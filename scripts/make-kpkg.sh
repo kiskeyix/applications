@@ -1,6 +1,6 @@
 #!/bin/bash
 # vim: ft=sh:columns=80 :
-# $Revision: 1.33 $
+# $Revision: 1.34 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2004-Nov-08
 #
@@ -70,7 +70,7 @@ MODULE_LOC="../modules/"            # modules are located in the
 NO_UNPATCH_BY_DEFAULT="YES"         # please do not unpatch the 
                                     # kernel by default
 
-PATCH_THE_KERNEL="NO"               # always patch the kernel
+PATCH_THE_KERNEL="YES"              # always patch the kernel
 
 ALL_PATCH_DIR="../kernel-patches/"  # patches are located before 
                                     # this directory

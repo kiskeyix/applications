@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.49 $
+# $Revision: 1.50 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -495,6 +495,13 @@ __EOF__
         ";
     }
 
+    #construct a footer if it doesn't yet exist:
+    if ( $config_tmp{$ROOT}{"footer"} =~ /^\s+$/ )
+    {
+        print $LOGFILE (": Blank footer. Generating my own [$ROOT] ... \n");
+        $config_tmp{$ROOT}{"footer"}="</body></html>";
+    }
+        
     # ext can be passed in a .pixdir2htmlrc file
     # like: ext=html or ext=php ...
     if ( 
@@ -1081,7 +1088,7 @@ sub menu_file {
     # generate menu
     #
     # When using nautilus we are off by one:
-
+    # TODO needs more testing
     if ( $nautilus_root gt "" ) 
     {
         $total_links-- ;

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.51 $
+# $Revision: 1.52 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -129,15 +129,17 @@ my $VERSION="1.4";
 
 $|++; # disable buffer (autoflush)
 
-my $USAGE = "pixdir2html.pl [-n|--nomenu] 
-[-N|--noindex]
-[-f|--force] 
-[-M|--menuonly]
-[-E|--extension] (php)
-[-t|--thumbsonly]
-[-D|--directory] (.)
-[-l|--menulinks]
-[-h|--help]
+my $USAGE = "
+pixdir2html.pl  [-n|--nomenu] 
+                [-N|--noindex]
+                [-f|--force] 
+                [-M|--menuonly]
+                [-E|--extension] (php)
+                [-t|--thumbsonly]
+                [-D|--directory] (.)
+                [-l|--menulinks]
+                [-c|--cut-dirs]
+                [-h|--help]
 
 force    - creates a .pixdir2htmlrc in every subdir overriding
 any file with that name
@@ -145,6 +147,7 @@ nomenu   - do not create menu file after finishing creating thumbnails
 noindex  - do not create the index.EXT files after creating thumbnails
 menuonly - only create a menu file and exit
 menulinks- number of links to put in the Menu per row. Default is 10
+cut-dirs - number of directories to cut from the Menu string. Default is 0
 extension- use this extension instead of default (php)
 directory- use this directory instead of default (current)
 menu_td  - How many cells in menu?
@@ -214,6 +217,7 @@ my $FORCE=0;
 my $NOMENU=0; 
 my $MENUONLY=0;
 my $THUMBSONLY=0;
+my $CUT_DIRS=0;
 my $NOINDEX=0;
 my $HELP=0;
 # progressbar stuff here:
@@ -295,7 +299,8 @@ GetOptions(
     # numbers
     'menu_td=i'     =>  \$menu_td,
     'td=i'          =>  \$TD,
-    'str_limit=i'   =>  \$STR_LIMIT 
+    'str_limit=i'   =>  \$STR_LIMIT,
+    'c|cut-dirs=i'    =>  \$CUT_DIRS
 );
 
 die $USAGE if $HELP;
@@ -490,9 +495,7 @@ __EOF__
         </head>\n".
         $config_tmp{$ROOT}{"body"}."
         \n<center>\n".
-        $config_tmp{$ROOT}{"html_msg"}."
-        \n
-        ";
+        $config_tmp{$ROOT}{"html_msg"}."\n";
     }
 
     #construct a footer if it doesn't yet exist:
@@ -1020,6 +1023,10 @@ sub menu_file {
     my @pixdir = (); # reset array 
 
     my @ary = do_dir_ary("$ROOT_DIRECTORY");
+    
+    # remove duplicates:
+    my %seen = ();
+    my @uniq = grep(!$seen{$_}++,@ary);
 
     # for e/a directory here
     # check if a .nopixdir2htmlrc file exists
@@ -1034,12 +1041,15 @@ sub menu_file {
     # Take into consideration that this function is called
     # before we even attempt to build the index.$EXT files
     # thus, that makes things kind of difficult a bit.
-    foreach my $directory (@ary){
+    # So, we should check if at least one .jpg|.gif|.png
+    # file exists in the current $directory. That should 
+    # be done by do_dir_ary above
+    #
+    foreach my $directory (@uniq){
         next if (-f "$directory/.nopixdir2htmlrc");
 
         if (
             !-f "$directory/.nopixdir2htmlrc"
-            #&& -f "$ROOT_DIRECTORY/$directory/$FILE_NAME.".$config{$ROOT_DIRECTORY}{"ext"}
         ) {
             # note that @ls holds the HTML links...
             # thus, paths are relative and not absolute here:
@@ -1130,10 +1140,17 @@ sub menu_file {
                             ( $ls[$i] = $ls[$i] ) =~ s,$nautilus_root/,,g;
                             ( $ts = $ts ) =~ s,$nautilus_root/*,,g;
                         }
+
+                        # remove CUT_DIRS number of directories from ts
+                        if ( $CUT_DIRS > 0 ) 
+                        {
+                            $ts = cut_dirs($ts,$CUT_DIRS);
+                        }
+
                         my $tmp_ts = str_truncate($ts);
                         
                         $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='".$config{$ROOT_DIRECTORY}{"new"}."' alt='new'>":""; # if .new file
-                        $ts = ucfirst($ts);
+                        $ts = ucfirst($tmp_ts);
                         print FILE ("<a href='".$config{$ROOT_DIRECTORY}{"uri"}."/$ls[$i]' target='_top'>$IMG $ts</a>\n");
                     } else {
                         print FILE ("&nbsp;");
@@ -1174,6 +1191,13 @@ sub menu_file {
                             ( $ls[$i] = $ls[$i] ) =~ s,$nautilus_root/,,g;
                             ( $ts = $ts ) =~ s,$nautilus_root/*,,g;
                         }
+
+                        # remove CUT_DIRS number of directories from ts
+                        if ( $CUT_DIRS > 0 ) 
+                        {
+                            $ts = cut_dirs($ts,$CUT_DIRS);
+                        }
+                        
                         my $tmp_ts = str_truncate($ts);
                         $ts = ucfirst($tmp_ts);
                         # $ls tends to hold the whole filename path+filename
@@ -1261,6 +1285,7 @@ sub do_dir_ary {
     # a/b/c
     # a/b2/c2
     # 
+
     my $ROOT = shift;
     my %opt = (wanted => \&process_dir, no_chdir=>1);
     find(\%opt,$ROOT);
@@ -1321,4 +1346,24 @@ sub process_file {
     }
 } #end process_file
 
+sub cut_dirs {
+    # call like cut_dirs($ts,$CUT_DIRS);
+    # where ts is a path in the form "path/to/something"
+    # and $CUT_DIRS is an integer
+    my $path = shift;
+    my $cut = shift;
+    # TODO is there a way to know the OS separator string in Perl
+    # a la Python?
+    $path =~ s,^/,,g; # remove leading slashes
+    my @tmp_path = split(/\//,$path);
+    my $tmp_str = "";
 
+    for ( my $i = 0; $i <= $#tmp_path; $i++ )
+    {
+        if ( $i > $cut )
+        {
+            $tmp_str .= $tmp_path[$i]."/";
+        }
+    }
+    return $tmp_str;
+} # end cut_dirs

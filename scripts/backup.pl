@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-May-24
 #
@@ -53,11 +53,13 @@ $MY_CONFIG{EXC_ULIST} = "man|nobody";  # separated by | . Change in
 
 $MY_CONFIG{SYSTEM}="/etc /home/cvsroot /var/lib/jabber /var/lib/mysql /var/mail /var/spool /var/lib/ldap /var/lib/iptables /root";
 
-$MY_CONFIG{LOCK} = "/tmp/.backup-init"; # timestamp of when backup started
+#$MY_CONFIG{LOCK} = "/tmp/.backup-init"; # timestamp of when backup started
 
 #-------------------------------------------------------------#
 #           No need to modify anything below here             #
 #-------------------------------------------------------------#
+
+my $TMP_LOCK = ".backup-lock";
 
 my %TMP_CONFIG = init_config($CONFIG_FILE); # override defaults with...
 
@@ -83,13 +85,20 @@ foreach my $hashref ( \%MY_CONFIG, \%TMP_CONFIG ) {
 #}
 #die "the end \n";
 
-my $TMP_LOCK = $CONFIG{LOCK};
+# change to backup directory
+if ( -d $CONFIG{BAK} ) {
+    chdir($CONFIG{BAK});
+} else {
+    die "could not change working dir to $CONFIG{BAK}. $!";
+}
 
 if ( ! -f $TMP_LOCK ) {
    
     my ($sec,$min,$hour,$mday,$mon,$year) = localtime; # get date
 
-    my $MIDDLE_STR = ( $ARGV[0] eq "daily" ) ? "daily" : "$year-$mon-$mday";
+    $year += 1900;
+
+    my $MIDDLE_STR = ( $ARGV[0] eq "daily" ) ? "daily" : $year."-$mon-$mday";
 
     # write lock file:
     open(FILE,"> $TMP_LOCK") || die "could not open $TMP_LOCK. $! \n";
@@ -101,7 +110,7 @@ if ( ! -f $TMP_LOCK ) {
     #split(",", $CONFIG{SYSTEM})
     print STDOUT "$CONFIG{BAK}\n";
     Archive::Tar->create_archive (
-            "/home/luigi/tmp/system-$MIDDLE_STR.tar.gz", 
+            "system-$MIDDLE_STR.tar.gz", 
             9, 
             "/etc"
         );

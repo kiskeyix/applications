@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2002-Nov-12
-# $Id: etodo.pl,v 1.8 2002-11-12 16:12:30 luigi Exp $
+# Last modified: 2002-Nov-18
+# $Id: etodo.pl,v 1.9 2002-11-18 16:16:17 luigi Exp $
 #
 # DESC:
 #   This script takes your tasks.ics file from Evolution
@@ -261,10 +261,11 @@ sub print_fields {
             } else {
                 # print 50 hashes...
                 my $hash_tmp = "";
-                for ($k=0; $k <= ($ary[$i]->{progress}/2) ; $k++) {
+                my $limit = $ary[$i]->{progress}/2;
+                for ($k=0; $k <= $limit ; $k++) {
                     $hash_tmp .= "#";
                 } # end for k
-                print OFILE td($hash_tmp);
+                print OFILE td("$hash_tmp ($ary[$i]->{progress}/100)");
             }
             #priority
             if ( $ary[$i]->{priority} <= 3 && $ary[$i]->{priority} != 0) {

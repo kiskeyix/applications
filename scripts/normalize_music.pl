@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2004-Dec-07
 #
@@ -23,6 +23,8 @@ use File::Basename; # basename() && dirname()
 #use FileHandle;     # for progressbar
 
 use MP3::Tag;
+
+my $MUSIC_FILES = '\.(mp3|ogg)$'; # files we will find
 
 # Args:
 my $PVERSION=0;
@@ -72,6 +74,7 @@ if ( -f $FILE )
     print STDOUT ("to file\t$file\n");
     if ( ! -f "$file" )
     {
+        print STDERR ("DEBUG: use path $path\n") if ( $DEBUG );
         _mkdir($path) if ( ! -d "$path" );
         if ( ! rename ( "$FILE","$file" ) )
         {
@@ -88,12 +91,15 @@ sub _mkdir
     my $path = shift;
     my @dirs = splitdir($path);
     my $last = "";
+    my $flag=1;
     foreach (@dirs)
     {
         next if ( $_ =~ m/^\s*$/ );
-        $last = catdir($last,$_);
+        $last = ( $flag > 1 ) ? catdir($last,$_) : $_ ;
         mkdir ($last) if ( ! -d $last);
+        $flag++;
     }
+    return $flag; # number of directories created
 }
 
 __END__

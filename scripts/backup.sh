@@ -1,5 +1,5 @@
 #!/bin/sh
-# Last modified: 2002-Oct-16
+# Last modified: 2002-Nov-16
 # Luis Mondesi < lemsx1@hotmail.com >
 # backup a site every night
 # 
@@ -48,8 +48,23 @@ if [ $WDAY -ne 6 ]; then
         # now move the nightly backup to yesterday week/day pair
         # and then do a new nightly for today
         # 
-        WDAY=$(expr $WDAY - 1)
-        MDAY=$(expr $MDAY - 1)
+        if [ $WDAY != 0 ]; then
+            WDAY=$(expr $WDAY - 1)
+        else
+            # sunday is 0 and 7, so
+            # saturday is 6
+            WDAY=6
+        fi
+       
+        if [ $MDAY != 1 ]; then
+            MDAY=$(expr $MDAY - 1)
+        else
+            # the fact that some months
+            # don't have 31 days doesn't matter
+            # for this script...
+            # this is a known bug!
+            MDAY=31
+        fi
         
         if [ -f $NAME-nightly.tar.bz2 ]; then
             mv -f $NAME-nightly.tar.bz2 $NAME-$FDATE-$MDAY-$WEEK-$WDAY.tar.bz2

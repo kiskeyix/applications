@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.81 $
+# $Revision: 1.82 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -198,6 +198,7 @@ my $NVREC=0; # By default NVREC is not here
 my $OGMTOOL=0; # By default ogmmerge is not here
 my $SUBRIP=0; # By default srtsubrip is not here
 my $MULTIPLEXER="tcmplex"; # By default use this multiplexer
+my $MULTIPLEXARGS=""; # extra arguments for whichever multiplexer you choose, setable from the command line --multiplex-args=""
 # end defaults #
 
 # TODO we create simple DVDs here, the user might want to pass a more
@@ -243,6 +244,7 @@ my $usage="
     '-l|--lang|--language=s'        Use this language [fr,en,es,...]
     '-S|--SUB_TITLE_opts=s'         Subtitle Options
     '-m|--multiplex=s'              Use this multiplexer [tcmplex,mplex]
+    '--multiplex-args=s'            Pass these arguments to the chosen multiplexer. A nice place to put \"-D 0\" and other things.
     '-M|--make-dvd=s'               Use this name to create a DVD iso
     # numbers
     '-a|--default_audio_channel=i'  Number of Audio Channels
@@ -3452,9 +3454,7 @@ sub ripdvd
         or mydie("Directory \"$VOBPATH\" does not exist \n Sorry");
     $dvd = "/dev/dvd"; # default
     DVDDEV:
-        print " On which device is your DVD [default: /dev/dvd]? " ;
-        $dvd=<STDIN>;
-        chomp($dvd);
+        $dvd=prompt("On which device is your DVD [default: $dvd]? ");
     goto DVDDEV if ( ! -b "$dvd" );  # $dvd is not a blockdevice...
     if ( $DVDTITLE ne "" )
     { 
@@ -3548,8 +3548,8 @@ sub ripdvd
         $rep="N";
         $rep=prompt(" Do you want to rip this title chapter by chapter (y|N)? ");
     }
-    my @files = glob("$VOBPATH/*"); # no /bin/rm anymore
-    unlink(@files);
+    my @dfiles = glob("$VOBPATH/*"); # no /bin/rm anymore
+    unlink(@dfiles);
     open (H_TITLE,">$VOBPATH/dvdtitle");
     print H_TITLE $TITLE;
     close(H_TITLE);
@@ -3604,7 +3604,7 @@ sub dvd9to5
     my $title = shift;
 
     my $TCMPLEX = which("tcmplex");
-    my $MPLEX = which("mplex"); #chomp($TCMPLEX);#chomp($MPLEX);
+    my $MPLEX = which("mplex");
 
     $title = ($title =~ /\d+/) ? $title : 1;
     # files
@@ -3625,6 +3625,8 @@ sub dvd9to5
         close(PROFILE);
     }
 
+    
+    
     if ( !-f "$audio" )
     {
         if ( -b "$dir" )
@@ -3633,6 +3635,13 @@ sub dvd9to5
             system("tccat -i $dir -T$title,-1 -P | tcextract -t vob -x ac3 -a0 > $audio");
         } elsif ( -d "$dir" )
         {
+            foreach my $file (glob("$dir/*.[VOBvob]")) # .vob too...
+            {
+                # TODO add a switch to turn this on (off by default)
+                # For now, it's just on :-)
+                # this will be useful when video is out of sync
+                system("tcprobe -H 500 -i $file > $file.txt");
+            }
             system("tccat -i $dir -P | tcextract -t vob -x ac3 -a0 > $audio");
         } else {
             pwarn("No DVD device or Directory given as argument for audio extraction.");
@@ -3643,6 +3652,9 @@ sub dvd9to5
     if ( !-f "$video" )
     {
         # my $TCREQUANT=1.13924050632911392405;
+        # TODO calculate tcrequant:
+        # 1.05 * ( video_size / (4700 - audio_size)) for a 4.4GB DVD
+        # audio size can be calculated from all .ac3 files
         my $TCREQUANT=1.57122151287947; # has proven to work best so far
         if ( -b "$dir" )
         {
@@ -3675,7 +3687,7 @@ sub dvd9to5
                 if ( $fps !~ /^25\.0/ ) { $args .= " -N" ;} # NTSC
                 # -D 0 # dont correct sync
                 # -m d # DVD mode
-                my $sys = "$TCMPLEX $args -d $VERBOSITY -D 0 -o video.mpeg -i video.m2v -p audio.ac3 -F $multiplex_config -m d";
+                my $sys = "$TCMPLEX $args -d $VERBOSITY -o video.mpeg -i video.m2v -p audio.ac3 -F $multiplex_config -m d $MULTIPLEXARGS";
                 pinfo("$sys") if ( $DEBUG );
                 system("$sys");
             } else {
@@ -3687,7 +3699,7 @@ sub dvd9to5
             {
                 # -S 4400 # split at 4.4GB
                 # -f 8 # produce dvdauthor compliant/navigational MPEG-2
-                my $sys = "$MPLEX -v $VERBOSITY -S 4400 -f 8 -o 'video\%d.mpeg' $video $audio";
+                my $sys = "$MPLEX $MULTIPLEXARGS -v $VERBOSITY -S 4400 -f 8 -o 'video\%d.mpeg' $video $audio";
                 pinfo("$sys") if ( $DEBUG );
                 system("$sys");
             } else {
@@ -3707,11 +3719,12 @@ sub dvd9to5
     }
     say_end();
     # ask to make DVD image
-    my $rep = prompt("Do you want to make a DVD iso? [y/N]");
+    my $rep = prompt("Do you want to make a DVD iso? [y/N] ");
     if ( $rep =~ m/^[yY]/ )
     {
         #DVD name is chosen for us. we could use basename($dir)...
-        make_dvd($dir); 
+        #make_dvd($dir,"V2DVD"); 
+        print "Sorry, this doesn't work yet\n";
     }
 } # end dvd9to5()
 
@@ -3946,6 +3959,7 @@ GetOptions(
     'l|lang|language=s'         => \$LANGUAGE, 
     'S|SUB_TITLE_opts=s'        => \$EXTSUB,
     'm|multiplex=s'             => \$MULTIPLEXER,
+    'multiplex-args=s'          => \$MULTIPLEXARGS,
     'M|make-dvd=s'              => \$DVD,
     # numbers
     'a|default_audio_channel=i' => \$DEF_AUDIOCHANNEL,

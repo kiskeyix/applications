@@ -39,6 +39,7 @@ METACITY_THEME=$GTK_THEME
 ICON_THEME="Nuvola"
 BACKGROUND="/usr/share/wallpapers/All-Good-People-1.jpg"
 SPLASH_IMAGE="/usr/local/share/pixmaps/Splash-Crystal.png" 
+BACKGROUND_ORIENTATION="wallpaper" # wallpaper,centered,scaled,strecthed
 #"/usr/share/pixmaps/splash/gnome-splash.png"
 MONOSPACE_FONT_NAME="Sans Bold 12"
 FONT_NAME="Sans Bold 11"
@@ -107,8 +108,8 @@ if [ $DEFAULT_BACKGROUND != 0 ]; then
     if [ $? != 0 ]; then
         echo "Setting a background failed"
     fi
-    # TODO give a choice to update this?
-    $GCONFTOOL --direct --config-source xml:readwrite:/etc/gconf/gconf.xml.mandatory --type string --set /desktop/gnome/background/picture_options "wallpaper"
+    
+    $GCONFTOOL --direct --config-source xml:readwrite:/etc/gconf/gconf.xml.mandatory --type string --set /desktop/gnome/background/picture_options $BACKGROUND_ORIENTATION
     if [ $? != 0 ]; then
         echo "Setting picture option failed"
     fi

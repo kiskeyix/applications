@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.90 $
+# $Revision: 1.91 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -29,14 +29,13 @@
 #   * transcode doesn't work with kernel 2.6.0 (not yet)
 
 use strict;
-use POSIX;
+use POSIX; # getcwd() for `pwd` and others
 use Env qw(HOME);
 use FileHandle;
 use File::Temp qw/ tempfile  /;     # Perl 5.6.1: 
                                     # used to get secured temp file
 use File::Basename; # basename();
 use File::Find; # find()
-use Cwd;  # getcwd() for `pwd`
 
 STDOUT->autoflush(1);
 
@@ -54,7 +53,7 @@ my $OKCLUSTER=0;
 my $TEST = 0;
 my $DVD9TO5 = 0;
 my $DVDBACKUP = 0;
-my $AVITOVCD = 0;
+my $TOVCD = 0;
 my $Res_DIVX_OPT = 0;
 my $DEBUG = 0;
 my $INFO = 0;
@@ -231,7 +230,8 @@ my $usage="
     '-t|--test'                     Do a minor test with movie
     '--dvd9-to-dvd5'                Convert from DVD-9 to DVD-5
     '--dvdbackup'                   Backup a DVD using dvdbackup (interactive) and exit
-    '--avi-to-vcd'                  Create VCD Image from AVI
+    '--avi-to-vcd'                  Create VCD Image from AVI (deprecated)
+    '--to-vcd'                      Create VCD 2.0 Image from any video file
     # strings
     '-D|--directory=s'              Use this directory as WORK DIR
     '-s|--source-video-format=s'    Video Format of the Source
@@ -805,6 +805,7 @@ sub create_extract
     #  ****** Create extract info (to calculate bitrate) ****** #
     my ($rep,$sys,$frames)="";
     my ($in_video_magic,$in_video_codec)=videoformat("$VOBPATH/$SAMPLE");
+    my $wdir = getcwd();
     pdebug ("--->  Enter create_extract");
 
     # we need only $audio_channel but ...
@@ -885,7 +886,7 @@ sub create_extract
                     ." -x pcm -e $audio_rate -f $FPS 2>> tmp/extract.text  >> tmp/extract.text";
             }
             print "$sys \n" if ( $INFO);
-            pdebug ("+ Working directory ".getcwd());
+            pdebug ("+ Working directory $wdir");
             system ("nice -$nice $sys") == 0  
                 or ( 
                 system("touch tmp/extract.finish") == 0 
@@ -3757,9 +3758,9 @@ sub dvd9to5
 #     }
 } # end dvd9to5()
 
-sub avitovcd
+sub tovcd
 {
-    # @param 0 file := string filename .avi
+    # @param 0 file := string filename
     # output will be a movie.mpg file in the current directory
     # or a .cue file if you choose to do so with vcdimager
     my $file = shift;
@@ -3791,10 +3792,13 @@ sub avitovcd
     {
         #my $sys = "transcode -E 44100 -b 224 -V -y mpeg2enc,mpeg -F 1,-M2 -Z 352x240 -i $file -o $video";
         # generalized (not just .avi):
-        my $sys = "transcode -i $file -V -y mpeg -F v,4 -E 44100 -b 224 -o $video";
+        #  - in case of ugly colors in output, remove -V
+        #  - if video is flipped (upside down), use -z 1
+        #  - for vcd 1 use v,4. default is vcd 2.0 (v,1)
+        my $sys = "transcode -i $file -z 0 -V -y mpeg -F v,1 -E 44100 -b 224 -o $video";
         system("$sys");
     } else {
-        pwarn("Video file $video exists. Not extracting new video.");
+        pwarn("Video or audio file $video.[mpa|m1v] exists. Not extracting new video or audio. Please remove these files if you want to re-extract them.");
     } # end if/else $video file found
 
     # although tcmplex is default, we give mplex a try
@@ -3839,7 +3843,7 @@ sub avitovcd
     }
     pinfo("Use 'cdrdao write --device /dev/sg0 --driver generic-mmc file.cue' to burn the image");
     say_end();
-} # end avitovcd()
+} # end tovcd()
 
 sub make_dvd
 {
@@ -4041,7 +4045,8 @@ GetOptions(
     't|test'                    =>  \$TEST,
     'dvd9-to-dvd5'              =>  \$DVD9TO5,
     'dvdbackup'                 =>  \$DVDBACKUP,
-    'avi-to-vcd'                =>  \$AVITOVCD,
+    'avi-to-vcd'                =>  \$TOVCD,
+    'to-vcd'                    =>  \$TOVCD,
     # strings
     'D|directory=s'             => \$ROOT_DIRECTORY,
     's|source-video-format=s'   => \$SVIDEO_FORMAT,
@@ -4179,9 +4184,9 @@ if ( defined($DVD) && $DVD !~ m/^\s+$/i && -d $ARGV[0] )
 }
 
 # Create a VCD image file
-if ($AVITOVCD > 0)
+if ($TOVCD > 0)
 {
-    avitovcd($ARGV[0]); # arg[0] holds .avi file
+    tovcd($ARGV[0]); # arg[0] holds .avi file
     exit(0);
 }
 

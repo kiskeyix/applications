@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.83 $
+# $Revision: 1.84 $
 # Luis Mondesi  <lemsx1@hotmail.com>
 # 
 # REQUIRED: ImageMagick's Perl module and a dialog 
@@ -17,16 +17,26 @@ use FileHandle;     # for progressbar
 use Cwd;            # same as: qx/pwd/
 
 # non-standard modules:
+my $USE_CONVERT=0;
 eval "use Image::Magick";
 if ($@) 
 {
     print STDERR "\nERROR: Could not load the Image::Magick module.\n" .
-    "       Please install this module before continuing\n".
+    "       To install this module use:\n".
     "       Use: perl -e shell -MCPAN to install it.\n".
-    "       On Debian just: apt-get install perlmagic \n\n";
+    "       On Debian just: apt-get install perlmagic \n\n".
+    "       FALLING BACK to 'convert'\n\n";
     print STDERR "$@\n";
-    exit 1;
-} # TODO else use "convert" if found
+    if ( -x "/usr/bin/convert" || -x "/usr/local/bin/convert" )
+    {
+        $USE_CONVERT=1;
+    } else {
+        print STDERR "\nERROR: 'convert' was not found in /usr/bin or \n".
+        "/usr/local/bin. \n Exiting...\n\n";
+        exit 1;
+    }
+}
+
 # Get Nautilus current working directory, if under Natilus:
 my $nautilus_root = "";
 if ( exists $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} 
@@ -330,10 +340,10 @@ sub init_config {
     $config{"$ROOT"}{"ext"}=( $EXT ) ? $EXT : "html" ;
     $config{"$ROOT"}{"menutype"}=( $MENU_TYPE ) ? $MENU_TYPE : "classic";
     $config{"$ROOT"}{"menuname"}=( $MENU_NAME ) ? $MENU_NAME : "menu";
-    $config{"$ROOT"}{"menutd"}=( $menu_td ) ? $menu_td : "10";
-    $config{"$ROOT"}{"td"}=( $TD ) ? $TD : "4" ;
-    $config{"$ROOT"}{"strlimit"}=( $STR_LIMIT ) ? $STR_LIMIT : "32";
-    $config{"$ROOT"}{"cutdirs"}=( $CUT_DIRS ) ? $CUT_DIRS : "0" ;
+    $config{"$ROOT"}{"menutd"}=( $menu_td ) ? $menu_td : 10;
+    $config{"$ROOT"}{"td"}=( $TD ) ? $TD : 4 ;
+    $config{"$ROOT"}{"strlimit"}=( $STR_LIMIT ) ? $STR_LIMIT : 32;
+    $config{"$ROOT"}{"cutdirs"}=( $CUT_DIRS ) ? $CUT_DIRS : 0 ;
 
     if ( -f "$ROOT/$CONFIG_FILE" )
     {
@@ -353,17 +363,8 @@ sub init_config {
             $config{"$ROOT"}{"$1"} = "$2" if ( $line =~ m,^\s*([^=]+)=(.+), );
         }
         close(CONFIG);
-    } else {
-        warn "Could not find $ROOT/$CONFIG_FILE\n";
-        if ( $create_config =~ /true/ ) 
-        {
-            # uncomment for debugging...
-            #use Data::Dumper;
-            #print STDOUT Dumper(%config);
-            #print STDOUT "\n\n\n";
-            write_config($ROOT,\%config);
-        }
-    }
+    } 
+    
     #construct a header if it doesn't yet exist:
     if ( $config{"$ROOT"}{"header"} =~ /^\s*$/ ) 
     {
@@ -385,6 +386,18 @@ sub init_config {
     {
         print $LOGFILE (": Blank footer. Generating my own [$ROOT] ... \n");
         $config{"$ROOT"}{"footer"}="</center>\n</body></html>";
+    }
+    # write or warn about configuration if one doesn't exists
+    if (!-f "$ROOT/$CONFIG_FILE" ) {
+        warn "Could not find $ROOT/$CONFIG_FILE\n";
+        if ( $create_config =~ /true/ ) 
+        {
+            # uncomment for debugging...
+            #use Data::Dumper;
+            #print STDOUT Dumper(%config);
+            #print STDOUT "\n\n\n";
+            write_config($ROOT,\%config);
+        }
     }
 } # end init_config
 
@@ -534,7 +547,7 @@ sub mkthumb {
     # remove duplicates:
     my %seen = ();
     my @uniq = grep(!$seen{$_}++,@ary);
-
+    #print STDERR @uniq;
     # parse array of images
     foreach (@uniq) {
         $thisFile = basename($_);
@@ -543,6 +556,7 @@ sub mkthumb {
         next if ($thisFile !~ m/$EXT_INCL_EXPR$/i);
         push @ls,$_;
     } #end images array creation
+    #print STDERR @ls;
     dict_sort(\@ls);
 
     # progressbar stuff
@@ -551,7 +565,7 @@ sub mkthumb {
     # initial values for gauge
     # TOTAL -> number of elements in ls array
     my $PROGRESS = 0;
-    my $TOTAL = $#ls;
+    my $TOTAL = $#ls + 1;
     if ( $use_console_progressbar == 1 )
     {
         $GAUGE->new({'name'=>$MESSAGE,'count'=>$TOTAL});
@@ -612,17 +626,21 @@ sub mkthumb {
 
         if ( !-f "$THUMBNAILSDIR/".$THUMB_PREFIX.$pix_name ){
             print $LOGFILE ("\n= Converting file $BASE/$pix_name into $THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name \n");
-            my $image = Image::Magick->new;
-            $image->Read("$BASE/$pix_name");
-            $image->Resize("$PERCENT");
-            $image->Write("$THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name");
-            undef $image;
-            # TODO if we could not load Image::Magick, see if "convert" is installed and use
-            # this instead:
-            #system("convert -geometry $PERCENT $BASE/$pix_name $THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name");
-            #if ( $? != 0 ) {
-            #    die "ERROR: conversion failed\n $! ";
-            #}
+            if ( $USE_CONVERT == 1 )
+            {
+                system("convert -geometry $PERCENT $BASE/$pix_name $THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name");
+                if ( $? != 0 ) {
+                    print $LOGFILE "** ERROR: conversion failed\n $! ";
+                }
+            } else {
+                # assumes Image::Magick was checked for before
+                my $image = Image::Magick->new;
+                $image->Read("$BASE/$pix_name");
+                $image->Resize("$PERCENT");
+                $image->Write("$THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name");
+                undef $image;
+            }
+            
             print $LOGFILE ("\n"); 
         } 
         # end if thumbnail file
@@ -707,7 +725,8 @@ sub thumb_html_files {
     # initial values for gauge, note total
     # is number of elements in array ;-) 
     my $PROGRESS = 0;
-    my $TOTAL = $#ls;
+    # $#VAR gets index of last element in an array
+    my $TOTAL = $#ls + 1;
     if ( $use_console_progressbar == 1 )
     {
         $GAUGE->new({'name'=>$MESSAGE,'count'=>$TOTAL});
@@ -715,7 +734,6 @@ sub thumb_html_files {
         progressbar_msg($MESSAGE);
     }
     #print all picts now
-    # $#VAR gets number of elements of an array variable
     for ( $i=0; $i < $TOTAL; $i++) {
         $PROGRESS++;
         # get base directory
@@ -884,7 +902,7 @@ sub menu_file {
         push(@ls,"$directory/$FILE_NAME.".$config{"$ROOT_DIRECTORY"}{"ext"});
     }   
     dict_sort(\@ls); # sort in dictionary order
-    $total_links = $#ls;
+    $total_links = $#ls + 1;
     # set menu-name now (from command-line or config file)
     if ( $NEW_MENU_NAME gt "" ) 
     {

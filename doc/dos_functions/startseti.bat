@@ -7,6 +7,7 @@ set SETI="c:\program files\seti"
 cd %SETI% || exit 1
 :: we loop forever here:
 :start
-    ./setiathome
-    sleep %SLEEP%
+    setiathome
+    :: stupid DOS has no 'sleep'
+    ping -n %SLEEP% localhost > nul
 goto start

@@ -1,15 +1,14 @@
 #!/usr/bin/perl 
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE:
-#   pictDir2html.pl [DIR] [force] [nomenu]
+#   pictDir2html.pl [-n|--nomenu] [-f|--force] [-h|--help]
 # 
-#   DIR     - make thumbnails for DIR or current directory if no argument
-#             is given
 #   force   - creates a .pictDir2htmlrc in every subdir overriding
 #             any file with that name
 #   nomenu  - do not create menus after finishing creating thumbnails
+#   help    - prints this help and exit
 #   
 # DESCRIPTION:
 # 
@@ -60,18 +59,36 @@
 # Put a .nopictDir2htmlrc file in directories for which you do not want
 # thumbnails and/or index.html to be written
 #
+
 use File::Copy;
+use Getopt::Long;
+Getopt::Long::Configure('bundling');
+
 use strict;
 use vars qw( $VERSION @INC );
 use Config;
-my $VERSION="0.3";
+
+my $VERSION="0.5";
+
 $|++; # disable buffer
+
+my $USAGE = "pictDir2html.pl [-n|--nomenu] [-f|--force]
+ 
+   force   - creates a .pictDir2htmlrc in every subdir overriding
+             any file with that name
+   nomenu  - do not create menus after finishing creating thumbnails
+   help    - prints this help and exit\n";
 
 # update these if needed
 my $HTML_DIRECTORY=".";
+
 my $LOG="$HTML_DIRECTORY/pictDir2html.log";
+
 my $FILE_NAME="index.php";
+my $MENU_NAME="menu.html";
+
 my $CONFIG_FILE=".pictDir2htmlrc";
+
 my $THUMBNAIL="t";
 
 # list directories that should be skipped here
@@ -84,6 +101,9 @@ my $EXCEPTION_LIST = "CVS|RCS";
 my $PERCENT="20%";
 # How many TDs per table?
 my $td=4;
+# How many TDs per menu table?
+my $menu_td=10;
+
 
 # dont worry if you don't have a log rotation facility...
 # just leave it as is
@@ -92,11 +112,36 @@ my $SAVELOG = "/usr/bin/savelog";
 ###Nothing below this line should need to be configured.###
 #**************************************************************#
 
-my $IMAGE_DIRECTORY=(-d "$ARGV[0]") ? "$ARGV[0]":".";
-my $FORCE=(($ARGV[1] =~ m/force/i) || ($ARGV[2] =~ m/force/i) ) ? 1 : 0; 
-my $NOMENU=(($ARGV[1] =~ m/nomenu/i) || ($ARGV[2] =~ m/nomenu/i) ) ? 1 : 0; 
+my %myconfig = ""; # init config hash
 
 my $total_directories=0;
+
+my $IMAGE_DIRECTORY=".";
+
+my $FORCE=0; 
+my $NOMENU=0; 
+my $HELP=0;
+
+# get options
+GetOptions(
+    'n|nomenu' => \$NOMENU,
+    'f|force' => \$FORCE,
+    'h|help' => \$HELP,
+);
+
+die $USAGE if $HELP;
+
+#$FORCE++ if $force;
+#$NOMENU++ if $nomenu;
+
+# TODO find a way to pass a directory to
+# which create images right from the command
+# line
+#$IMAGE_DIRECTORY = shift;
+
+#eval $IMAGE_DIRECTORY;
+#die $@ if $@; # if any error ocurred while evaluating, then die
+
 my $THUMBNAILSDIR="$IMAGE_DIRECTORY/$THUMBNAIL";
 
 warn << "__EOF__";
@@ -247,23 +292,24 @@ sub mkthumb {
     }
 
     if (!-f "$ROOT/.nopictDir2htmlrc") {
+       
+        # read specific config file for this directory
+        init_config($ROOT);
+        
         open(FILE, "> $ROOT/$FILE_NAME") || die "Couldn't write file $FILE_NAME to $ROOT";
 
-
-# Percentage for this folder?
+        # Percentage for this directory?
         $PERCENT = ("$myconfig{percent}") ? $myconfig{percent}:$PERCENT;
 
-#print contents of array @ls
-
-# start HTML
+        # start HTML
         print FILE ("$myconfig{header}\n");
 
-# start table
+        # start table
         print FILE ("$myconfig{table}\n");
 
         my $my_bgcolor = "";
 
-#print all picts now
+        #print all picts now
         foreach(@ls){
             if ( !-f "$THUMBNAILSDIR/"."t$_" ){
                 # TODO determine which thumbnails need to be recreated
@@ -363,25 +409,14 @@ sub menuMaker {
 # inside this given folder that has a file named: index.html or index.php
 # 
 # if there is a file named .new inside the given directory,
-# then a IMG tag will be put in front of the link with a gif
-# file $GIF
+# then a IMG tag will be put in front of the link with an image
+# src=myscript{new} in it
 # 
+# Thus in the config file put a line as such:
+# new=http://images.server.com/new_icon.png;;
 
-    my $MENU_NAME="menu.html";
-
-# this is used for the 'new' gif
-    my $GIF = "http://www.latinomixed.com/sex/images/new.png";
-
-# URI is used for creating the link. Everything
-# is relative to this. Will put this in the .pictDir2htmlrc file
-    my $URI = "http://sex.latinomixed.com";
-
-    my $IMG = ""; #init variable
-
-# How many TDs per table?
-    my $tds=10;
-
-###Nothing below this line should need to be configured.###
+    # init a couple of needed variables
+    my $IMG = ""; 
     my $line = "";
     my $thisFile= "";
     my $x=0;
@@ -394,20 +429,21 @@ sub menuMaker {
     my @files=();
 
     opendir (DIR,"$HTML_DIRECTORY") || die "Couldn't open dir $HTML_DIRECTORY";
-#construct array of all HTML files
+
+    # TODO use function to init the @ls array recursively
+    #construct array of all HTML files
     while (defined($thisFile = readdir(DIR))) {
         next if ($thisFile !~ /\w/);
+        next unless (-d "$HTML_DIRECTORY/$thisFile");
         next if (-f "$HTML_DIRECTORY/$thisFile/.nopictDir2htmlrc");
-        next if (!-f "$HTML_DIRECTORY/$thisFile/$FILE_NAME");
+        next unless (-f "$HTML_DIRECTORY/$thisFile/$FILE_NAME");
         $ls[$x] = "$thisFile/$FILE_NAME"; # link
         $x+=1;
-        #@files = grep(/\.html$/,$thisFile);    
     }
     closedir(DIR);
 
 # sort menus alphabetically (dictionary order):
 # print STDERR join(' ', @ls), "\n";
-# sort @ls;
     my $da;
     my $db;
     @ls = sort { 
@@ -415,11 +451,11 @@ sub menuMaker {
         ($db = lc $b) =~ s/[\W_]+//g;
         $da cmp $db;
     } @ls;
-# print STDERR join(' ', @ls), "\n";
 
     $total_links = $x;
 
-    open(FILE, "> $HTML_DIRECTORY/$MENU_NAME") || die "Couldn't write file $MENU_NAME to $HTML_DIRECTORY";
+    open(FILE, "> $HTML_DIRECTORY/$MENU_NAME") || \
+        die "Couldn't write file $MENU_NAME to $HTML_DIRECTORY";
 
 # TODO sometimes menus don't need headers and footers
 #       device a way to turn it off in the rc file
@@ -446,7 +482,7 @@ sub menuMaker {
         } else {
             print FILE ($myconfig{tr}."\n");
         }
-        for ($y=1;$y<=$tds;$y++){
+        for ($y=1;$y<=$menu_td;$y++){
             if ($y > 1) { print FILE ("\t </td> \n"); }   # close the TD tags
             print FILE ("\t".$myconfig{td}."\n");
             if ( $ls[$i] ne "" ) {
@@ -454,7 +490,7 @@ sub menuMaker {
                 ($ts = $ls[$i]) =~ s/(.*)\/$FILE_NAME/$1/gi;
                 $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='$myconfig{new}'>":""; # if .new file
                 $ts = ucfirst($ts);
-                print FILE ("<a href='$URI/$ls[$i]' target='_top'>$IMG $ts</a>\n");
+                print FILE ("<a href='$myconfig{uri}/$ls[$i]' target='_top'>$IMG $ts</a>\n");
             } else {
                 print FILE ("&nbsp;");
             }

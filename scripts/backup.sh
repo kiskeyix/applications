@@ -2,7 +2,7 @@
 ######################################################################
 # Last modified: 2003-Feb-05
 # Luis Mondesi < lemsx1@hotmail.com >
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # 
 # DESC: backup a site every night
 #       Out of daily backups keep the 7th backup
@@ -28,11 +28,16 @@
 #
 ######################################################################
 
+if [ -f $HOME/.backuprc ]; then
 # source config file
-. $HOME/.backuprc
+    . $HOME/.backuprc
+else 
+    echo "no $HOME/.backuprc file found";
+    exit 1;
+fi
 
 
-######## NO NEED TO MODIFY #################
+############# NO NEED TO MODIFY #################
 
 TAR="tar $EXCLUDES -cjf ";  # j for bz2 ... do not modify this!!
 WDAY=`date +%w`     # 0-6 day of the week

@@ -1,9 +1,9 @@
 #!/usr/bin/perl -w
-# $Revision: 1.5 $
-# $Date: 2003-03-26 05:42:23 $
+# $Revision: 1.6 $
+# $Date: 2003-03-29 17:33:37 $
 #
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Mar-26
+# Last modified: 2003-Mar-29
 #
 # DESCRIPTION: interactively create a new
 #               virtual website
@@ -137,7 +137,7 @@ if ( $SMTP_VIRTUAL =~ m/postfix/i) {
 }
 
 print STDOUT "Run '$MAKE_MAP' or favorite hash map creator".
-" on '$SMTP_VIRTUAL' and '$SMTP_ACCESS' to activate alias name and relay emails from this domain\n";
+" on '$SMTP_VIRTUAL' and '$SMTP_ACCESS' to activate alias name and relay emails from this domain\n Also, add the propper domain(s) to postfix's main.cf config file";
 
 # functions
 

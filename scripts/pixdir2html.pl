@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.30 $
+# $Revision: 1.31 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -203,26 +203,29 @@ main();
 #                     FUNCTIONS                   #
 #-------------------------------------------------#
 sub main {
+    
+    open (LOGFILE,"> $LOG");
+    
     # are we creating a menu file only?
     if ( $MENUONLY > 0 ) {
-        print LOGFILE ("Creating menu file\n");
+        print LOGFILE ("= Creating menu file\n");
         menu_file();
         return 0;
     }
-    # Using Image::Magick now
-    #    if (!-x "/usr/bin/convert") {
-    #        die ("could not find 'convert'. Install ImageMagick.");
-    #    }
-    open (LOGFILE,"> $LOG");
+    
+    print LOGFILE "= Start directory $ROOT_DIRECTORY \n";
+
     init_config($ROOT_DIRECTORY);
 
     # get menu string
     unless ( $NOMENU == 1 ) {
-        print LOGFILE ("Creating menu file\n");
+        print LOGFILE ("= Creating menu file\n");
         $menu_str = menu_file();
     }
+    
     # make all thumbnails and indices
     mkthumb($ROOT_DIRECTORY,$menu_str);
+
     if ( $THUMBSONLY > 0 ) {
         # this is a quick "dirty" way of getting only
         # thumbnails and their respetive index.html files
@@ -266,7 +269,7 @@ __EOF__
         $config_tmp{meta}="<meta http-equiv='content-type' content='text/html;charset=iso-8859-1'>";
         $config_tmp{stylesheet}="<link rel='stylesheet' href='../styles.css' type='text/css'>";
         $config_tmp{html_msg}="<h1>Free form HTML</h1>";
-        $config_tmp{body}="<body bgcolor='#000000' text='#ffffff'>";
+        $config_tmp{body}="<body bgcolor='#000000' text='#ffffff'>\n";
         $config_tmp{p}="<p>";
         $config_tmp{table}="<table border='0'>";
         $config_tmp{td}="<td valign='top' align='left'>";
@@ -285,9 +288,9 @@ __EOF__
         ".$config_tmp{meta}."
         <title>".$config_tmp{title}."</title>
         ".$config_tmp{stylesheet}."
-        </head>".
+        </head>\n".
         $config_tmp{body}."
-        <center>".
+        \n<center>\n".
         $config_tmp{html_msg}."
         \n
         ";
@@ -441,6 +444,11 @@ sub mkthumb {
         ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR//gi;
         # get base directory
         ( $BASE = $_ ) =~ s/(.*)\/$pix_name$/$1/g;
+        # BASE is blank if we are already inside the directory
+        # for which to do thumbnails, thus:
+        if ( ! -d $BASE ) { 
+            $BASE = "."; 
+        }
         #print STDOUT $BASE."\n";
 
         if ( $BASE !~ m/$tmp_BASE/ ) {
@@ -568,6 +576,11 @@ sub thumb_html_files {
         ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR//gi;
         # get base directory
         ( $BASE = $ls[$i] ) =~ s/(.*)\/$pix_name$/$1/g;
+        # BASE is blank if we are already inside the directory
+        # for which to do thumbnails, thus:
+        if ( ! -d $BASE ) { 
+            $BASE = "."; 
+        }
         #print STDOUT "Base: $BASE.\n";
 
         if ( $BASE ne $tmp_BASE ) {
@@ -729,7 +742,7 @@ sub process_dir {
     my $base_name = basename($_);
     if ( 
         !-f $_ && 
-        $base_name !~ m/^($EXCEPTION_LIST|$THUMBNAIL|$HTMLDIR|\..*)$/ 
+        $base_name !~ m/^($EXCEPTION_LIST|$THUMBNAIL|$HTMLDIR|\.[a-zA-Z0-9]*)$/ 
     ) {
         s/^\.\/*//g;
         push @pixdir,$_;
@@ -766,7 +779,7 @@ sub process_file {
     my $base_name = basename($_);
     if ( 
         -f $_ && 
-        $base_name !~ m/^($EXCEPTION_LIST|$THUMBNAIL|$HTMLDIR|\..*)$/ 
+        $base_name !~ m/^($EXCEPTION_LIST|$THUMBNAIL|$HTMLDIR|\.[a-zA-Z0-9]*)$/ 
     ) {
         s/^\.\/*//g;
         push @pixfile,$_;

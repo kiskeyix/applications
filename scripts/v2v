@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.61 $
+# $Revision: 1.62 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -39,7 +39,7 @@ Getopt::Long::Configure('bundling');
 # flags
 my ($HELP,$VERSION,$RUNCLUST,$SRTSUBRIP,$OKCLUSTER) = 0;
 # others
-my ($SVIDEO_FORMAT,$ROOT_DIRECTORY,$AO) = "";
+my ($SVIDEO_FORMAT,$ROOT_DIRECTORY) = "";
 
 GetOptions(
     # flags

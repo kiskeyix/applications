@@ -1,8 +1,8 @@
 #!/bin/bash
 # vim: ft=sh:columns=80 :
-# $Revision: 1.30 $
+# $Revision: 1.31 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Sep-21
+# Last modified: 2004-Oct-11
 #
 # DESCRIPTION:  an interactive wrapper to Debian's "make-kpkg"
 #               to build a custom kernel package using 
@@ -172,7 +172,8 @@ if [[ ! -z $1 && "$1" != "--help" ]]; then
   
     # make the modules
     if [[ $mmakeit -eq 1 ]]; then
-        make-kpkg clean modules_clean
+        make-kpkg clean
+        make-kpkg modules_clean
         make-kpkg   --rootcmd $FAKEROOT \
         --config oldconfig \
         --append-to-version $1 \

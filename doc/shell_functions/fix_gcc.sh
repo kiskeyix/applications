@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2004-Apr-04
 #
@@ -10,8 +10,8 @@
 
 PRIORITY=51 # 0 - 100. higher is better
 
-GCC=/usr/bin/gcc-3.3
-G++=/usr/bin/g++-3.3
+GCC="/usr/bin/gcc-3.3"
+GPP="/usr/bin/g++-3.3"
 
 # to remove do:
 # sudo update-alternatives --remove-all $GCC
@@ -22,8 +22,8 @@ if [ -x ${GCC} ]; then
     $PRIORITY --slave /usr/bin/cc cc ${GCC}
 fi
 
-if [ -x ${G++} ]; then
-    sudo update-alternatives --install /usr/bin/g++ g++ ${G++} \
-    $PRIORITY --slave /usr/bin/c++ c++ ${G++}
+if [ -x ${GPP} ]; then
+    sudo update-alternatives --install /usr/bin/g++ g++ ${GPP} \
+    $PRIORITY --slave /usr/bin/c++ c++ ${GPP}
 fi
 

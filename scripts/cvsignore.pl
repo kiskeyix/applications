@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2005-Jan-23
 #
@@ -46,10 +46,10 @@ if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
 my $basename = "";
 my $dirname = "";
 
-while (<STDIN>)
+foreach my $file (<STDIN>)
 {
-    $basename = basename(clean($_));
-    $dirname = dirname(clean($_));
+    $basename = basename(clean($file));
+    $dirname = dirname(clean($file));
     if ( -d "$dirname" )
     {
         open(CVSIGNORE,">> $dirname/.cvsignore");
@@ -65,8 +65,8 @@ sub clean
 {
     my $str=shift;
     # remove bad characters from filenames
-    my ($tmp = $str) =~ s/^\?//gc;
-    return $tmp;
+    $str =~ s/^\?//g;
+    return $str;
 }
 
 __END__

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.43 $
+# $Revision: 1.44 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -985,9 +985,10 @@ sub menu_file {
     my @ls = ();
     my $ts = "";
     my @files=();
-    my @pixdir = (); # reset array
+    my @pixdir = (); # reset array 
+
     my @ary = do_dir_ary("$ROOT_DIRECTORY");
-   
+
     # for e/a directory here
     # check if tha nopixdir2htmlrc file exists
     # if it does, then skip it and do the next one.
@@ -1035,6 +1036,16 @@ sub menu_file {
     if ( $MENUONLY > 0 && $config{$ROOT_DIRECTORY}{"menuheader_footer"} > 0 ) {
         print FILE ($config{$ROOT_DIRECTORY}{"header"}."\n");
     }
+
+    # generate menu
+    #
+    # When using nautilus we are off by one:
+
+    if ( $nautilus_root gt "" ) 
+    {
+        $total_links-- ;
+    }
+
     if ( $total_links > 1 )
     {
         if ( $MENUONLY > 0 ) 

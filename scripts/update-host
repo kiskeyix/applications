@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Jan-20
 #
@@ -63,7 +63,7 @@ foreach my $h ( @hosts )
     #print "\e[H"; # return the cursor to the normal position
 
     # we only care about IPs here:
-    if ( !$DEBUG && $h =~ /(\d+.\d+.\d+.\d+)/ )
+    if ( !$DEBUG && $h =~ /(\d+.\d+.\d+.\d+)/ && is_alive($h) )
     {
         $j=0;
         # make sure the .backup and $TMP dir exists
@@ -105,4 +105,15 @@ sub slurp_hosts
             push @hosts, split(/\s+/,$_);
         }
     }
+}
+
+sub is_alive
+{
+    my $host = shift;
+    if ( $host )
+    {
+        # send 1 package of 8 bytes to $host
+        my $ret = qx/ping -c 1 -s 8 $host/;
+    }
+    return ( $? ) ? 0:1; # return the opposite of ping's return output
 }

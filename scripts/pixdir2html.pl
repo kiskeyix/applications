@@ -1,11 +1,11 @@
 #!/usr/bin/perl 
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE:
-#   pictDir2html.pl [-n|--nomenu] [-f|--force] [-h|--help]
+#   pixdir2html.pl [-n|--nomenu] [-f|--force] [-h|--help]
 # 
-#   force   - creates a .pictDir2htmlrc in every subdir overriding
+#   force   - creates a .pixdir2htmlrc in every subdir overriding
 #             any file with that name
 #   nomenu  - do not create menus after finishing creating thumbnails
 #   help    - prints this help and exit
@@ -23,7 +23,7 @@
 # Then run it from from the File::Scripts::script_name menu
 # 
 # You could customize each directory differently by having a
-# file named .pictDir2htmlrc in the directory containing the
+# file named .pixdir2htmlrc in the directory containing the
 # pictues. This file has the form:
 # 
 # percent=30% #size of the thumbnails for this folder
@@ -45,16 +45,16 @@
 #     lines. Will fix later.
 #   * config file should not contain double quotes (") without
 #     escaping them first (\")
-#   * if a directory has a .nopictDir2htmlrc file, it will be skipped
+#   * if a directory has a .nopixdir2htmlrc file, it will be skipped
 #     even if there are subdirectories inside which might need thumbnails
-#     created. Either do not put a .nopictDir2htmlrc file in these directories
+#     created. Either do not put a .nopixdir2htmlrc file in these directories
 #     or mv the subdirectories parallel to this directory. Will deal with
 #     this issue later when menuMaker subroutine is completed and completely
 #     recursive
 # 
 # TIPS:
 # 
-# Put a .nopictDir2htmlrc file in directories for which you do not want
+# Put a .nopixdir2htmlrc file in directories for which you do not want
 # thumbnails and/or index.html to be written
 #
 
@@ -70,9 +70,9 @@ my $VERSION="0.5";
 
 $|++; # disable buffer
 
-my $USAGE = "pictDir2html.pl [-n|--nomenu] [-f|--force]
+my $USAGE = "pixdir2html.pl [-n|--nomenu] [-f|--force]
  
-   force   - creates a .pictDir2htmlrc in every subdir overriding
+   force   - creates a .pixdir2htmlrc in every subdir overriding
              any file with that name
    nomenu  - do not create menus after finishing creating thumbnails
    help    - prints this help and exit\n";
@@ -80,14 +80,17 @@ my $USAGE = "pictDir2html.pl [-n|--nomenu] [-f|--force]
 # update these if needed
 my $HTML_DIRECTORY=".";
 
-my $LOG="$HTML_DIRECTORY/pictDir2html.log";
+my $LOG="$HTML_DIRECTORY/pixdir2html.log";
 
-my $FILE_NAME="index.php";
-my $MENU_NAME="menu.html";
+my $CONFIG_FILE=".pixdir2htmlrc";
 
-my $CONFIG_FILE=".pictDir2htmlrc";
+my $THUMBNAIL="t";  # individual thumnails
+my $HTMLDIR="h";    # individual HTML files
 
-my $THUMBNAIL="t";
+my $EXT="php";     # extension for generated HTML files
+
+my $FILE_NAME="index.$EXT";
+my $MENU_NAME="menu.$EXT";
 
 # list directories that should be skipped here
 # separated by |
@@ -137,10 +140,8 @@ die $USAGE if $HELP;
 # line
 #$IMAGE_DIRECTORY = shift;
 
-#eval $IMAGE_DIRECTORY;
-#die $@ if $@; # if any error ocurred while evaluating, then die
-
 my $THUMBNAILSDIR="$IMAGE_DIRECTORY/$THUMBNAIL";
+my $HTMLSDIR="$IMAGE_DIRECTORY/$HTMLDIR";
 
 warn << "__EOF__";
 Perl PictDir2HTML v$VERSION (Luis Mondesi <lemsx1\@hotmail.com> / LatinoMixed.com) (running with Perl $] on $Config{'archname'}) \n \n
@@ -157,7 +158,10 @@ sub main {
     }
     open (LOGFILE,"> $LOG");
     init_config(".");
+    # make all thumbnails and indices
     mkthumb($IMAGE_DIRECTORY);
+    # make all supporting HTML files
+    thumbfile($IMAGE_DIRECTORY);
     unless ( $NOMENU == 1 ) {
         print LOGFILE ("Creating menu file\n");
         menuMaker();
@@ -251,8 +255,8 @@ sub mkthumb {
         next if ($thisFile !~ /\w/);
         next if ($thisFile =~ /^\..*/); 
         if (-d "$ROOT/$thisFile" && $thisFile !~ m/^$THUMBNAIL$/ ) {
-            if (-f "$ROOT/$thisFile/.nopictDir2htmlrc") {
-                print LOGFILE ".nopictDir2htmlrc file exists in ($thisFile). Skipping ...\n";
+            if (-f "$ROOT/$thisFile/.nopixdir2htmlrc") {
+                print LOGFILE ".nopixdir2htmlrc file exists in ($thisFile). Skipping ...\n";
                 next;
             }
             $total_directories++;
@@ -285,13 +289,16 @@ sub mkthumb {
     } #end images array creation
     closedir(DIR);
 
-#do we already have a dir with this name? no, then create one
-    if (!-d "$THUMBNAILSDIR" && !-f "$ROOT/.nopictDir2htmlrc") { 
+    #do we already have a dir with this name? no, then create one
+    if (!-d "$THUMBNAILSDIR" && !-f "$ROOT/.nopixdir2htmlrc") { 
         print LOGFILE ("making thumbnails directory in $THUMBNAILSDIR\n");
-        mkdir("$THUMBNAILSDIR",0755);
+        # only create directory if at least one image file exists here
+        if ( -f $ROOT."/".$ls[0] ) {
+            mkdir("$THUMBNAILSDIR",0755);
+        }
     }
 
-    if (!-f "$ROOT/.nopictDir2htmlrc") {
+    if (!-f "$ROOT/.nopixdir2htmlrc" && -f $ROOT."/".$ls[0] ) {
        
         # read specific config file for this directory
         %myconfig = init_config($ROOT);
@@ -307,19 +314,20 @@ sub mkthumb {
         # start table
         print FILE ("$myconfig{table}\n");
 
-        my $my_bgcolor = "";
+        my ($my_bgcolor,$file_name) = "";
 
         #print all picts now
         foreach(@ls){
             if ( !-f "$THUMBNAILSDIR/"."t$_" ){
-                # TODO determine which thumbnails need to be recreated
-                # $FORCE_ALL || !-f "$THUMBNAILSDIR/"."t$_" 
-                # file doesn't exists or we are being forced to recreated
-                # create thumbnail below
+                # create thumbnail 
                 if ( -f "$ROOT/$_" ){
 
                     print LOGFILE ("\nConverting file $ROOT/$_ into $THUMBNAILSDIR/t$_ \n");
                     system("convert -geometry $PERCENT $ROOT/$_ $THUMBNAILSDIR/"."t$_");
+                    if ( $? != 0 ) {
+                        die "ERROR: conversion failed\n";
+                    }
+
                     print LOGFILE ("\n"); 
                 } # end if -f ROOT/ls[i]
             } # end if THUMBNAILSDIR/myfile
@@ -335,7 +343,8 @@ sub mkthumb {
             print FILE ("\t".$myconfig{td}."\n");
             if (-f "$THUMBNAILSDIR/"."t$_"){
                 # if file exists, create a link, otherwise leave it blank
-                print FILE ("<a href='$_'><img src='$THUMBNAIL/"."t$_'></a>\n");
+                ($file_name = $_) =~ s/\.jpg|\.gif|\.png//g;
+                print FILE ("<a href='$HTMLDIR/$file_name.$EXT'><img src='$THUMBNAIL/"."t$_'></a>\n");
             } else {
                 print FILE ("&nbsp;");
             }
@@ -378,11 +387,137 @@ sub mkthumb {
     }
 } #end mkthumb
 
-#sub thumbfile {
+sub thumbfile {
     # creates an HTML page for a thumbnail
-    # this will be implemented later
 
-#}
+    my $ROOT = $_[0];
+    $HTMLSDIR="$ROOT/$HTMLDIR";
+
+    my @subdir = ();
+    my @ls = ();
+    my @ts = ();
+    my %myconfig = ();
+
+    my $line = "";
+    my $thisFile= "";
+    my $i=0;
+    my $total_picts=0;
+
+    opendir (DIR,"$ROOT") || die "Couldn't open dir $ROOT";
+
+    print LOGFILE ("Making HTML files in $ROOT \n");
+
+    #construct array of all image files
+    while (defined($thisFile = readdir(DIR))) {
+        next if ($thisFile =~ m/$EXCEPTION_LIST/);
+        next if ($thisFile !~ /\w/);
+        next if ($thisFile =~ /^\..*/); 
+        # we skip the THUMBNAIL directory and the HTML files directory
+        if (-d "$ROOT/$thisFile" && $thisFile !~ m/^$HTMLDIR$/  ) {
+            # no need to keep going if we have a nopixdir2htmlrc file
+            if (-f "$ROOT/$thisFile/.nopixdir2htmlrc") {
+                print LOGFILE ".nopixdir2htmlrc file exists in ($thisFile). Skipping ...\n";
+                next;
+            }
+
+            if ( $thisFile !~ m/^$THUMBNAIL$/) {
+                $total_directories++;
+                push @subdir,"$ROOT/$thisFile";
+            }
+        }
+        next if ($thisFile !~ m/\.(jpg|png|jpeg|gif)/i);
+        push @ls,$thisFile;
+        $total_picts++;
+    } #end images array creation
+    closedir(DIR);
+
+    #do we already have a dir with this name? no, then create one
+    if (!-d "$HTMLSDIR" && !-f "$ROOT/.nopixdir2htmlrc") { 
+        # only create directory if at least one image exists
+        if ( -f $ROOT."/".$ls[0] ) {
+            print LOGFILE ("making html files directory in $HTMLSDIR\n");
+            mkdir("$HTMLSDIR",0755);
+        }
+    }
+
+    if (!-f "$ROOT/.nopixdir2htmlrc") {
+
+        # read specific config file for this directory
+        %myconfig = init_config($ROOT);
+
+        my ($file_name,$last_html_file,$current_html_file,$last_file_name,$next_file_name,$current_link,$last_link) = "";
+
+        #print all picts now
+        foreach(@ls){
+            ($file_name = $_) =~ s/\.jpg|\.gif|\.png//g;
+
+            my $current_html_file = "$HTMLSDIR/$file_name.$EXT";
+            my $current_link = "$file_name.$EXT";
+
+            if ( -f $current_html_file ){
+                print LOGFILE "WARNING: overriding $current_html_file\n";
+            } # end if not current_html_file
+
+            print LOGFILE ("\ncreating html file ".
+                "for $ROOT/$_ into $current_html_file\n");
+
+            # routine for creating file should be called here...
+            open(FILE, "> $current_html_file") || 
+            die "Couldn't write file $current_html_file";           
+            # start HTML
+            print FILE ("$myconfig{header}\n");
+
+            # start table
+            print FILE ("$myconfig{table}\n");
+            print FILE ("<tr><td>\n");
+            # image here
+            print FILE ("<img src='../$_'>\n");
+            print FILE ("</td></tr>\n<tr><td valign='bottom' align='center'>\n");
+            # back link here
+            if ( -f $last_html_file ) {
+                print FILE ("<a href='$last_link'>&lt;==</a> \n"); 
+            } else {
+                print FILE ("&lt;==");
+            }
+            # home link here
+            print FILE ("<a href='../$FILE_NAME'>HOME</a>");
+            # next link here
+            if ( -f $ROOT."/".$ls[$i+1] ) {
+                ($file_name = $ls[$i+1]) =~ s/\.jpg|\.gif|\.png//g;
+                print FILE (" <a href='$file_name.$EXT'>==&gt;</a> \n");
+            } else {
+                print FILE ("==&gt;");
+            }
+            print FILE ("</td></tr>\n");
+            print FILE ("</table>\n");
+
+            # close the footer if one doesn't exist:
+            if ( $myconfig{footer} eq "" ) {
+                print FILE ($myconfig{footer}."\n");
+                print FILE ("</center></body>\n");
+                print FILE ("</HTML>");
+            } else {
+                print FILE ($myconfig{footer});
+            }            
+            close(FILE);
+
+            print LOGFILE ("\n"); 
+
+
+            $i++;
+            $last_html_file = $current_html_file;
+            $last_link = $current_link;
+
+        } #end foreach
+
+    } # end if not nopixdirhtml...
+
+    # loop thru rest of directories
+    foreach(@subdir){
+        thumbfile("$_"); 
+    }
+}
+
 sub prompt {
     # promt user and return input 
     # pass string when calling subroutine: $var = prompt("string");
@@ -435,7 +570,7 @@ sub menuMaker {
     while (defined($thisFile = readdir(DIR))) {
         next if ($thisFile !~ /\w/);
         next unless (-d "$HTML_DIRECTORY/$thisFile");
-        next if (-f "$HTML_DIRECTORY/$thisFile/.nopictDir2htmlrc");
+        next if (-f "$HTML_DIRECTORY/$thisFile/.nopixdir2htmlrc");
         next unless (-f "$HTML_DIRECTORY/$thisFile/$FILE_NAME");
         $ls[$x] = "$thisFile/$FILE_NAME"; # link
         $x+=1;

@@ -1,0 +1,231 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html><head>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+<title>DVD Backup Script</title></head>
+<body text="#000000">
+
+<h2 align="center">DVD Backup Script</h2>
+
+<H3>Introduction</H3>
+I resisted a long time, but I finally bit the bullet and started
+buying DVD's. I am a science fiction buff, and there are a lot of
+classic science fiction on DVD now. But after a few weeks I noticed
+that all my precious DVD's were starting to get scratched, lost,
+etc. To make matters worse some of the DVD's are hard to find
+anymore. So what is your average Linux stud to do? Why make backup
+copies of my DVD's of course! I poked around a bit, and there are some
+solutions available that I found unsatisfactory. A good site to look
+at is <A HREF="http://www.vcdhelp.com/">VCDHelp.com</A> I wanted
+something cheap, Linux based, easy to use, and automated. And so the
+project begins! 
+
+<H3>Issues</H3>
+<P>My first consideration is the cost in money. CD writers have been
+around a while, and both the drives and the media are fairly
+cheap. But if you want to backup an entire movie with a CD writer
+there are some trade offs. Either you end up with multiple CD's or
+unsatisfactory quality. The good news is that DVD burners and media
+have come down in price as well, and are just now becoming a viable
+option. 100 1X DVD blanks now cost less than $100 US and the
+Pioneer DVR-104 drives are now going
+for less than $200 US on Ebay. Right, a DVD writer it is then.</P>
+<P>The next major issue is a matter of formats. The DVD standard is a
+pretty loose standard. First of all there are currently about 18 different
+physical varieties with capacities ranging from 1.36 Gig to 15.90 
+Gig with more on the way. By far the most common formats, thankfully, are known as DVD-5
+(4.37 Gig) and DVD-9 (7.95 Gig). Now, guess which format commercial
+DVD's come in, and which format your typical DVD writer writes? That's
+right, most commercial DVD's are DVD-9 and most DVD writers are DVD-5. So
+many DVD's have to go through a process known as transcoding to shrink
+them down to fit on a DVD-5 DVD. Unless, of course, your source DVD
+happens to be a DVD-5 format DVD or else you don't mind splitting the
+content roughly in half.</P>  
+
+<P>In addition to the different physical varieties there are also
+different logical format varieties. There are various audio, video,
+menu, subtitle, and other possibilities. For example, one or more
+audio tracks in AC3, MP2, or WAV formats are allowed. The Linux
+based tools for manipulating DVD data are fairly well advanced. The
+problem is that, since DVD writers have only recently become an option
+for the average joe, the tools to burn DVD's are not as well
+advanced. In fact I found it a bit of a challenge to generate a script
+that could reliably produce a DVD that would play in most set top DVD
+players.</P>
+
+<H3>The Script</H3>
+<P>What I wanted was a simple Perl script where I could pop in a DVD,
+run the script with no special options, and come back a while later
+with a burnable DVD-R ISO image. I have found that after a lot of work,
+I have something that is almost there. The ISO image almost always
+comes out fine, but I at least need to verify the image before I burn
+it.</P> 
+<P>The first thing the script does is check for cached information
+about the DVD, and generates it if it doesn't exist. Then it copies
+the titles requested by the user (by 
+default all of them) to the vob directory.
+The selected titles are transcoded chapter by
+chapter and a valid DVD structure is created from the specially
+formatted video, and an ISO image is created. If something goes wrong
+at any step of the process the script exits cleanly and you can
+recover from that point after you fix the problem so that no time is
+lost. Two logs are produced, one for the commands and thier output,
+and one to chronicle general progress.</P>
+<P>If the user has selected to split the DVD (using the -s option) the 
+titles are copied directly and an image is created as long as at
+least one title will fit. When splitting the options -f, -a, -b, -z, 
+and -v options are ignored. The -x option causes the script to create
+a duplicate of the source DVD which is a good idea only if you know
+the source DVD is in DVD-5 format. When duplicating most options are
+ignored.</P>
+<P>There are some problems of course, especially with the transcoding
+process. I think the biggest problem is that it takes a lot of time
+and HD space. On my (PIII 866) system it takes about 20 hours to
+transcode a typical movie, as well as 20 Gigs of HD space. There are
+some options, defined below, that will reduce that to about 10 Gigs,
+but then you can't recover if something goes wrong. The other big
+problem is that occasionally the A/V sync for individual chapters is
+off. So when I have to transcode a DVD I preview each chapter and
+verify the sync is good before I burn a coaster. If the sync is off
+then I either delete the offending output vob file(s) in the out directory and rerun the
+script with a fudge factor or else (especially for the extra content)
+rerun the script with the -t option to skip the offending titles. If I
+am really feeling adventurous I use -- to override the transcoding
+options. Finally, when transocding you are currently limitied to one
+audio and one video rack, and no subtitles.</P>
+<P>There are three major issues that aren't related to transcoding. One
+is that that there is no support for menus. The second is that to use
+this script to split a DVD by chapter instead of title you need to run
+it once (using -k would be a good idea here), edit the info.dvd file
+to include a bogus new title, and rename some files in the vob
+directory. The first problem really doesn't bother me, and the need
+for splitting up a DVD by chapter occurs so infrequently for me that
+it is not worth my time to do anything about it. The final and most
+severe problem is that I have been unable to get both dvdbackup and
+tccat to reliably split a DVD up by title or chapter. <STRONG>If you
+know of any other Linux programs that do this PLEASE let me
+know.</STRONG> dvdbackup occasionally results in missing or extra video
+in the middle of a chapter, while tccat either results in unusable
+streams (-T), or wants to give me the whole titleset (-P). Until this
+problem is resolved I can not reccommend using the -p option.</P>
+
+<H3>Options</H3>
+<P>I rarely use any options other than -t, -v, and -c. Some example usages are:</P><UL>
+<LI>"dvd2iso.pl -x" - Duplicate a known DVD-5 format DVD.</LI>
+<LI>"dvd2iso.pl -pt 3,7,2" - Make a new image by extracting titles 3,
+7, and 2 (in that order) from the source DVD.</LI>
+<LI>"dvd2iso.pl -c" - Process a new DVD and don't ask me any
+questions. If the source DVD is DVD-5 it will be duplicated, otherwise
+it will be transcoded.</LI>
+<LI>"dvd2iso.pl -kf 800" - Fix a A/V sync problem with one or more
+output VOB files. 800 is just a guess. :-)</LI>
+<LI>"dvd2iso.pl -D" - Transcodes using the absolute minimum HD space.</LI>
+</UL>
+
+<TABLE BORDER=1>
+<TR><TH>Option</TH><TH>Value</TH><TH>Description</TH><TH>Comment</TH><TH>Default</TH></TR>
+<TR><TD> -f </TD><TD>ms </TD><TD>Audio/video sync fudge.</TD><TD>Only used to fix transcode sync problems. See -D tcmplex option documention for details.</TD><TD>0</TD></TR>
+<TR><TD> -i </TD><TD>dir </TD><TD>Source /device.</TD><TD>Default should be fine.</TD><TD>/dev/dvd</TD></TR>
+<TR><TD> -w </TD><TD>dir </TD><TD>Working directory.</TD><TD>Point this to a nice big partition.</TD><TD>HOMEDIR/video</TD></TR>
+<TR><TD> -a </TD><TD>chan </TD><TD>Audio channel to grab.</TD><TD>Default should be fine.</TD><TD>0</TD></TR>
+<TR><TD> -o </TD><TD>name </TD><TD>Name of the resulting ISO file.</TD><TD>Unless -D option used or specified here, ISO filename incremented and not clobbered.</TD><TD>0000.iso</TD></TR>
+<TR><TD> -b </TD><TD>rate </TD><TD>Target audio bitrate.</TD><TD>Default should be fine.</TD><TD>384</TD></TR>
+<TR><TD> -z </TD><TD>rate </TD><TD>Target audio frequency.</TD><TD>Default should be fine or a value of 0 forces ac3 pass through.</TD><TD>48000</TD></TR>
+<TR><TD> -v </TD><TD>rate </TD><TD>Target video bitrate.</TD><TD>This should be adjusted if the transcoded title does not fit.</TD><TD>3800</TD></TR>
+<TR><TD> -t </TD><TD>list</TD><TD>Comma seperated titles to
+include.</TD><TD>No spaces or other whitespace allowed. Great for
+removing the boring introduction stuff, or moving them to the end.</TD><TD>all</TD></TR>
+<TR><TD> -h </TD><TD>&nbsp</TD><TD>Help. </TD><TD>Help.</TD><TD>&nbsp</TD></TR>
+<TR><TD> -s </TD><TD>&nbsp</TD><TD>Scan the DVD and exit. </TD><TD>Just display information about DVD in the drive and exit. Does not clobber cache or log files.</TD><TD>&nbsp</TD></TR>
+<TR><TD> -p </TD><TD>&nbsp</TD><TD>Split the DVD, do not
+transcode. </TD><TD> Use unmodified content from source DVD, including
+multiple audio tracks, subtitles, etc. Great and fast if the title(s) you are interested in will fit.</TD><TD>&nbsp</TD></TR>
+<TR><TD> -q </TD><TD>&nbsp</TD><TD>Process by title instead of
+chapter.</TD><TD>ifogen tends to introduce a slight pause when playing
+back</TD><TD>&nbsp</TD></TR>
+<TR><TD> -x </TD><TD>&nbsp</TD><TD>Known DVD-5 (4.7 Gig)
+DVD. Duplicate.</TD><TD>Pretty useless for DVD-9 format DVD's. Any region
+coding and encryption is lost. Bummer.</TD><TD>&nbsp</TD></TR>
+<TR><TD> -k </TD><TD>&nbsp</TD><TD>Do everything but create an image. </TD><TD>Create output VOB's but not the ISO image. Useful when fixing sync problems to save time.</TD><TD>&nbsp</TD></TR>
+<TR><TD> -c </TD><TD>&nbsp</TD><TD>Clobber any preexisting working files.</TD><TD>All content on the HD is first erased before loading fresh data from the DVD. This option prevents the script from asking any pesky questions.</TD><TD>&nbsp</TD></TR>
+<TR><TD> -d </TD><TD>&nbsp</TD><TD>Delete some working files as we go.</TD><TD>If something goes wrong it takes a couple hours to reproduce the deleted files using this option. Not reccommended but it does save HD space.</TD><TD>&nbsp</TD></TR>
+<TR><TD> -D </TD><TD>&nbsp</TD><TD>Delete all working files as we go.</TD><TD>Really not reccommended, like -d option but also deletes transcoded video and old ISO images.</TD><TD>&nbsp</TD></TR>
+<TR><TD> -- </TD><TD>&nbsp</TD><TD>Pass all otions after this to transcode.</TD><TD>Useful when 'no' isn't an option when fixing transcoding sync problems. Overrides script values.</TD></TR>
+</TABLE>
+
+<H3>Internals</H3>
+<P>The following are examples of typical commands executed on your
+behalf by the script. And no, I don't know what all the transcode
+options mean, but it seems to work. Many of the values for the options shown below
+are dynamic and may change from DVD to DVD. </P><UL>
+<LI>tcprobe -i /dev/dvd -T 1 2>&1</LI>
+<LI>dvdbackup -M -i /dev/dvd -n iso -o /home/$USER/video</LI>
+<LI> Run for each chapter:<UL>
+<LI>dvdbackup -i /dev/dvd -o /home/$USER/video -n in -t 3 -s 1 -e 1</LI>
+<LI>
+transcode -q 0 -a 0 -x vob -i /home/$USER/video/vob/003.001.vob -w 3800 -V -f 24,1 -g 720x480 -J 32detect=force_mode=3 -M 2 -F 5,' -B 387 -r 20 -g 9 -G 15 -d' -N 0x50 -y mpeg2enc,mpeg -E 48000 -b 384 -o /home/$USER/video/out/003.001 --import_asr 2 --export_asr 2 --psu_mode --no_split -e 48000,16,2 -n 0x2000
+</LI>
+<LI>tcmplex -D 0 -o /home/$USER/video/out/001.001.vob -i
+/home/$USER/video/out/001.001.m2v 
+-p /home/$USER/video/out/001.001.mpa -m d</LI>
+</UL></LI>
+<LI>rm -rf /home/$USER/video/iso</LI>
+<LI>ifogen --aspect-ratio 16:9 --audio-format mp2 
+--resolution 720x480 --tv ntsc -o /home/$USER/video/iso/VIDEO_TS/VTS
+--next-vts  /home/$USER/video/out/001.001.vob</LI>
+<LI>tocgen /home/$USER/video/iso/VIDEO_TS</LI>
+<LI>mkisofs -udf -o /home/$USER/video/0001.iso /home/$USER/video/iso/</LI>
+</UL>
+
+<H3>Requirements</H3>
+<UL><LI>mjpegtools 1.6.0 <A HREF= "http://mjpeg.sourceforge.net/">(http://mjpeg.sourceforge.net/)</A></LI>
+<LI>dvdbackup 0.1.0 <A HREF= "http://dvd.chevelless230.com/dvdbackup.html">(http://dvd.chevelless230.com/dvdbackup.html)</A></LI>
+<LI>transcode 0.6.0 <A HREF= "http://www.theorie.physik.uni-goettingen.de/~ostreich/transcode/">(http://www.theorie.physik.uni-goettingen.de/~ostreich/transcode/)</A></LI>
+<LI>dvdauthor 0.5.0 <A HREF= "http://dvdauthor.sourceforge.net/">(http://dvdauthor.sourceforge.net/)</A></LI>
+</UL><P>In general, the newer version of transcde you use the better
+off you are. Depending on your version
+of mkisofs (cdrecord) you may also need the dvdrtools
+<A HREF= "http://www.nongnu.org/dvdrtools/">(http://www.nongnu.org/dvdrtools/)</A> package as well.
+</P>
+
+<H3>Conclusion</H3>
+<P>So far I am very happy with this script and don't plan on 
+making any more major modifications. I
+can run this script with no human intervention, almost always
+resulting in a good backup. If you have any ideas on how to fix the
+occasional sync issues please let me know. I now personally use
+vobcopy to duplicate DVD-5 DVD's since it appears much more stable.</P>
+<P>Be warned 
+that if you use this code on copyrighted content then your government
+probably considers you a dirty, rotten, stinking, hellbound pirate, and (especially in
+the USA) you could face fines, confiscation of your computer(s) and/or
+imprisonment! This heinous crime is MUCH worse than ripping the tag
+off of your mattress, so if you get thrown in the pokey for using something
+you own, in private, strictly for your personal 
+use, then it is your own damn fault. 
+</P>
+
+<H3>Change Log</H3>
+<TABLE BORDER=1><TR><TH>Version</TH><TH>Comments</TH><TR>
+<TR><TD>1.5</TD><TD>Updated to use dvdauthor 0.5.</TD></TR>
+<TR><TD>1.4</TD><TD>Bug fixes. Added -q option.</TD></TR>
+<TR><TD>1.3</TD><TD>Bug fixes. dvdbackup is buggier than I
+thought. Doublecheck when splitting!</TD></TR>
+<TR><TD>1.2</TD><TD>Replaced -m and -s options with -t option. -s
+option now splits by title instead of transcoding. -x option now forces
+straight duplication. Setting -z to 0 forces ac3 pass through. Any
+options after -- are passed to and override transcode options. </TD></TR>
+<TR><TD>1.1</TD><TD>Bug fixes. Added -p and -z options.</TD></TR>
+<TR><TD>1.0</TD><TD>Initial Revision</TD></TR>
+</TABLE>
+
+<A HREF="dvd2iso.pl">Download</A>
+
+<HR><p><a href="mailto:james@nontrivial.org">
+James</a><br/>
+This document was last updated May 25, 2003.
+<a href="http://james.nontrivial.org/projdvd.htm">James Bearden </a>
+is not responsible for all information accessible from this web page.
+Links to the rest of the Internet point to material maintained by many
+other people and organizations. Please read the following
+<a href="disclaim.htm">disclaimer </a> before use of this WWW page.
+</p></body</html>

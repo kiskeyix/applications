@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.17 $
+# $Revision: 1.18 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE:
@@ -90,15 +90,18 @@ my $VERSION="0.6";
 $|++; # disable buffer
 
 my $USAGE = "pixdir2html.pl [-n|--nomenu] 
+                            [-N|--noindex]
                             [-f|--force] 
                             [-M|--menuonly]
                             [-E|--extension]
+                            [-t|--thumbsonly]
                             [-D|--directory]
                             [-h|--help]
  
    force    - creates a .pixdir2htmlrc in every subdir overriding
               any file with that name
    nomenu   - do not create menus after finishing creating thumbnails
+   noindex  - do not create the index.EXT files after creating thumbnails
    menuonly - only create a menu file and exit
    extension- use this extension instead of default (php)
    directory- use this directory instead of default (current)
@@ -159,18 +162,22 @@ my $total_links=0;
 my $FORCE=0; 
 my $NOMENU=0; 
 my $MENUONLY=0;
+my $THUMBSONLY=0;
+my $NOINDEX=0;
 my $HELP=0;
 
 # get options
 GetOptions(
     # flags
-    'n|nomenu' => \$NOMENU,
-    'f|force' => \$FORCE,
-    'h|help' => \$HELP,
-    'M|menuonly' =>\$MENUONLY,
+    'n|nomenu'      =>  \$NOMENU,
+    'f|force'       =>  \$FORCE,
+    'h|help'        =>  \$HELP,
+    'M|menuonly'    =>  \$MENUONLY,
+    't|thumbsonly'  =>  \$THUMBSONLY,
+    'N|noindex'     =>  \$NOINDEX,
     # strings
-    'E|extension=s' =>\$EXT,
-    'D|directory=s' =>\$ROOT_DIRECTORY
+    'E|extension=s' =>  \$EXT,
+    'D|directory=s' =>  \$ROOT_DIRECTORY
 );
 
 die $USAGE if $HELP;
@@ -214,6 +221,12 @@ sub main {
     }
     # make all thumbnails and indices
     mkthumb($ROOT_DIRECTORY,$menu_str);
+    if ( $THUMBSONLY > 0 ) {
+        # this is a quick "dirty" way of getting only
+        # thumbnails and their respetive index.html files
+        return 0;
+    }
+
     # make all supporting HTML files
     thumb_html_files($ROOT_DIRECTORY);
     
@@ -478,9 +491,11 @@ sub mkthumb {
         $LAST_BASE = $BASE;
     } #end foreach @ls
 
-    mkindex(\%pixfiles,$MENU_STR);  # pass hash reference
-                                    # and a menu string to be included
-                                    # in e/a file
+    if ( $NOINDEX == 0 ) {
+        mkindex(\%pixfiles,$MENU_STR);  # pass hash reference
+                                        # and a menu string
+                                        # to be included in e/a file
+    }
 
 } # end mkthumb
 

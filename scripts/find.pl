@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jan-16
 #
@@ -54,7 +54,7 @@ if ($this_string =~ /\w/
         open (FILE,"<$thisFile") or die "could not open $thisFile. $!\n";
         while(<FILE>) {
             
-            if ($_ =~ m($this_string)g) {
+            if ($_ =~ m($this_string)gi) {
                 print STDOUT "$thisFile [$i]: $_"; 
             }
 

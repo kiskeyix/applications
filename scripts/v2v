@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.92 $
+# $Revision: 1.93 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -3803,8 +3803,8 @@ sub tovcd
         #my $sys = "transcode -E 44100 -b 224 -V -y mpeg2enc,mpeg -F 1,-M2 -Z 352x240 -i $file -o $video";
         # generalized (not just .avi):
         #  - in case of ugly colors in output, remove -V
-        #  - for vcd 1.0 use v,4. default is vcd 2.0 (v,1)
-        my $sys = "transcode -i $file $flipped $mirrored $blued -V -y mpeg -F v,1 -E 44100 -b 224 -o $video";
+        #  - for NTSC use v,4 (default). PAL is v,1
+        my $sys = "transcode -i $file $flipped $mirrored $blued -V -y mpeg -F v,4 -E 44100 -b 224 -o $video";
         pdebug($sys);
         system("$sys");
     } else {

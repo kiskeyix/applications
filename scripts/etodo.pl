@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2002-Sep-25
-# $Id: etodo.pl,v 1.5 2002-09-25 16:52:45 luigi Exp $
+# Last modified: 2002-Sep-26
+# $Id: etodo.pl,v 1.6 2002-10-04 02:54:46 luigi Exp $
 #
 # DESC:
 #   This script takes your tasks.ics file from Evolution
@@ -61,7 +61,7 @@ my $debugging = 0;
 
 my $vtask = $ENV{'HOME'}."/evolution/local/Tasks/tasks.ics";
 # output to this HTML file
-my $ohtml = "/home/ftp/www/html/tasks.html";
+my $ohtml = $ENV{'HOME'}."/public_html/tasks.html";
 
 # End configuration... no need to edit below this comment
 #************************************************************

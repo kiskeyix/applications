@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.32 $
+# $Revision: 1.33 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -1348,6 +1348,7 @@ sub cluster
         #close(GOODNODE); 
     } else {
         # we don't need cluster-mode?
+        print $DEBUG "\n+++++> Unlinking file $s_file";
         unlink("$s_file");
     }
 

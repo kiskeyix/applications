@@ -1,20 +1,29 @@
 #!/usr/bin/perl -w
-# $Revision: 1.19 $
+# $Revision: 1.20 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jul-06
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
-#              it will create 3 files:
+#               or a user specified command archiver ( tar? )
+#              
+#              it will create files in the form:
 #
 #               backup-system-%date-tar.bz2
-#               backup-users-%date-tar.bz2
+#               backup-user-USER1-%date-tar.bz2
+#               backup-user-USER2-%date-tar.bz2
+#               ...
 #               backup-other-%date-tar.bz2
 #               
 #               or 
 #
-#               backup-daily-tar.bz2
-#               backup-daily-tar.bz2
-#               backup-daily-tar.bz2
+#               backup-system-daily-tar.bz2
+#               backup-user-USER1-daily-tar.bz2
+#               ...
+#               backup-other-daily-tar.bz2
+#               
+#               Run from a cronjob daily by passing the "daily"
+#               argument, or weekly/monthly whatever without
+#               the daily argument
 #
 # USAGE: backup.pl [daily]
 #
@@ -39,6 +48,7 @@
 # #SYSTEM=system_directories_separated_by_spaces_or_commas
 # #LOW_UID=lowest_uid_number_to_backup
 # #EXC_ULIST=exclude_users_from_list_separated_by_|
+# # --- END CUT --- #
 #
 # TIPS:
 # * If you have "tar" or any other archive utility in your system,
@@ -75,6 +85,20 @@
 #     COMPRESS_LEVEL=9
 #
 # * The script defaults should be enough for a Debian system :-D
+#
+# BUGS:
+# * UNIX has a limit of arguments that can be passed from a command line
+#   or any app. This is usually 131,072 items. To circumbent that
+#   we are:
+#     1. using " --exclude='' " in tar and passing whole directories
+#        to the argument via de system() call
+#     2. if you use Archive::Tar this problem is not an issue
+#
+#     Make sure you have a version of Tar that has --exclude support.
+#     This is version 1.13.25 ( tar --version )
+#     If your version of UNIX ships with a version older than this, or
+#     if it doesn't include this switch, then just use Archive::Tar (
+#     note that this is slower, but works... )
 #
 
 use strict;
@@ -183,7 +207,18 @@ if ( ! -f $TMP_LOCK ) {
     # Same for the -x in the following statement
     if ( exists $CONFIG{"TAR"} && -x $CONFIG{"TAR"} ) {
         $USE_TAR = 1;
-        $COMMAND = sprintf("%s cf - xxFILESxx ",$CONFIG{"TAR"});
+
+        # get the excludes from the | (bar) separated list:
+        # not too elegant, but better than looping!
+        my $TMP_EXCLUDES = "--exclude='";
+        ($TMP_EXCLUDES .= $CONFIG{"EXCLUDES"}) =~ s/\|/' --exclude='/g; 
+        $TMP_EXCLUDES .= "'";
+        
+        # construct our main command
+        $COMMAND = sprintf("%s %s cf -  xxFILESxx ",
+            $CONFIG{"TAR"},
+            $TMP_EXCLUDES
+            );
     } elsif ( exists $CONFIG{"TAR"} && $DEBUG !=0 ) {
         print STDERR "Tar was given but not found! \n";
     }
@@ -212,13 +247,6 @@ if ( ! -f $TMP_LOCK ) {
         # check for two spaces or commas in list
         @tmp_dirs = split(/ +|,+/,$CONFIG{"SYSTEM"});
 
-        foreach ( @tmp_dirs ) {
-            if ( -d $_ ) {
-                my @ary = &do_file_ary($_);
-                push(@filelist,@ary);
-            }
-        }
-
         print STDOUT "Backing up system files \n";
         if ( $DEBUG == 0 ) {
             if ( $USE_TAR ) {
@@ -229,7 +257,7 @@ if ( ! -f $TMP_LOCK ) {
                 $TMP_FILE_NAME .= ( $CONFIG{"COMPRESS_DO"} =~ m/bzip2/ ) ? ".bz2" : "";
                 $TMP_FILE_NAME .= ( $CONFIG{"COMPRESS_DO"} =~ m/gzip/ ) ? ".gz" : "";
                 
-                my $TMP_FILE_LIST = join(' ',@filelist);
+                my $TMP_FILE_LIST = join(' ',@tmp_dirs);
                 # put files and tar file name in place holders
                 ( $TMP_COMMAND = $COMMAND) =~ s/xxFILESxx/$TMP_FILE_LIST/;
                 
@@ -241,6 +269,14 @@ if ( ! -f $TMP_LOCK ) {
                     die "Command '$SYSTEM_COMMAND' failed terribly! $!\n";
                 }
             } else {
+
+                foreach ( @tmp_dirs ) {
+                    if ( -d $_ ) {
+                        my @ary = &do_file_ary($_);
+                        push(@filelist,@ary);
+                    }
+                }
+
                 Archive::Tar->create_archive (
                     $CONFIG{"NAME"}."-system-$MIDDLE_STR.tar.gz", 
                     $CONFIG{"COMPRESS_LEVEL"}, 
@@ -273,35 +309,32 @@ if ( ! -f $TMP_LOCK ) {
         print STDOUT join("\n",%user)."\n"; 
     }
 
-    # foreach user, put the list of their files in this array
-    my ($k, $v) = "";
-    @filelist = ();
-    while (($k, $v) = each %user) {
-        if ( -d $v ) {
-            my @ary = &do_file_ary($v);
-            push(@filelist,@ary);
-        }
-    }
-    #print STDOUT join(" ",@filelist)."\n";
-   
+       
     # Users backup
     print STDOUT "Backing up users files... \n";
-    if ( $DEBUG == 0 ) {
-        if ( $USE_TAR ) {
+    # foreach user, put the list of their files in this array
+    my ($k, $v) = "";
+
+    while (($k, $v) = each %user) {
+
+        # do archive for this user:
+
+        if ( $DEBUG == 0 ) {
+            if ( $USE_TAR ) {
                 # TODO maybe this should be in a subroutine?
                 # compression is not needed? then use filename
-                my $TMP_FILE_NAME = $CONFIG{"NAME"}."-user-$MIDDLE_STR.tar";
+                my $TMP_FILE_NAME = $CONFIG{"NAME"}."-user-$k-$MIDDLE_STR.tar";
                 # TODO put these in COMPRESS_DO general above
                 # and declare a $EXT scalar holding the string to use
                 # for all file_names
                 # to allow other formats, let's probe one at a time
                 $TMP_FILE_NAME .= ( $CONFIG{"COMPRESS_DO"} =~ m/bzip2/ ) ? ".bz2" : "";
                 $TMP_FILE_NAME .= ( $CONFIG{"COMPRESS_DO"} =~ m/gzip/ ) ? ".gz" : "";
-                
-                my $TMP_FILE_LIST = join(' ',@filelist);
+
+                my $TMP_FILE_LIST = $v;
                 # put files and tar file name in place holders
                 ( $TMP_COMMAND = $COMMAND) =~ s/xxFILESxx/$TMP_FILE_LIST/;
-                
+
                 $SYSTEM_COMMAND = sprintf("%s > %s",
                     $TMP_COMMAND,
                     $TMP_FILE_NAME);
@@ -309,14 +342,24 @@ if ( ! -f $TMP_LOCK ) {
                 if ( $? !=0 ) {
                     die "Command '$SYSTEM_COMMAND' failed terribly! $!\n";
                 }
-        } else {
-            Archive::Tar->create_archive (
-                $CONFIG{"NAME"}."-users-$MIDDLE_STR.tar.gz", 
-                $CONFIG{"COMPRESS_LEVEL"}, 
-                @filelist
-            );
-        }
-    } # end if debug
+            } else {
+                if ( -d $v ) {
+                    my @ary = &do_file_ary($v);
+                    push(@filelist,@ary);
+                } # end if volume
+                #print STDOUT join(" ",@filelist)."\n";
+                Archive::Tar->create_archive (
+                    $CONFIG{"NAME"}."-user-$k-$MIDDLE_STR.tar.gz", 
+                    $CONFIG{"COMPRESS_LEVEL"}, 
+                    @filelist
+                );
+            } #end if/else use_tar
+            
+            # reset array
+            @filelist = ();
+            
+        } # end if debug
+    } #end while
 
     # Other directories ( non-system specific )
     if ( exists $CONFIG{"DIRS"} ) {
@@ -325,13 +368,6 @@ if ( ! -f $TMP_LOCK ) {
         # a bit of sanity checking... 
         # check for two spaces or commas in list
         @tmp_dirs = split(/ +|,+/,$CONFIG{"DIRS"});
-
-        foreach ( @tmp_dirs ) {
-            if ( -d $_ ) {
-                my @ary = &do_file_ary($_);
-                push(@filelist,@ary);
-            }
-        }
 
         printf STDOUT "Backing up other files %s \n",$CONFIG{"DIRS"};
 
@@ -347,7 +383,7 @@ if ( ! -f $TMP_LOCK ) {
                 $TMP_FILE_NAME .= ( $CONFIG{"COMPRESS_DO"} =~ m/bzip2/ ) ? ".bz2" : "";
                 $TMP_FILE_NAME .= ( $CONFIG{"COMPRESS_DO"} =~ m/gzip/ ) ? ".gz" : "";
 
-                my $TMP_FILE_LIST = join(' ',@filelist);
+                my $TMP_FILE_LIST = join(' ',@tmp_dirs);
                 # put files and tar file name in place holders
                 ( $TMP_COMMAND = $COMMAND) =~ s/xxFILESxx/$TMP_FILE_LIST/;
 
@@ -359,6 +395,13 @@ if ( ! -f $TMP_LOCK ) {
                     die "Command '$SYSTEM_COMMAND' failed terribly! $!\n";
                 }
             } else {
+                foreach ( @tmp_dirs ) {
+                    if ( -d $_ ) {
+                        my @ary = &do_file_ary($_);
+                        push(@filelist,@ary);
+                    }
+                }
+
                 Archive::Tar->create_archive (
                     $CONFIG{"NAME"}."-other-$MIDDLE_STR.tar.gz", 
                     $CONFIG{"COMPRESS_LEVEL"}, 

@@ -9,7 +9,7 @@ error_reporting(0);
  * http://www.server.com/images/index.php
  *
 
- * $Revision: 1.4 $
+ * $Revision: 1.5 $
  *
  * Last modified: 2004-Oct-28
  */
@@ -103,8 +103,8 @@ if ( $send == "Send"
     } else {
         echo "<br><font color='red'>Upload could not be completed. ".
         "Please contact system administrator: ".
-        "<a href='mailto:webmaster at rbsd . com'>".
-        "webmaster at rbsd.com</a><br>".
+        "<a href='mailto:webmaster at domain . com'>".
+        "webmaster at domain . com</a><br>".
         "Error Code: ".$_FILES['upload']['error']."</font><br>";
         if ( $DEBUG )
         {

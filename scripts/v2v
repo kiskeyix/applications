@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.18 $
+# $Revision: 1.19 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -56,6 +56,11 @@ $userconfig="
 
 #		Cluster config if you intend to use cluster mode
 \$CLUSTER_CONFIG=/path/to/.V2divxrc-cluster;  # YOU MUST MODIFY THIS LINE !!!
+
+#               Xterm command (default is 'xterm \%s -e') 
+#               You can also set it to things like: gnome-terminal -x, 
+#               konsole -x, screen -d -m, etc...
+\$XTERM=xterm \%s -e ;
 
 # 		remote command if you intend to use cluster mode
 \$RMCMD=ssh; 			# change this to rsh if you need
@@ -785,7 +790,8 @@ sub readuserconf
 $XV=xv if ( ! defined ($XV));
 $XINE=xine if ( ! defined ($XINE));
 $AVIPLAY=aviplay if ( ! defined ($AVIPLAY));
-$RMCMD=rsh if ( ! defined ($RMCMD));
+$RMCMD=ssh if ( ! defined ($RMCMD));
+$XTERM="xterm \%s -e" if ( ! defined ($XTERM) ); print $DEBUG "+ using terminal $XTERM\n";
 $POSLOGO=4 if ( ! defined ($POSLOGO));
 $CLUSTER_CONFIG="/see/your/V2divxrc" if ( ! defined ($CLUSTER_CONFIG));
 $TIMELOGO=25 if ( ! defined ($TIMELOGO));
@@ -892,7 +898,7 @@ sub printinfo
     {
         if ( ! -e "$dvdtitle.srt" && $sub_title =~ m,SRT_(\d+)_(.*),)
         {
-            system("xterm -e $0 $vobpath srtsubrip &")==0 or print STDERR "couldn't exec xterm -e $0 $vobpath srtsubrip\n";
+            system(sprintf("$XTERM $0 $vobpath srtsubrip &",""))==0 or print STDERR "couldn't exec $XTERM $0 $vobpath srtsubrip\n";
         }
         exit(0);
      } 
@@ -1100,11 +1106,26 @@ sub cluster
                 print CLUSTERARGS "$sumpow,$pow\n";
                 close(CLUSTERARGS);
                 print $GREEN."$v2d\t Encoding on node $rhost:\t   | -W $sumpow,$pow\n".$NORM;
+                $this_arg=""; # reset arguments
+                $this_cmd=""; # reset command string
                 if ( $rhost ne "$localhost" ) 
                 { 	
-                    system ("xterm -n rhost -e $RMCMD $rhost $0 runclust $wdir &");
+                    # Luis Mondesi 
+                    # -n remote_host is the name of the window for
+                    # xterm. or it will be left blank for other terminals
+                    # note that $XTERM contains the %s string placeholder
+                    # you might want to add more arguments according
+                    # to which XTERM the user wants... gnome-terminal,
+                    # konsole, screen, etc... 
+                    $this_arg="-n $rhost" if $XTERM =~ /xterm/i;
+                    $this_cmd=sprintf("$XTERM $RMCMD $rhost $0 runclust $wdir &",$this_arg);
+                    print $DEBUG "+ excecuting $this_cmd\n";
+                    system ( $this_cmd );
                 } else {
-                    system ("xterm -n $rhost -e $0 runclust $wdir &");
+                    $this_arg="-n $rhost" if $XTERM =~ /xterm/i;
+                    $this_cmd=sprintf("$XTERM $0 runclust $wdir &",$this_arg);
+                    print $DEBUG "+ excecuting $this_cmd\n";
+                    system ( $this_cmd );
                 }
                 $tabpower[$i]=$sumpow;
                 $i++;
@@ -1119,12 +1140,16 @@ sub cluster
             print  CLUSTERARGS "$sumpow,$pow\n";
             close(CLUSTERARGS);
             print $GREEN."$v2d\t Encoding on localnode with:\t\t   | -W $sumpow,$pow to finish\n".$NORM;
-            system ("xterm -e $0 runclust $wdir &");
+            system ( sprintf("$XTERM $0 runclust $wdir &","") );
             $tabpower[$i]=$sumpow;
             sleep(3);
         }
-        
-        print $GREEN."$v2d\t Wait for nodes to finish ....\n".$NORM;
+       
+        # TODO
+        # Luis Mondesi 
+        # we should make sure that the processes are actually running
+        # before we continue...
+        print $GREEN."$v2d\t Waiting for nodes to finish ....\n".$NORM;
         
         foreach $endnode ( @tabpower )
         {

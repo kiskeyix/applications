@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.10 $
+# $Revision: 1.11 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jun-01
+# Last modified: 2003-Jun-08
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
 #              it will create 3 files:
@@ -86,7 +86,7 @@ my @tmp_files = (); # temporary list of files
 my ($k, $v) = "";
 foreach my $hashref ( \%MY_CONFIG, \%TMP_CONFIG ) {
     while (($k, $v) = each %$hashref) {
-        if ( $DEBUG == 1 && exists $CONFIG{$k}) {
+        if ( $DEBUG != 0 && exists $CONFIG{$k}) {
             print STDERR "Warning: $k seen twice.  Using the second definition.\n";
             # next;
         }
@@ -95,7 +95,7 @@ foreach my $hashref ( \%MY_CONFIG, \%TMP_CONFIG ) {
 }
 
 # DEBUG: print content of hash
-if ( $DEBUG == 1 ) {
+if ( $DEBUG != 0 ) {
     foreach ( \%CONFIG ) {
         while (($k,$v) = each %$_) {
             print "$k -> $v \n";
@@ -122,29 +122,32 @@ if ( ! -f $TMP_LOCK ) {
     open(FILE,"> $TMP_LOCK") || die "could not open $TMP_LOCK. $! \n";
     print FILE $year."-".$mon."-".$mday." ".$hour.":".$min.":".$sec;
     close(FILE); 
-
-    # backup system
-    # Archive::Tar->create_archive ("my.tar.gz", 9, "/this/file", "/that/file");
-    my @filelist = ();
-    # a bit of sanity checking... 
-    # check for two spaces or commas in list
-    my @tmp_dirs = split(/ +|,+/,$CONFIG{SYSTEM});
-
-    foreach ( @tmp_dirs ) {
-        if ( -d $_ ) {
-            my @ary = &do_file_ary($_);
-            push(@filelist,@ary);
-        }
-    }
-
-    print STDOUT "Backing up system files \n";
-
-    Archive::Tar->create_archive (
-            "system-$MIDDLE_STR.tar.gz", 
-            9, 
-            @filelist
-        );
     
+    if ( $CONFIG{SYSTEM} gt "" ) {
+        # backup system
+        # Archive::Tar->create_archive ("my.tar.gz", 9, "/this/file", "/that/file");
+        my @filelist = ();
+        # a bit of sanity checking... 
+        # check for two spaces or commas in list
+        my @tmp_dirs = split(/ +|,+/,$CONFIG{SYSTEM});
+
+        foreach ( @tmp_dirs ) {
+            if ( -d $_ ) {
+                my @ary = &do_file_ary($_);
+                push(@filelist,@ary);
+            }
+        }
+
+        print STDOUT "Backing up system files \n";
+        if ( $DEBUG == 0 ) {
+            Archive::Tar->create_archive (
+                "system-$MIDDLE_STR.tar.gz", 
+                9, 
+                @filelist
+            );
+        } # end if debug
+    } # end if $CONFIG{SYSTEM} 
+
     # backup users
     my %user = ();                  # user/userdir pair in a hash
 
@@ -158,7 +161,7 @@ if ( ! -f $TMP_LOCK ) {
     }
 
     # DEBUG: print content of %user hash
-    if ( $DEBUG == 1 ) { 
+    if ( $DEBUG != 0 ) { 
         print STDOUT join(" ",%user)."\n"; 
     }
 
@@ -174,38 +177,38 @@ if ( ! -f $TMP_LOCK ) {
     #print STDOUT join(" ",@filelist)."\n";
     
     print STDOUT "Backing up users files \n";
-
-    {
-    # temporarily turn off warnings in this block
-    no warnings;
-    
-    Archive::Tar->create_archive (
+    if ( $DEBUG == 0 ) {
+        Archive::Tar->create_archive (
             "users-$MIDDLE_STR.tar.gz", 
             9, 
             @filelist
         );
-    }
+    } # end if debug
 
-    # backup others
-    @filelist = ();
-    # a bit of sanity checking... 
-    # check for two spaces or commas in list
-    @tmp_dirs = split(/ +|,+/,$CONFIG{DIRS});
+    if ( $CONFIG{DIRS} gt "" ) {
+        # backup others
+        @filelist = ();
+        # a bit of sanity checking... 
+        # check for two spaces or commas in list
+        @tmp_dirs = split(/ +|,+/,$CONFIG{DIRS});
 
-    foreach ( @tmp_dirs ) {
-        if ( -d $_ ) {
-            my @ary = &do_file_ary($_);
-            push(@filelist,@ary);
+        foreach ( @tmp_dirs ) {
+            if ( -d $_ ) {
+                my @ary = &do_file_ary($_);
+                push(@filelist,@ary);
+            }
         }
-    }
-    
-    print STDOUT "Backing up other files $CONFIG{DIRS} \n";
 
-    Archive::Tar->create_archive (
-            "other-$MIDDLE_STR.tar.gz", 
-            9, 
-            @filelist
-        );
+        print STDOUT "Backing up other files $CONFIG{DIRS} \n";
+
+        if ( $DEBUG == 0 ) {
+            Archive::Tar->create_archive (
+                "other-$MIDDLE_STR.tar.gz", 
+                9, 
+                @filelist
+            );
+        } # end if debug
+    } # end if $CONFIG{DIRS}
 
     # debian specific
     if ( -f "/etc/debian_version" ) {

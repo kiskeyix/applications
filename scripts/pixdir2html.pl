@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.45 $
+# $Revision: 1.46 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -559,6 +559,18 @@ sub mkindex {
         }
        
         my @files = @{$$hashref{$this_base}};
+
+        # TODO make this into a function and re-use it...
+        # sort alphabetically:
+        # sort files alphabetically (dictionary order):
+        my $da;
+        my $db;
+        @files = sort { 
+            ($da = lc $a) =~ s/[\W_]+//g;
+            ($db = lc $b) =~ s/[\W_]+//g;
+            $da cmp $db;
+        } @files;
+
         # FILE_NAME is a global
         open(FILE, "> ".$this_base."/".$FILE_NAME.".".$config{$this_base}{"ext"}) || 
         die "Couldn't write file $FILE_NAME.".$config{$this_base}{"ext"}." to $this_base";
@@ -990,7 +1002,7 @@ sub menu_file {
     my @ary = do_dir_ary("$ROOT_DIRECTORY");
 
     # for e/a directory here
-    # check if tha nopixdir2htmlrc file exists
+    # check if a .nopixdir2htmlrc file exists
     # if it does, then skip it and do the next one.
     # if it doesn't, then assume this will contain
     # a index.$EXT file and add it to the menu.
@@ -1003,8 +1015,10 @@ sub menu_file {
     # before we even attempt to build the index.$EXT files
     # thus, that makes things kind of difficult a bit.
     foreach my $directory (@ary){
+        next if (-f "$directory/.nopixdir2htmlrc");
+
         if (
-            !-f "$ROOT_DIRECTORY/$directory/.nopixdir2htmlrc"
+            !-f "$directory/.nopixdir2htmlrc"
             #&& -f "$ROOT_DIRECTORY/$directory/$FILE_NAME.".$config{$ROOT_DIRECTORY}{"ext"}
         ) {
             # note that @ls holds the HTML links...
@@ -1025,6 +1039,7 @@ sub menu_file {
         ($db = lc $b) =~ s/[\W_]+//g;
         $da cmp $db;
     } @ls;
+
     if ( $MENUONLY > 0 ) {
         open(FILE, "> ".$ROOT_DIRECTORY."/".$MENU_NAME.".".$config{$ROOT_DIRECTORY}{"ext"}) ||
         die "Couldn't write file $MENU_NAME.".$config{$ROOT_DIRECTORY}{"ext"}." to $ROOT_DIRECTORY";

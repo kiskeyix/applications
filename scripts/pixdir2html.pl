@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.55 $
+# $Revision: 1.56 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -333,8 +333,7 @@ if ( $MODE eq "x" ) {
         print STDERR join(" ",@xbinaries)."\n";
         exit 1;
     }
-} elsif ( $MODE eq "text" ) 
-{
+} elsif ( $MODE eq "text" ) {
     if ( $DIA eq "" ) {
         # error
         print STDERR ("Console Dialog was not found.\n");
@@ -1428,3 +1427,13 @@ sub cut_dirs {
     }
     return $tmp_str;
 } # end cut_dirs
+
+# Gui 
+sub front_end
+{
+    # if running under text mode, then use terminal "readline"
+    # if there is no dialog installed
+    use Term::ReadLine;
+    $Term::ReadLine::termcap_nowarn = 1; # Turn off stupid termcap warning.
+    my $gui = Term::ReadLine->new('pixdir2html');
+} # end front_end

@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.86 $
+# $Revision: 1.87 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -4078,7 +4078,7 @@ if ( $VERSION )
 system("clear") if ( ! $DEBUG );
 
 $f_start_time = format_date($start_time);
-pinfo("Start Time: $f_start_time \n");
+pinfo("Start Time: $f_start_time \n") unless ( $HELP == 1 );
 
 if ( $TEST ) 
 {

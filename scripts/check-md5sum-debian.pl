@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Sep-15
+# Last modified: 2003-Sep-25
 #
 # DESCRIPTION: simple script to check md5sum of all
 #               debian installed files. If a --binary
@@ -16,6 +16,9 @@
 #               this with a different user who has permission
 #               to read those binaries or files.
 #
+# NOTE: later discovered "debsums" perl script which essentially
+#       does the same in a simpler and nicer way... use that instead.
+# 
 # USAGE:    $0 [-b|--binary] [-l|--log] [-m|--md5sum]
 # CHANGELOG:
 #

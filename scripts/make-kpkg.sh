@@ -1,7 +1,7 @@
 #!/bin/sh
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jul-04
+# Last modified: 2003-Jul-14
 #
 # DESCRIPTION: Use the wonderful "make-kpkg" from Debian
 #               to build a custom kernel.
@@ -11,7 +11,7 @@
 #           
 #           make-kpkg.sh #1 #2
 #           
-#               where #1 is the number appended to the kernel
+#               where #1 is the number or string appended to the kernel
 #               (01 or 02, or 03..., etc...)
 #               and #2 is the revision of this kernel: 1.0, 1.1 ...
 #               
@@ -63,5 +63,5 @@ if [ $1 -a $1 != "--help" ]; then
         modules_clean modules_image
     fi
 else
-    echo -e "Usage: $0 ## \n \t Where ## is an interger"
+    echo -e "Usage: $0 ## \n \t Where ## is an interger or string to append to the kernel name"
 fi

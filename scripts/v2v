@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.14 $
+# $Revision: 1.15 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
 #               Dominique CARON <domiATlpm.univ-montp2.fr> 
@@ -1602,7 +1602,7 @@ sub finish
             
             my $stat_of_file_hour = sec_to_hour($deb_sec);
             my $end_of_file_hour = 
-                sec_to_hour( ($nbr_frames / $FPS) - $last_sec );
+                sec_to_hour( int($nbr_frames / $FPS) - $last_sec );
 
             $sys="avisplit -t $start_of_file_hour-$end_of_file_hour -i  tmp/2-${dvdtitle}_sync.avi -o $dvdtitle.avi && mv $dvdtitle.avi-0000 $dvdtitle.avi";
             print $GREEN."$v2d\t Splitting the result to $nbr_frames frames.\n".$NORM;

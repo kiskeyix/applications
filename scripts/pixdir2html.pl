@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.19 $
+# $Revision: 1.20 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE:
@@ -85,7 +85,7 @@ use strict;
 use vars qw( $VERSION @INC );
 use Config;
 
-my $VERSION="0.6";
+my $VERSION="1.0";
 
 $|++; # disable buffer
 

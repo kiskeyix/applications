@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Gpa
+Comment=Gnu Privacy Assistant
+Exec=gpa
+Terminal=false
+MultipleArgs=false
+Type=Application
+Icon=/usr/X11R6/include/X11/pixmaps/gpa.xpm
+Categories=Application;Accessories;Utility;

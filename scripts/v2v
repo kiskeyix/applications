@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.50 $
+# $Revision: 1.51 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -39,7 +39,7 @@ Getopt::Long::Configure('bundling');
 # flags
 my ($HELP,$VERSION,$RUNCLUST,$SRTSUBRIP,$OKCLUSTER) = 0;
 # others
-($SVIDEO_FORMAT,$ROOT_DIRECTORY,$AO) = "";
+my ($SVIDEO_FORMAT,$ROOT_DIRECTORY,$AO) = "";
 
 GetOptions(
     # flags
@@ -75,9 +75,9 @@ $DIVX_OPT="" if ( defined $DIVX && ! defined $DIVX_OPT);
 $DEBUG=STDOUT if ( $DEBUG );
 $INFO=STDOUT if ( $INFO );
 
-$userconfigfile="$HOME/.V2divxrc";
+my $userconfigfile="$HOME/.V2divxrc";
 
-$userconfig="
+my $userconfig="
 #		This file is use by V2divx to read your default parameters
 #
 #		The nice level of transcode ( nice -$nice transcode ....)
@@ -151,21 +151,22 @@ $userconfig="
 \$EXTSUB=0:0:255;
 ";
 
-############# SOME VARIABLES ###################
-$release="2.2.4 (C) 2002-2003 Dominique Caron";
-$last_sec=0;
-$v2d="[V2divx]";
-$deb_sec=0;
-$keyframes = 250;
-$audiosample_length = 1000;
-$PGMFINDCLIP=pgmfindclip; # New tool of transcode
-$DVDTITLE=dvdtitle;
-$RED="\033[1;31m";
-$GREEN="\033[0;32m";
-$NORM="\033[0;39m";
-$MAJOR=0;
-$MINOR=6;
-$VIDEONORM="PAL";   # Default video format
+#################### SOME GLOBAL VARIABLES ###################
+my $release="2.2.4 (C) 2002-2003 Dominique Caron";
+my $last_sec=0;
+my $v2d="[V2divx]";
+my $deb_sec=0;
+my $keyframes = 250;
+my $audiosample_length = 1000;
+my $PGMFINDCLIP=pgmfindclip; # New tool of transcode
+my $DVDTITLE=dvdtitle;
+my $RED="\033[1;31m";
+my $GREEN="\033[0;32m";
+my $NORM="\033[0;39m";
+my $MAJOR=0;
+my $MINOR=6;
+my $VIDEONORM="PAL";   # Default video format
+my $FPS=""; # number of FPS will be detected automatically
 
 #  Functions Declarations
 
@@ -241,9 +242,9 @@ if ( -f $userconfigfile )
 # Check tools,lib etc .... on system
 check_system;
 
-$urldvdtitle=$GREEN."\t V2divx is unable to find dvdtitle in your PATH.\n\t Code Sources of dvdtitle are available at : \n\t http://www.lpm.univ-montp2.fr/~domi/V2divx/dvdtitle.tgz\n ".$NORM."\n";
+my $urldvdtitle=$GREEN."\t V2divx is unable to find dvdtitle in your PATH.\n\t Code Sources of dvdtitle are available at : \n\t http://www.lpm.univ-montp2.fr/~domi/V2divx/dvdtitle.tgz\n ".$NORM."\n";
 
-$warnclust = 
+my $warnclust = 
 $RED."***********  WARNING ABOUT CLUSTER MODE *************".$NORM."
 If you want to use a cluster :
 a) The /path/to/vobs directory must be NFS mounted on each node
@@ -261,7 +262,7 @@ vercingetorix:70 # Thunderbird 1.2 Ghz
 ${RED}Of course the total of percentage frames to encode MUST be 100
 \n\n".$NORM;
 
-$usage =
+my $usage =
 $RED."            *****  Warning  *****$NORM
 Please note that you are only allowed to use this program according to fair-use laws which vary from country to country. You are not allowed to redistribute 
 copyrighted material. Also note that you have to use this software at your own risk.
@@ -325,7 +326,8 @@ without parameters in the same directory.\n$RED\t You MUST NOT run V2divx from t
 V2divx v$release
 \n\n
 ";
-$readme=" 
+
+my $readme=" 
 $RED V2divx $NORM is a perl script which make a lot of work for you to
 rip/encode your Videofiles or TVrecord in a AVI-Divx file with the fabulous Transcode. 
 
@@ -372,9 +374,9 @@ Enter '$0 --help|-h ' to have a small help
 # You may Modify the Next value but take care
 # (see the transcode man pages - about Bits per Pixel)
 # it's used to estimate the image size of the encoded clip
-$bpp=0.18;   # This value =  bitrate x 1000 / ( fps x height x width ) 
+my $bpp=0.18;   # This value =  bitrate x 1000 / ( fps x height x width ) 
 
-#********************* MAIN () **************************
+# ********************* MAIN () ************************ #
 
 if ($ARGV[1] eq "config")
 {
@@ -520,6 +522,8 @@ sub ask_ntsc {
     chomp($rep);
     $TELECINE=1 if ( $rep eq "y" || $rep eq "Y" );
     $VIDEONORM="NTSC" if ( $FPS =~ m,2[39]\.9, );
+    print $DEBUG "+ video normalization: $VIDEONORM telecine: $TELECINE";
+
 } # end ask_ntsc()
 
 sub check_system
@@ -1460,8 +1464,9 @@ sub ask_clust
         if ( $rep eq "y" || $rep eq "Y" || $rep eq "o" || $rep eq "0")
         {	
             # first find out number of FPS and then create_nav
-            if ( ! defined($FPS) )
+            if ( $FPS eq "" )
             {
+                pinfo("+ Getting Frames Per Second\n");
                 $FPS = get_fps();
             }
             ask_ntsc( $FPS );
@@ -1754,8 +1759,11 @@ sub create_extract
     get_audio_channel if ( ! defined($audio_channel));
     $audio_format=audioformat("-a $audio_channel") if ( $NOAUDIO != 1 );	
     a_bitrate if ( ! defined($audio_bitrate));
-    
-    $FPS = get_fps();
+   
+    if ( $FPS eq "" )
+    {
+        $FPS = get_fps();
+    } 
     
     if ( $FPS =~ m,29\.97, )
     {
@@ -1869,7 +1877,10 @@ sub calculate_nbrframe
         or mydie "Unable to find number of frames to encode in $LOG" ;
     $tot_frames = $1;
 
-    $FPS=get_fps() if ( ! defined($FPS) );
+    if ( $FPS eq "" )
+    {
+        $FPS=get_fps();
+    }
 
     if ( $FPS =~ m,29\.97, && ! defined($TELECINE) )
     {

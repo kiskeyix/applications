@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.15 $
+# $Revision: 1.16 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Feb-28
 #
@@ -32,6 +32,7 @@ my $VERBOSE=0;
 my $DEBUG=0;
 my $REMOVE_FILES=0;
 my $MASTER=0; # update current host from $MASTER_HOST
+my $LOCAL=0; # do not get any new copies, use the local files instead
 my $RED = "\033[1;31m";
 my $NORM = "\033[0;39m";
 my $GREEN = "\033[0;32m";
@@ -44,7 +45,8 @@ GetOptions(
     'debug'         =>  \$DEBUG,
     'remove'        =>  \$REMOVE_FILES,
     'verbose'       =>  \$VERBOSE,
-    'master'        =>  \$MASTER
+    'master'        =>  \$MASTER,
+    'local'         =>  \$LOCAL
 );
 ## START SCRIPT ##
 
@@ -65,18 +67,22 @@ if ( $MASTER )
 {
     my @failed = (); # array of files that failed
     chdir($LOCAL_PATH) or die ("$LOCAL_PATH $!");
-    foreach my $i ( @FILES )
+    if ( !$LOCAL )
     {
-        if ( $MASTER_HOST =~ m/^http:/i && -f "$i" )
+        # download files from remote (master) host:
+        foreach my $i ( @FILES )
         {
-            # wget is not too smart when using http
-            debug("Deleting $i");
-            unlink($i); # silently delete old copies
+            if ( $MASTER_HOST =~ m/^http:/i && -f "$i" )
+            {
+                # wget is not too smart when using http
+                debug("Deleting $i");
+                unlink($i); # silently delete old copies
+            }
+            print STDOUT "\n";
+            printf STDOUT ("%20s","Downloading $MASTER_HOST/$i ");
+            system("wget $WGET_ARGS $MASTER_HOST/$i ".$silent);
+            print STDOUT ( $? ) ? " failed": " done";
         }
-        print STDOUT "\n";
-        printf STDOUT ("%20s","Downloading $MASTER_HOST/$i ");
-        system("wget $WGET_ARGS $MASTER_HOST/$i ".$silent);
-        print STDOUT ( $? ) ? " failed": " done";
     }
     print STDOUT ("\n");
     chdir("$ENV{'HOME'}");

@@ -1,17 +1,23 @@
 #!/usr/bin/perl -w
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jan-08
+# Last modified: 2003-Jun-01
 #
 # BUGS: if replacement string contains invalid characters
 #       nothing gets done. Have to find a way to escape
 #       all characters which might be used by Perl's
 #       s/// operator
 #
+
+use File::Find;     # find();
+use File::Basename; # basename();
+
 use strict;
 $|++;
 
 my $DEBUG = 0;
+
+my $EXCEPTION_LIST = "\.soc|\.sock";
 
 # -------------------------------------------------------------------
 #           NO NEED TO MODIFY ANYTHING PASS THIS LINE               #
@@ -19,8 +25,8 @@ my $DEBUG = 0;
 
 my $modified = 0;
 
-my $usage = "Usage: find_replace.pl \
-    \"string\" \"replacement\" \"filenames_pattern\"\n";
+my $usage = "Usage: \n \
+find_replace.pl \"string\" \"replacement\" \"filenames_pattern\"\n";
 
 my $thisFile = "";      # general current file
 my @new_file = ();      # lines to be printed in new file
@@ -39,7 +45,7 @@ if ($this_string =~ /\w/
 
     my $i =0;
     
-    file_ary("."); # start at current directory
+    @ls = do_file_ary("."); # start at current directory
     
     for (@ls) {
         # yes, this is a wrapper for a standard tip!
@@ -82,36 +88,76 @@ if ($this_string =~ /\w/
         @new_file = ();
 
     }
+} else {
+    print $usage;
 }
 
-sub file_ary {
+sub do_file_ary {
+    # uses find() to recur thru directories
+    # returns an array of files
+    # i.e. in directory "a" with the files:
+    # /a/file.txt
+    # /a/b/file-b.txt
+    # /a/b/c/file-c.txt
+    # /a/b2/c2/file-c2.txt
+    # 
+    # my @ary = &do_file_ary(".");
+    # 
+    # will yield:
+    # a/file.txt
+    # a/b/file-b.txt
+    # a/b/c/file-c.txt
+    # a/b2/c2/file-c2.txt
+    # 
+    my $ROOT = shift;
     
-    my $dir = $_[0];
-    my @subdir = ();
-
-    if ($DEBUG) { print STDOUT "dir $dir\n"; }
+    my %opt = (wanted => \&process_file, no_chdir=>1);
     
-    opendir (DIR,"$dir") || die "Couldn't open current directory. $!\n";
+    find(\%opt,$ROOT);
+    
+    return @ls;
+}
 
-    #construct array of all files and put in @ls
-    while (defined($thisFile = readdir(DIR))) {
-        next if ($thisFile =~ /^\..*/);
-        next if ($thisFile !~ /\w/);
-        if (-d "$dir/$thisFile") {
-            push @subdir,"$dir/$thisFile"; 
-            next;
-        }
-        next if ($thisFile !~ m/$f_pattern/i);
-        
-        if ($DEBUG) { print STDERR "this file $thisFile\n"; }
-        
-        push @ls, "$dir/$thisFile";
-    }
-    closedir(DIR);
-
-    # recur thru rest of directories
-    # there is no limit in recursion. be careful!
-    foreach(@subdir) {
-        file_ary("$_");
+sub process_file {
+    my $base_name = basename($_);
+    if ( 
+        -f $_ && 
+        $_ =~ m/^($f_pattern)$/ &&
+        $base_name !~ m/^($EXCEPTION_LIST)$/
+    ) {
+        s/^\.\/*//g;
+        push @ls,$_;
     }
 }
+
+#sub file_ary {
+#    
+#    my $dir = $_[0];
+#    my @subdir = ();
+#
+#    if ($DEBUG) { print STDOUT "dir $dir\n"; }
+#    
+#    opendir (DIR,"$dir") || die "Couldn't open current directory. $!\n";
+#
+#    #construct array of all files and put in @ls
+#    while (defined($thisFile = readdir(DIR))) {
+#        next if ($thisFile =~ /^\..*/);
+#        next if ($thisFile !~ /\w/);
+#        if (-d "$dir/$thisFile") {
+#            push @subdir,"$dir/$thisFile"; 
+#            next;
+#        }
+#        next if ($thisFile !~ m/$f_pattern/i);
+#        
+#        if ($DEBUG) { print STDERR "this file $thisFile\n"; }
+#        
+#        push @ls, "$dir/$thisFile";
+#    }
+#    closedir(DIR);
+#
+#    # recur thru rest of directories
+#    # there is no limit in recursion. be careful!
+#    foreach(@subdir) {
+#        file_ary("$_");
+#    }
+#}

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Oct-29
 #
@@ -27,7 +27,7 @@
 SUSER="root"
 
 # encryption support
-DCYPHER="serpent"
+DCYPHER="serpent"   # default cypher
 CYPHERS="TRUE serpent FALSE aes FALSE xor"
 
 # filetype formats
@@ -36,14 +36,14 @@ FORMATS="TRUE ext2 FALSE ext3 FALSE iso9660 FALSE ntfs FALSE msdos FALSE fat FAL
 # paths
 MOUNTDIR="$HOME/mnt"
 LOOPDEV="/dev/loop7"    # block device used for encryption. Or else it 
-                        # will use an automatic device assigned by mount
+# will use an automatic device assigned by mount
 
 # programs
 LO="losetup"    # setup loop devices
 SU="gksu --disable-grab "       # xsu|gnome-sudo. graphical representation of "su"
-                # TIP: setup "sudo" so that this user doesn't need
-                # to type a password for the commands "losetup",
-                # "umount" and "mount" to avoid unecessary questions
+# TIP: setup "sudo" so that this user doesn't need
+# to type a password for the commands "losetup",
+# "umount" and "mount" to avoid unecessary questions
 DIALOG="zenity" # gdialog|xdialog. dialog replacement for Gnome
 MOUNT="mount"   # mount command
 
@@ -59,7 +59,7 @@ lmount()
     # @arg3 path
     if [ -b $2 ];then
         $SU -u $SUSER -t "Mount Image" "$MOUNT -t $1 $2 $3"
-        if [ "`df | grep \"${3}\"`" ]; then
+        if [ "`df | grep \"$3\"`" ]; then
             MOUNTED="yes"
             return 1
         else
@@ -69,7 +69,7 @@ lmount()
         # for convenience. $2 is not a block device, try to mount it
         # letting mount find a block device for us
         $SU -u $SUSER -t "Mount Image" "$MOUNT -o loop -t $1 $2 $3"
-        if [ "`df | grep \"${3}\"`" ]; then
+        if [ "`df | grep \"$3\"`" ]; then
             MOUNTED="yes"
             return 1
         else
@@ -157,8 +157,8 @@ unset_loop()
 
 error()
 {
-        $DIALOG --error \
-                --text="$1"
+    $DIALOG --error \
+    --text="$1"
 }
 
 for arg in $@
@@ -184,33 +184,43 @@ do
         mtype="none";       # user should supply later...
         ;;
     esac;
- 
+
     # try to mount the file system
     # make directory for this image
     USERMOUNTDIR="$MOUNTDIR/$arg"
 
     # directory doesn't exist?
     mkdir -p $USERMOUNTDIR
-  
+
     # try mounting the filesystem with what we know so far
     MOUNTED="no"
     lmount $mtype $arg $USERMOUNTDIR
-    
+
     if [ $MOUNTED = "yes" ]; then 
         nautilus $USERMOUNTDIR
     else
         # if mount failed, ask about encryption and filetype
         # TODO make utility function...
-        if [ `$DIALOG --title="Encryption" --question --text="Is this an encrypted image?"`  ]; then
+       
+        IS_ENC=`$DIALOG --title="Encryption" --question --text="Is this an encrypted image?"`
+
+        echo "Is it encrypted? [$IS_ENC]"
+        
+        if [ $IS_ENC ]; then
 
             echo "Encryption is used"
 
             # choose encryption type
             echo "Asking about cypher"
-            DCYPHER=$($DIALOG --list \
+            CYPHER=$($DIALOG --list \
             --title="Select Cypher" \
             --radiolist --editable \
             --column="Selected" --column="Cypher" "$CYPHERS")
+
+            if [ -z $CYPHER ]; then
+                # what we do when user presses cancel
+                CYPHER="$DCYPHER"
+            fi
 
             # choose format type
             echo "Asking about filesystem type"
@@ -219,8 +229,13 @@ do
             --radiolist --editable \
             --column="Selected" --column="Filetype" $FORMATS)
 
+            if [ -z $mtype ]; then
+                # what we do when user presses cancel
+                mtype="iso9660"
+            fi
+
             # try to setup the encrypted loop
-            if [ "`setup_enloop $DCYPHER $LOOPDEV ${arg}`" ]; then
+            if [ "`setup_enloop $CYPHER $LOOPDEV ${arg}`" ]; then
                 SETUPLOOP="yes"
             else
                 SETUPLOOP="no"
@@ -228,6 +243,7 @@ do
 
             if [ $SETUPLOOP = "yes" ]; then
                 # loop device setup, now mount
+                MOUNTED="no"
                 lmount $mtype $LOOPDEV $USERMOUNTDIR
                 if [ $MOUNTED = "yes" ]; then
                     nautilus $USERMOUNTDIR
@@ -245,31 +261,25 @@ do
         else
             # image is not encrypted... ask about filesystem format
             # and mount
-
             echo "Encryption is not used"
+            echo "Asking about filesystem type"
+            mtype=$($DIALOG --list \
+            --title="Select filesystem type" \
+            --radiolist --editable \
+            --column="Selected" --column="Filetype" $FORMATS)
 
-            if [ $DIALOG = "zenity" ]; then
-                echo "Asking about filesystem type"
-                mtype=$($DIALOG --list \
-                --title="Select filesystem type" \
-                --radiolist --editable \
-                --column="Selected" --column="Filetype" $FORMATS)
-            else
-                echo "Asking about filesystem type"
-                # TODO this might need modification
-                mtype=$($DIALOG --list \
-                --title="Select filesystem type" \
-                --radiolist --editable \
-                --column="Selected" --column="Filetype" $FORMATS)
+            if [ -z $mtype ]; then
+                # what we do when user presses cancel
+                mtype="iso9660"
             fi
 
             MOUNTED="no"
-            lmount $mtype ${arg} $USERMOUNTDIR
+            lmount $mtype $arg $USERMOUNTDIR
 
             if [ $MOUNTED = "yes"  ]; then
                 nautilus $USERMOUNTDIR
             else
-                error "Could not mount ${arg} in $USERMOUNTDIR"
+                error "Could not mount $arg in $USERMOUNTDIR"
                 rmdir $USERMOUNTDIR
                 rmdir $MOUNTDIR
             fi

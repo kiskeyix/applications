@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.9 $
+# $Revision: 1.10 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jul-17
 #
@@ -17,7 +17,7 @@ $|++;
 
 my $DEBUG = 0;
 
-my $EXCEPTION_LIST = "\.soc\$|\.sock\$|\.so\$|\.o\$";
+my $EXCEPTION_LIST = "\.soc\$|\.sock\$|\.so\$|\.o\$|\.swp\$";
 
 # -------------------------------------------------------------------
 #           NO NEED TO MODIFY ANYTHING PASS THIS LINE               #

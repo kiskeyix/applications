@@ -1,8 +1,8 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2002-Jul-27
+# Last modified: 2002-Sep-15
 # 
-# $Id: rcopy.pl,v 1.1 2002-09-15 00:31:58 luigi Exp $
+# $Id: rcopy.pl,v 1.2 2002-09-15 19:07:32 luigi Exp $
 # 
 # LICENSE:
 # GPL
@@ -103,6 +103,16 @@ if ( -f $rcopylock ) {
     print ("Lock file exists.\n $rcopylock \n Please remove before continuing");
     exit(1);
 }
+# Check to see whether a configuration file already exists
+# if not, create it and exit
+# to give the user time to review the file
+# if needed
+if ( !-f $xmlconfig ) {
+
+    create_config();
+    exit (0);
+
+}
 
 my $config = XMLin($xmlconfig,forcearray=>1);
 
@@ -128,17 +138,6 @@ while ( $_ = ( $ARGV[0] ) ? $ARGV[0] : "" , /^-/) {
                 \n \t -example \t creates an example config file that can be edited by hand (for the impatient \n\n";
     exit(0); }
 }
-
-# Check to see whether a configuration file already exists
-# if not, create it and exit
-# to give the user time to review the file
-# if needed
-if ( !-f $xmlconfig ) {
-
-    create_config();
-    exit (0);
-
-} 
 
 ##
 # All code comes down to this few lines!!

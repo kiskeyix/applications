@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2002-Nov-12
-# $Id: etodo.pl,v 1.7 2002-11-12 16:01:19 luigi Exp $
+# $Id: etodo.pl,v 1.8 2002-11-12 16:12:30 luigi Exp $
 #
 # DESC:
 #   This script takes your tasks.ics file from Evolution
@@ -241,13 +241,19 @@ sub print_fields {
             #date due
             print OFILE td($ary[$i]->{dtdue});
             #summary
-            if ( $ary[$i]->{description} gt "" ) {
-                # should we clean the strings first?
-                # we should at least remove " (quotes)
-                # from the description...
-                print OFILE td("<a href=\"#\" title=\"$ary[$i]->{description}\">$ary[$i]->{summary}</a>");
-            } else {
-                print OFILE td("$ary[$i]->{summary}");
+            {
+                # this is a block for which we do not need
+                # to see warnings!
+                # this line temporarily turns off warnings
+                no warnings;          
+                if ( $ary[$i]->{description} gt "" ) {
+                    # should we clean the strings first?
+                    # we should at least remove " (quotes)
+                    # from the description...
+                    print OFILE td("<a href=\"#\" title=\"$ary[$i]->{description}\">$ary[$i]->{summary}</a>");
+                } else {
+                    print OFILE td("$ary[$i]->{summary}");
+                }
             }
             #progress
             if ( $ary[$i]->{progress} == 100 ) {

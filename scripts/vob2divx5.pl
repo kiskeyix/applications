@@ -1,5 +1,8 @@
 #! /usr/bin/perl
 
+# deprecated!
+die "Use V2divx.pl instead";
+
 use POSIX;
 
 $usage=

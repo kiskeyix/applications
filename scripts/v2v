@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.41 $
+# $Revision: 1.42 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -1278,7 +1278,8 @@ sub cluster
     # which contain ONLY available nodes
    
     # returns a filehandle and filename
-    my $s_file = new File::Temp(
+    #my $s_file = new File::Temp(
+    my ($s_file,$n_file) = tempfile(
                                 "UNLINK"    => 0, # do not unlink
                                 "TEMPLATE"  => "XXXXXXXXX",
                                 "DIR"       => "tmp", # NFS
@@ -1365,8 +1366,8 @@ sub cluster
         close($s_file);
     } else {
         # we don't need cluster-mode?
-        print $DEBUG "\n+++++> Unlinking file $s_file";
-        unlink("$s_file");
+        print $DEBUG "\n+++++> Unlinking file $n_file";
+        unlink("$n_file");
     }
 
     pinfo("$v2d\t Number of available Nodes:\t\t   |$node_counter\n");
@@ -1375,7 +1376,7 @@ sub cluster
     # percentages of frames that each nodes
     # need to encode more
     # So we run V2divx on nodes ...
-    if ( -f "$s_file" )
+    if ( -f "$n_file" )
     {	
         # tabpower is just a table to know when nodes 
         # have finished to encode
@@ -1386,8 +1387,8 @@ sub cluster
 
         my  $max=0;	
         $i=0;
-        @allnodes=`cat $s_file`; # TODO read file using Perl
-        unlink("$s_file"); 
+        @allnodes=`cat $n_file`; # TODO read file using Perl
+        unlink("$n_file"); 
 
         foreach $node (@allnodes )     
         { 
@@ -1432,13 +1433,21 @@ sub cluster
                 # that the cluster node will have to run zooming, 
                 # which in turn runs calculate_bitrate and others... 
                 # This almost always 
-                # times out. We should find a better way to know 
+                # times out.
+                # > my nodes start in 3 / 4 seconds ??!
+                #  We should find a better way to know 
                 # if the cluster is running.
                 # As a test, I'll add a "touch tmp/node_started"
                 # as soon as the first --runclust is found
                 # before it reads the configuration or anything else.
+                #
+                #   NO !!!! an important file is tmp/cluster.args 
+                #   each node MUST have read this file before
+                #   to start another 
+                #   that's why the touch tmp/node_started is made
+                #   just after read this file (tmp/cluster.args)
                 my $j=0;
-                while ( ! -e "tmp/node_started" && $j < 15 )
+                while ( ! -f "tmp/node_started" && $j < 15 )
                 {
                     sleep(1);
                     $j++;
@@ -3156,8 +3165,8 @@ if ( $RUNCLUST )
         readconf;
         chk_wdir; # is needed to know input video format
         # And now we can aviencode
-        # first, notify that the process started on this node:
-        system("touch tmp/node_started"); # FIXME do we need this here?
+        # touch tmp/node_started more later :-(
+        # cause we have to be sure to have read tmp/cluster.args
         zooming;
         aviencode;
         exit(0);

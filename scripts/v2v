@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.13 $
+# $Revision: 1.14 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
 #               Dominique CARON <domiATlpm.univ-montp2.fr> 
@@ -134,6 +134,7 @@ sub smily;
 sub audiorescale;
 sub subtitle;
 sub format_date;
+sub sec_to_hour;
 
 system("clear");
 
@@ -334,7 +335,35 @@ sub format_date
     my ($sec,$min,$hour,$mday,$mon,$year) = localtime(shift);
     my $ADATE=sprintf("%04d-%02d-%02d %02d:%02d:%02d",($year+=1900),$mon,$mday,$hour,$min,$sec);
     return $ADATE;
-}
+} # end format date
+
+sub sec_to_hour {
+    # convert seconds into a string HH:MM:SS
+    # @param 0 number of seconds
+    my $seconds = shift;
+    
+    my ($days,$hours,$minutes);
+    
+    if ( $seconds > 86400) 
+    {
+        print STDERR "ERROR: sec_to_hour: This value is higher than a day\n";
+        return "00:00:00";
+    }
+    
+    # Here we don't care about the number of days in $seconds
+    # however, I included this for those who care about that value
+    # - Luis Mondesi
+    #$days = int($seconds / (24 * 60 * 60));
+    #$seconds -= ($days * 24 * 60 * 60);
+
+    $hours = int($seconds / ( 60 * 60 ));
+    $seconds -= ($hours * 60 * 60);
+
+    $minutes = int($seconds / 60);
+    $seconds -= $minutes * 60;
+
+    return sprintf("%02d:%02d:%02d",$hours,$minutes,$seconds);
+} # end sec_to_hour
 
 sub srt_subrip
 {
@@ -386,7 +415,7 @@ sub srt_subrip
         } else {
             smily;
         }
-    } else{
+    } else {
         print $RED."$v2d\t Subtitle2pgm already done, remove tmp/srtpgm_done, to remake it\n".$NORM;
     }
     if ( ! -f "tmp/srtpgm2txt_done")
@@ -1437,6 +1466,7 @@ sub aviencode
 } # END Aviencode
 
 # ********* MERGING ( and syncing )Function **************#
+
 sub merge
 {	
     print $DEBUG "--->  Enter merge\n";
@@ -1561,7 +1591,20 @@ sub finish
             print $GREEN."$v2d\t Renaming tmp/2-${dvdtitle}_sync.avi $dvdtitle.avi\n".$NORM ;
             rename("tmp/2-${dvdtitle}_sync.avi","$dvdtitle.avi");
         } else {
-            $sys="avisplit -t $from_frames-$to_frames -i  tmp/2-${dvdtitle}_sync.avi -o $dvdtitle.avi && mv $dvdtitle.avi-0000 $dvdtitle.avi";
+            # avisplit takes arguments in HH:MM:SS format in transcode
+            # 0.6.11. Maybe we should detect what version of transcode
+            # people are using before doing this. - Luis Mondesi
+            # If the movie is 2 Hours long and you want to cut from
+            # 30 seconds up to 1:55 hours, then you will pass
+            # deb_sec = 30;
+            # last_sec = ( 5 * 60 ); # to cut 5 minutes from the end 
+            #                        # the movie
+            
+            my $stat_of_file_hour = sec_to_hour($deb_sec);
+            my $end_of_file_hour = 
+                sec_to_hour( ($nbr_frames / $FPS) - $last_sec );
+
+            $sys="avisplit -t $start_of_file_hour-$end_of_file_hour -i  tmp/2-${dvdtitle}_sync.avi -o $dvdtitle.avi && mv $dvdtitle.avi-0000 $dvdtitle.avi";
             print $GREEN."$v2d\t Splitting the result to $nbr_frames frames.\n".$NORM;
             print $INFO "$sys\n";
             system("nice -$nice $sys");
@@ -1784,7 +1827,9 @@ sub get_params
 
     print $DEBUG "<--- get_params\n";
 }
+
 # ##################### Audio Input format ###################
+
 sub audioformat
 {
     print $DEBUG "---> Enter audioformat\n";
@@ -1801,7 +1846,7 @@ sub audioformat
     my $tmp=$1;
     SWITCH: 
     {
-# FIXME
+    # FIXME
         if ( $tmp == 2000 ) {
             $audio_format=ac3 ; last SWITCH;
         }
@@ -2231,7 +2276,7 @@ sub config
     }
 
 
-# ****************CROPPING TOP/BOTTOM ***********************
+    # ****************CROPPING TOP/BOTTOM ***********************
     findclip;
     print " Clipping Top/Bottom \n You must have the smallest black LetterBox at top/bottom \n (It's better to leave black LetterBox at top/bottom if you intend to have SubTitle)\n";
     print " To see the first sample, please press Enter -->";
@@ -2273,7 +2318,7 @@ sub config
     }
 
 
-# ***************** CROPPING LEFT RIGHT **************************
+    # ***************** CROPPING LEFT RIGHT **************************
     print " Now Clipping Left/Right \n";
     print " To see the first sample, please press Enter -->";
     $rep=<STDIN>;
@@ -2308,7 +2353,7 @@ sub config
         }
     }
 
-# ************************* SUBTITLE ***********************
+    # ************************* SUBTITLE ***********************
     $st=20;
     if ( $in_video_magic eq 'mov' )
     {
@@ -2373,7 +2418,7 @@ sub config
         }
 
     }
-# ************** ANTIALIASING & DEINTERLACING ******************** 
+    # ************** ANTIALIASING & DEINTERLACING ******************** 
     interlaced;
     print " Do you want to deinterlace this movie(";
     print "Y|n)? " if ( $INTERLACE eq "yes" );

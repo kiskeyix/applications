@@ -19,8 +19,11 @@
 # rss2html.pl config
 #
 # TODO
-# A .desktop will be included later so that Zaurus users can
-# just click on it... 
+# * A .desktop will be included later so that Zaurus users can
+#   just click on it... 
+# * A way to parse files which end in .html (not rss or rdf)
+#   so that users can put links to sites that don't provide
+#   nice rss/rdf channels ... (nytimes?)
 # 
 # NOTE
 # A convenient thing is to just make your $HOME/rss2html.html 

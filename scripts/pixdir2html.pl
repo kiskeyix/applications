@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.56 $
+# $Revision: 1.57 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -124,7 +124,8 @@
 #
 # With more to be added in the future...
 #
-# REQUIRED: ImageMagick's Perl module and it's dependancies
+# REQUIRED: ImageMagick's Perl module and it's dependancies. And a dialog 
+#           program or Term::Pogressbar Perl module
 #
 # TODO:
 #   
@@ -149,7 +150,7 @@
 # thumbnails and/or index.$EXT to be written
 #
 
-# standard modules
+# standard Perl modules
 use strict;
 use vars qw( $VERSION @INC );
 use Config;
@@ -181,39 +182,44 @@ if ($@)
 # didn't use it because it's too bloated for what
 # I needed, and it created an extra module that
 # users would have to install... nice work though
-#
-#eval "use UDPM";
 
 # end of loading needed modules
 
-my $VERSION="1.4";
+my $VERSION="1.5";
 
 $|++; # disable buffer (autoflush)
 
 my $USAGE = "
-pixdir2html.pl  [-n|--nomenu] 
-                [-N|--noindex]
+pixdir2html.pl  [-n|--no-menu] 
+                [-N|--no-index]
                 [-f|--force] 
-                [-M|--menuonly]
+                [-M|--menu-only]
                 [-E|--extension] (php)
-                [-t|--thumbsonly]
+                [-t|--thumbs-only]
                 [-D|--directory] (.)
-                [-l|--menulinks]
+                [-l|--menu-links]
                 [-c|--cut-dirs]
+                [-F|--front-end=[Xdialog|zenity|console|...]]
+                [--td]
+                [--menu-td]
+                [--str-limit]
                 [-h|--help]
 
 force    - creates a .pixdir2htmlrc in every subdir overriding
 any file with that name
-nomenu   - do not create menu file after finishing creating thumbnails
-noindex  - do not create the index.EXT files after creating thumbnails
-menuonly - only create a menu file and exit
-menulinks- number of links to put in the Menu per row. Default is 10
+no-menu   - do not create menu file after finishing creating thumbnails
+no-index  - do not create the index.EXT files after creating thumbnails
+menu-only - only create a menu file and exit
+menu-links- number of links to put in the Menu per row. Default is 10
 cut-dirs - number of directories to cut from the Menu string. Default is 0
 extension- use this extension instead of default (php)
 directory- use this directory instead of default (current)
-menu_td  - How many cells in menu?
+menu-td  - How many cells in menu?
 td       - How many cells in e/a file
-str_limit- What's the size of the longest string allowed in menus?
+front-end - dialog to use to display progress. Must be compatible with Xdialog.
+            or you can also choose 'console' if you have Term::Progressbar 
+            installed
+str-limit- What's the size of the longest string allowed in menus?
 help     - prints this help and exit\n
 
 e.g.
@@ -288,6 +294,7 @@ my $GAUGE = new FileHandle;
 #my $tty = qx/tty/; # this returns text from system("tty")
 my $MODE = "text";
 my $DIA = "";
+my $use_console_progressbar = 0; # a simple flag
 
 # xdialog is a better implementation than gdialog
 # thus, if we find that, we use that first
@@ -334,33 +341,48 @@ if ( $MODE eq "x" ) {
         exit 1;
     }
 } elsif ( $MODE eq "text" ) {
-    if ( $DIA eq "" ) {
-        # error
-        print STDERR ("Console Dialog was not found.\n");
-        print STDERR ("Please install any of these programs:\n");
-        print STDERR join(" ",@binaries)."\n";
-        exit 1;
+    if ( $DIA eq "" or $DIA eq "console" ) {
+        # error only if no DIA
+        # being userfriendly here... 
+        if ( $DIA eq "" ) {
+            print STDERR ("Console Dialog was not found.\n");
+            print STDERR ("Please install any of these programs:\n");
+            print STDERR join(" ",@binaries)."\n";
+        }
+        print STDERR ("Trying Term::Progressbar");
+        # if running under text mode, then use terminal "readline"
+        # if there is no dialog installed
+        eval "use Term::ProgressBar";
+        if ( ! $@ ) {
+            my $gui = Term::ProgressBar;
+            $use_console_progressbar = 1; # update flag
+        } else {
+            # no hope at this point... 
+            print STDERR ("Term::Progressbar is not installed. Exiting");
+            exit 1;
+        }
     }
 }
 
 # get options
 GetOptions(
     # flags
-    'n|nomenu'      =>  \$NOMENU,
+    'n|no-menu'      =>  \$NOMENU,
     'f|force'       =>  \$FORCE,
     'h|help'        =>  \$HELP,
-    'M|menuonly'    =>  \$MENUONLY,
-    't|thumbsonly'  =>  \$THUMBSONLY,
-    'N|noindex'     =>  \$NOINDEX,
-    'l|menulinks=i' =>  \$menu_td,
+    'M|menu-only'    =>  \$MENUONLY,
+    't|thumbs-only'  =>  \$THUMBSONLY,
+    'N|no-index'     =>  \$NOINDEX,
+    'l|menu-links=i' =>  \$menu_td,
     # strings
     'E|extension=s' =>  \$EXT,
     'D|directory=s' =>  \$ROOT_DIRECTORY,
+    'F|front-end=s' =>  \$DIA,
     # numbers
-    'menu_td=i'     =>  \$menu_td,
+    'menu-td=i'     =>  \$menu_td,
     'td=i'          =>  \$TD,
-    'str_limit=i'   =>  \$STR_LIMIT,
-    'c|cut-dirs=i'    =>  \$CUT_DIRS
+    'str-limit=i'   =>  \$STR_LIMIT,
+    'c|cut-dirs=i'    =>  \$CUT_DIRS     
 );
 
 die $USAGE if $HELP;
@@ -1431,9 +1453,5 @@ sub cut_dirs {
 # Gui 
 sub front_end
 {
-    # if running under text mode, then use terminal "readline"
-    # if there is no dialog installed
-    use Term::ReadLine;
-    $Term::ReadLine::termcap_nowarn = 1; # Turn off stupid termcap warning.
-    my $gui = Term::ReadLine->new('pixdir2html');
+    $gui->update(shift);
 } # end front_end

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2002-Sep-26
-# $Id: etodo.pl,v 1.6 2002-10-04 02:54:46 luigi Exp $
+# Last modified: 2002-Nov-12
+# $Id: etodo.pl,v 1.7 2002-11-12 16:01:19 luigi Exp $
 #
 # DESC:
 #   This script takes your tasks.ics file from Evolution
@@ -69,6 +69,7 @@ my $HIDE_COMPLETED = 0;
 my $SHOW_TIME = 0;
 my $user_name = "none";
 my $SECONDS_TO_RUN = 0;
+my $date = "";
 
 while ( $_ = ( $ARGV[0] ) ? $ARGV[0] : "" , /^-/) {
     shift;
@@ -159,6 +160,11 @@ sub get_fields(){
                 $_ =~ s/^PRIORITY://;
                 $ary[$i]->{priority}=$_;
             }
+            if ($_ =~ m/^DESCRIPTION:/  ) {
+                $_ =~ s/^DESCRIPTION://;
+                $ary[$i]->{description}=$_;
+            }
+
             #if ($_ =~ m/^COMPLETED:/  && $STARTED == 1){
             #    $_ =~ s/^COMPLETED:(.*)T.*/$1/;
             #    push(@completed, $_);
@@ -189,8 +195,12 @@ sub print_fields {
 
     open (OFILE,"> $ohtml") || die ("Could not open output file");
 
+    if ( $SHOW_TIME == 1 ) {
+        $date = localtime;
+    } 
+    
     print OFILE start_html( 
-        -title=>"Evolution Tasks [$user_name]",
+        -title=>"Evolution Tasks [$user_name] $date",
         -author=>"$user_name",
         -dtd=>"html",
         -lang=>"en_US",
@@ -231,7 +241,14 @@ sub print_fields {
             #date due
             print OFILE td($ary[$i]->{dtdue});
             #summary
-            print OFILE td($ary[$i]->{summary});
+            if ( $ary[$i]->{description} gt "" ) {
+                # should we clean the strings first?
+                # we should at least remove " (quotes)
+                # from the description...
+                print OFILE td("<a href=\"#\" title=\"$ary[$i]->{description}\">$ary[$i]->{summary}</a>");
+            } else {
+                print OFILE td("$ary[$i]->{summary}");
+            }
             #progress
             if ( $ary[$i]->{progress} == 100 ) {
                 print OFILE td("COMPLETED");

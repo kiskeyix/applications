@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE:
@@ -26,17 +26,15 @@
 # file named .pictDir2htmlrc in the directory containing the
 # pictues. This file has the form:
 # 
-# percent=30%;; #size of the thumbnails for this folder
-# title=Title;;
-# html_msg=<h1>Free form using HTML tags</h1> <h2> ending in 
-# two semicolons</h2> <p> this is a single line. Do not permit
-# line breaks</p>;;
-# body=<body bgcolor='#000000'>;;
-# p=<p>;; # or whichever way you want to customize this tag
-# table=<table border='0'>;;
-# td=<td valign='left'>;;
-# tr=<tr>;;
-# footer=<a href='#'>A footer here</a>;;
+# percent=30% #size of the thumbnails for this folder
+# title=Title
+# html_msg=<h1>Free form using HTML tags</h1> 
+# body=<body bgcolor='#000000'>
+# p=<p>
+# table=<table border='0'>
+# td=<td valign='left'>
+# tr=<tr>
+# footer=<a href='#'>A footer here</a>
 # 
 # These are the only tags that you can customize for now :-)
 # Required: linux/UNIX "convert" command (to convert images from
@@ -181,7 +179,7 @@ sub init_config {
         while (<CONFIG>) {
             next if /^\s*#/;
             chomp;
-            $myconfig{$1} = $2 if m/^\s*([^=]+)=(.+)\;\;+/;
+            $myconfig{$1} = $2 if m/^\s*([^=]+)=(.+)/;
         }
         close(CONFIG);
 

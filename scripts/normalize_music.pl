@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.13 $
+# $Revision: 1.14 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2004-Dec-07
 #
@@ -133,10 +133,19 @@ sub _rename
     no warnings;
     print STDOUT ("_"x69,"\n");
     print STDOUT "file\t$this_file\n";
-    # tracks are not that essential:
+    # tracks,artist,album are not that essential:
+    #'song','track','artist','album'
     if ( $hashref->{'track'} =~ m/^\s*$/ )
     {
         $hashref->{'track'}="00/00";
+    }
+    if ( $hashref->{'artist'} =~ m/^\s*$/ )
+    {
+        $hashref->{'artist'} = "noartist";
+    }
+    if ( $hashref->{'album'} =~ m/^\s*$/ )
+    {
+        $hashref->{'album'} = "noalbum";
     }
     foreach(@TAGS)
     {

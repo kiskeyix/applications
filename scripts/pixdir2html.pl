@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.53 $
+# $Revision: 1.54 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -1360,7 +1360,7 @@ sub cut_dirs {
 
     for ( my $i = 0; $i <= $#tmp_path; $i++ )
     {
-        if ( $i > $cut )
+        if ( $i >= $cut ) # to be safe, display the last name
         {
             $tmp_str .= $tmp_path[$i]."/";
         }

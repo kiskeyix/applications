@@ -1,10 +1,10 @@
 #!/bin/bash
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Oct-31
+# Last modified: 2004-Dec-17
 #
 # DESCRIPTION: A simple script to update my settings in $HOME
-# USAGE: $0 [remove|verbose]
+# USAGE: $0 [remove] [verbose] [bashrc|vimrc|muttrc|applications]
 #
 # If remove is passed, the FILES will be deleted after downloading them
 #

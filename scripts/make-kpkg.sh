@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.10 $
+# $Revision: 1.11 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jul-17
 #
@@ -54,7 +54,7 @@ if [ $1 -a $1 != "--help" ]; then
     # ask whether to create a kernel image
     makeit=0
 
-    echo -e "Do you want to make the Kernel? [y/N] \c"
+    echo "Do you want to make the Kernel? [y/N] "
     read yesno
     case $yesno in
         y* | Y*)
@@ -80,7 +80,7 @@ if [ $1 -a $1 != "--help" ]; then
     
     makeit=0
 
-    echo -e "Do you want to make the Kernel Modules? [y/N] \c"
+    echo "Do you want to make the Kernel Modules? [y/N] "
     read yesno
     case $yesno in
         y* | Y*)

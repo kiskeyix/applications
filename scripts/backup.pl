@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-May-24
 #
@@ -19,19 +19,37 @@
 # USAGE: backup.pl [daily|weekly|monthly]
 #
 # Example $HOME/.backuprc
+# # NOTE that the defaults for these variables are sufficient
+# # for a Debian system.
 #
-# BAK="/dir/to/store/backups"
-# EXCLUDES="--exclude='*this' --exclude='*that' "
+# BAK=/dir/to/store/backups
+# EXCLUDES=".*this.*|.*that\$"
 # 
-# DIRS="dirs_to_backup_separated_by_spaces "
-# SYSTEM="system_directories_separated_by_spaces"
-# LOW_UID="lowest_uid_number_to_backup"
+# DIRS=other_dirs_to_backup_separated_by_spaces_or_commas
+# SYSTEM=system_directories_separated_by_spaces_or_commas
+# LOW_UID=lowest_uid_number_to_backup
 # EXC_ULIST="exclude_users_from_list_separated_by_|"
 #
+# TIPS:
+# To override a default value, just specify what you want
+# in your .backuprc file. For instance: 
+# SYSTEM="". 
+# Would cause the SYSTEM list of directories to be disregarded. 
+# And:
+# SYSTEM=/dir/1 /dir/2 /dir/3
+# Would backup only those directories
+#
+# Do not use quotes in your .backuprc except for the regexp strings
+#
+
 use strict;
 $|++;
 
 use Archive::Tar;
+use File::Find;     # find();
+use File::Basename; # basename();
+
+my $DEBUG = 0;      # set to 1 to print debugging messages
 
 my %MY_CONFIG = ();
 my $CONFIG_FILE= $ENV{HOME}."/.backuprc";
@@ -40,8 +58,8 @@ $MY_CONFIG{BAK}="/home/backup";        # default backup directory
                                     # you might want to change this
                                     # in your .backuprc file like:
                                     # BAK="/other/dir"
-# tar EXCL list. specify EXCLUDES in your .backuprc to modify 
-$MY_CONFIG{EXCLUDES}="--exclude='*.pid' --exclude='*.soc' --exclude='*.sock' --exclude='*.log' --exclude='*.log*.gz' ";
+# tar EXCL list regexp. specify EXCLUDES in your .backuprc to modify 
+$MY_CONFIG{EXCLUDES}=".*\.pid\$|.*\.soc\$|.*\.log\$";
 
 
 $MY_CONFIG{LOW_UID} = "1000";          # debian standard lowest uid.
@@ -53,8 +71,6 @@ $MY_CONFIG{EXC_ULIST} = "man|nobody";  # separated by | . Change in
 
 $MY_CONFIG{SYSTEM}="/etc /home/cvsroot /var/lib/jabber /var/lib/mysql /var/mail /var/spool /var/lib/ldap /var/lib/iptables /root";
 
-#$MY_CONFIG{LOCK} = "/tmp/.backup-init"; # timestamp of when backup started
-
 #-------------------------------------------------------------#
 #           No need to modify anything below here             #
 #-------------------------------------------------------------#
@@ -64,12 +80,13 @@ my $TMP_LOCK = ".backup-lock";
 my %TMP_CONFIG = init_config($CONFIG_FILE); # override defaults with...
 
 my %CONFIG = ();   # where the two will be merged
+my @tmp_files = (); # temporary list of files
 
 # merge two hashes and warn about dups... use the last defined key=>val
 my ($k, $v) = "";
 foreach my $hashref ( \%MY_CONFIG, \%TMP_CONFIG ) {
     while (($k, $v) = each %$hashref) {
-        if (exists $CONFIG{$k}) {
+        if ( $DEBUG == 1 && exists $CONFIG{$k}) {
             print STDERR "Warning: $k seen twice.  Using the second definition.\n";
             # next;
         }
@@ -78,16 +95,17 @@ foreach my $hashref ( \%MY_CONFIG, \%TMP_CONFIG ) {
 }
 
 # DEBUG: print content of hash
-#foreach ( \%CONFIG ) {
-#    while (($k,$v) = each %$_) {
-#        print "$k -> $v \n";
-#    }
-#}
-#die "the end \n";
+if ( $DEBUG == 1 ) {
+    foreach ( \%CONFIG ) {
+        while (($k,$v) = each %$_) {
+            print "$k -> $v \n";
+        }
+    }
+}
 
 # change to backup directory
-if ( -d eval($CONFIG{BAK}) ) {
-    chdir(eval($CONFIG{BAK}));
+if ( -d $CONFIG{BAK} ) {
+    chdir($CONFIG{BAK});
 } else {
     die "could not change working dir to $CONFIG{BAK}. $!";
 }
@@ -107,12 +125,22 @@ if ( ! -f $TMP_LOCK ) {
 
     # backup system
     # Archive::Tar->create_archive ("my.tar.gz", 9, "/this/file", "/that/file");
-    #split(",", $CONFIG{SYSTEM})
-    print STDOUT "$CONFIG{BAK}\n";
+    my @filelist = ();
+    # a bit of sanity checking... 
+    # check for two spaces or commas in list
+    my @tmp_dirs = split(/ +|,+/,$CONFIG{SYSTEM});
+
+    foreach ( @tmp_dirs ) {
+        if ( -d $_ ) {
+            my @ary = &do_file_ary($_);
+            push(@filelist,@ary);
+        }
+    }
+
     Archive::Tar->create_archive (
             "system-$MIDDLE_STR.tar.gz", 
             9, 
-            "/etc"
+            @filelist
         );
     
     # backup users
@@ -127,9 +155,46 @@ if ( ! -f $TMP_LOCK ) {
     }
 
     # DEBUG: print content of %user hash
-    #print STDOUT join(" ",%user)."\n";
+    if ( $DEBUG == 1 ) { 
+        print STDOUT join(" ",%user)."\n"; 
+    }
+
+    # foreach user, put the list of their files in this array
+    my ($k, $v) = "";
+    @filelist = ();
+    while (($k, $v) = each %user) {
+        if ( -d $v ) {
+            my @ary = &do_file_ary($v);
+            push(@filelist,@ary);
+        }
+    }
+    #print STDOUT join(" ",@filelist)."\n";
+    
+    Archive::Tar->create_archive (
+            "users-$MIDDLE_STR.tar.gz", 
+            9, 
+            @filelist
+        );
+    
 
     # backup others
+    @filelist = ();
+    # a bit of sanity checking... 
+    # check for two spaces or commas in list
+    @tmp_dirs = split(/ +|,+/,$CONFIG{DIRS});
+
+    foreach ( @tmp_dirs ) {
+        if ( -d $_ ) {
+            my @ary = &do_file_ary($_);
+            push(@filelist,@ary);
+        }
+    }
+    
+    Archive::Tar->create_archive (
+            "other-$MIDDLE_STR.tar.gz", 
+            9, 
+            @filelist
+        );
 
 } else {
     die "Lock file $TMP_LOCK exists... exiting.\n";
@@ -170,4 +235,44 @@ sub init_config {
     }
     
     return %config_tmp;
+}
+
+sub do_file_ary {
+    # uses find() to recur thru directories
+    # returns an array of files
+    # i.e. in directory "a" with the files:
+    # /a/file.txt
+    # /a/b/file-b.txt
+    # /a/b/c/file-c.txt
+    # /a/b2/c2/file-c2.txt
+    # 
+    # my @ary = &do_file_ary(".");
+    # 
+    # will yield:
+    # /a/file.txt
+    # /a/b/file-b.txt
+    # /a/b/c/file-c.txt
+    # /a/b2/c2/file-c2.txt
+    # 
+    @tmp_files = ();
+
+    my $ROOT = shift;
+    
+    my %opt = (wanted => \&process_file, no_chdir=>1);
+    
+    find(\%opt,$ROOT);
+    
+    return @tmp_files;
+}
+
+sub process_file {
+    my $base_name = basename($_);
+    my $excludes = eval($CONFIG{EXCLUDES});
+    #print STDOUT $excludes."\n";
+    if ( 
+        -f $_ && 
+        $base_name !~ m/$excludes/ 
+    ) {
+        push @tmp_files,$_;
+    }
 }

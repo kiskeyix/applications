@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Encoding=UTF-8
+Type=Application
+Exec=/opt/Qtopia/bin/qtopiadesktop
+TryExec=
+X-GNOME-DocPath=
+Terminal=false
+Icon=pda.png
+Name[en_US]=Qtopia
+GenericName[en_US]=
+Comment[en_US]=

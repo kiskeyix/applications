@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.23 $
+# $Revision: 1.24 $
 # Luis Mondesi < lemsx1@gmail.com >
-# Last modified: 2005-Feb-28
+# Last modified: 2005-Mar-01
 #
 # DESC: finds a string in a set of files
 #
@@ -171,11 +171,7 @@ sub is_binary
     {
         return 0;
     }
-    if ( $file_t =~ m/elf|executable|data/i )
-    {
-        return 1;
-    }
-    return 0;
+    return 1;
 }
 
 sub process_file {

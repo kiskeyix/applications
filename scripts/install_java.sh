@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Oct-15
 #
@@ -51,12 +51,23 @@ fi
 
 update-alternatives --install /usr/local/bin/java java /usr/local/j2re/bin/java 50
 
-if [ -d "/usr/local/MozillaFirebird/plugins" ]; then
-    update-alternatives \
-    --install /usr/local/MozillaFirebird/plugins/libjavaplugin_oji.so \
+# put plugin in standard mozilla location 
+update-alternatives \
+    --install /usr/lib/mozilla/plugins/libjavaplugin_oji.so \
     libjavaplugin_oji.so \
     /usr/local/j2re/plugin/i386/ns610-gcc32/libjavaplugin_oji.so \
     50
+
+if [ -d "/usr/local/MozillaFirebird/plugins" ]; then
+#    update-alternatives \
+#    --install /usr/local/MozillaFirebird/plugins/libjavaplugin_oji.so \
+#    libjavaplugin_oji.so \
+#    /usr/local/j2re/plugin/i386/ns610-gcc32/libjavaplugin_oji.so \
+#    50
+    
+    ln -s /etc/alternatives/libjavaplugin_oji.so \
+        /usr/local/MozillaFirebird/plugins/libjavaplugin_oji.so
+
     echo "Putting Mozilla Firebird in Gnome-2 menu"
     echo "[Desktop Entry]" > /usr/share/applications/mozilla-firebird.desktop
     echo "Name=Mozilla Firebird" >> /usr/share/applications/mozilla-firebird.desktop
@@ -67,19 +78,17 @@ if [ -d "/usr/local/MozillaFirebird/plugins" ]; then
     echo "Type=Application"  >> /usr/share/applications/mozilla-firebird.desktop
     echo "Icon=web-browser"  >> /usr/share/applications/mozilla-firebird.desktop
     echo "Categories=Application;Network"  >> /usr/share/applications/mozilla-firebird.desktop
-
-elif [ -d "/usr/lib/mozilla-firebird/plugins" ]; then
-    update-alternatives \
-    --install /usr/local/MozillaFirebird/plugins/libjavaplugin_oji.so \
-    libjavaplugin_oji.so \
-    /usr/local/j2re/plugin/i386/ns610-gcc32/libjavaplugin_oji.so \
-    50
 fi
 
-# put in standard mozilla location also
-update-alternatives \
-    --install /usr/lib/mozilla/plugins/libjavaplugin_oji.so \
-    libjavaplugin_oji.so \
-    /usr/local/j2re/plugin/i386/ns610-gcc32/libjavaplugin_oji.so \
-    50
+if [ -d "/usr/lib/mozilla-firebird/plugins" ]; then
+#    update-alternatives \
+#    --install /usr/lib/mozilla-firebird/plugins/libjavaplugin_oji.so \
+#    libjavaplugin_oji.so \
+#    /usr/local/j2re/plugin/i386/ns610-gcc32/libjavaplugin_oji.so \
+#    50
+ 
+    ln -s /etc/alternatives/libjavaplugin_oji.so \
+        /usr/lib/mozilla-firebird/plugins/libjavaplugin_oji.so
+
+fi
 

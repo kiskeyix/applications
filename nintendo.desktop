@@ -3,7 +3,7 @@ Version=1.0
 Encoding=UTF-8
 Name=Nintendo
 Type=Application
-Exec=playrom.pl %U
+Exec=/home/luigi/bin/playrom.pl
 TryExec=
 Icon=/usr/share/icons/Nuvola/scalable/apps/gnome-joystick.svg
 X-GNOME-DocPath=
@@ -12,4 +12,3 @@ Name[en_US]=Nintendo
 GenericName[en_US]=Nintendo
 Comment[en_US]=Play Nintendo games
 Categories=Application;Game;
-

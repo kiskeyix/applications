@@ -3,18 +3,18 @@
 # Launch update process for all config files found in a particular directory.
 # See COPYING.TXT file about AWStats GNU General Public License.
 #-------------------------------------------------------
-# $Revision: 1.1 $ - $Author: luigi $ - $Date: 2004-01-15 16:51:37 $
+# $Revision: 1.2 $ - $Author: luigi $ - $Date: 2004-01-15 17:05:48 $
 
 
 #-------------------------------------------------------
 # Defines
 #-------------------------------------------------------
-my $REVISION='$Revision: 1.1 $'; $REVISION =~ /\s(.*)\s/; $REVISION=$1;
+my $REVISION='$Revision: 1.2 $'; $REVISION =~ /\s(.*)\s/; $REVISION=$1;
 my $VERSION="1.0 (build $REVISION)";
 
 # Default value of DIRCONFIG and AWSTATSSCRIPT
 my $DIRCONFIG = "/etc/awstats";
-my $AWSTATSSCRIPT = "/usr/local/awstats/wwwroot/cgi-bin/awstats.pl";
+my $AWSTATSSCRIPT = "/home/luigi/bin/awstats.pl";
 
 
 

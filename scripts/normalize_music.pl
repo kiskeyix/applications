@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2004-Dec-07
 #
@@ -72,13 +72,26 @@ if ( -f $FILE )
     print STDOUT ("to file\t$file\n");
     if ( ! -f "$file" )
     {
-        mkdir($path) if ( ! -d $path );
+        _mkdir($path) if ( ! -d $path );
         if ( ! rename ( $FILE,$file ) )
         {
             print STDOUT ("Renaming $FILE to $file failed. Do you have permissions to write in $path?\n");
         }
     } else {
         print STDOUT ("$FILE skipped ... $file already exist.\n");
+    }
+}
+
+# @desc implements `mkdir -p`
+sub _mkdir
+{
+    my $path = shift;
+    my @dirs = splitdir($path);
+    my $last = "";
+    foreach (@dirs)
+    {
+        $last = catdir($last,$_);
+        mkdir ($last) if ( ! -d $last);
     }
 }
 

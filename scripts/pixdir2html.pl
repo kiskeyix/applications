@@ -1,170 +1,20 @@
 #!/usr/bin/perl 
-# $Revision: 1.76 $
-# Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
+# $Revision: 1.77 $
+# Luis Mondesi  <lemsx1@hotmail.com>
 # 
-# USAGE: 
-#       SEE HELP:
-#           pixdir2html.pl --help
-#
-#       For the Impatient:
-#           pixdir2html.pl . # passes current directory to script as root
-#                            # this is assumed by default
-#                            
-#           pixdir2html.pl -f # force copies the root/.pixdir2htmlrc
-#                             # to all other directories within this tree
-#           pixdir2html.pl --menu-only # generates a menu.$EXT file only
-#                                     # see "menuheader_footer" var
-#                                     # in case you don't want headers/
-#                                     # footers in that file (as if
-#                                     # that file is a .php and will
-#                                     # be included in other files...
-#                                     # or if you don't want menus in the
-#                                     # html files created
-#                                     # set to 0: no menus whatsoever
-#
-# DESCRIPTION:
-# 
-# Use this non-interactive script in Nautilus to create HTML files
-# with their proper thumbnails for pictures (.jpeg, .gif or .png)
-# 
-# Make this file executable and put it in:
-# ~/.gnome/nautilus-scripts
-# or 
-# ~/.gnome2/nautilus-scripts
-# 
-# Then run it from from the File::Scripts::script_name menu in Nautilus
-# 
-# You could customize each directory differently by having a
-# file named .pixdir2htmlrc in the directory containing the
-# pictues. This file has the form:
-# 
-# uri=http://absolute.path.com/images # must be absolute. no trailing /
-# header=
-# percent=30% #size of the thumbnails for this folder
-# title=
-# meta=
-# stylesheet=
-# html_msg=<h1 class='pdheader1'>Free form using HTML tags</h1> 
-# body=<body bgcolor='#000000' class='pdbody'>
-# p=<p class='pdparagraph'>
-# table=<table border='0' class='pdtable'>
-# td=<td valign='left' class='pdtd'>
-# tr=<tr %%bgcolor%% class='pdtr'>
-# new=http://absolute.path.com/images/new.png # for dirs with .new files
-# footer=<a href='#' class='pdlink'>A footer here</a>
-# # set this to 1 to avoid printing a header
-# # or footer in the menu file menu.$EXT
-# menuheader_footer=0
-# ext=php
-# menutype=classic
-# albumpix=album.png # full path to a picture which will be used as the background image for the album icons. album's thumbnails must be exactly the same size for this to look good.
-# 
-# These are the only tags that you can customize for now :-)
-#
-# If you don't create a file, a sample will be done for you
-# at the root level of the directory from which you execute
-# this script.
-#
-# STYLESHEET:
-# Basic support for the style sheet was added. Keywords should be in 
-# following form. (Note, they are all declared as "class" as shown above)
-# A simple styles.css file should have things like:
-#
-# .pdimage {
-#   border: 0;
-# }
-#
-# .pdbody { 
-#   font-family: Verdana, Lucida, sans-serif;
-#   color: #ce7500;
-#   text-decoration: none;
-#   background: #ffffff;
-#   background-image: url("/path/to/images/image.png"); 
-#   background-repeat: no-repeat;
-#   background-attachment: fixed;
-#   background-position: center;
-# }
-#
-# .pdtd {
-#   vertical-align: top;
-#   padding: 2px 0px 0px 0px;
-#   font-family : "hoefler text", Tahoma, Helvetica, sans-serif;
-#   font-size : 11pt;
-#   color : #000000;
-#   text-decoration : none;
-#   background-color: transparent;
-# }
-#
-# .pdtr {}
-# .pdparagraph {}
-# .pdtable {}
-# .pdlink a {
-#   vertical-align: top;
-#   padding: 2px 0px 0px 0px;
-#   color:  #7090A6;
-#   background-color: transparent;
-#   font-weight: bold;
-#   text-decoration:    none;
-# }
-#
-# .pdlink a:visited  {
-#   vertical-align: top;
-#   padding: 2px 0px 0px 0px;
-#   text-decoration:    none;
-#   font-weight: bold;
-#   color:  #7090A6;
-#   background-color: transparent;
-# }
-# .pdlink a:hover {
-#   vertical-align: top;
-#   padding: 2px 0px 0px 0px;
-#   background-color: transparent;
-#   font-weight: bold;
-#   color:  #7090A6;
-#   text-decoration:    none;
-# }
-#
-# With more to be added in the future...
-#
-# REQUIRED: ImageMagick's Perl module and it's dependancies. And a dialog 
+# REQUIRED: ImageMagick's Perl module and a dialog 
 #           program or Term::Pogressbar Perl module
-#
-# TODO:
-#   
-#   * read TODO scatter thru the script...
-#
-#   * do html_msg per photo in a .pixdir2htmlrc file or a pixname.txt file:
-#       pix_"filename" = message for this file
-#
-#   * clean() function to cleanup all files created by this script
-#     HINT: 
-#     find . -name "[$LOGFILE*|*.$EXT|$html_dir|$thumbnails_dir]" -exec rm -fr {} \;
-#   * internationalization of strings
-#   * test in windows or other non-unix that run Perl
-#
-# BUGS:
-#   * config file should not contain double quotes (") without
-#     escaping them first (\")
-# 
-# TIPS:
-# 
-# Put a .nopixdir2htmlrc file in directories for which you do not want
-# thumbnails and/or index.$EXT to be written
-#
+use strict;
+$|++; # disable buffer (autoflush)
 
 # standard Perl modules
-use strict;
-use vars qw( $VERSION @INC );
-use Config;
-
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
-
 use File::Copy;
 use File::Find;     # find();
 use File::Basename; # basename();
-use FileHandle; # for progressbar
-use Cwd; # pwd
+use FileHandle;     # for progressbar
+use Cwd;            # same as: qx/pwd/
 
 # non-standard modules:
 eval "use Image::Magick";
@@ -176,68 +26,9 @@ if ($@)
     "       On Debian just: apt-get install perlmagic \n\n";
     print STDERR "$@\n";
     exit 1;
-}
-# TODO else use "convert" if found
-
-# borrowed ideas from UDPM.pm for the progressbar.
-# didn't use it because it's too bloated for what
-# I needed, and it created an extra module that
-# users would have to install... nice work though
-
-# end of loading needed modules
-
-$|++; # disable buffer (autoflush)
-
-my $USAGE = "
-pixdir2html.pl  [-n|--no-menu] 
-                [-N|--no-index]
-                [-f|--force] 
-                [-M|--menu-only]
-                [-E|--extension] (php)
-                [-t|--thumbs-only]
-                [-D|--directory] (.)
-                [-l|--menu-links]
-                [-m|--menu-type=[classic|modern]]
-                [--menu-name=[menu]]
-                [-c|--cut-dirs]
-                [-F|--front-end=[Xdialog|zenity|console|...]]
-                [--td]
-                [--menu-td]
-                [--str-limit]
-                [-h|--help]
-
-force    - creates a .pixdir2htmlrc in every subdir overriding
-any file with that name
-no-menu   - do not create menu file after finishing creating thumbnails
-no-index  - do not create the index.EXT files after creating thumbnails
-menu-only - only create a menu file and exit
-menu-links- number of links to put in the Menu per row. Default is 10
-menu-type - menu to use for albums (directories). Classic uses plain text menus, modern lays menus vertically with a sample thumbnail and their name
-menu-name - name to use for menu files instead of 'menu'. You might want to use 'index'.
-cut-dirs - number of directories to cut from the Menu string. Default is 0
-extension- use this extension instead of default (php)
-directory- use this directory instead of default (current)
-menu-td  - How many cells in menu?
-td       - How many cells in e/a file
-front-end - dialog to use to display progress. Must be compatible with Xdialog.
-            or you can also choose 'console' if you have Term::ProgressBar 
-            installed
-str-limit- What's the size of the longest string allowed in menus?
-help     - prints this help and exit\n
-
-e.g.
-cd /path/to/picture_directory
-pixdir2html --extension='html'
-
-is the same as:
-pixdir2html -E html
-
-";
-
+} # TODO else use "convert" if found
 # Get Nautilus current working directory, if under Natilus:
-
 my $nautilus_root = "";
-
 if ( exists $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} 
     && $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} =~ m#^file:///# 
 ) 
@@ -245,39 +36,24 @@ if ( exists $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'}
     ($nautilus_root = $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} ) =~ s#%([0-9A-Fa-f]{2})#chr(hex($1))#ge;
     ($nautilus_root = $nautilus_root ) =~ s#^file://##g;
 }
-
 my $ROOT_DIRECTORY= ( -d $nautilus_root ) ? $nautilus_root : ".";
 my $LOG="$ROOT_DIRECTORY/pixdir2html.log";
 my $CONFIG_FILE=".pixdir2htmlrc";
 my $THUMBNAIL="t";  # individual thumnails files will be placed here
 my $HTMLDIR="h";    # individual HTML files
-my $EXT="php";     # default extension for generated HTML files
 my $THUMB_PREFIX = "t"; # no need to ever change this... this starts
 # the name for all thumbnail images
-
 # list directories that should be skipped here
 # separated by |
 my $EXCEPTION_LIST = "CVS|RCS";
 # regex of files we want to include
 my $EXT_INCL_EXPR = "\.(jpg|png|jpeg|gif)";
-# How big are the thumbnails?
-# This is the default, in case the config file
-# doesn't exist or do not have this item in it
-my $PERCENT="20%";
-# How many TDs per table in e/a index.EXT?
-my $TD=4;
-# How many TDs per menu table?
-my $menu_td=10;
-# How big are strings in menus?
-my $STR_LIMIT = 32;
-
 # dont worry if you don't have a log rotation facility...
 # just leave it as is
 my $SAVELOG = "/usr/bin/savelog";
-
-###Nothing below this line should need to be configured.###
 #**************************************************************#
-
+###        Nothing below this line should be changed.        ###
+#**************************************************************#
 my @pixdir = ();    # for menu
 my @pixfile = ();   # for thumbfiles/pictures
 my %config = ();    # hash of hashes to hold config per directories
@@ -291,27 +67,28 @@ my $CUT_DIRS=0;
 my $NOINDEX=0;
 my $HELP=0;
 my $PVERSION=0;
+# How big are the thumbnails?
+my $PERCENT="20%";
+# How many TDs per table in e/a index.EXT?
+my $TD=4;
+# How many TDs per menu table?
+my $menu_td=10;
+# How big are strings in menus?
+my $STR_LIMIT = 32;
 # progressbar stuff here:
-# initialization:
 my $GAUGE = new FileHandle;
-
-#my $tty = qx/tty/; # this returns text from system("tty")
 my $MODE = "text";
 my $DIA = "";
 my $use_console_progressbar = 0; # a simple flag
-
 my $MENU_TYPE="classic"; # default menu-type. put 'menu-type: modern' in config or pass --menu-type="modern" from command line to change
-
 # html related
+my $EXT="html";     # default extension for generated HTML files
 my $FILE_NAME="index";
 my $MENU_NAME="menu"; 
 my $NEW_MENU_NAME="";
 # others
 my $menu_str="";
-
-my $revision = "Pixdir2html v1.7 
-Luis Mondesi <lemsx1\@hotmail.com> | LatinoMixed.com)\n";
-
+my $revision="Pixdir2html v1.8\n Luis Mondesi <lemsx1\@hotmail.com>\n";
 # get options
 GetOptions(
     # flags
@@ -322,7 +99,6 @@ GetOptions(
     'M|menu-only'       =>  \$MENUONLY,
     't|thumbs-only'     =>  \$THUMBSONLY,
     'N|no-index'        =>  \$NOINDEX,
-    'l|menu-links=i'    =>  \$menu_td,
     # strings
     'E|extension=s'     =>  \$EXT,
     'D|directory=s'     =>  \$ROOT_DIRECTORY,
@@ -331,25 +107,18 @@ GetOptions(
     'menu-name=s'       =>  \$NEW_MENU_NAME,
     # numbers
     'menu-td=i'         =>  \$menu_td,
+    'l|menu-links=i'    =>  \$menu_td,
     'td=i'              =>  \$TD,
     'str-limit=i'       =>  \$STR_LIMIT,
     'c|cut-dirs=i'      =>  \$CUT_DIRS
 );
-
-die $USAGE if $HELP;
+if ( $HELP ) { system("pod2text $0 | more"); exit 0; }
 if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
-
 # Xdialog is a better implementation than gdialog. 
-# Zenity is better than all so far... but
-# if we find any of these, we'll use that first
-# else, we try an alternate name
-# TODO make sure this works in different systems/shells
-# Go thru the PATH variable and finding the binaries:
-# (this might not work on some systems...)
+# Zenity is better than all so far... 
 my @xbinaries = ("zenity","Xdialog","xdialog","gdialog","kdialog");
 my @binaries = ("dialog","whiptail","cdialog"); 
 my $FOUND = 0; # flag
-
 if ( $DIA eq "console" ) {
     print STDERR ("Trying Term::ProgressBar\n");
     eval "use Term::ProgressBar";
@@ -387,7 +156,6 @@ if ( $DIA eq "console" ) {
             } # end foreach @binaries
         } # end if NAUTILUS_SCRIPT_CURRENT_URI
     } # end foreach $PATH
-
     # make sure DIA is set or exit abnormally
     if ( $MODE eq "x" ) {
         if ( $DIA eq "" ) { 
@@ -420,27 +188,18 @@ if ( $DIA eq "console" ) {
         } # end if DIA eq console
     } # end if MODE
 } # end if DIA
-
 my $LOGFILE = new FileHandle;
-
 my $THUMBNAILSDIR="$ROOT_DIRECTORY/$THUMBNAIL";
 my $HTMLSDIR="$ROOT_DIRECTORY/$HTMLDIR";
 
 main();
-
 #-------------------------------------------------#
-#                     FUNCTIONS                   #
+#                   FUNCTIONS                     #
 #-------------------------------------------------#
 sub main {
-    
     $LOGFILE->open("> $LOG");
     $LOGFILE->autoflush(1);
-   
-    # for now --clear is the same for all dialogs but Zenity
-    # also --backtitle is not an option for zenity
-    # ( $MODE eq "x" ) ? " --clear ": 
     my $ARGS = ( $DIA =~ /zenity/ ) ? "" : " --clear --backtitle 'Picture Directory to HTML' ";
-    
     if ( $use_console_progressbar == 1 ) 
     {
         $GAUGE = Term::ProgressBar->new(100); # will be setup later...
@@ -454,10 +213,8 @@ sub main {
         }
         $GAUGE->autoflush(1);
     }
-
     # which progressbar are we using?
     print $LOGFILE ("Mode $MODE\n");
-
     # are we creating a menu file only?
     if ( 
         $MENUONLY > 0 
@@ -468,64 +225,64 @@ sub main {
         menu_file();
         return 0;
     }
-
     print $LOGFILE "= Start directory $ROOT_DIRECTORY \n";
-
     if ( ! -f "$ROOT_DIRECTORY/$CONFIG_FILE" )
     {
-        print $LOGFILE ( "Missing main $CONFIG_FILE. Creating one for you \n");
+        print $LOGFILE 
+        ( "! Missing main $CONFIG_FILE. Creating one for you at '$ROOT_DIRECTORY'\n");
         init_config($ROOT_DIRECTORY,"true");
     }	
-
     # get menu string
-    # TODO
-    # this will generate a list of all 
-    # directories that don't have a .nopixdir2htmlrc
-    # file in them and assume that a index.$EXT file
-    # will be created later during this script 
-    # execution. I don't like this assumption
-    # and will fix this later...
-    # For now it just works. This way we get a uniform
-    # Menu string for all index files.
     unless ( $NOMENU == 1 ) {
         print $LOGFILE ("= Creating menu string\n");
         $menu_str = menu_file();
     }
-
     # make all thumbnails and indices
     mkthumb($ROOT_DIRECTORY,$menu_str);
-
     if ( $THUMBSONLY > 0 ) {
-        # this is a quick "dirty" way of getting only
-        # thumbnails 
         return 0;
     }
-
     # make all supporting HTML files
     thumb_html_files($ROOT_DIRECTORY);
-
-    # close GAUGE
-    #$GAUGE->close();
+    # close progressbar
     if ( $use_console_progressbar != 1 ) 
     {
         eof($GAUGE);
     }
     undef($GAUGE); # this also closes the gauge... but...
-
     # close log
     print $LOGFILE ("$total_directories directories.\n\n");
     $LOGFILE->close();
-
     if ( -x $SAVELOG ) {
         system("$SAVELOG $LOG > /dev/null 2>&1");
     }
-
     return 0;
 } # endmain
+
+sub write_config
+{
+    # @param 0 string := directory to write $CONFIG_FILE to
+    # @param 1 hashref := hash of hashes containing what to write
+    my $dir = shift;
+    my $hashref = shift;
+    if (open(CONFIG, ">$dir/$CONFIG_FILE")) {
+        foreach my $key ( keys %{$hashref} ) {
+            foreach my $subkey ( keys %{$hashref->{$key}} ) {
+                print CONFIG 
+                "$subkey=" . $hashref->{"$key"}->{"$subkey"}."\n";
+            }
+        }
+    } else {
+        print STDERR 
+        "Could not write $dir/$CONFIG_FILE. Check permissions?";
+    }
+    close(CONFIG);
+} # end write_config
 
 sub init_config {
     # @param 0 string := directory with config file   
     # @param 1 string := optional, do we want to create a config file?
+    # saves found variables to global %config
     my $ROOT = shift;
     my $create_config = shift;
     my %config_tmp = (); # hash to return
@@ -552,11 +309,11 @@ sub init_config {
     # ROOT/dir_a/dir_a1/dir_a2
     # ROOT/dir_b ...
     # for which case you will need a full path
-    $config_tmp{"$ROOT"}{"uri"}="..";
-    $config_tmp{"$ROOT"}{"percent"}=$PERCENT;
+    $config_tmp{"$ROOT"}{"uri"}=".."; # might need modifications
+    $config_tmp{"$ROOT"}{"percent"}=( $PERCENT ) ? $PERCENT : "20%";
     $config_tmp{"$ROOT"}{"title"}="Images";
     $config_tmp{"$ROOT"}{"meta"}="<meta http-equiv='content-type' content='text/html;charset=iso-8859-1'>";
-    $config_tmp{"$ROOT"}{"stylesheet"}="<link rel='stylesheet' href='../styles.css' type='text/css'>";
+    $config_tmp{"$ROOT"}{"stylesheet"}="../styles.css";
     $config_tmp{"$ROOT"}{"html_msg"}="<h1 class='pdheader1'>Free form HTML</h1>";
     $config_tmp{"$ROOT"}{"body"}="<body class='pdbody'>";
     $config_tmp{"$ROOT"}{"p"}="<p class='pdparagraph'>";
@@ -570,7 +327,15 @@ sub init_config {
     $config_tmp{"$ROOT"}{"header"}="";
     $config_tmp{"$ROOT"}{"footer"}="";
     $config_tmp{"$ROOT"}{"menuheader_footer"}=0;
-    $config_tmp{"$ROOT"}{"ext"}=$EXT;
+    # ext can be passed in a .pixdir2htmlrc file
+    # like: ext=html or ext=php ...
+    $config_tmp{"$ROOT"}{"ext"}=( $EXT ) ? $EXT : "html" ;
+    $config_tmp{"$ROOT"}{"menutype"}=( $MENU_TYPE ) ? $MENU_TYPE : "classic";
+    $config_tmp{"$ROOT"}{"menuname"}=( $MENU_NAME ) ? $MENU_NAME : "menu";
+    $config_tmp{"$ROOT"}{"menutd"}=( $menu_td ) ? $menu_td : "10";
+    $config_tmp{"$ROOT"}{"td"}=( $TD ) ? $TD : "4" ;
+    $config_tmp{"$ROOT"}{"strlimit"}=( $STR_LIMIT ) ? $STR_LIMIT : "32";
+    $config_tmp{"$ROOT"}{"cutdirs"}=( $CUT_DIRS ) ? $CUT_DIRS : "0" ;
 
     if ( -f "$ROOT/$CONFIG_FILE" )
     {
@@ -587,28 +352,20 @@ sub init_config {
                 $line .= <CONFIG>;
                 redo unless eof(CONFIG);
             }
-            $config_tmp{"$ROOT"}{"$1"} = $2 if ( $line =~ m,^\s*([^=]+)=(.+), );
+            $config_tmp{"$ROOT"}{"$1"} = "$2" if ( $line =~ m,^\s*([^=]+)=(.+), );
         }
         close(CONFIG);
     } else {
         warn "Could not find $ROOT/$CONFIG_FILE\n";
-        
-        my $this_root_ref = \%config_tmp;
-
         if ( $create_config =~ /true/ ) 
         {
-            if (open(CONFIG, ">$ROOT/$CONFIG_FILE")) {
-                #        foreach my $keys ( keys %config_tmp ) {
-                    foreach my $key ( keys %$this_root_ref ) {
-                        print CONFIG "$key=" . $config_tmp{"$ROOT"}{"$key"}."\n";
-                    }
-                    #}
-            } else {
-                print STDERR "Could not write $ROOT/$CONFIG_FILE. Check permissions?";
-            }
+            # uncomment for debugging...
+            #use Data::Dumper;
+            #print STDOUT Dumper(%config_tmp);
+            #print STDOUT "\n\n\n";
+            write_config($ROOT,\%config_tmp);
         }
     }
-
     #construct a header if it doesn't yet exist:
     if ( $config_tmp{"$ROOT"}{"header"} =~ /^\s*$/ ) 
     {
@@ -617,34 +374,22 @@ sub init_config {
         <head>
         ".$config_tmp{"$ROOT"}{"meta"}."
         <title>".$config_tmp{"$ROOT"}{"title"}."</title>
-        ".$config_tmp{"$ROOT"}{"stylesheet"}."
+        <link rel='stylesheet' href='".
+        $config_tmp{"$ROOT"}{"stylesheet"}.
+        "' type='text/css'>
         </head>\n".
         $config_tmp{"$ROOT"}{"body"}."
         \n<center>\n".
         $config_tmp{"$ROOT"}{"html_msg"}."\n";
     }
-
     #construct a footer if it doesn't yet exist:
     if ( $config_tmp{"$ROOT"}{"footer"} =~ /^\s*$/ )
     {
         print $LOGFILE (": Blank footer. Generating my own [$ROOT] ... \n");
         $config_tmp{"$ROOT"}{"footer"}="</center>\n</body></html>";
     }
-        
-    # ext can be passed in a .pixdir2htmlrc file
-    # like: ext=html or ext=php ...
-    if ( 
-        ! exists $config_tmp{"$ROOT"}{"ext"} ||
-        $config_tmp{"$ROOT"}{"ext"} eq "" 
-    ) {
-        # default to HTML extension
-        $config_tmp{"$ROOT"}{"ext"}="html";
-    }
-
     # save hash
-    %config = %config_tmp;
-
-    #return %config_tmp;
+    %config = %config_tmp; # returns %config_tmp in global %config
 } # end init_config
 
 sub mkindex {
@@ -1046,7 +791,6 @@ sub thumb_html_files {
         print FILE ($config{"$BASE"}{"header"}."\n");
         # start table
         print FILE ($config{"$BASE"}{"table"}."\n");
-        # FIXME image was here
         # set menu-name now (from command-line or config file)
         if ( $NEW_MENU_NAME gt "" ) 
         {
@@ -1165,19 +909,7 @@ sub menu_file {
     # check if a .nopixdir2htmlrc file exists
     # if it does, then skip it and do the next one.
     # if it doesn't, then assume this will contain
-    # a index.$EXT file and add it to the menu.
-    #
-    # TODO
-    # If we check whether the index.$EXT file exists
-    # first, then we get files with no menu table...
-    # We should find a way to correct this.
-    # Take into consideration that this function is called
-    # before we even attempt to build the index.$EXT files
-    # thus, that makes things kind of difficult a bit.
-    # So, we should check if at least one .jpg|.gif|.png
-    # file exists in the current $directory. That should 
-    # be done by do_dir_ary above
-    #
+    # a index.$EXT file and add it to the menu. 
     foreach my $directory (@uniq){
         next if (-f "$directory/.nopixdir2htmlrc");
         if (
@@ -1345,7 +1077,7 @@ sub menu_file {
                         } else {
                             print FILE ($config{"$ROOT_DIRECTORY"}{"tr"}."\n");
                         }
-                        for ($y=1;$y<=$menu_td;$y++){
+                        for ($y=1;$y<=$config{"$ROOT_DIRECTORY"}{"menu_td"};$y++){
                             # close the TD tags
                             if ($y > 1) { 
                                 print FILE ("\t </td> \n"); 
@@ -1398,7 +1130,7 @@ sub menu_file {
                         } else {
                             $MENU_STR .= $config{"$ROOT_DIRECTORY"}{"tr"}."\n";
                         }
-                        for ($y=1;$y<=$menu_td;$y++){
+                        for ($y=1;$y<=$config{"$ROOT_DIRECTORY"}{"menutd"};$y++){
                             # close the TD tags
                             if ($y > 1) { 
                                 $MENU_STR .= "\t </td> \n";
@@ -1651,3 +1383,250 @@ sub mydie
     print LOGFILE "$msg";
     die("Stopping execution $fun");
 }
+
+#-------------------------------------------------#
+#                 DOCUMENTATION                   #
+#-------------------------------------------------#
+__END__
+
+=head1 NAME
+
+pixdir2html - makes thumbnails and custom html files for pictures
+
+=head1 SYNOPSIS
+
+B<pixdir2html.pl>  [-n,--no-menu]
+                [-N,--no-index]
+                [-f,--force] 
+                [-M,--menu-only]
+                [-E,--extension] 
+                [-t,--thumbs-only]
+                [-D,--directory] 
+                [-l,--menu-links,--menu-td]
+                [-m,--menu-type=[classic,modern]]
+                [--menu-name=[menu]]
+                [-c,--cut-dirs]
+                [-F,--front-end=[Xdialog,zenity,console,...]]
+                [--td]
+                [--str-limit]
+                [-h,--help]
+
+=head1 DESCRIPTION 
+
+For the Impatient:
+    Passes current directory to script 
+        pixdir2html.pl 
+    Force copies the "rootdir"/.pixdir2htmlrc
+    to all other directories within this tree
+        pixdir2html.pl -f --directory="rootdir"
+    
+    To use this script in a non interactive way with Nautilus,
+    make this file executable and put it in:
+        ~/.gnome2/nautilus-scripts
+
+    Then run it from from the File->Scripts menu in Nautilus
+
+=head1 OPTIONS
+
+=over 8
+
+=item -n,--no-menu
+
+do not create menu file after finishing creating thumbnails
+
+=item -N,--no-index
+
+do not create the index.EXT files after creating thumbnails
+
+=item -f,--force
+
+copy the .pixdir2htmlrc file from rootdir in every subdirectory
+
+=item -M,--menu-only
+
+only create a menu file and exit
+
+=item -E,--extension 
+
+extension to use for output files. Defaults to "html"
+
+=item -t,--thumbs-only
+
+generate thumbnail files only in thumbnail directory. Defaults to "t"
+
+=item -D,--directory
+
+directory containing all pictures to work with. Defaults to "."
+
+=item -l,--menu-links,--menu-td
+
+number of links to put in the Menu per row in classic menus. Default is 10
+
+=item -m,--menu-type=[classic,modern]
+
+menu type to use for albums (directories).
+    Classic uses plain text menus.
+    Modern lays menus vertically with a sample thumbnail and their name
+
+=item --menu-name=[index]
+
+name to use for menu files. Defaults to "menu"
+
+=item -c,--cut-dirs
+
+number of directories to cut from the classic Menu string. Default is 0
+
+=item -F,--front-end=[Xdialog,zenity,console,...]
+
+dialog to use to display progress. Must be compatible with Xdialog
+or you can also choose "console" if you have Term::ProgressBar 
+installed. Defaults to Zenity for Nautilus
+
+=item --td
+
+number of cells in e/a index file for classic Menus
+
+=item --str-limit
+
+size of the longest string allowed in menus. Defaults to unlimited
+
+=item -h,--help
+
+prints this help and exit
+
+e.g.
+
+cd /path/to/picture_directory
+
+pixdir2html --extension="php"
+
+is the same as:
+
+pixdir2html -E php
+ 
+You could customize each directory differently by having a
+file named .pixdir2htmlrc in the directory containing the
+pictures. Put a .nopixdir2htmlrc file in directories for which 
+you do not want thumbnails and/or index.$EXT to be written. A
+sample .pixdir2htmlrc should have the following:
+
+uri=http://absolute.path.com/images # must be absolute. no trailing /
+
+header=
+
+percent=30% #size of the thumbnails for this folder
+
+title=
+
+meta=
+
+stylesheet=http://absolute.path.com/styles/styles.css
+
+html_msg=<h1 class="pdheader1">Free form using HTML tags</h1> 
+
+body=<body bgcolor="#000000" class="pdbody">
+
+p=<p class="pdparagraph">
+
+table=<table border="0" class="pdtable">
+
+td=<td valign="left" class="pdtd">
+
+tr=<tr %%bgcolor%% class="pdtr">
+
+new=http://absolute.path.com/images/new.png # for dirs with .new files
+
+footer=<a href="#" class="pdlink">A footer here</a>
+
+# set this to 1 to avoid printing a header
+
+# or footer in the menu file menu.$EXT
+
+menuheader_footer=0
+
+ext=html
+
+menutype=classic
+
+# full path to a picture which will be used as the background image 
+
+# for the album icons. album"s thumbnails must be exactly the 
+
+# same size for this to look good.
+
+albumpix=album.png  
+
+A simple styles.css file should have things like:
+
+.pdimage {
+  border: 0;
+}
+
+.pdbody { 
+  font-family: Verdana, Lucida, sans-serif;
+  color: #ce7500;
+  text-decoration: none;
+  background: #ffffff;
+  background-image: url("/path/to/images/image.png"); 
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-position: center;
+}
+
+.pdtd {
+  vertical-align: top;
+  padding: 2px 0px 0px 0px;
+  font-family : "hoefler text", Tahoma, Helvetica, sans-serif;
+  font-size : 11pt;
+  color : #000000;
+  text-decoration : none;
+  background-color: transparent;
+}
+
+.pdtr {}
+
+.pdparagraph {}
+
+.pdtable {}
+
+.pdlink a {
+  vertical-align: top;
+  padding: 2px 0px 0px 0px;
+  color:  #7090A6;
+  background-color: transparent;
+  font-weight: bold;
+  text-decoration:    none;
+}
+
+.pdlink a:visited  {
+  vertical-align: top;
+  padding: 2px 0px 0px 0px;
+  text-decoration:    none;
+  font-weight: bold;
+  color:  #7090A6;
+  background-color: transparent;
+}
+
+.pdlink a:hover {
+  vertical-align: top;
+  padding: 2px 0px 0px 0px;
+  background-color: transparent;
+  font-weight: bold;
+  color:  #7090A6;
+  text-decoration:    none;
+}
+
+=head1 ENVIRONMENT
+
+No environment variables are used.
+
+=head1 AUTHOR
+
+Luis Mondesi <lemsx1@hotmail.com>
+
+=head1 SEE ALSO
+
+perl(1), pod2text(1), pod2man(1), Image::Magick(3), Term::Progressbar(3)
+
+=cut
+

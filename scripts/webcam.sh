@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jan-30
 #
@@ -97,6 +97,7 @@ case "$1" in
             echo $MESSAGE | $EMAILBIN -s "$DESC error" $EMAILADDRESS $USER
 
         fi
+
         # rename directory and create a new empty directory
         $MV $PHOTO $PHOTO-$APPENDTONAME.$$$$ && mkdir $PHOTO
 

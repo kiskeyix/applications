@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.15 $
+# $Revision: 1.16 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE:
@@ -274,182 +274,239 @@ __EOF__
     return %config_tmp;
 }
 
+#sub mkthumb {
+#    # Takes one argument directory to create images for
+#    # If a directory is found inside this directory containing
+#    # images, then it recursively calls itself over and over
+#
+#    my $ROOT = $_[0];
+#    my $MENU_STR = $_[1];
+#
+#
+#
+#    my (@ls,%myconfig) = ();
+#    my $i=0;
+#    my $total_picts=0;
+#
+#    my ($line,
+#    $thisFile,
+#    $pix_name,
+#    $file_name,
+#    $next_pix_name,
+#    $next_file_name,
+#    $last_pix_name,
+#    $last_html_file,
+#    $current_html_file,
+#    $last_file_name,
+#    $current_link,
+#    $last_link,
+#    $BASE,
+#    $tmp_BASE,
+#    $LAST_BASE,
+#    $NEXT_BASE,
+#    $HTMLSDIR) = "";
+#
+#
+#    print LOGFILE ("Making Thumbnails in $ROOT \n");
+#
+#    #construct array of all image files
+#    my @ary = do_file_ary("$ROOT");
+#
+#    # parse array of images
+#    foreach (@ary){
+#        $thisFile = basename($_);
+#        next if ($thisFile =~ m/$EXCEPTION_LIST/);
+#        next if ($_ =~ m/\/$THUMBNAIL\/.*$EXT_INCL_EXPR$/i);
+#        next if ($thisFile !~ m/$EXT_INCL_EXPR/i);
+#
+#        push @ls,$_;
+#    } #end images array creation
+#
+#    # Old loop (works!): 
+#    #opendir (DIR,"$ROOT") || die "Couldn't open dir $ROOT";
+#    # construct array of all image files
+##     while (defined($thisFile = readdir(DIR))) {
+##         next if ($thisFile =~ m/$EXCEPTION_LIST/);
+##         next if ($thisFile !~ /\w/);
+##         next if ($thisFile =~ /^\..*/); 
+##         if (
+##             -d "$ROOT/$thisFile" 
+##             && $thisFile !~ m/^$THUMBNAIL$/ 
+##             && $thisFile !~ m/^$HTMLDIR$/
+##         ) {
+##             if (-f "$ROOT/$thisFile/.nopixdir2htmlrc") {
+##                 print LOGFILE ".nopixdir2htmlrc file exists in ($thisFile). Skipping ...\n";
+##                 next;
+##             }
+##             $total_directories++;
+##             push @subdir,"$ROOT/$thisFile";
+##    
+##             if (-f "$ROOT/$thisFile/$CONFIG_FILE") {
+##                 if ($FORCE == 1) {
+##                     if ( 
+##                         copy("$ROOT_DIRECTORY/$CONFIG_FILE", 
+##                             "$ROOT/$thisFile/$CONFIG_FILE") 
+##                     ) {
+##                         print LOGFILE ("force copied $ROOT_DIRECTORY/$CONFIG_FILE \
+##                             to $ROOT/$thisFile/$CONFIG_FILE \n");
+##                     }
+##                 } 
+##             } else {
+##                 #file doesn't exist, copy it
+##                 if (
+##                 copy("$ROOT_DIRECTORY/$CONFIG_FILE", 
+##                     "$ROOT/$thisFile/$CONFIG_FILE")
+##                 ) {
+##                     print LOGFILE ("copied $CONFIG_FILE to \
+##                         $ROOT/$thisFile/$CONFIG_FILE \n");
+##                 }
+##             }
+##         }
+##         next if ($thisFile !~ m/$EXT_INCL_EXPR/i);
+##         push @ls,$thisFile;
+##         $total_picts++;
+##     } #end images array creation
+##     closedir(DIR);
+#
+#foreach(@ls) {
+#    $pix_name = basename($_);
+#    # strip extension from file name
+#    ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR//g;
+#    # get base directory
+#    ( $BASE = $_ ) =~ s/(.*)\/$pix_name$/$1/g;
+#    #print STDOUT $BASE."\n";
+#
+#    if ( $BASE !~ m/$tmp_BASE/ ) {
+#        print LOGFILE "+ Reading config for $BASE\n";
+#        # read specific config file for this directory
+#        %myconfig = init_config($BASE);
+#
+#    } 
+#    # update flag
+#    $tmp_BASE = $BASE;
+#    next if ( -f "$BASE/.nopixdir2htmlrc" );
+#
+#    # construct PATH for thumbnail directory
+#    $THUMBNAILSDIR="$BASE/$THUMBNAIL";
+#
+#    #do we already have a dir with this name? no, then create one
+#    if (!-d "$THUMBNAILSDIR") { 
+#        print LOGFILE ("making thumbnails directory in $THUMBNAILSDIR\n");
+#        mkdir("$THUMBNAILSDIR",0755);
+#    }
+#
+#    if (!-f "$BASE/.nopixdir2htmlrc" && -f $BASE."/".$ls[0] ) {
+#
+#        # read specific config file for this directory
+#        %myconfig = init_config($BASE);
+#
+#        open(FILE, "> $BASE/$FILE_NAME") || die "Couldn't write file $FILE_NAME to $BASE";
+#
+#        # Percentage for this directory?
+#        $PERCENT = ("$myconfig{percent}") ? $myconfig{percent}:$PERCENT;
+#
+#        # start HTML
+#        print FILE ("$myconfig{header}\n");
+#
+#        # print menu (if any)
+#        print FILE ("$MENU_STR");
+#
+#        # start table
+#        print FILE ("$myconfig{table}\n");
+#
+#        my ($my_bgcolor,$file_name) = "";
+#
+#        #print all picts now
+#        #foreach(@ls){
+#            if ( !-f "$THUMBNAILSDIR/"."t$_" ){
+#                # create thumbnail 
+#                if ( -f "$BASE/$_" ){
+#
+#                    print LOGFILE ("\nConverting file $BASE/$_ into $THUMBNAILSDIR/t$_ \n");
+#                    system("convert -geometry $PERCENT $BASE/$_ $THUMBNAILSDIR/"."t$_");
+#                    if ( $? != 0 ) {
+#                        die "ERROR: conversion failed\n";
+#                    }
+#
+#                    print LOGFILE ("\n"); 
+#                } # end if -f BASE/ls[i]
+#            } # end if THUMBNAILSDIR/myfile
+#
+#            if ($i == 0) {
+#                # open a new row
+#                if ( $myconfig{tr} =~ m/\%+bgcolor\%+/i ) {
+#                    ($myconfig{tr} = $myconfig{tr}) =~ s/\%+bgcolor\%+//i;
+#                }
+#
+#                print FILE ($myconfig{tr}."\n");
+#            } 
+#            print FILE ("\t".$myconfig{td}."\n");
+#            if (-f "$THUMBNAILSDIR/"."t$_"){
+#                # if file exists, create a link, otherwise leave it blank
+#                ($file_name = $_) =~ s/$EXT_INCL_EXPR//g;
+#                print FILE ("<a href='$HTMLDIR/$file_name.$EXT'><img src='$THUMBNAIL/"."t$_'></a>\n");
+#            } else {
+#                print FILE ("&nbsp;");
+#            }
+#            print FILE ("\t</td>\n");
+#            if ($i<($td-1)) {
+#                $i++;
+#            } else {
+#                # wrap and reset counter
+#                print FILE ("</tr>\n");
+#                $i = 0;
+#            }
+#            #} #end foreach
+#            # complete missing TD
+#            if ($i != 0) {
+#                for (;$i<$td;$i++) {
+#                    print FILE ("\t".$myconfig{td}."\n");
+#                    print FILE ("&nbsp;");
+#                    print FILE ("\t</td>\n");
+#                }
+#            }
+#            print FILE ("</tr>\n");
+#            print FILE ("</table>\n");
+#
+## close the footer if one doesn't exist:
+#if ( $myconfig{footer} eq "" ) {
+#    print FILE ($myconfig{footer}."\n");
+#    print FILE ("</center></body>\n");
+#    print FILE ("</HTML>");
+#} else {
+#
+#    print FILE ($myconfig{footer});
+#}
+#close(FILE);
+#print LOGFILE "Counted $total_picts pictures here $ROOT\n";
+#    }
+#} # end foreach @ls
+#} #end mkthumb
+
+sub mkindex {
+    # takes a two-dimensional array in the form:
+    # $name{base}->[0] = 'path/file'
+    # and does a index file for e/a 'base' of
+    # all files referenced 
+    my ($BASE) = "";
+    my (@files,%pixfiles) = ();
+
+    # TODO see why this doesn't work as expected
+    foreach $BASE ( sort keys %_ ) {
+        print STDOUT ("base: $BASE\n");
+        my @files = @{$pixfiles{$BASE}};
+        print STDOUT (join ", ", sort @files);
+        print STDOUT "\n";
+    }
+}
+
+
 sub mkthumb {
-    # Takes one argument directory to create images for
-    # If a directory is found inside this directory containing
-    # images, then it recursively calls itself over and over
-
-    my $ROOT = $_[0];
-    my $MENU_STR = $_[1];
-
-    $THUMBNAILSDIR="$ROOT/$THUMBNAIL";
-
-    my @subdir = ();
-    my @ls = ();
-    my @ts = ();
-    my %myconfig = ();
-
-    my $line = "";
-    my $thisFile= "";
-    my $i=0;
-    my $total_picts=0;
-    
-    opendir (DIR,"$ROOT") || die "Couldn't open dir $ROOT";
-    
-    print LOGFILE ("Working in $ROOT \n");
-    
-    # construct array of all image files
-    while (defined($thisFile = readdir(DIR))) {
-        next if ($thisFile =~ m/$EXCEPTION_LIST/);
-        next if ($thisFile !~ /\w/);
-        next if ($thisFile =~ /^\..*/); 
-        if (
-            -d "$ROOT/$thisFile" 
-            && $thisFile !~ m/^$THUMBNAIL$/ 
-            && $thisFile !~ m/^$HTMLDIR$/
-        ) {
-            if (-f "$ROOT/$thisFile/.nopixdir2htmlrc") {
-                print LOGFILE ".nopixdir2htmlrc file exists in ($thisFile). Skipping ...\n";
-                next;
-            }
-            $total_directories++;
-            push @subdir,"$ROOT/$thisFile";
-   
-            if (-f "$ROOT/$thisFile/$CONFIG_FILE") {
-                if ($FORCE == 1) {
-                    if ( 
-                        copy("$ROOT_DIRECTORY/$CONFIG_FILE", 
-                            "$ROOT/$thisFile/$CONFIG_FILE") 
-                    ) {
-                        print LOGFILE ("force copied $ROOT_DIRECTORY/$CONFIG_FILE \
-                            to $ROOT/$thisFile/$CONFIG_FILE \n");
-                    }
-                } 
-            } else {
-                #file doesn't exist, copy it
-                if (
-                copy("$ROOT_DIRECTORY/$CONFIG_FILE", 
-                    "$ROOT/$thisFile/$CONFIG_FILE")
-                ) {
-                    print LOGFILE ("copied $CONFIG_FILE to \
-                        $ROOT/$thisFile/$CONFIG_FILE \n");
-                }
-            }
-        }
-        next if ($thisFile !~ m/$EXT_INCL_EXPR/i);
-        push @ls,$thisFile;
-        $total_picts++;
-    } #end images array creation
-    closedir(DIR);
-
-    #do we already have a dir with this name? no, then create one
-    if (!-d "$THUMBNAILSDIR" && !-f "$ROOT/.nopixdir2htmlrc") { 
-        print LOGFILE ("making thumbnails directory in $THUMBNAILSDIR\n");
-        # only create directory if at least one image file exists here
-        if ( -f $ROOT."/".$ls[0] ) {
-            mkdir("$THUMBNAILSDIR",0755);
-        }
-    }
-
-    if (!-f "$ROOT/.nopixdir2htmlrc" && -f $ROOT."/".$ls[0] ) {
-       
-        # read specific config file for this directory
-        %myconfig = init_config($ROOT);
-        
-        open(FILE, "> $ROOT/$FILE_NAME") || die "Couldn't write file $FILE_NAME to $ROOT";
-
-        # Percentage for this directory?
-        $PERCENT = ("$myconfig{percent}") ? $myconfig{percent}:$PERCENT;
-
-        # start HTML
-        print FILE ("$myconfig{header}\n");
-        
-        # print menu (if any)
-        print FILE ("$MENU_STR");
-
-        # start table
-        print FILE ("$myconfig{table}\n");
-
-        my ($my_bgcolor,$file_name) = "";
-
-        #print all picts now
-        foreach(@ls){
-            if ( !-f "$THUMBNAILSDIR/"."t$_" ){
-                # create thumbnail 
-                if ( -f "$ROOT/$_" ){
-
-                    print LOGFILE ("\nConverting file $ROOT/$_ into $THUMBNAILSDIR/t$_ \n");
-                    system("convert -geometry $PERCENT $ROOT/$_ $THUMBNAILSDIR/"."t$_");
-                    if ( $? != 0 ) {
-                        die "ERROR: conversion failed\n";
-                    }
-
-                    print LOGFILE ("\n"); 
-                } # end if -f ROOT/ls[i]
-            } # end if THUMBNAILSDIR/myfile
-
-            if ($i == 0) {
-                # open a new row
-                if ( $myconfig{tr} =~ m/\%+bgcolor\%+/i ) {
-                    ($myconfig{tr} = $myconfig{tr}) =~ s/\%+bgcolor\%+//i;
-                }
-
-                print FILE ($myconfig{tr}."\n");
-            } 
-            print FILE ("\t".$myconfig{td}."\n");
-            if (-f "$THUMBNAILSDIR/"."t$_"){
-                # if file exists, create a link, otherwise leave it blank
-                ($file_name = $_) =~ s/$EXT_INCL_EXPR//g;
-                print FILE ("<a href='$HTMLDIR/$file_name.$EXT'><img src='$THUMBNAIL/"."t$_'></a>\n");
-            } else {
-                print FILE ("&nbsp;");
-            }
-            print FILE ("\t</td>\n");
-            if ($i<($td-1)) {
-                $i++;
-            } else {
-                # wrap and reset counter
-                print FILE ("</tr>\n");
-                $i = 0;
-            }
-        } #end foreach
-        # complete missing TD
-        if ($i != 0) {
-            for (;$i<$td;$i++) {
-                print FILE ("\t".$myconfig{td}."\n");
-                print FILE ("&nbsp;");
-                print FILE ("\t</td>\n");
-            }
-        }
-        print FILE ("</tr>\n");
-        print FILE ("</table>\n");
-
-# close the footer if one doesn't exist:
-        if ( $myconfig{footer} eq "" ) {
-            print FILE ($myconfig{footer}."\n");
-            print FILE ("</center></body>\n");
-            print FILE ("</HTML>");
-        } else {
-
-            print FILE ($myconfig{footer});
-        }
-        close(FILE);
-        print LOGFILE "Counted $total_picts pictures here $ROOT\n";
-    }
-
-# loop thru rest of directories
-    foreach(@subdir){
-        mkthumb($_,$MENU_STR); 
-    }
-} #end mkthumb
-
-sub thumb_html_files {
-    # creates an HTML page for a thumbnail
     my $ROOT = $_[0];
     
     # locals
-    my (@ls,%myconfig) = ();
-    my $i = 0;
+    my (@ls,%myconfig,%pixfiles) = ();
+    
     my ($thisFile,
         $pix_name,
         $file_name,
@@ -468,7 +525,7 @@ sub thumb_html_files {
         $HTMLSDIR) = "";
 
 
-    print LOGFILE ("Making HTML files in $ROOT \n");
+    print LOGFILE ("= Making thumbnails in $ROOT \n");
 
     #construct array of all image files
     my @ary = do_file_ary("$ROOT");
@@ -477,8 +534,109 @@ sub thumb_html_files {
     foreach (@ary){
         $thisFile = basename($_);
         next if ($thisFile =~ m/$EXCEPTION_LIST/);
-        next if ($thisFile !~ m/$EXT_INCL_EXPR/i);
         next if ($_ =~ m/\/$THUMBNAIL\/.*$EXT_INCL_EXPR$/i);
+        next if ($thisFile !~ m/$EXT_INCL_EXPR/i);
+        
+        push @ls,$_;
+    } #end images array creation
+   
+    foreach(@ls){
+        $pix_name = basename($_);
+        # strip extension from file name
+        ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR//g;
+        # get base directory
+        ( $BASE = $_ ) =~ s/(.*)\/$pix_name$/$1/g;
+        #print STDOUT $BASE."\n";
+
+        if ( $BASE !~ m/$tmp_BASE/ ) {
+            # change of base, reset two-dimensional array counter
+            print LOGFILE "+ Reading config for $BASE\n";
+            # read specific config file for this directory
+            %myconfig = init_config($BASE);            
+        } 
+        # update flag
+        $tmp_BASE = $BASE;
+        next if ( -f "$BASE/.nopixdir2htmlrc" );
+        
+        # construct PATH for thumbnail directory
+        $THUMBNAILSDIR="$BASE/$THUMBNAIL";
+
+        #print STDOUT $HTMLSDIR."\n";
+        if (!-d "$THUMBNAILSDIR") { 
+            print LOGFILE ("= Making thumbnail directory in $BASE\n");
+            mkdir("$THUMBNAILSDIR",0755);
+        }
+
+        if ( !-f "$THUMBNAILSDIR/"."t$pix_name" ){
+        
+            print LOGFILE ("\n= Converting file $BASE/$pix_name into $THUMBNAILSDIR/t$pix_name \n");
+            system("convert -geometry $PERCENT $BASE/$pix_name $THUMBNAILSDIR/t$pix_name");
+            if ( $? != 0 ) {
+                die "ERROR: conversion failed\n $! ";
+            }
+
+            print LOGFILE ("\n"); 
+
+                }
+        # end if thumbnail file
+   
+        # save pixname for the index.html file
+        push @{$pixfiles{$BASE}}, "$THUMBNAILSDIR/t$pix_name";
+
+        # update flags
+        $LAST_BASE = $BASE;
+    } #end foreach @ls
+
+    mkindex(%pixfiles);
+
+#    foreach $BASE ( sort keys %pixfiles ) {
+#        print STDOUT ("base: $BASE\n");
+#        my @files = @{$pixfiles{$BASE}};
+#        print STDOUT (join ", ", sort @files);
+#        print STDOUT "\n";
+#    }
+
+} # end mkthumb
+
+sub thumb_html_files {
+    # creates an HTML page for a thumbnail
+    my $ROOT = $_[0];
+    
+    # locals
+    my (@ls,%myconfig) = ();
+    
+    my $i = 0;
+    
+    my ($thisFile,
+        $pix_name,
+        $file_name,
+        $next_pix_name,
+        $next_file_name,
+        $last_pix_name,
+        $last_html_file,
+        $current_html_file,
+        $last_file_name,
+        $current_link,
+        $last_link,
+        $BASE,
+        $tmp_BASE,
+        $LAST_BASE,
+        $NEXT_BASE,
+        $HTMLSDIR) = "";
+
+
+    print LOGFILE ("= Making HTML files in $ROOT \n");
+
+    #construct array of all image files
+    my @ary = do_file_ary("$ROOT");
+
+    # parse array of images
+    foreach (@ary){
+        $thisFile = basename($_);
+        next if ($thisFile =~ m/$EXCEPTION_LIST/);
+        next if ($_ =~ m/\/$THUMBNAIL\/.*$EXT_INCL_EXPR$/i);
+        next if ($thisFile !~ m/$EXT_INCL_EXPR/i);
+        
         push @ls,$_;
     } #end images array creation
    
@@ -505,7 +663,7 @@ sub thumb_html_files {
 
         #print STDOUT $HTMLSDIR."\n";
         if (!-d "$HTMLSDIR") { 
-            print LOGFILE ("making html files directory in $BASE\n");
+            print LOGFILE ("= Making html files directory in $BASE\n");
             mkdir("$HTMLSDIR",0755);
         }
 
@@ -588,7 +746,7 @@ sub thumb_html_files {
         #$PRINT_NEXT_LINK = 0;
     } #end foreach
 
-}
+} # end sub
 
 sub prompt {
     # promt user and return input 

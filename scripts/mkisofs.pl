@@ -10,12 +10,15 @@ $DEBUG=0;
 # a single directory and then run this script on that directory
 # $ENV{"NAUTILUS_SCRIPT_SELECTED_FILE_PATHS"}
 
+chomp($ARGV[0]); # remove end-line
+
 # Volume id needs no spaces or other characters
 ( $volumeid = $ARGV[0] ) =~ s,[\s-]+,_,g;
-# removes end-lines and put a .iso extension
-( $name = $ARGV[0] ) =~ s,(\w+),$1.iso,g;
+# put a .iso extension
+( $name = $ARGV[0] ) =~ s,(.+),$1.iso,;
 
 print "Argument: $ARGV[0] | Volume Name: $volumeid | FileName: $name\n" if $DEBUG == 1;
 sleep(5) if $DEBUG == 1;
-`mkisofs -J -r -v -o "$name" -V "$volumeid" $ARGV[0]`;
+system("mkisofs -J -r -v -o '$name' -V '$volumeid' ".$ARGV[0]);
+
 #eof

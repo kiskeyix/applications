@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2004-Oct-31
 #
@@ -12,8 +12,12 @@ use strict;
 $|++;
 my $file = shift;
 
-my $dvd = "/dev/dvd";
+# we unset sudo variables and then set mkisofs path:
+$ENV{"SUDO_COMMAND"} = "" if $ENV{"SUDO_COMMAND"} ne "";
+$ENV{"MKISOFS"} = "/usr/bin/mkisofs" if $ENV{"MKISOFS"} ne "";
 
+my $dvd = "/dev/dvd";
+my $cmd="";
 my $RED="\033[1;31m";
 my $GREEN="\033[0;32m";
 my $NORM="\033[0;39m";
@@ -42,32 +46,33 @@ if ( $ENV{"DVD"} =~ /\/dev\// and -b $ENV{"DVD"} )
 
 if ( $file =~ /\.iso$/i )
 {
-    system("growisofs -dvd-compat -Z /dev/dvd=$file");
+    $cmd = "growisofs -dvd-compat -Z /dev/dvd=$file";
+    system( $cmd );
     if ( $? != 0 )
     {
-        perror("Creating DVD from $file failed!");
+        perror("$cmd failed! Could not create DVD from image $file");
     }
-} else if ( -d $file ) {
+} elsif ( -d $file ) {
     # TODO check for VOB files inside $file/VIDEO_TS
     if ( -d "$file/VIDEO_TS" )
     {
         # see man mkisofs for -r -J
-        my $cmd = "growisofs -dvd-compat -Z /dev/dvd -r -J $file";
+        $cmd = "growisofs -dvd-compat -Z /dev/dvd -r -J $file";
         system( $cmd );
         if ( $? != 0 )
         {
-            perror("$file DVD could not be created!");
+            perror("$cmd failed! Could not be create DVD from directory $file");
         }
     } else {
         perror("$file is not a valid DVD structure.");
-        ret = prompt("Do you want to make a backup of this directory? [y/N]");
+        my $ret = prompt("Do you want to make a backup of this directory? [y/N]");
         if ( $ret == "y" )
         {
-            my $cmd = "growisofs -Z /dev/dvd -r -J $file"
-            system($cmd);
+            $cmd = "growisofs -Z /dev/dvd -r -J $file";
+            system( $cmd );
             if ( $? != 0 )
             {
-                perror("Backup creation failed!");
+                perror("$cmd failed! Could not backup $file");
             }
         } else {
             perror("aborting...");

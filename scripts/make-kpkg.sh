@@ -1,7 +1,7 @@
 #!/bin/bash
-# $Revision: 1.26 $
+# $Revision: 1.27 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Feb-18
+# Last modified: 2004-Feb-19
 #
 # DESCRIPTION:  an interactive wrapper to Debian's "make-kpkg"
 #               to build a custom kernel package.
@@ -35,14 +35,16 @@
 # we can use both ccache and distcc
 
 
-if test -x "/usr/bin/ccache"; then
+if test -x "/usr/bin/ccache" -a -x "/usr/bin/distcc"; then
+    echo "Setting up distcc with ccache"
     export MAKEFLAGS="CCACHE_PREFIX=distcc";
     export CCACHE_PREFIX="distcc"
-fi
-
-if test -x "/usr/local/bin/gcc"; then
-    echo "Using /usr/local/bin/gcc as Compiler"
-    export CC="/usr/local/bin/gcc"
+    if test -L "/usr/local/bin/gcc"; then
+        readlink /usr/local/bin/gcc | grep ccache && \
+            echo "ccache is correctly setup" &&
+            export CC="/usr/local/bin/gcc" \
+            || echo "No symlink from gcc to ccache found in /usr/local/bin"
+    fi
 fi
 
 if [ -f "$HOME/.distcc/hosts" ];then

@@ -1,4 +1,4 @@
-# $Id: gaim_xp2p.pl,v 1.3 2002-12-21 22:09:59 luigi Exp $
+# $Revision: 1.4 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2002-Dec-21
 #

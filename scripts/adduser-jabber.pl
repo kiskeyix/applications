@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Jun-02
+# Last modified: 2004-Oct-27
 #
 # DESCRIPTION: rbsd adduser script for jabber
 # USAGE:
@@ -26,19 +26,22 @@ $|++;
 # +------------------------------------
 
 # Your main jabber hostname.
-my $myhost = "intranet.rbsd.local";
+my $myhost = "intranet.domain.local";
 
 # the directory where the user.xml files are kept.
 my $jabberuserdir = "/var/lib/jabber/$myhost";
+my $jabberuid = "jabber"; # UNIX uid (hint: id jabber)
+my $jabbergid = "adm"; # UNIX gid
 
 # For SMTP
 my $smtp_server = "localhost";
-my $smtp_sender = "lmondesi\@rbsd.com"; # the is needed
+my $smtp_sender = "admin\@domain.com"; # the is needed
 
 # More var
 my $tel_number = "";
 my $mail_support = "$smtp_sender"; # the is needed
-my $company_name = "RBSD";
+my $company_name = "company";
+my $public_domain = "www.company.com";
 
 # Set to blank some values - don't change.
 my $username = "";
@@ -88,13 +91,13 @@ my @current_users = glob("$jabberuserdir/*.xml");
 foreach my $username ( @current_users )
 {
     $username =~ s,.*/([a-zA-Z0-9-]+)\.xml,$1,g;
-    $user_list = "$user_list <item jid='$username\@intranet.rbsd.local' name='$username' subscription='both'><group>Co-Workers</group></item>"; 
+    $user_list = "$user_list <item jid='$username\@$myhost' name='$username' subscription='both'><group>Co-Workers</group></item>"; 
 }
 
 $theline =~ s/XXXUSERSXXX/$user_list/g;
 
 # register a vcard with some useful information
-my $vcard = "<vCard prodid='-//HandGen//NONSGML vGen v1.0//EN' version='2.0' xmlns='vcard-temp' xdbns='vcard-temp'><FN>$username</FN><N><FAMILY></FAMILY></N><NICKNAME>$username</NICKNAME><URL>http://www.rbsd.com</URL><ORG><ORGNAME>$company_name</ORGNAME></ORG><TITLE>my title</TITLE><BDAY>1/1/2004</BDAY><DESC>Some desc</DESC></vCard>";
+my $vcard = "<vCard prodid='-//HandGen//NONSGML vGen v1.0//EN' version='2.0' xmlns='vcard-temp' xdbns='vcard-temp'><FN>$username</FN><N><FAMILY></FAMILY></N><NICKNAME>$username</NICKNAME><URL>http://$public_domain</URL><ORG><ORGNAME>$company_name</ORGNAME></ORG><TITLE>my title</TITLE><BDAY>1/1/2004</BDAY><DESC>Some desc</DESC></vCard>";
 
 $theline =~ s/XXXVCARDXXX/$vcard/g;
 
@@ -105,7 +108,7 @@ open ( USRFILE, "> $jabberuserdir/$username.xml" )
 print USRFILE $theline;
 close USRFILE;
 
-chown(109,4,"$jabberuserdir/$username.xml"); # jabber,adm
+chown($jabberuid,$jabbergid,"$jabberuserdir/$username.xml"); # jabber,adm
 chmod(0600,"$jabberuserdir/$username.xml");  # rw-------
 
 # +------------------------------------

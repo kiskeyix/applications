@@ -1,7 +1,7 @@
 #!/bin/bash
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Sep-02
+# Last modified: 2004-Oct-27
 #
 # Csaba Wiesz
 # This script uses a temp file to store the name of the contacts, who were already sent all
@@ -13,10 +13,11 @@
 PATH=/bin:/usr/bin
 
 ### Setting some initial parameters ###
-
-COMPANY="RBSD"
-adminmail="lmondesi@rbsd.com"
-server="intranet.rbsd.local"
+ADMIN="jabberadmin" # jabber admin as define in jabberd xml file
+ADMINPW="jabberpasswd"
+COMPANY="domain"
+adminmail="admin@domain.local"
+server="intranet.domain.local"
 sentfile="/var/lib/jabber/contacts-already-sent.log"
 cd "/var/lib/jabber/$server"
 users=`/bin/ls -1 *.xml`
@@ -32,7 +33,7 @@ send_to () {
 
     ### Start a stream to server and log in with a presence ###
     echo -e   "<stream:stream to=\"$server\" xmlns=\"jabber:client\" xmlns:stream=\"http://etherx.jabber.org/streams\">\x"
-    echo -e   "<iq id='auth2' type='set'><query xmlns='jabber:iq:auth'><username>luigi</username><password>rbsdJabber</password><resource>telnet</resource></query></iq>\n"
+    echo -e   "<iq id='auth2' type='set'><query xmlns='jabber:iq:auth'><username>$ADMIN</username><password>$ADMINPW</password><resource>telnet</resource></query></iq>\n"
     echo -e   "<presence/>\n"
 
 
@@ -40,7 +41,7 @@ send_to () {
     echo -e "<message id=\"new-contacts\" to=\"$recipient\"><x xmlns=\"jabber:x:roster\">"
     for i in $users ;do 
         i=`basename $i .xml`
-        echo "<item name=\"$i\" jid=\"$i@intranet.rbsd.local\"></item>  " ;
+        echo "<item name=\"$i\" jid=\"$i@$server\"></item>  " ;
         sleep 1
     done
     echo -e "</x><body>This message contains contact information of all $COMPANY users who are registered at $server Jabber server.\nPlease add them all to your contact list! (Just click Add Contacts below)\n\n[Jabber Admin Account]</body></message>\n"
@@ -59,7 +60,7 @@ for j in $users ; do
     then
         ### Activate sending through telnet 
         ### then do dome logging and reporting
-        send_to  $j | telnet intranet.rbsd.local 5222
+        send_to  $j | telnet $server 5222
         echo -e "[`date`]\t$j ">>$sentfile
     fi
 done	

@@ -3,7 +3,7 @@
 # Title="Mount Image"
 # Title[es]="Montar Imagen"
 #
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Oct-31
 #
@@ -32,7 +32,7 @@ SUSER="root"
 
 # encryption support
 DCYPHER="serpent"   # default cypher
-CYPHERS="TRUE serpent FALSE aes FALSE xor"
+CYPHERS="TRUE serpent FALSE aes FALSE twofish FALSE blowfish FALSE des FALSE xor"
 
 # filetype formats
 FORMATS="TRUE ext2 FALSE ext3 FALSE iso9660 FALSE ntfs FALSE msdos FALSE fat FALSE efs"
@@ -54,37 +54,51 @@ MOUNT="mount"   # mount command
 
 # language settings
 
-set_english()
-{
-    LANG="en"
-    # Messages
-    TIT_ENCRYPTED="Encryption"
-    MSG_ENCRYPTED="Is this an encrypted image?"
+# Messages
+TIT_ENCRYPTED="Encryption"
+MSG_ENCRYPTED="Is this an encrypted image?"
 
-    TIT_MOUNT="Mount Image"
-    MSG_MOUNTED="already mounted"
+TIT_MOUNT="Mount Image"
+MSG_MOUNTED="already mounted"
+MSG_EMOUNT="Could not mount"
 
-    TIT_UMOUNT="Unmount Filesystem"
+MSG_UMOUNTED="unmounted successfully"
+MSG_NOTUMOUNTED="Could not unmount"
+TIT_UMOUNT="Unmount Filesystem"
 
-    TIT_FORMAT="Select filesystem type"
-    TIT_CYPHER="Select Cypher"
+TIT_FORMAT="Select filesystem type"
+TIT_CYPHER="Select Cypher"
 
-}
+MSG_PASSWORD="Please enter filesystem password"
+
+MSG_SETLO="Setup Loopback"
+MSG_UNSETLO="Unset Loopback"
+MSG_ESETLO="Setting loopback failed"
+MSG_EBLOCK="Wrong device"
 
 set_spanish()
 {
-    LANG="es"
     # spanish
     TIT_ENCRYPTED="Cifrado"
     MSG_ENCRYPTED="¿Este es un archivo cifrado?"
 
     TIT_MOUNT="Montar imagen"
     MSG_MOUNTED="ya está montado"
+    MSG_EMOUNT="No pude montar"
 
+    MSG_UMOUNTED="desmontado exitósamente"    
+    MSG_NOTUMOUNTED="No pude desmontar"
     TIT_UMOUNT="Desmontar la imagen"
 
     TIT_FORMAT="Selecciona el tipo de formato"
     TIT_CYPHER="Selecciona módulo cifrado"
+
+    MSG_PASSWORD="Por favor provee la contraseña"
+
+    MSG_SETLO="Activar el archivo especial"
+    MSG_UNSETLO="Desactivar el archivo especial"
+    MSG_ESETLO="No pude activar el archivo especial"
+    MSG_EBLOCK="Archivo especial erroneo"
 }
 
 # determine language to use:
@@ -94,23 +108,29 @@ if [ -n $LANG ]; then
         set_spanish
     else
         echo "Using default language"
-        set_english
     fi
-else
-    echo "Using default language"
-    LANG="en"
-    set_english
 fi
 
 # utilities
+ask_passwd()
+{
+    # @arg1 text to display
+    # asks the password to use when 
+    # mounting encrypted filesystems
+    TMP=""
+    TMP="`$DIALOG --entry --hide-text --text=\"$1\"`"
+    echo $TMP
+}
+
 ask_cypher()
 {
     TMP=""
 
-    TMP=$($DIALOG --list \
-            --title="${TIT_CYPHER}" \
-            --radiolist --editable \
-            --column="Selected" --column="Cypher" $CYPHERS)
+    TMP=`$DIALOG --list \
+    --title="${TIT_CYPHER}" \
+    --radiolist --editable \
+    --column="Selected" --column="Cypher" $CYPHERS`
+
     if [ -z $TMP ]; then
         # what we do when user presses cancel
         TMP="$DCYPHER"
@@ -124,10 +144,10 @@ ask_filesystem()
 
     TMP=""
 
-    TMP=$($DIALOG --list \
+    TMP=`$DIALOG --list \
     --title="${TIT_FORMAT}" \
     --radiolist --editable \
-    --column="Selected" --column="Filetype" $FORMATS)
+    --column="Selected" --column="Filetype" $FORMATS`
 
     if [ -z $TMP ]; then
         # what we do when user presses cancel
@@ -189,15 +209,15 @@ setup_loop()
     # @arg1 loop device
     # @arg2 image
     if [ -b $1 ]; then
-        $SU -u $SUSER -t "Setup Loopback $1" "$LO $1 $2"
+        $SU -u $SUSER -t "$MSG_SETLO $1" "$LO $1 $2"
         if [ $? -eq 0 ]; then
             echo "yes"
         else 
-            error "Setting loopback failed"
+            error "$MSG_ESETLO $1"
             echo "no"
         fi
     else
-        error "Wrong block device $1"
+        error "$MSG_EBLOCK $1"
         echo "no"
     fi
 }
@@ -208,15 +228,19 @@ setup_enloop()
     # @arg2 image
     # @arg3 encryption cypher
     if [ -b $1 ]; then
-        $SU -u $SUSER -t "Setup Loopback $1" "$LO -e $3 $1 $2"
+        # ask user password for encryption
+        PASSWORD=""
+        PASSWORD="`ask_passwd \"$MSG_PASSWORD\"`"
+
+        $SU -u $SUSER -t "$SETLO $1" "echo $PASSWORD | $LO -p0 -e $3 $1 $2"
         if [ $? -eq 0 ]; then
             echo "yes"
         else 
-            error "Setting Encrypted loopback failed"
+            error "$MSG_ESETLO $1"
             echo "no"
         fi
     else
-        error "Wrong block encrypted device $1"
+        error "$MSG_EBLOCK $1"
         echo "no"
     fi
 }
@@ -226,14 +250,14 @@ unset_loop()
 {
     # @arg1 loop device
     if [ -b $1 ]; then
-        $SU -u $SUSER -t "Unsetting Loopback $1" "$LO -d $1"
+        $SU -u $SUSER -t "$UNSETLO $1" "$LO -d $1"
         if [ $? -eq 0 ]; then
             echo "yes"
         else 
             echo "no"
         fi
     else
-        error "Wrong block device $1"
+        error "$MSG_EBLOCK $1"
         echo "no"
     fi
 }
@@ -254,15 +278,15 @@ info()
 for arg in $@
 do
 
-    file_type=$(file "${arg}")
+    file_type="`file \"${arg}\"`"
 
     # if already mounted continue
     if [ "`mount | grep \"${arg}\"`" ]; then
         RET=`unmount "$arg ${MSG_MOUNTED}" "$arg"`
         if [ $RET = "yes" ]; then
-            info "$arg unmounted successfully"
+            info "$arg $MSG_UMOUNTED"
         else
-            error "Could not unmount $arg"
+            error "$MSG_NOTUMOUNTED $arg"
         fi
         continue
     fi
@@ -300,7 +324,7 @@ do
             
             # choose encryption type
             echo "Asking about cypher"
-            CYPHER=$(ask_cypher)
+            CYPHER="`ask_cypher`"
 
             if [ -z $CYPHER ]; then
                 # what we do when user presses cancel
@@ -309,19 +333,25 @@ do
 
             # choose format type
             echo "Asking about filesystem type"
-            mtype=$(ask_filesystem)
+            mtype="`ask_filesystem`"
 
-            if [ "`setup_enloop $CYPHER $LOOPDEV ${arg}`" = "yes" ]; then
+            if [ "`setup_enloop $LOOPDEV $arg $CYPHER`" = "yes" ]; then
                 if [ "`lmount $mtype $LOOPDEV $USERMOUNTDIR`" = "yes" ]; then
                     nautilus $USERMOUNTDIR
                 else
-                    error "Could not mount $LOOPDEV in $USERMOUNTDIR"
-                    unset_loop $LOOPDEV
+                    error "$MSG_EMOUNT $LOOPDEV --> $USERMOUNTDIR"
+                    
+                    if [ "`unset_loop $LOOPDEV`" = "yes" ]; then
+                        info "$LOOPDEV successfully freed"
+                    else
+                        error "$LOOPDEV could not be released"
+                    fi
+                    
                     rmdir $USERMOUNTDIR
                     rmdir $MOUNTDIR
                 fi
             else
-                error "Could not setup encrypted block device $LOOPDEV"
+                error "$MSG_ESETLO. $MSG_EBLOCK $LOOPDEV"
                 rmdir $USERMOUNTDIR
                 rmdir $MOUNTDIR
             fi
@@ -331,7 +361,7 @@ do
             echo "Encryption is not used"
 
             echo "Asking about filesystem type"
-            mtype=$(ask_filesystem)
+            mtype="`ask_filesystem`"
 
             if [ -z $mtype ]; then
                 # what we do when user presses cancel
@@ -341,7 +371,7 @@ do
             if [ "`lmount $mtype $arg $USERMOUNTDIR`" = "yes" ]; then
                 nautilus $USERMOUNTDIR
             else
-                error "Could not mount $arg in $USERMOUNTDIR"
+                error "$MSG_EMOUNT $arg --> $USERMOUNTDIR"
                 rmdir $USERMOUNTDIR
                 rmdir $MOUNTDIR
             fi

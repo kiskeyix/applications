@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.31 $
+# $Revision: 1.32 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Dec-24
+# Last modified: 2004-Dec-30
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
 #               or a user specified command archiver ( tar? )
@@ -42,7 +42,8 @@
 #
 # ## Users must define this
 # BAK=/dir/to/store/backups
-# #EXCLUDES=.*this.*|.*that$|other$|startswith.*
+# ##perl compatible + shell regex
+# #EXCLUDES=.*contain-this.*|\.ends-in-that$|starts-with.*|[0-9]*|.[a-z]*$
 # 
 # #DIRS=other_dirs_to_backup_separated_by_spaces_or_commas
 # #SYSTEM=system_directories_separated_by_spaces_or_commas
@@ -229,7 +230,7 @@ if ( ! -f $TMP_LOCK ) {
     $year += 1900;
 
     my $MIDDLE_STR = "";
-    if ( exists $ARGV[0] && $ARGV[0] =~ /^(daily|weekly|monthly)$/i )
+    if ( exists $ARGV[0] && $ARGV[0] =~ /^(daily|weekly|monthly|yearly)$/i )
     {
         $MIDDLE_STR = "$1";
     } else {
@@ -616,8 +617,11 @@ sub clean_regex {
     # shell pattern
     my $string = shift;
     ($string = $string) =~ s/\\//g; 
-    ($string = $string) =~ s/([\.\w]+)\$/*$1/g;
+    #($string = $string) =~ s/([\.\w]+)\$/*$1/g;
+    ($string = $string) =~ s/(\..+)\$/*$1/g;
+    ($string = $string) =~ s/(\.\*|\.\+)/*/g;
     ($string = $string) =~ s/\+/*/g;
+
     return $string;
 }
 

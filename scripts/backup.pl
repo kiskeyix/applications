@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.12 $
+# $Revision: 1.13 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jun-07
+# Last modified: 2003-Jun-17
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
 #              it will create 3 files:
@@ -23,12 +23,12 @@
 # # for a Debian system.
 #
 # BAK=/dir/to/store/backups
-# EXCLUDES=".*this.*|.*that\$"
+# EXCLUDES=.*this.*|.*that\$
 # 
 # DIRS=other_dirs_to_backup_separated_by_spaces_or_commas
 # SYSTEM=system_directories_separated_by_spaces_or_commas
 # LOW_UID=lowest_uid_number_to_backup
-# EXC_ULIST="exclude_users_from_list_separated_by_|"
+# EXC_ULIST=exclude_users_from_list_separated_by_|
 #
 # TIPS:
 # Setting the script in debugging mode doesn't create any tar.gz
@@ -240,7 +240,7 @@ if ( ! -f $TMP_LOCK ) {
         }
     }
 } else {
-    die "Lock file $TMP_LOCK exists... exiting.\n";
+    die "Lock file ".$CONFIG{BAK}."/$TMP_LOCK exists... exiting.\n";
 }
 
 # gracely exit...
@@ -310,11 +310,11 @@ sub do_file_ary {
 
 sub process_file {
     my $base_name = basename($_);
-    my $excludes = eval($CONFIG{EXCLUDES});
+    #my $excludes = eval($CONFIG{EXCLUDES});
     #print STDOUT $excludes."\n";
     if ( 
         -f $_ && 
-        $base_name !~ m/$excludes/ 
+        $base_name !~ m/$CONFIG{EXCLUDES}/ 
     ) {
         push @tmp_files,$_;
     }

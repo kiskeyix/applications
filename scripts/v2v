@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.30 $
+# $Revision: 1.31 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -648,7 +648,9 @@ sub makelogo
     }
     pinfo("$v2d\t Making Logo\n");
     $fparams="$params -c $from_frames-$synclogo";
-    $fparams =$fparams." -M 2 " if ( $VFORMAT eq "NTSC" );
+    $fparams =$fparams." -M 2 " if ( $VFORMAT eq "NTSC" && ! ($deintl =~ m,ivtc,));
+    $fparams =$fparams." -M 0 -f 23.976" if ( $deintl =~ m,ivtc,);
+
     $add_logo="logo=file=$LOGO:posdef=$poslogo:rgbswap=$RGBSWAP:range=$start_frames_logo-$end_frames_logo,";
     $filter=$deint.$add_logo.$sub_title.",hqdn3d";
     audiorescale;
@@ -1002,7 +1004,7 @@ sub printinfo
         print "Normal"  if ( $qual==2);
         print $NORM."\n";
     }else{
-        print $v2d."   V:\tVideo input Format:\t(1)| $VFORMAT\n";
+        print $v2d."   V:\tVideo input Format:\t   | $VFORMAT\n";
     }
     print $v2d."   V:\tVideo Output format:\t(1)| $DIVX\n";
     print $v2d."   V:\tVideo Input interlaced:\t   | ";
@@ -1204,7 +1206,7 @@ sub ask_clust
         chomp($rep);
         if ( $rep eq "y" || $rep eq "Y" || $rep eq "o" || $rep eq "0")
         {	
-            create_nav if ( ! -e "tmp/filenav-ok" or ! -e "tmp/file.nav" );
+            create_nav ;
             my $stream_units=`tail -1 tmp/file.nav | awk '{print \$1}'`;
             chomp($stream_units);
             if ( $stream_units > 10 ) # Take care there is too much stream units !!
@@ -1451,14 +1453,16 @@ sub cluster
 
 sub create_nav
 {
-    pinfo("$v2d\t Using Cluster, creating:\t\t   | tmp/file.nav\n");
+    return()  if (  -e "tmp/filenav-ok" &&  -e "tmp/file.nav" );
+    my $demux=" -M 2" if ( $VFORMAT eq "NTSC" );
+    pinfo("$v2d\t Creating File Navigation:\t\t   | tmp/file.nav\n");
     my $pid = fork();
     mydie "couldn't fork [function: create_nav]" unless defined $pid;
     if ($pid)
     {
         # Domi, do we need to use VOB extensions? What if files
         # don't have this extensions -- Luis 2004-01-07 20:28 EST 
-        $sys = "cat $VOBPATH/*.[Vv][Oo][Bb] | tcdemux -W > tmp/file.nav";
+        $sys = "cat $VOBPATH/*.[Vv][Oo][Bb] | tcdemux $demux -W > tmp/file.nav";
         print $INFO $sys."\n";
         system ("nice -$nice $sys") == 0  or ( system ("touch tmp/filenav.finish")== 0 and mydie "Unable to create file nav" );
         system("touch tmp/filenav.finish");	
@@ -1755,7 +1759,7 @@ sub aviencode
             $audio_format="vob" if ( $in_video_codec eq vob );
 
             # Add NTSC demuxer opts
-            $fparams =$fparams." -M 2" if ( $VFORMAT eq "NTSC" );
+            $fparams =$fparams." -M 2 " if ( $VFORMAT eq "NTSC" && ! ($deintl =~ m,ivtc,));
             $fparams =$fparams." -M 0 -f 23.976" if ( $deintl =~ m,ivtc,);
 
             # And Now ... Let the Rolling Stones
@@ -2847,7 +2851,7 @@ sub config
         open (CONF,">>tmp/V2divx.conf");
         if ( $TELECINE )
         {
-            $deintl="ivtc,decimate," if ( $TELECINE ) ;
+            $deintl="ivtc,32detect=force_mode=3,decimate," if ( $TELECINE ) ;
             print CONF "#deintl:$deintl\n";
         }else{
             $PP=`transcode -J pp=lb -c 9-11  2>&1 | grep failed`;

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.61 $
+# $Revision: 1.62 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -428,15 +428,22 @@ sub main {
     $LOGFILE->open("> $LOG");
     $LOGFILE->autoflush(1);
    
-    # for now --clear is the same for all dialogs:
+    # for now --clear is the same for all dialogs but Zenity
+    # also --backtitle is not an option for zenity
     # ( $MODE eq "x" ) ? " --clear ": 
-    my $ARGS = " --clear ";
+    my $ARGS = ( $DIA =~ /zenity/ ) ? "" : " --clear --backtitle 'Picture Directory to HTML' ";
     
     if ( $use_console_progressbar == 1 ) 
     {
         $GAUGE = Term::ProgressBar->new(100); # will be setup later...
     } else {
-        $GAUGE->open("| $DIA $ARGS --backtitle 'Picture Directory to HTML' --title 'Picture Progress' --gauge 'Thumbnails Creation' 8 70 0 2>&1");
+        if ( $DIA =~ /zenity/ )
+        {
+            # zenity uses --progress
+            $GAUGE->open("| $DIA $ARGS --title 'Picture Progress' --progress 'Thumbnails Creation' 8 70 0 2>&1");
+        } else {
+            $GAUGE->open("| $DIA $ARGS --title 'Picture Progress' --gauge 'Thumbnails Creation' 8 70 0 2>&1");
+        }
         $GAUGE->autoflush(1);
     }
 

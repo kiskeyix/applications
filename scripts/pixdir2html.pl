@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.31 $
+# $Revision: 1.32 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -215,7 +215,11 @@ sub main {
     
     print LOGFILE "= Start directory $ROOT_DIRECTORY \n";
 
-    init_config($ROOT_DIRECTORY);
+    if ( -f "$CONFIG_FILE" ) {
+        init_config($ROOT_DIRECTORY);
+    } else {
+        print STDERR "Missing main $CONFIG_FILE. Please create one first before continuing \n";
+    }
 
     # get menu string
     unless ( $NOMENU == 1 ) {
@@ -281,7 +285,7 @@ __EOF__
     #construct a header if it doesn't yet exist:
     if ( $config_tmp{header} eq "" ) {
 
-        print LOGFILE ("Blank header. Generating my own ... \n");
+        print LOGFILE (": Blank header. Generating my own ... \n");
 
         $config_tmp{header}="<html>
         <head>
@@ -324,7 +328,21 @@ sub mkindex {
         $i = 0;
 
         # read specific config file for this directory
-        %myconfig = init_config($this_base);
+        if ( -f "$this_base/$CONFIG_FILE" ) {
+            %myconfig = init_config($this_base);
+        } else {
+            # oops, missing config... getting base file
+            if ( 
+                    copy("$ROOT_DIRECTORY/$CONFIG_FILE", 
+                        "$this_base/$CONFIG_FILE") 
+                ) {
+                    print LOGFILE (": Copied ".
+                        " $ROOT_DIRECTORY/$CONFIG_FILE ".
+                        "==> $this_base/$CONFIG_FILE \n");
+                }
+            # now read the config file
+            %myconfig = init_config($this_base);
+        }
         my @files = @{$$hashref{$this_base}};
 
         # FILE_NAME is a global
@@ -432,7 +450,7 @@ sub mkthumb {
     foreach (@ary){
         $thisFile = basename($_);
         next if ($thisFile =~ m/$EXCEPTION_LIST/);
-        next if ($_ =~ m/\/$THUMBNAIL\/.*$EXT_INCL_EXPR$/i);
+        next if ($_ =~ m/\b$THUMBNAIL\b/i);
         next if ($thisFile !~ m/$EXT_INCL_EXPR/i);
         
         push @ls,$_;
@@ -449,22 +467,35 @@ sub mkthumb {
         if ( ! -d $BASE ) { 
             $BASE = "."; 
         }
+        next if ($BASE eq $THUMBNAIL);
         #print STDOUT $BASE."\n";
 
         if ( $BASE !~ m/$tmp_BASE/ ) {
             if ( 
-                ( $FORCE > 0 || ! -f  "$BASE/$CONFIG_FILE" ) && 
-                (! -f "$BASE/.nopixdir2htmlrc" ) 
+                $FORCE > 0  && 
+                ! -f "$BASE/.nopixdir2htmlrc" 
             ) {
                 if ( 
                     copy("$ROOT_DIRECTORY/$CONFIG_FILE", 
                         "$BASE/$CONFIG_FILE") 
                 ) {
-                    print LOGFILE ("WARNING: Force copy ".
+                    print LOGFILE (": Force copy ".
                         " $ROOT_DIRECTORY/$CONFIG_FILE ".
                         "==> $BASE/$CONFIG_FILE \n");
                 }
             } # end if FORCE
+
+            if ( ! -f  "$BASE/$CONFIG_FILE" ) {
+                if ( 
+                    copy("$ROOT_DIRECTORY/$CONFIG_FILE", 
+                        "$BASE/$CONFIG_FILE") 
+                ) {
+                    print LOGFILE (": Copied ".
+                        " $ROOT_DIRECTORY/$CONFIG_FILE ".
+                        "==> $BASE/$CONFIG_FILE \n");
+                }
+            } # end if missing $CONFIG_FILE
+
             # change of base, reset two-dimensional array counter
             print LOGFILE "+ Reading config for $BASE\n";
             # read specific config file for this directory
@@ -528,7 +559,7 @@ sub mkthumb {
 sub thumb_html_files {
     # creates an HTML page for a thumbnail
     my $ROOT = $_[0];
-    
+   
     # locals
     my (@ls,%myconfig) = ();
     
@@ -581,6 +612,8 @@ sub thumb_html_files {
         if ( ! -d $BASE ) { 
             $BASE = "."; 
         }
+        next if ($BASE eq $THUMBNAIL);
+
         #print STDOUT "Base: $BASE.\n";
 
         if ( $BASE ne $tmp_BASE ) {
@@ -607,7 +640,7 @@ sub thumb_html_files {
         $current_link = "$file_name.$EXT";
         
         if ( -f $current_html_file ){
-            print LOGFILE "WARNING: overriding $current_html_file\n";
+            print LOGFILE ": Overriding $current_html_file\n";
         } # end if not current_html_file
 
         print LOGFILE ("\n= Creating html file into $current_html_file\n");
@@ -734,7 +767,7 @@ sub do_dir_ary {
     my %opt = (wanted => \&process_dir, no_chdir=>1);
     
     find(\%opt,$ROOT);
-    
+   
     return @pixdir;
 }
 
@@ -742,7 +775,7 @@ sub process_dir {
     my $base_name = basename($_);
     if ( 
         !-f $_ && 
-        $base_name !~ m/^($EXCEPTION_LIST|$THUMBNAIL|$HTMLDIR|\.[a-zA-Z0-9]*)$/ 
+        $base_name !~ m/^($EXCEPTION_LIST|$THUMBNAIL|$HTMLDIR|\.[a-zA-Z0-9]+)$/ 
     ) {
         s/^\.\/*//g;
         push @pixdir,$_;
@@ -779,7 +812,7 @@ sub process_file {
     my $base_name = basename($_);
     if ( 
         -f $_ && 
-        $base_name !~ m/^($EXCEPTION_LIST|$THUMBNAIL|$HTMLDIR|\.[a-zA-Z0-9]*)$/ 
+        $base_name !~ m/^($EXCEPTION_LIST|$THUMBNAIL|$HTMLDIR|\.[a-zA-Z0-9]+)$/ 
     ) {
         s/^\.\/*//g;
         push @pixfile,$_;
@@ -804,8 +837,6 @@ sub menu_file {
     # new=http://images.server.com/new_icon.png;
     #----------------------------------------------#
 
-    # TODO this was read at some point... maybe it
-    # should be passed to this function in some way...
     my %myconfig = init_config($ROOT_DIRECTORY);
 
     my $MENU_STR = ""; # return this instead of making file

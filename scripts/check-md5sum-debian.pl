@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Sep-15
 #
@@ -9,7 +9,13 @@
 #               If --md5sum="" is given, it will use that
 #               binary to check md5sum's.
 #               Output will be printed to STDOUT unless
-#               --log="/path/to/file.log" is given
+#               --log="/path/to/file.log" is given.
+#
+#               Note that if you don't have read access to
+#               files/binaries then you might need to run
+#               this with a different user who has permission
+#               to read those binaries or files.
+#
 # USAGE:    $0 [-b|--binary] [-l|--log] [-m|--md5sum]
 # CHANGELOG:
 #
@@ -25,7 +31,7 @@ use Getopt::Long;
 Getopt::Long::Configure('bundling');
 
 my $MD5SUM = ""; 
-eval "use Image::Magick";
+eval "use Digest::md5sum";
 if ($@)
 {
     print STDERR "\n ERROR: Digest::Md5sum was not found\n".

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2005-Jan-23
 #
@@ -52,7 +52,7 @@ foreach my $file (<STDIN>)
     $dirname = dirname(clean($file));
     print STDERR "writing $basename to $dirname/.cvsignore\n" if ($DEBUG);
     open(CVSIGNORE,">> $dirname/.cvsignore");
-    print CVSIGNORE "$basename";
+    print CVSIGNORE "$basename\n";
     close(CVSIGNORE);
     # reset
     $basename = "";

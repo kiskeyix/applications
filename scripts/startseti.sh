@@ -48,11 +48,11 @@ PATH=/usr/bin:/bin:.
 NICE=19
 # work load average at which point we would stop seti momentarily
 MAXLOAD=5 
-SLEEP=14400 # 4 hours
+SLEEP=3 #4400 # 4 hours
 SETI="$HOME/Develop/seti"
 PIDF="$SETI/.startseti.pid" # process id file
 PROCESS="setiathome" # name of the seti binary
-PKILL="/usr/bin/pkill" # pkill is smart about process names
+PKILL="/usr/bin/pkill -U $UID" # pkill is smart about process names and -U for the processes run by a given user
 CAT="/bin/cat"          # std unix command
 PIDOF="/bin/pidof"      # returns process id of "process_name":
                         # i.e: pidof vim. yields PID number of vim processes
@@ -64,6 +64,7 @@ PIDOF="/bin/pidof"      # returns process id of "process_name":
 ######################################################################
 
 CPID=$$ # current process id is saved
+EXIT=1 # always assume we will need to exit, unless we are doing condstop
 
 #
 # Functions
@@ -73,12 +74,15 @@ CPID=$$ # current process id is saved
 # our exit function removes the .pid file
 function _exit()        # function to run upon exit of shell
 {
-    rm -f $PIDF # removes PID file of this script
-    $PKILL $PROCESS # kill all seti processes by me
-    echo "Hasta la vista seti" 
-    # reenable signals
-    trap EXIT HUP TERM INT
-    exit 0
+    # we exit when EXIT is not doing condstop and LOAD is not gt MAXLOAD
+    if [ $EXIT -ne 0 ]; then
+        rm -f $PIDF # removes PID file of this script
+        $PKILL $PROCESS # kill all seti processes by me
+        echo "Hasta la vista seti" 
+        # reenable signals
+        trap EXIT HUP TERM INT
+        exit 0
+    fi
 }
 # hint: trap -l (displays signals)
 # SIGTERM (15) is sent to us from init when rebooting
@@ -86,10 +90,29 @@ trap _exit EXIT HUP TERM INT
 
 function killold ()
 {
-    # kill startseti.sh old PID
-    kill -9 `$CAT $PIDF` &&\
-        rm -f $PIDF &&\
-            echo "$0 killed"
+    echo "Called killold"
+    SUCCESS=0 # assume we will fail
+    MPID=$($PIDOF -x $0)
+    for i in $MPID; do
+        if [ x`$CAT $PIDF` = x$i -a x$CPID != x$i ]; then
+            # kill startseti.sh old PID
+            echo "Killing $0 number $i"
+            kill -9 `$CAT $PIDF` &&\
+            rm -f $PIDF &&\
+            SUCCESS=1
+        elif [ x$CPID != x$i ]; then
+            echo "Murdering $0 number $i"
+            kill -9 $i &&\
+            SUCCESS=1
+        else
+            echo "Not killing $i [We are $CPID]"
+        fi
+    done
+    if [ $SUCCESS ]; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 cd $SETI || exit 1
@@ -106,12 +129,13 @@ if [ $LOAD -gt $MAXLOAD -a x$1 = "xcondstop" -o x$1 = "xstop" ]; then
     echo -n "Stopping $PROCESS " 
     # cleanup startseti.sh processes if any...
     $PKILL $PROCESS && \
-        echo "[ok]"  && \
-            killold && exit 0
+        echo "[ok]"
+    killold && exit 0
     # else echo failed and exit 1
     echo "[failed]" && exit 1
 elif [ x$1 = "xcondstop" ]; then
     # load is not high enough, exit
+    EXIT=0 # do not exit
     exit 0
 fi
 
@@ -124,17 +148,21 @@ fi
 if [ x$1 = "xstart" -a ! -f $PIDF ]; then
     echo $CPID > $PIDF 
 else
-    # trying to determine if seti is running
+    RUNNING=0 # assume startseti.sh ($0) is not running
     MPID=$($PIDOF -x $0)
-    # we don't care if there are multiple copies running of setiathome
-    if [ x`$CAT $PIDF` != x$MPID ]; then
-        # "startseti.sh start" is not running
-        killold && \
-        echo $CPID > $PIDF # save our current process ID
+    for i in $MPID; do
+        if [ x`$CAT $PIDF` = x$i ]; then
+            echo "$0 is already running"
+            RUNNING=1
+        fi
+    done
+    if [ $RUNNING -eq 0 -a $LOAD -lt 5 ]; then
+        # $0 is not running, so, we update the PID file
+        # and try to launch a new $PROCESS later
+        echo $CPID > $PIDF
     else
-        echo "$PIDF exists. We can't start seti until you stop all $PROCESS started from this directory"
-        echo " and all $0, then remove the $PIDF file" 
-        exit 1
+        EXIT=0
+        exit 0
     fi
 fi
 

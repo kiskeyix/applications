@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+    <foo>
+        <!-- sample comment -->
+        <x>10</x>
+        <y>90</y>
+    </foo>
+    <bar>
+        <b>b</b>
+        <o>o</o>
+    </bar>
+</root>

@@ -1,48 +1,133 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-May-24
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
+#              it will create 3 files:
+#
+#               system-%date-tar.bz2
+#               users-%date-tar.bz2
+#               other-%date-tar.bz2
+#               
+#               or 
+#
+#               system-daily-tar.bz2
+#               users-daily-tar.bz2
+#               other-daily-tar.bz2
+#
 # USAGE: backup.pl [daily|weekly|monthly]
+#
+# Example $HOME/.backuprc
+#
+# BAK="/dir/to/store/backups"
+# EXCLUDES="--exclude='*this' --exclude='*that' "
+# 
+# DIRS="dirs_to_backup_separated_by_spaces "
+# SYSTEM="system_directories_separated_by_spaces"
+# LOW_UID="lowest_uid_number_to_backup"
+# EXC_ULIST="exclude_users_from_list_separated_by_|"
 #
 use strict;
 $|++;
 
 use Archive::Tar;
 
-my $TAR="/usr/bin/tar";             # if needed specify your TAR 
-                                    # in .backuprc
-                                    # i.e:
-                                    # TAR=/usr/local/bin/tar
-                                     
+my %MY_CONFIG = ();
 my $CONFIG_FILE= $ENV{HOME}."/.backuprc";
-my $BAK="/home/backup";             # default backup directory
+
+$MY_CONFIG{BAK}="/home/backup";        # default backup directory
                                     # you might want to change this
                                     # in your .backuprc file like:
                                     # BAK="/other/dir"
-# tar EXCL list. specify EXCLUDES in your .backuprc to append to this list
-my $EXCLUDES="--exclude='*.pid' --exclude='*.soc' --exclude='*.sock' --exclude='*.log' --exclude='*.log*.gz' ";
+# tar EXCL list. specify EXCLUDES in your .backuprc to modify 
+$MY_CONFIG{EXCLUDES}="--exclude='*.pid' --exclude='*.soc' --exclude='*.sock' --exclude='*.log' --exclude='*.log*.gz' ";
 
 
-my $lowest_uid = "1000";            # debian standard lowest uid
-my $exception_list = "man|nobody";  # separated by |
+$MY_CONFIG{LOW_UID} = "1000";          # debian standard lowest uid.
+                                    # change in .backuprc
+$MY_CONFIG{EXC_ULIST} = "man|nobody";  # separated by | . Change in
+                                    # .backuprc
 
 # backup "root" home dir, cvsroot and other important stuff
 
-my $SYSTEM="/etc /home/cvsroot /var/lib/jabber /var/lib/mysql /var/mail /var/spool /var/lib/ldap /var/lib/iptables /root";
+$MY_CONFIG{SYSTEM}="/etc /home/cvsroot /var/lib/jabber /var/lib/mysql /var/mail /var/spool /var/lib/ldap /var/lib/iptables /root";
 
-my %user = (); # user/userdir pair in a hash
+$MY_CONFIG{LOCK} = "/tmp/.backup-init"; # timestamp of when backup started
 
-while (my @r = getpwent()) {
-          # $name,$passwd,$uid,$gid,$quota,$comment,$gcos,$dir,$shell,$expire
-          #print "$r[0]:$r[1]:$r[2]:$r[3]:$r[6]:$r[7]:$r[8]\n";
-          if ( $r[0] !~ m/$exception_list/i && $lowest_uid <= $r[2] ) {
-            $user{$r[0]}=$r[7];
-          }
+#-------------------------------------------------------------#
+#           No need to modify anything below here             #
+#-------------------------------------------------------------#
+
+my %TMP_CONFIG = init_config($CONFIG_FILE); # override defaults with...
+
+my %CONFIG = ();   # where the two will be merged
+
+# merge two hashes and warn about dups... use the last defined key=>val
+my ($k, $v) = "";
+foreach my $hashref ( \%MY_CONFIG, \%TMP_CONFIG ) {
+    while (($k, $v) = each %$hashref) {
+        if (exists $CONFIG{$k}) {
+            print STDERR "Warning: $k seen twice.  Using the second definition.\n";
+            # next;
+        }
+        $CONFIG{$k} = $v;
+    }
 }
 
-print join(" ",%user);
+# DEBUG: print content of hash
+#foreach ( \%CONFIG ) {
+#    while (($k,$v) = each %$_) {
+#        print "$k -> $v \n";
+#    }
+#}
+#die "the end \n";
+
+my $TMP_LOCK = $CONFIG{LOCK};
+
+if ( ! -f $TMP_LOCK ) {
+   
+    my ($sec,$min,$hour,$mday,$mon,$year) = localtime; # get date
+
+    my $MIDDLE_STR = ( $ARGV[0] eq "daily" ) ? "daily" : "$year-$mon-$mday";
+
+    # write lock file:
+    open(FILE,"> $TMP_LOCK") || die "could not open $TMP_LOCK. $! \n";
+    print FILE $year."-".$mon."-".$mday." ".$hour.":".$min.":".$sec;
+    close(FILE); 
+
+    # backup system
+    # Archive::Tar->create_archive ("my.tar.gz", 9, "/this/file", "/that/file");
+    #split(",", $CONFIG{SYSTEM})
+    print STDOUT "$CONFIG{BAK}\n";
+    Archive::Tar->create_archive (
+            "/home/luigi/tmp/system-$MIDDLE_STR.tar.gz", 
+            9, 
+            "/etc"
+        );
+    
+    # backup users
+    my %user = ();                  # user/userdir pair in a hash
+
+    while (my @r = getpwent()) {
+        # $name,$passwd,$uid,$gid,$quota,$comment,$gcos,$dir,$shell,$expire
+        #print "$r[0]:$r[1]:$r[2]:$r[3]:$r[6]:$r[7]:$r[8]\n";
+        if ( $r[0] !~ m/$CONFIG{EXC_ULIST}/i && $CONFIG{LOW_UID} <= $r[2] ) {
+            $user{$r[0]}=$r[7];
+        }
+    }
+
+    # DEBUG: print content of %user hash
+    #print STDOUT join(" ",%user)."\n";
+
+    # backup others
+
+} else {
+    die "Lock file $TMP_LOCK exists... exiting.\n";
+}
+
+# gracely exit...
+unlink "$TMP_LOCK" or die "could not remove ".$TMP_LOCK.". $!\n";
 
 # functions 
 
@@ -58,7 +143,8 @@ sub init_config {
     # 
     # hash{VAR}='argument'
     
-    my %config_tmp = "";
+    my %config_tmp = ();
+
     my $CONFIG_FILE = shift;
 
     if (open(CONFIG, "<$CONFIG_FILE")){

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.91 $
+# $Revision: 1.92 $
 # Luis Mondesi  <lemsx1@hotmail.com>
 # 
 # REQUIRED: ImageMagick's Perl module and a dialog 
@@ -10,6 +10,7 @@ $|++; # disable buffer (autoflush)
 # standard Perl modules
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
+use File::Spec::Functions;     # abs2rel() and other dir/filename specific
 use File::Copy;
 use File::Find;     # find();
 use File::Basename; # basename() && dirname()
@@ -283,7 +284,7 @@ sub main {
     # i.e. under the "t" directory
     if ( $err == 0 && $NOINDEX == 0 ) {
         # TODO this should use %thumbfiles (see mkindex())
-        thumb_html_files($ROOT_DIRECTORY);
+        mkthumb_files($ROOT_DIRECTORY);
     }
     # 5.
     # create index.$EXT files for thumbnails. The index file contains
@@ -698,7 +699,7 @@ sub mkthumb {
     return $err;
 } # end mkthumb
 
-sub thumb_html_files {
+sub mkthumb_files {
     # creates an HTML file for e/a thumbnail 
     # @param 0 string := path to directory to generate html files for
     my $ROOT = $_[0];
@@ -765,7 +766,7 @@ sub thumb_html_files {
         # BASE is blank if we are already inside the directory
         # for which to do thumbnails, thus:
         if ( ! -d $BASE ) { 
-            print $LOGFILE "+ Thumb_HTML_Files changed based $BASE to .\n";
+            print $LOGFILE "+ mkthumb_files changed based $BASE to .\n";
             $BASE = "."; 
         }
         next if ( -f "$BASE/.nopixdir2htmlrc" );
@@ -777,7 +778,7 @@ sub thumb_html_files {
         # do so now:
         if ( ! exists $config{"$BASE"} ) 
         {
-            print $LOGFILE "+ Thumb_Html_Files Reading config for '$BASE'\n";
+            print $LOGFILE "+ mkthumb_files Reading config for '$BASE'\n";
             init_config("$BASE");
         }
         
@@ -790,13 +791,15 @@ sub thumb_html_files {
 
         $current_html_file = "$HTMLSDIR/$file_name.".$config{"$BASE"}{"ext"};
         $current_link = "$file_name.".$config{"$BASE"}{"ext"};
+
+        my $msg = "Creating";
         if ( -f $current_html_file ){
-            print $LOGFILE ": Overriding $current_html_file\n";
+            $msg = "Overriding";
         } # end if not current_html_file
-        print $LOGFILE ("= Creating html file into $current_html_file\n");
+        print $LOGFILE ("= $msg html file '$current_html_file'\n");
         # TODO routine for creating file should be called here...
         open(FILE, "> $current_html_file") || 
-        mydie("Couldn't write file $current_html_file","thumb_html_files");
+        mydie("Couldn't write file $current_html_file","mkthumb_files");
 
         # start HTML
         print FILE ($config{"$BASE"}{"header"}."\n");
@@ -810,9 +813,7 @@ sub thumb_html_files {
             && $config{"$ROOT_DIRECTORY"}{"menuname"} gt "" ) {
             $MENU_NAME=$config{"$ROOT_DIRECTORY"}{"menuname"};
         } # else MENU_NAME keeps the default name
-         if ( 
-             $config{"$BASE"}{"menutype"} eq "modern" 
-         )
+         if ( $config{"$BASE"}{"menutype"} eq "modern" )
          {
             print FILE ("\t\t<a class='pdlink' href='".$config{"$BASE"}{"uri"}."/".$MENU_NAME.".".$config{"$BASE"}{"ext"}."'>&lt;&lt;</a>\n");
         }
@@ -825,7 +826,7 @@ sub thumb_html_files {
         } else {
             print FILE ("&lt;==");
         }
-        # home link here
+        # home link here # TODO ../ should be replaced with relative str
         print FILE ("\t\t | <a class='pdlink' href='../$FILE_NAME.".$config{"$BASE"}{"ext"}."'>HOME</a> | \n");
 
         if ( -f $ls[$i+1] ) {
@@ -834,7 +835,6 @@ sub thumb_html_files {
             $next_pix_name = basename($ls[$i+1]);
             # get next base directory
             $NEXT_BASE = dirname($ls[$i+1]);
-            #) =~ s/(.*)\/$next_pix_name$/$1/g;
         }
         # forward link here
         if ( -f $ls[$i+1] && ($BASE eq $NEXT_BASE) ) {
@@ -850,7 +850,7 @@ sub thumb_html_files {
         }
         print FILE ("</div></td></tr>\n");
         print FILE ("<tr><td align='center'>\n<div align='center'>\n");
-        # image here
+        # image here # TODO ../ should be replaced with relative str
         print FILE ("<img src='../$pix_name' alt='$file_name' border=0>\n");
         print FILE ("</div></td></tr>\n<tr><td valign='bottom' align='center'><div align='center'>\n");
         print FILE ("</table>\n");
@@ -872,7 +872,7 @@ sub thumb_html_files {
             progressbar($PROGRESS,$TOTAL);
         } 
     } #end foreach $i
-} # end thumb_html_files
+} # end mkthumb_files
 
 sub menu_file {
     #---------------------------------------------#

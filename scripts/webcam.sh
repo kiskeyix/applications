@@ -1,11 +1,14 @@
 #!/bin/sh
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jan-30
 #
 # DESCRIPTION: a script to start|stop "webcam"
 # USAGE: webcam.sh [start|stop|restart] 
-#
+# TODO:
+#       -   when user sets EMAILUSER he/she probably don't 
+#           care about an STDERR message ...
+#   
 
 EMAILUSER=yes           # should an email notification be sent to $USER?
 EMAILADDRESS="lemsx1@hotmail.com" # public email or local user

@@ -1,13 +1,19 @@
 #!/usr/bin/perl -w
-# $Revision: 1.18 $
-# Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Oct-24
+# $Revision: 1.19 $
+# Luis Mondesi < lemsx1@gmail.com >
+# Last modified: 2005-Feb-02
 #
 # DESC: finds a string in a set of files
 #
 # USAGE: 
 #   find_infile.pl "string" ".*\.html"
 #
+# BUGS: if replacement string contains invalid characters
+#       nothing gets done. Have to find a way to escape
+#       all characters which might be used by Perl's
+#       s/// operator
+#
+
 
 use File::Find;     # find();
 use File::Basename; # basename();
@@ -23,28 +29,30 @@ my $EXCEPTION_LIST = "\.soc\$|\.sock\$|\.so\$|\.o\$|\.swp\$";
 #           NO NEED TO MODIFY ANYTHING PASS THIS LINE               #
 # -------------------------------------------------------------------
 
-my $usage = "Usage: find_infile.pl \"string\" [\"FILE_REGEX\"]\n NOTE use quotes to avoid the shell expanding your REGEX";
+my $usage = "Usage: find.pl [--replace=\"string\"] \"string\" [\"FILE_REGEX\"]\n NOTE use quotes to avoid the shell expanding your REGEX";
+my $modified = 0;
 
 my $thisFile = "";      # general current file
 my @new_file = ();      # lines to be printed in new file
 my @ls = ();            # array of files
 
-if (!$ARGV[0]) {
-    print STDERR $usage;
-    exit 1;
-}
+#if (!$ARGV[0]) {
+#    print STDERR $usage;
+#    exit 1;
+#}
 
-my ($this_string,$f_pattern) = @ARGV;
+my ($this_string,$that_string,$f_pattern) = "";
+#@ARGV;
 
 if ( defined $f_pattern && $f_pattern =~ m(^\.) ) {
     print "WARNING: using a dot in file pattern can match too many files. Escape dots with '\.'.\n Waiting 5 seconds before continuing\n Press CTRL+C to abort script execution\n" ;
     sleep(5);
 }
 
-if (!$ARGV[1]) {
-    print STDERR "All files chosen\n";
-    $f_pattern = ".*";
-}
+#if (!$ARGV[1]) {
+#    print STDERR "All files chosen\n";
+#    $f_pattern = ".*";
+#}
 
 print "s: '$this_string' f: '$f_pattern'\n" if ($DEBUG != 0);
 
@@ -58,26 +66,58 @@ if ($this_string =~ /\w/) {
         # yes, this is a wrapper for a standard tip!
         #
         # open e/a file if it's a regular file
-        # and find $this_string
+        # and replace $this_string with $that_string
+        # if $that_string is set
+        # and keep a backup .bak for e/a file modified
     
         if ($DEBUG) {print STDERR "opening $_\n"; }
         
         #system("perl -e 'm/$this_string/g;' $_");
-        
+        # or 
+        #system("perl -e 's/$this_string/$that_string/g;' -pi.bak $_");
+
         $thisFile = $_;
 
         $i = 0;
+        $modified = 0; # clear flag
 
         open (FILE,"<$thisFile") or die "could not open $thisFile. $!\n";
-        while(<FILE>) { 
-            $i++; 
-            if ($_ =~ m($this_string)gi) {
-                print STDOUT "$thisFile [$i]: $_"; 
+        if ( $that_string qt "" )
+        {
+            while(<FILE>) {
+                $i++;
+                if ($_ =~ s($this_string)($that_string)g) {
+                    print STDOUT "$thisFile [$i]: $_"; 
+                    $modified = 1;
+                }
+                push @new_file,$_;
             }
-        }
-        close(FILE);
+            close(FILE);
 
-    }
+            if ($modified) {
+                open (NEWFILE,">$thisFile") 
+                    or die "could not write to $thisFile. $!\n";
+                print NEWFILE @new_file;
+                close(NEWFILE);
+            }
+
+            # cleanup array
+            @new_file = ();
+
+        } else {
+            while(<FILE>) { 
+                $i++; 
+                if ($_ =~ m($this_string)gi) {
+                    print STDOUT "$thisFile [$i]: $_"; 
+                }
+            }
+            close(FILE);
+
+        }
+
+    } #end for
+} else {
+    print $usage;
 }
 
 sub do_file_ary {

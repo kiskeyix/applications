@@ -13,8 +13,28 @@
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 NAME="local"
 HDPARM="/sbin/hdparm"
-HDPARMARGS=" -A1a128d1u1k1 -X udma5 " # dma on and ultra dma 5 mode
-                                        # k1 -> keep settings on soft-reset
+
+# hdparm options
+# k1 -> keep settings on soft-reset
+# a128 -> set count for filesystem
+#           readahead to 128. Default is a8 which
+#           sets random seeks to 4k (8 sectors).
+#           When computer sets it, it uses a256 for a
+#           2.6.0 kernel compiled with ide core built-in
+#           (not as a module).
+# m16 -> enable  sector  count  for multiple sector I/O on the drive
+# c1 -> enable 32bit i/o support.
+# d1 -> enable using_dma flag for the drive
+# X69 -> dma5 (64+5)
+# u1 -> enable interruptunmask flag for the 
+#       drive (use with caution!!)
+#
+# use hdparm -v /dev/$DEV to see settings for the drive
+# and hdparm -I /dev/$DEV to see settings from the drive (no BIOS)
+#
+# -m16c1A1a256d1u1X69
+HDPARMARGS=" -k1m16c1A1a256d1u1X69 " 
+                            
 INSMOD="/sbin/insmod"
 
 set -e # exit if a program ends in non-zero status ( $? )
@@ -27,40 +47,95 @@ VIA82CXXX="`/bin/lsmod | /bin/egrep -i \"^via82cxxx\" | /usr/bin/cut -d\" \" -f1
 case "$1" in
     start)
     echo "Starting 'local' settings "
-    if [ x$VIA82CXXX = "xvia82cxxx" ]; then
+#     if [ x$VIA82CXXX = "xvia82cxxx" ]; then
         echo -n "Starting hdparm settings "
         $HDPARM $HDPARMARGS /dev/hda #> /dev/null
         RETHDA=$?
-        $HDPARM $HDPARMARGS /dev/hdb #> /dev/null
-        RETHDB=$?
-        if [ $RETHDA -eq 0 -a $RETHDB -eq 0 ]; then
-            echo -n " [sucessfull] "
-        else
-            echo -n " [failed] "
-        fi
-        echo "."
-    else
-        echo -n "Loading module via82cxxx "
-        # try loading the module and test again
-        $INSMOD via82cxxx
-        if [ $? -eq 0 ]; then
-            echo " [successful] "
-            echo -n "Starting hdparm settings "
-            $HDPARM $HDPARMARGS /dev/hda #> /dev/null
-            RETHDA=$?
-            $HDPARM $HDPARMARGS /dev/hdb #> /dev/null
-            RETHDB=$?
-            if [ $RETHDA -eq 0 -a $RETHDB -eq 0 ]; then
-                echo -n " [sucessfull] "
-            else
-                echo -n " [failed] "
-            fi
-            echo "."
-        else
-            echo -n " [failed] "
-            echo "."
-        fi
+        if [ $RETHDA -eq 0 ]; then
+             echo -n " [sucessfull] "
+         else
+             echo -n " [failed] "
+         fi
+#         $HDPARM $HDPARMARGS /dev/hdb #> /dev/null
+#         RETHDB=$?
+#       if [ $RETHDA -eq 0 -a $RETHDB -eq 0 ]; then
+#             echo -n " [sucessfull] "
+#         else
+#             echo -n " [failed] "
+#         fi
+         echo "."
+#     else
+#         echo -n "Loading module via82cxxx "
+#         # try loading the module and test again
+#         $INSMOD via82cxxx
+#         if [ $? -eq 0 ]; then
+#             echo " [successful] "
+#             echo -n "Starting hdparm settings "
+#             $HDPARM $HDPARMARGS /dev/hda #> /dev/null
+#             RETHDA=$?
+#             $HDPARM $HDPARMARGS /dev/hdb #> /dev/null
+#             RETHDB=$?
+#             if [ $RETHDA -eq 0 -a $RETHDB -eq 0 ]; then
+#                 echo -n " [sucessfull] "
+#             else
+#                 echo -n " [failed] "
+#             fi
+#             echo "."
+#         else
+#             echo -n " [failed] "
+#             echo "."
+#         fi
+#     fi
+   
+#     echo -n "Starting nvidia settings "
+#     if [ ! -c /dev/.devfsd ]; then
+#         for i in 0 1 2 3 4 5 6 7; do
+#             node="/dev/nvidia$i"
+#             rm -f $node
+#             mknod $node c 195 $i || echo "mknod \"$node\""
+#             chmod 0660 $node     || echo "chmod \"$node\""
+#             chown :video $node     || echo "chown \"$node\""
+#         done
+#         node="/dev/nvidiactl"
+#         rm -f $node
+#         mknod $node c 195 255    || echo "mknod \"$node\""
+#         chmod 0666 $node         || echo "chmod \"$node\""
+#         chown :video $node     || echo "chown \"$node\""
+#     fi
+#     echo "."
+    
+#     echo -n "Starting Zip settings "
+#     if [ ! -c /dev/.devfsd ]; then
+#        
+#         # special case:
+#         node=/dev/hdd
+#         rm -f $node
+#         mknod $node b 22 64
+#         chown root:floppy $node
+#         chmod 0660 $node
+# 
+#         for i in 0 1 2 3 4 5 6 7; do 
+#             node="/dev/hdd$i"
+#             rm -f $node
+#             mknod $node b 22 $((64+$i))
+#             chown root:floppy $node
+#             chmod 0660 $node
+#         done
+#         # by default partition 4 is the one we care:
+#         ln -s /dev/hdd4 /dev/zip || echo "/dev/zip skipped"
+#     fi
+#     echo "."
+    
+    echo -n "Starting vmware settings "
+    if [ ! -c /dev/.devfsd ]; then
+        for i in 0 1 2 8 9; do
+            node="/dev/vmnet$i"
+            rm -f $node
+            mknod "$node" c 119 $i || echo "mknod \"$node\""
+        done
     fi
+    echo "."
+
     ;;
     stop)
         # no need to stop anything here sir

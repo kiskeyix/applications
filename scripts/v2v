@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.51 $
+# $Revision: 1.52 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -1438,10 +1438,11 @@ sub findclip
     }
 }
 
-# ========= ASK if Cluster is used ============== #
-# And initialize the number of stream units if yes
 sub ask_clust
 {
+    # Asks if Cluster is used 
+    # and initialize the number of stream units if yes
+
     my ($rep)='n';
     print $DEBUG "--->  Enter ask_clust\n";
     $CLUSTER="NO";
@@ -2344,7 +2345,6 @@ sub finish
     mydie $NORM."Bye !!!";
 }  # ENd finish
 
-
 #   *************   Get Audio Bitrage ************ #
 
 sub a_bitrate
@@ -2606,21 +2606,6 @@ sub audioformat
     return($audio_format);
 }
 
-#sub videoformat_old
-#{
-#    print $DEBUG "---> Enter videoformat\n";
-#    $in_video_magic='vob' if ( $probe =~ m,MPEG program stream,);
-#    $in_video_magic='mov' if ( $probe =~ m,QuickTime movie,);
-#    $in_video_magic='m2v' if ( $probe =~ m,elementary stream,);
-#    $in_video_magic='vdr' if ( $probe =~ m,Digital Video,);
-#    $in_video_magic='avi' if ( $probe =~ m,RIFF data\, AVI video,);
-#    $in_video_codec='mpeg2' if ( $probe =~ m,MPEG .* stream,);
-#    $in_video_codec='mpeg2' if ( $probe =~ m,elementary stream,);
-#    $in_video_codec='dv' if ( $probe =~ m,Digital Video,);
-#    $in_video_codec='dv' if ( $probe =~ m,codec=[Dd][vV][sS][dD],);
-#    $in_video_codec='ffmpeg' if ( $probe =~ m,codec=[mM][jJ][pP][gG],);
-#}
-
 sub videoformat
 {    
     $in_video_magic=""; # reset var
@@ -2775,7 +2760,6 @@ sub ask_logo
     close(CONF);
 }
 # END ask_logo
-
 
 #******************Evaluate the Zoom*********************
 sub zooming
@@ -3481,6 +3465,5 @@ sub pwarn
     print STDOUT $red."@_".$norm;
 }
 
-#****************End of Functions Declarations***********
-#
-
+# ************ End of Functions Declarations *********** #
+#EOF#

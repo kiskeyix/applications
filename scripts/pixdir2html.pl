@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.57 $
+# $Revision: 1.58 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -296,73 +296,7 @@ my $MODE = "text";
 my $DIA = "";
 my $use_console_progressbar = 0; # a simple flag
 
-# xdialog is a better implementation than gdialog
-# thus, if we find that, we use that first
-# else, we try an alternate name
-# TODO make sure this works in different systems/shells
-# Go thru the PATH variable and finding the binaries:
-# (this might not work on some systems...)
-my @xbinaries = ("Xdialog","xdialog","gdialog","kdialog");
-my @binaries = ("dialog","whiptail","cdialog"); 
-my $FOUND = 0; # flag
-foreach my $path ( split(/:/,$ENV{"PATH"}) )
-{
-    next if ( $FOUND == 1 );
-    if ( exists $ENV{"NAUTILUS_SCRIPT_CURRENT_URI"} )
-    {
-        $MODE = "x";
-        foreach my $binary ( @xbinaries ) {
-            next if ( $FOUND == 1 );
-            if ( -x "$path/$binary" ) {
-                $DIA = "$path/$binary";
-                # gets out of these loops
-                $FOUND = 1; 
-            }
-        } # end foreach @xbinaries
-    } else {
-        $MODE = "text";
-        foreach my $binary ( @binaries ) {
-            next if ( $FOUND == 1 );
-            if ( -x "$path/$binary" ) {
-                $DIA = "$path/$binary";
-                $FOUND = 1; 
-            }
-        } # end foreach @binaries
-    } # end if NAUTILUS_SCRIPT_CURRENT_URI
-} # end foreach $PATH
 
-# make sure DIA is set or exit abnormally
-if ( $MODE eq "x" ) {
-    if ( $DIA eq "" ) { 
-        # error
-        print STDERR ("Graphical Dialog was not found.\n");
-        print STDERR ("Please install any of these programs:\n");
-        print STDERR join(" ",@xbinaries)."\n";
-        exit 1;
-    }
-} elsif ( $MODE eq "text" ) {
-    if ( $DIA eq "" or $DIA eq "console" ) {
-        # error only if no DIA
-        # being userfriendly here... 
-        if ( $DIA eq "" ) {
-            print STDERR ("Console Dialog was not found.\n");
-            print STDERR ("Please install any of these programs:\n");
-            print STDERR join(" ",@binaries)."\n";
-        }
-        print STDERR ("Trying Term::Progressbar");
-        # if running under text mode, then use terminal "readline"
-        # if there is no dialog installed
-        eval "use Term::ProgressBar";
-        if ( ! $@ ) {
-            my $gui = Term::ProgressBar;
-            $use_console_progressbar = 1; # update flag
-        } else {
-            # no hope at this point... 
-            print STDERR ("Term::Progressbar is not installed. Exiting");
-            exit 1;
-        }
-    }
-}
 
 # get options
 GetOptions(
@@ -382,11 +316,82 @@ GetOptions(
     'menu-td=i'     =>  \$menu_td,
     'td=i'          =>  \$TD,
     'str-limit=i'   =>  \$STR_LIMIT,
-    'c|cut-dirs=i'    =>  \$CUT_DIRS     
+    'c|cut-dirs=i'    =>  \$CUT_DIRS
 );
 
 die $USAGE if $HELP;
 
+# Xdialog is a better implementation than gdialog. 
+# Zenity is better than all so far... but
+# if we find any of these, we'll use that first
+# else, we try an alternate name
+# TODO make sure this works in different systems/shells
+# Go thru the PATH variable and finding the binaries:
+# (this might not work on some systems...)
+my @xbinaries = ("Xdialog","xdialog","gdialog","kdialog");
+my @binaries = ("dialog","whiptail","cdialog"); 
+my $FOUND = 0; # flag
+
+if ( $DIA eq "console" ) {
+    print STDERR ("Trying Term::Progressbar\n");
+    eval "use Term::ProgressBar";
+    if ( ! $@ ) { 
+        $use_console_progressbar = 1; # update flag
+    } else {
+        # no hope at this point... 
+        print STDERR ("Run without --front-end='console' to autodetect dialog\n");
+        print STDERR ("Term::Progressbar is not installed. Exiting\n");
+        exit 1;
+    }
+} elsif ( $DIA eq "" ) {
+    foreach my $path ( split(/:/,$ENV{"PATH"}) )
+    {
+        next if ( $FOUND == 1 );
+        if ( exists $ENV{"NAUTILUS_SCRIPT_CURRENT_URI"} )
+        {
+            $MODE = "x";
+            foreach my $binary ( @xbinaries ) {
+                next if ( $FOUND == 1 );
+                if ( -x "$path/$binary" ) {
+                    $DIA = "$path/$binary";
+                    # gets out of these loops
+                    $FOUND = 1; 
+                }
+            } # end foreach @xbinaries
+        } else {
+            $MODE = "text";
+            foreach my $binary ( @binaries ) {
+                next if ( $FOUND == 1 );
+                if ( -x "$path/$binary" ) {
+                    $DIA = "$path/$binary";
+                    $FOUND = 1; 
+                }
+            } # end foreach @binaries
+        } # end if NAUTILUS_SCRIPT_CURRENT_URI
+    } # end foreach $PATH
+
+    # make sure DIA is set or exit abnormally
+    if ( $MODE eq "x" ) {
+        if ( $DIA eq "" ) { 
+            # error
+            print STDERR ("Graphical Dialog was not found.\n");
+            print STDERR ("Please install any of these programs:\n");
+            print STDERR join(" ",@xbinaries)."\n";
+            exit 1;
+        }
+    } elsif ( $MODE eq "text" ) {
+        if ( $DIA eq "" ) {
+            # error only if no DIA
+            # being userfriendly here... 
+            print STDERR ("Console Dialog was not found.\n");
+            print STDERR ("Please install any of these programs:\n");
+            print STDERR join(" ",@binaries)."\n";
+            exit 1;         
+        } # end if DIA eq console
+    } # end if MODE
+} # end if DIA
+
+# html related
 my $FILE_NAME="index";
 my $MENU_NAME="menu";
 my $menu_str="";
@@ -416,9 +421,14 @@ sub main {
     # for now --clear is the same for all dialogs:
     # ( $MODE eq "x" ) ? " --clear ": 
     my $ARGS = " --clear ";
-
-    $GAUGE->open("| $DIA $ARGS --backtitle 'Picture Directory to HTML' --title 'Picture Progress' --gauge 'Thumbnails Creation' 8 70 0 2>&1");
-    $GAUGE->autoflush(1);
+    
+    if ( $use_console_progressbar == 1 ) 
+    {
+        $GAUGE = Term::ProgressBar;
+    } else {
+        $GAUGE->open("| $DIA $ARGS --backtitle 'Picture Directory to HTML' --title 'Picture Progress' --gauge 'Thumbnails Creation' 8 70 0 2>&1");
+        $GAUGE->autoflush(1);
+    }
 
     # which progressbar are we using?
     print $LOGFILE ("Mode $MODE\n");
@@ -466,9 +476,11 @@ sub main {
     thumb_html_files($ROOT_DIRECTORY);
 
     # close GAUGE
-    #print $GAUGE "\x04";
     #$GAUGE->close();
-    eof($GAUGE);
+    if ( $use_console_progressbar != 1 ) 
+    {
+        eof($GAUGE);
+    }
     undef($GAUGE); # this also closes the gauge... but...
 
     # close log
@@ -777,8 +789,12 @@ sub mkthumb {
     # initial values for gauge
     # TOTAL -> number of elements in ls array
     my ($PROGRESS,$TOTAL) = (0,( $#ls + 1 ) );
-    progressbar_msg($MESSAGE);
-
+    if ( $use_console_progressbar == 1 )
+    {
+        $GAUGE->new({'name'=>$MESSAGE,'count'=>$TOTAL});
+    } else {
+        progressbar_msg($MESSAGE);
+    }
     print $LOGFILE ("= $TOTAL pictures \n");
     foreach(@ls) 
     {
@@ -878,7 +894,12 @@ sub mkthumb {
         # update flags
         $LAST_BASE = $BASE;
         # update progressbar
-        progressbar($PROGRESS,$TOTAL);
+        if ( $use_console_progress == 1 ) 
+        {
+            $GAUGE->update($PROGRESS);
+        } else {
+            progressbar($PROGRESS,$TOTAL);
+        }
         $PROGRESS++;
     } #end foreach @ls
 
@@ -961,7 +982,12 @@ sub thumb_html_files {
     # initial values for gauge, note total
     # is number of elements in array ;-) 
     my ($PROGRESS,$TOTAL) = (0,$#ls);
-    progressbar_msg($MESSAGE);
+    if ( $use_console_progressbar == 1 )
+    {
+        $GAUGE->new({'name'=>$MESSAGE,'count'=>$TOTAL});
+    } else {
+        progressbar_msg($MESSAGE);
+    }
     #print all picts now
     # $#VAR gets number of elements of an array variable
     for ( $i=0; $i <= $#ls; $i++) {
@@ -1066,7 +1092,12 @@ sub thumb_html_files {
         #$PRINT_NEXT_LINK = 0;
 
         # update progressbar
-        progressbar($PROGRESS,$TOTAL);
+        if ( $use_console_progressbar == 1 )
+        {
+            $GAUGE->update($PROGRESS);
+        } else {
+            progressbar($PROGRESS,$TOTAL);
+        }
         $PROGRESS++;
     } #end foreach
 } # end thumb_html_files
@@ -1338,7 +1369,12 @@ sub progressbar
     if ( $TOTAL > 0 ) 
     {
         $current = sprintf( "%02d",($PROGRESS/$TOTAL) * 100 );
-        print $GAUGE $current."\n";
+        if ( $use_console_progressbar == 1)
+        {
+            $GAUGE->update($current);
+        } else {
+            print $GAUGE $current."\n";
+        }
     } 
 } # end progressbar
 
@@ -1347,7 +1383,10 @@ sub progressbar_msg
     my ($MESSAGE) = @_;
 
     chomp($MESSAGE);
-    print $GAUGE  "XXX\n".$MESSAGE."\nXXX\n";
+    if ( $use_console_progressbar != 1)
+    {
+        print $GAUGE  "XXX\n".$MESSAGE."\nXXX\n";
+    }
 } # end progressbar_msg
 
 sub do_dir_ary {

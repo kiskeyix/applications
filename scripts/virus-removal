@@ -3,5 +3,5 @@
 # 
 if [ -d "/mnt/windows" ]; then
 	echo "Removing Virus from /mnt/windows"
-	/usr/bin/clamscan --unzip --unrar --arj --unzoo --lha --jar --tar --deb --tgz --remove --recursive /mnt/windows
+	/usr/bin/clamscan --bell --unzip --unrar --arj --unzoo --lha --jar --tar --deb --tgz --remove --recursive --log=~/Desktop/Virus_Scan.txt --max-recursion=5 /mnt/windows
 fi

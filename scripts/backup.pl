@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.32 $
+# $Revision: 1.33 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Dec-30
+# Last modified: 2004-Dec-31
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
 #               or a user specified command archiver ( tar? )
@@ -149,7 +149,7 @@ if ($@)
 use File::Find;     # find();
 use File::Basename; # basename();
 
-my $DEBUG = 0;      # set to 1 to print debugging messages
+my $DEBUG = 1;      # set to 1 to print debugging messages
 
 my %MY_CONFIG = ();
 my $CONFIG_FILE= $ENV{"HOME"}."/.backuprc";
@@ -616,12 +616,13 @@ sub clean_regex {
     # attemps to take a PCRE regex and returns a
     # shell pattern
     my $string = shift;
-    ($string = $string) =~ s/\\//g; 
-    #($string = $string) =~ s/([\.\w]+)\$/*$1/g;
-    ($string = $string) =~ s/(\..+)\$/*$1/g;
-    ($string = $string) =~ s/(\.\*|\.\+)/*/g;
-    ($string = $string) =~ s/\+/*/g;
-
+    $string =~ s/(\.[a-zA-Z0-9_\-\[\]\(\)]+)[\\]*\$/*$1/g;
+    $string =~ s/(\.\*|\.\+)/*/g;
+    $string =~ s/\+/*/g;
+    $string =~ s/\\w/[a-zA-Z]/g; 
+    $string =~ s/\\d/[0-9]/g; 
+    $string =~ s/\$//g; 
+    $string =~ s/\\//g; 
     return $string;
 }
 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Jan-20
 #
@@ -64,6 +64,12 @@ if ( $MASTER )
     chdir($LOCAL_PATH) or die ("$LOCAL_PATH $!");
     foreach my $i ( @FILES )
     {
+        if ( $MASTER_HOST =~ m/^http:/i && -f "$i" )
+        {
+            # wget is not too smart when using http
+            print STDERR ("Deleting $i\n") if ( $DEBUG );
+            unlink($i); # silently delete old copies
+        }
         print STDOUT "\n";
         printf STDOUT ("%20s","wGetting $MASTER_HOST/$i");
         system("wget $WGET_ARGS $MASTER_HOST/$i");

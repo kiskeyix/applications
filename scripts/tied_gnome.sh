@@ -1,7 +1,7 @@
 #!/bin/sh
-# $Revision: 1.14 $
+# $Revision: 1.15 $
 # luis mondesi <lemsx1@hotmail.com>
-# Last modified: 2004-Apr-12
+# Last modified: 2004-Jul-22
 #
 # DESCRIPTION:  a simple Gnome 2 script for sysadmins to 
 #		set a bunch of gnome defaults. Remember 
@@ -299,13 +299,11 @@ else
     unset_mandatory "/desktop/gnome/sound/enable_esd"
 fi
 
-if [ $ENABLE_EVENTS_SOUNDS != 0 ]; then
+if [ $ENABLE_EVENTS_SOUNDS == 1 ]; then
     unset_mandatory "/desktop/gnome/sound/event_sounds"
-    # we are not unsetting the mandatory for enable_esd
-    # that will be done by setting DISABLE_SOUND_SERVER to anything
-    # other than one
-    set_bool_mandatory "/desktop/gnome/sound/enable_esd" "true"
     set_bool_defaults "/desktop/gnome/sound/event_sounds" "true"
+else
+    unset_mandatory "/desktop/gnome/sound/event_sounds"
 fi
 
 #eof

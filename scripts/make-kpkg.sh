@@ -1,7 +1,7 @@
 #!/bin/sh
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jun-29
+# Last modified: 2003-Jul-04
 #
 # DESCRIPTION: Use the wonderful "make-kpkg" from Debian
 #               to build a custom kernel.
@@ -41,8 +41,27 @@ if [ $1 -a $1 != "--help" ]; then
                 --config oldconfig \
                 --append-to-version -custom.$1 \
                 --revision $REVISION \
-                clean kernel_image \
-                modules_clean modules_image
+                clean kernel_image 
+    makeit=0
+
+    echo "Do you want to make the Kernel Modules? [y/N] \c"
+    read yesno
+    case $yesno in
+        y* | Y*)
+            makeit=1
+        ;;
+        n* | N*)
+            makeit=0
+        ;;
+    esac
+    
+    if [ $makeit ]; then
+        make-kpkg   --rootcmd $FAKEROOT \
+        --config oldconfig \
+        --append-to-version -custom.$1 \
+        --revision $REVISION \
+        modules_clean modules_image
+    fi
 else
     echo -e "Usage: $0 ## \n \t Where ## is an interger"
 fi

@@ -1,7 +1,7 @@
 #!/bin/bash
-# $Revision: 1.14 $
+# $Revision: 1.15 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jul-30
+# Last modified: 2003-Aug-01
 #
 # DESCRIPTION:  an interactive wrapper to Debian's "make-kpkg"
 #               to build a custom kernel package.
@@ -27,28 +27,6 @@
 # TODO: divise a better routine to find executables
 # according to the users $PATH
 
-# see if ccache is here but not distributed cc
-#if [ -x /usr/bin/ccache -a ! -x /usr/bin/distcc ]; then
-#    export MAKEFLAGS="CC=ccache gcc";
-#export MAKEFLAGS="CC=distcc gcc";
-#fi
-
-#if [ -x /usr/bin/distcc -a  -x /usr/bin/ccache ]; then
-#    # if distributed cc is installed, then
-#    #  we will distribute our compilation
-#    #  to the following hosts:
-#    export DISTCC_HOSTS="localhost www2";
-#
-#    # if we also have ccache installed,
-#    # then we arrange the commands so that
-#    # we can use both ccache and distcc
-#    export CCACHE_PREFIX="distcc";
-#
-#    export MAKEFLAGS="CC=ccache distcc gcc";
-#else 
-#    echo "Distcc or ccache not found...";
-#fi
-
 # if distributed cc is installed, then
 #  we will distribute our compilation
 #  to the following hosts:
@@ -56,13 +34,13 @@
 # then we arrange the commands so that
 # we can use both ccache and distcc
 
-export MAKEFLAGS="CCACHE_PREFIX=distcc DISTCC_HOSTS='localhost www2'";
+export MAKEFLAGS="CCACHE_PREFIX=distcc";
 export CCACHE_PREFIX=distcc 
 
 if [ -f $HOME/.distcc/hosts ]; then
     export DISTCC_HOSTS=`cat $HOME/.distcc/hosts`
 else
-    export DISTCC_HOSTS='localhost www2'
+    export DISTCC_HOSTS=localhost www2
 fi 
 
 FAKEROOT=fakeroot
@@ -101,8 +79,16 @@ if [ $1 -a $1 != "--help" ]; then
         y* | Y*)
             makeit=1
         ;;
-        n* | N*)
-            makeit=0
+    esac
+  
+    # ask about make the kernel headers
+    yesno="No"
+    KERNEL_HEADERS=""
+
+    read -p "Do you want to make the Headers pkg for this Kernel? [y/N] " yesno
+    case $yesno in
+        y* | Y*)
+            KERNEL_HEADERS="kernel_headers"
         ;;
     esac
 
@@ -113,7 +99,7 @@ if [ $1 -a $1 != "--help" ]; then
         --config oldconfig \
         --append-to-version -custom.$1 \
         --revision $REVISION \
-        clean kernel_image 
+        clean kernel_image $KERNEL_HEADERS
     fi
 
     # ask whether to create all kernel module images
@@ -122,13 +108,10 @@ if [ $1 -a $1 != "--help" ]; then
     mmakeit=0
     myesno="No"
 
-    read -p "Do you want to make the Kernel Modules? [y/N] " myesno
+    read -p "Do you want to make the Kernel Modules [$MODULE_LOC] ? [y/N] " myesno
     case $myesno in
         y* | Y*)
             mmakeit=1
-        ;;
-        n* | N*)
-            mmakeit=0
         ;;
     esac
     

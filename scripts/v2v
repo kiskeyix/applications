@@ -30,7 +30,7 @@ $userconfig="
 #
 
 #		Cluster config if you intend to use cluster mode
-\$CLUSTER_CONFIG=/home/luigi/.vob2divxrc-cluster;  # YOU MUST MODIFY THIS LINE !!!
+\$CLUSTER_CONFIG=/path/to/.vob2divxrc-cluster;  # YOU MUST MODIFY THIS LINE !!!
 
 # 		remote command if you intend to use cluster mode
 \$RMCMD=ssh; 			# change this to rsh if you need
@@ -56,7 +56,7 @@ $userconfig="
 # If for some reason V2divx is unable to determine the audio channel 
 # for your LANGUAGE, put here the audio channel number
 # ( generally 0 is your language, 1 is english, 2 is another ...)
-\$DEF_AUDIOCHANNEL=1;   
+\$DEF_AUDIOCHANNEL=0;   
 # to trace V2divx put this to STDOUT or /dev/null for none
 \$DEBUG=STDOUT;
 # to know what system command are run by V2divx put this to STDOUT

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.48 $
+# $Revision: 1.49 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -111,6 +111,7 @@ if ($@)
     "       Please install this module before continuing\n".
     "       Use: perl -e shell -MCPAN to install it.\n".
     "       On Debian just: apt-get install perlmagic \n\n";
+    print STDERR "$@\n";
     exit 1;
 }
 # TODO else use "convert" if found

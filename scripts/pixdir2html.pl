@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.54 $
+# $Revision: 1.55 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -44,14 +44,14 @@
 # title=
 # meta=
 # stylesheet=
-# html_msg=<h1>Free form using HTML tags</h1> 
-# body=<body bgcolor='#000000'>
-# p=<p>
-# table=<table border='0'>
-# td=<td valign='left'>
-# tr=<tr>
+# html_msg=<h1 class='pdheader1'>Free form using HTML tags</h1> 
+# body=<body bgcolor='#000000' class='pdbody'>
+# p=<p class='pdparagraph'>
+# table=<table border='0' class='pdtable'>
+# td=<td valign='left' class='pdtd'>
+# tr=<tr %%bgcolor%% class='pdtr'>
 # new=http://absolute.path.com/images/new.png # for dirs with .new files
-# footer=<a href='#'>A footer here</a>
+# footer=<a href='#' class='pdlink'>A footer here</a>
 # # set this to 1 to avoid printing a header
 # # or footer in the menu file menu.$EXT
 # menuheader_footer=0
@@ -62,6 +62,67 @@
 # If you don't create a file, a sample will be done for you
 # at the root level of the directory from which you execute
 # this script.
+#
+# STYLESHEET:
+# Basic support for the style sheet was added. Keywords should be in 
+# following form. (Note, they are all declared as "class" as shown above)
+# A simple styles.css file should have things like:
+#
+# .pdimage {
+#   border: 0;
+# }
+#
+# .pdbody { 
+#   font-family: Verdana, Lucida, sans-serif;
+#   color: #ce7500;
+#   text-decoration: none;
+#   background: #ffffff;
+#   background-image: url("/path/to/images/image.png"); 
+#   background-repeat: no-repeat;
+#   background-attachment: fixed;
+#   background-position: center;
+# }
+#
+# .pdtd {
+#   vertical-align: top;
+#   padding: 2px 0px 0px 0px;
+#   font-family : "hoefler text", Tahoma, Helvetica, sans-serif;
+#   font-size : 11pt;
+#   color : #000000;
+#   text-decoration : none;
+#   background-color: transparent;
+# }
+#
+# .pdtr {}
+# .pdparagraph {}
+# .pdtable {}
+# .pdlink a {
+#   vertical-align: top;
+#   padding: 2px 0px 0px 0px;
+#   color:  #7090A6;
+#   background-color: transparent;
+#   font-weight: bold;
+#   text-decoration:    none;
+# }
+#
+# .pdlink a:visited  {
+#   vertical-align: top;
+#   padding: 2px 0px 0px 0px;
+#   text-decoration:    none;
+#   font-weight: bold;
+#   color:  #7090A6;
+#   background-color: transparent;
+# }
+# .pdlink a:hover {
+#   vertical-align: top;
+#   padding: 2px 0px 0px 0px;
+#   background-color: transparent;
+#   font-weight: bold;
+#   color:  #7090A6;
+#   text-decoration:    none;
+# }
+#
+# With more to be added in the future...
 #
 # REQUIRED: ImageMagick's Perl module and it's dependancies
 #
@@ -434,12 +495,12 @@ sub init_config {
     $config_tmp{$ROOT}{"title"}="Images";
     $config_tmp{$ROOT}{"meta"}="<meta http-equiv='content-type' content='text/html;charset=iso-8859-1'>";
     $config_tmp{$ROOT}{"stylesheet"}="<link rel='stylesheet' href='../styles.css' type='text/css'>";
-    $config_tmp{$ROOT}{"html_msg"}="<h1>Free form HTML</h1>";
-    $config_tmp{$ROOT}{"body"}="<body bgcolor='#000000' text='#ffffff'>";
-    $config_tmp{$ROOT}{"p"}="<p>";
-    $config_tmp{$ROOT}{"table"}="<table border='0'>";
-    $config_tmp{$ROOT}{"td"}="<td valign='top' align='left'>";
-    $config_tmp{$ROOT}{"tr"}="<tr>";
+    $config_tmp{$ROOT}{"html_msg"}="<h1 class='pdheader1'>Free form HTML</h1>";
+    $config_tmp{$ROOT}{"body"}="<body class='pdbody'>";
+    $config_tmp{$ROOT}{"p"}="<p class='pdparagraph'>";
+    $config_tmp{$ROOT}{"table"}="<table border='0' class='pdtable'>";
+    $config_tmp{$ROOT}{"td"}="<td valign='top' align='left' class='pdtd'>";
+    $config_tmp{$ROOT}{"tr"}="<tr class='pdtr'>";
     # when header is set, title, meta, stylesheet, etc...
     # are discarded. So do a complete set
     # such as <HTML><head><title>...
@@ -609,8 +670,8 @@ sub mkindex {
             ($file_name = $this_file) =~ s/$EXT_INCL_EXPR//gi;
             ($file_name = $file_name) =~ s/^$THUMB_PREFIX//; # removes prefix
             # EXT is a global and so is THUMBNAIL
-            print FILE ("<a href='$HTMLDIR/$file_name.".$config{$this_base}{"ext"}."'>".
-                "<img src='$THUMBNAIL/"."$this_file'></a>\n");
+            print FILE ("<a class='pdlink' href='$HTMLDIR/$file_name.".$config{$this_base}{"ext"}."'>".
+                "<img class='pdimage' src='$THUMBNAIL/"."$this_file'></a>\n");
             print FILE ("\t</td>\n");
             if ($i<($TD-1)) {
                 $i++;

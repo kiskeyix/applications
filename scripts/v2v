@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.52 $
+# $Revision: 1.53 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -244,23 +244,7 @@ check_system;
 
 my $urldvdtitle=$GREEN."\t V2divx is unable to find dvdtitle in your PATH.\n\t Code Sources of dvdtitle are available at : \n\t http://www.lpm.univ-montp2.fr/~domi/V2divx/dvdtitle.tgz\n ".$NORM."\n";
 
-my $warnclust = 
-$RED."***********  WARNING ABOUT CLUSTER MODE *************".$NORM."
-If you want to use a cluster :
-a) The /path/to/vobs directory must be NFS mounted on each node
-    and have the same name.
-b) You must have rsh or ssh permission on each node,
-( modify your $userconfigfile to select rsh or ssh ).
-c) You need to have a $RED${CLUSTER_CONFIG}$NORM file (change this value in your $userconfigfile) on the node you run V2divx on.
-This file must contain all the nodenames of your cluster:the percentage of frames to encode by each node.
-Syntax of this file:
-# This is a Comment
-# nodename:percentage
-asterix:25   #  Duron 333 Mhz
-obelix:5  # 486 66Mhz
-vercingetorix:70 # Thunderbird 1.2 Ghz
-${RED}Of course the total of percentage frames to encode MUST be 100
-\n\n".$NORM;
+my $warnclust = "\n ERROR: cluster mode. Please see README file\n\n";
 
 my $usage =
 $RED."            *****  Warning  *****$NORM
@@ -327,49 +311,7 @@ V2divx v$release
 \n\n
 ";
 
-my $readme=" 
-$RED V2divx $NORM is a perl script which make a lot of work for you to
-rip/encode your Videofiles or TVrecord in a AVI-Divx file with the fabulous Transcode. 
-
-\t\t What does $RED V2divx $NORM do ?
-
-1) rip your DVD to vob files.
-2) detect titles ( and then the main title ) of a DVD.
-3) detect the DVD volume identification if you install dvdtitle.
-4) detect if the DVD title is a multi-angle video stream (and rip only one).
-5) detect if the video frames are interlaced.
-6) detect all audio channels (and their languages) in the input video files.
-7) detect the input format of all audio channels (mp3,dts,ac3,lpcm,mpeg2ext).
-8) supports to encode two audio channels in avi files.
-9) detect suggested volume rescale.
-10) is able to add subtitles (on stream or in an srt subfile).
-11) detect the aspect ratio and then calculate the best output image size,
-Note: this does NOT give you the best aspect ratio, but the best image quality.
-V2divx use the Bits per Pixel value :
-BpP=bitrate*1000/(fps * height * width)
-V2divx uses BpP=0.18 without letterboxes, BpP is recalculated depending on letterboxes size.
-The smaller the video bitrate, the smaller will be the image size (your avi player will resize it to full screen).
-The final aspect ratio rarely is much different from the original aspect ratio (which pratically never respects the motion picture aspect ratio.)
-12) detect if deinterlacing is necessary (and detect if transcode was compiled with the MPlayer pp lib and/or mpeg tools)
-13) detect if the slow Zooming transcode option (-Z) is necessary or not.
-14) is able to encode on a cluster (even multiple sequence unit video streams)
-15) is able to prepend a Logo to the DivX (even in cluster mode since release 1.0.2) .
-16) remove (if you want) the end and begin credits (to reduce space and leave it to the movie itself).
-17) is able to record TV (if you've installed NVrec)
-18) And finally guide you from your Video file to your DivX file.
-
-That's all Folk's ;)... 
-All you need is perl, transcode, xv (or ImageMagick), a video file viewer (Mplayer, Xine, playdv etc...), a divx (MPEG-4) viewer (MPlayer or aviplay etc...) and optionally (but recommended) dvdtitle, pgmfindclip and the srttools (see the contrib transcode source directory).
-
-You will find the latest $RED V2divx $NORM Release at:
-$GREEN
-http://www.lpm.univ-montp2.fr/~domi/V2divx
-$NORM
-where you will find also the dvdtitle source code.
-
-Enter '$0 --help|-h ' to have a small help
-";
-
+my $readme="\n See README file \n\n ";
 
 # You may Modify the Next value but take care
 # (see the transcode man pages - about Bits per Pixel)
@@ -505,7 +447,7 @@ sub get_fps {
 }
 
 sub ask_ntsc {
-    # @param str $FPS
+    # @param 0 str $FPS := float [25.00 or 23.97 or 29.97 ... ]
     # ask user a yes or no question about whether
     # NTSC is needed and sets proper parameters
     # accordingly.
@@ -514,7 +456,10 @@ sub ask_ntsc {
     # is 29.970 (pass as argument)
     #
     # example: ask_ntsc($FPS);
-    my $FPS = shift;
+    #
+    # After that it sets globals VIDEONORM and TELECINE
+    # accordingly. And lastly, returns string $VIDEONORM
+    $FPS = shift;
 
     print(" Is this Movie a NTSC TELECINE movie".
     " (MPlayer is your friend to know that)? [y|N]");
@@ -522,8 +467,8 @@ sub ask_ntsc {
     chomp($rep);
     $TELECINE=1 if ( $rep eq "y" || $rep eq "Y" );
     $VIDEONORM="NTSC" if ( $FPS =~ m,2[39]\.9, );
-    print $DEBUG "+ video normalization: $VIDEONORM telecine: $TELECINE";
-
+    print $DEBUG "+ video normalization: $VIDEONORM | telecine: $TELECINE\n";
+    return $VIDEONORM;
 } # end ask_ntsc()
 
 sub check_system
@@ -723,14 +668,13 @@ sub tv_recorder
     }
     print $DEBUG "<--- TV Recorder\n";
     exit(0);
-}
-    
+}    
 
 sub format_date 
 {
     # returns a nicely formatted string:
-    # @param 0 unixtimestamp
-    # @param 1 "hours"
+    # @param 0 unixtimestamp := number of seconds since 1970
+    # @param 1 "hours" := str "hours" [optional]
     # if no second parameter is given, returns a date string 
     # formatted in ISO-8660
     # if second parameter "hours" is given, it converts
@@ -750,7 +694,7 @@ sub format_date
 sub sec_to_hour 
 {
     # convert seconds into a string HH:MM:SS
-    # @param 0 number of seconds
+    # @param 0 number of seconds := integer
     my $seconds = shift;
 
     my ($days,$hours,$minutes);
@@ -871,6 +815,7 @@ sub mydie
     unlink("tmp/PB");
     exit(1);
 }
+
 use sigtrap qw(handler mydie normal-signals error-signals) ;
 
 sub makelogo
@@ -1467,17 +1412,18 @@ sub ask_clust
             # first find out number of FPS and then create_nav
             if ( $FPS eq "" )
             {
-                pinfo("+ Getting Frames Per Second\n");
                 $FPS = get_fps();
             }
-            ask_ntsc( $FPS );
-            create_nav ;
+            $VIDEONORM = ask_ntsc( $FPS );
+            create_nav($VIDEONORM);
+
+            # TODO use Perl seek() to read this last line
             my $stream_units=`tail -1 tmp/file.nav | awk '{print \$1}'`;
             chomp($stream_units);
-            # Take care there is too much stream units !!
+            # Take care if there are too many stream units !!
             if ( $stream_units > 10 )
             {
-                pwarn("\tThere are too much stream units".
+                pwarn("\tThere are too many stream units".
                 " to encode this clip \n".
                 "\t in cluster mode with a good ".
                 "video quality\n\tReversing to NO".
@@ -1485,9 +1431,10 @@ sub ask_clust
                 $stream_units="NO";
                 sleep(2);
             }
-            # WE need create-extract in CLUSTER Mode to have $audio_rescale :-(
-                create_extract if ( $stream_units ne "NO" 
-                && ( ! -e "tmp/extract-ok" || ! -e "tmp/extract.text"));
+            # WE need create-extract in CLUSTER Mode 
+            # to have $audio_rescale :-(
+            create_extract if ( $stream_units ne "NO" 
+                && ( ! -f "tmp/extract-ok" || ! -f "tmp/extract.text"));
             # Initialize the $CLUSTER to the number of stream Units or to NO if there
             # are too many Stream Units 
             $CLUSTER=$stream_units;
@@ -1498,9 +1445,9 @@ sub ask_clust
     print $DEBUG "<--- ask_clust\n";
 } # end ask_clust
 
-# ============= Cluster MODE =================== # 
 sub cluster
 { 	
+    # ============= Cluster MODE =================== # 
     print $DEBUG "--->  Enter cluster\n";
     # Need to know working directory 
     # and pass it to the cluster nodes (to find tmp/*)
@@ -1726,14 +1673,16 @@ sub cluster
     # End cluster Sub routine
 }
 
-
-#  ***************** Create Nav File (For cluster) *****************
-
 sub create_nav
 {
+    # Create Nav File (For cluster)
+    # @param 0 str videonorm := NTSC or PAL [default]
+    # takes a string to determine what type of demux (map)
+    # to do for clusters 
     return()  if (  -f "tmp/filenav-ok" &&  -f "tmp/file.nav" );
-    # BUG VIDEONORM is not known the first time create_nav is called
-    my $demux=" -M 2" if ( $VIDEONORM eq "NTSC" );
+    my $video_norm_str = shift; # get VIDEONORM from this if passed
+    my $demux=" -M 2 " if ( $VIDEONORM eq "NTSC" 
+        or $video_norm_str eq "NTSC" );
     pinfo("$v2d\t Creating File Navigation:\t\t   | tmp/file.nav\n");
     my $pid = fork();
     mydie "couldn't fork [function: create_nav]\n" unless defined $pid;
@@ -1751,6 +1700,7 @@ sub create_nav
         smily(filenav);
     }
 }
+
 #  ****** Create extract info (to calculate bitrate) ****** #
 
 sub create_extract
@@ -1773,7 +1723,6 @@ sub create_extract
         # accordingly
         ask_ntsc($FPS);
     } 
-    #    create_nav if ( $VIDEONORM eq "NTSC");
     if ( $NOAUDIO == 1  || $need_time == 1 )  
     {
         # || $in_video_magic eq 'mpeg2'(OK V=mpeg2,A=mp3.mpg)  
@@ -1887,8 +1836,6 @@ sub calculate_nbrframe
     {
         ask_ntsc($FPS);
     }
-    #    create_nav if ( $VIDEONORM eq "NTSC");
-
     $nbr_frames= floor($tot_frames - ($deb_sec+$last_sec)*$FPS);
     print $DEBUG "Number of frames: $nbr_frames\n";
     print $DEBUG "<--- calculate_nbrframe\n";

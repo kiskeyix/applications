@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.9 $
+# $Revision: 1.10 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE:
@@ -49,7 +49,7 @@
 #     even if there are subdirectories inside which might need thumbnails
 #     created. Either do not put a .nopixdir2htmlrc file in these directories
 #     or mv the subdirectories parallel to this directory. Will deal with
-#     this issue later when menuMaker subroutine is completed and completely
+#     this issue later when menu_file subroutine is completed and completely
 #     recursive
 # 
 # TIPS:
@@ -172,7 +172,7 @@ sub main {
     thumbfile($IMAGE_DIRECTORY);
     unless ( $NOMENU == 1 ) {
         print LOGFILE ("Creating menu file\n");
-        menuMaker();
+        menu_file();
     }
     close(LOGFILE);
     if ( -x $SAVELOG ) {
@@ -181,7 +181,6 @@ sub main {
 
     print STDOUT "$total_directories directories.\n Read log $LOG for details. \n";
 } # endmain
-
 
 sub init_config {
     # Takes one argument:
@@ -237,7 +236,6 @@ __EOF__
 
     return %config_tmp;
 }
-
 
 sub mkthumb {
     # Takes one argument directory to create images for
@@ -591,7 +589,7 @@ sub process {
     }
 }
 
-sub menuMaker {
+sub menu_file {
     ##############################################
     # It creates a menu.$EXT file at 
     # the root level of the picture

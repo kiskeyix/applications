@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jul-06
+# Last modified: 2003-Jul-14
 #
 # BUGS: if replacement string contains invalid characters
 #       nothing gets done. Have to find a way to escape
@@ -27,7 +27,7 @@ my $modified = 0;
 
 my $usage = "Usage: \n \
 find_replace.pl \"string\" \"replacement\" [\"FILE_REGEX\"]\n \
-NOTE use quotes to avoid the shell expanding your REGEX";
+NOTE use quotes to avoid the shell expanding your REGEX\n";
 
 my $thisFile = "";      # general current file
 my @new_file = ();      # lines to be printed in new file

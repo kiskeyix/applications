@@ -1,5 +1,5 @@
 #!/bin/bash
-# $Revision: 1.24 $
+# $Revision: 1.25 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Dec-14
 #
@@ -91,7 +91,7 @@ if [ $1 -a $1 != "--help" ]; then
             INITRD="YES"
             INITRD_OK="YES"
 
-            expotr $INITRD
+            export INITRD
         ;;
         *)
             echo "Initrd support disabled"

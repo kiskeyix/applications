@@ -1,0 +1,49 @@
+#!/bin/sh
+#
+# Luis Mondesi <lemsx1@hotmail.com>
+# 2003-09-10 00:15 UTC 
+#
+# For Latinomixed.com
+#
+# This script slaps a host or ip 
+# it adds it to the 
+# 
+# /etc/firestarter/blocked-hosts
+# 
+# file and then reloads the 
+# 
+# /etc/firestarter/firewall.sh
+# 
+# script
+#
+# args:
+# $1 = ip or hostname
+# $2 = service
+#
+# example:
+# slap-this-bitch aa.bb.cc.dd sshd
+#
+# This is called from hosts.allow like this:
+#
+# sshd ssh: ALL : spawn ( /path/to/slap-this-bitch %h %d ) & : DENY
+#
+#
+
+if [ x$1 != "x" ]; then
+    echo $1 >> /etc/firestarter/blocked-hosts \
+    && /etc/firestarter/firewall.sh 
+
+    if [ x$2 != "x" ]; then
+        echo "Host has been blocked for life [ tried to use $2 ]: $1."\
+        | /usr/bin/mail -s "Host Blocked all access $2-$1" root
+    else 
+        echo "Host has been blocked for life: $1"\
+        | /usr/bin/mail -s "Host Blocked all access $1" root
+    fi
+
+else
+
+    echo "Wrong arguments sent to $0"\
+    | /usr/bin/mail -s "Wrong arguments" root
+
+fi

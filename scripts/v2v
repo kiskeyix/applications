@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.85 $
+# $Revision: 1.86 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -577,9 +577,9 @@ sub say_end
 sub which 
 {
     # @param 0 string := binary to find in $ENV{PATH}
-    # returns binary plus path found
+    # returns binary path or -1 if not found
     my $binary = shift;
-    my $path = "-1"; # string to return when found
+    my $path = "-1"; # holds string to return when found. 
     foreach my $binary_path ( split(/:/,$ENV{"PATH"}) )
     {
         next if ( -x "$path" ); # a quick way out. after finding
@@ -673,29 +673,33 @@ sub check_system
         foreach $pgm ( $XV, $XINE, $AVIPLAY )
         {
             my(@pgm)=split / /,$pgm;
-            if ( system("which $pgm[0] > /dev/null 2>&1 ") )
+            if ( ! -x which("$pgm[0]") )
             {
-                pwarn(" $pgm is not installed on this System :-( \n Modify your $userconfigfile to reach your configuration (DVD player, DivX player, Image viewer....) \n");
+                pwarn(" $pgm is not installed on this System :-( "
+                ."\n Modify your $userconfigfile to reach your "
+                ."configuration (DVD player, DivX player, "
+                ."Image viewer....) \n");
                 exit (0);
             }
         }
-        $PGMFINDCLIP=(! system("which $PGMFINDCLIP >/dev/null 2>&1 "))?1:0;
+        $PGMFINDCLIP=( -x which("$PGMFINDCLIP") ) ? 1:0;
     
-        $SUBRIP=system("which subtitle2pgm >/dev/null 2>&1 ");
-        $SUBRIP=system("which pgm2txt >/dev/null 2>&1 ") if ( $SUBRIP == 0 );
-        $SUBRIP=system("which srttool >/dev/null 2>&1 ") if ( $SUBRIP == 0 );
-        $SUBRIP=system("which gocr >/dev/null 2>&1 ") if ( $SUBRIP == 0 );
-        $SUBRIP=( $SUBRIP == 0 )?1:0;
-        $DVDTITLE="" if ( system("which $DVDTITLE >/dev/null 2>&1 ")!=0);
+        $SUBRIP=which("subtitle2pgm");
+        $SUBRIP=which("pgm2txt")    if ( $SUBRIP eq "-1" );
+        $SUBRIP=which("srttool")    if ( $SUBRIP eq "-1" );
+        $SUBRIP=which("gocr")       if ( $SUBRIP eq "-1" );
+        $SUBRIP=( $SUBRIP eq "-1" ) ? 1:0;
+        $DVDTITLE="" if ( ! -x which($DVDTITLE) );
         # are ogmtools on this system ?
-        $OGMTOOL=system("which ogmmerge >/dev/null 2>&1 ");
-        $OGMTOOL=system("which ogmsplit >/dev/null 2>&1 ") if ( $OGMTOOL == 0 );
-        $OGMTOOL=( $OGMTOOL == 0 )?1:0;
+        $OGMTOOL=which("ogmmerge");
+        $OGMTOOL=which("ogmsplit")  if ( $OGMTOOL eq "-1" );
+        $OGMTOOL=( $OGMTOOL eq "-1" ) ? 1:0;
         # reset $AO to mp3 if ogmmerge is not found
         if  ( ! $OGMTOOL  && $AO eq "ogg" )
         {
             $AO="mp3";
-            pwarn("Audio output format reset to MP3, ogmmerge not found on this system\n (Press Enter)");
+            pwarn("Audio output format reset to MP3, "
+            ."ogmmerge not found on this system\n (Press Enter)");
             my $junk=<STDIN>;
         }
     
@@ -3463,8 +3467,10 @@ sub ripdvd
     # *************** RIP A DVD ***********************
     my ($angle,$angles,$chapter,$chapters)=1;
     my (@titleSet,@titleLen,$sys,$vob,$sec,$hour,$min,$dvd)="";
-    $VOBPATH= $ARGV[0];
-    ( -e $VOBPATH ) 
+    $VOBPATH = ( -e $ARGV[0] ) ? $ARGV[0] : 
+    prompt("Enter directory to hold ripped DVD [/scratch_disk/DVD]: ");
+    # sanity check:
+    ( -e $VOBPATH )
         or mydie("Directory \"$VOBPATH\" does not exist \n Sorry");
     $dvd = "/dev/dvd"; # default
     DVDDEV:
@@ -3557,9 +3563,9 @@ sub ripdvd
     ($probe =~ m,(\d+) chapter\(s\),) 
         or mydie("No chapter found in tcprobe for title $longestTitle !");
     $chapter=$1;
+    $rep="N";
     if ( $chapter > 1 )
     { 	
-        $rep="N";
         $rep=prompt(" Do you want to rip this title chapter by chapter (y|N)? ");
     }
     my @dfiles = glob("$VOBPATH/*"); # no /bin/rm anymore
@@ -3572,7 +3578,7 @@ sub ripdvd
         or mydie("Unable to chdir to $VOBPATH.. please DO NOT USE the ~ character in the /path/to/vob");
     $sys="tcprobe -i $dvd -T $longestTitle >> probe.rip 2>&1 ";
     system ("nice -$nice $sys");
-    if ( $rep eq "y" || $rep eq "Y" || $rep eq "o" || $rep eq "0")
+    if ( $rep =~ m/^y$/i  || $rep eq "o" || $rep eq "0")
     {
         my $i=0;
         for ( $i=1;$i<=$chapter;$i++)
@@ -3582,6 +3588,15 @@ sub ripdvd
             pinfo("$sys \n") if ( $INFO );
             system("nice -$nice $sys");
         }
+# TODO we don't care about angles or chapters, 
+# rip whole title with -P to make more compatible with dvdauthor
+#    } elsif ( $rep =~ m/^n$/i && ) {
+#        # -P => rip whole title. (compatible with dvdauthor. VOBU)
+#        # don't care about angle. 
+#        $sys="tccat -i $dvd -P -T $longestTitle ".
+#            "| split -b 1024m - ${TITLE}_T${longestTitle}_" ;
+#        pinfo("$sys \n") if ( $INFO);
+#        system("nice -$nice $sys");
     } else {
         $sys="tccat -i $dvd -T $longestTitle,-1,$angle ".
             "| split -b 1024m - ${TITLE}_T${longestTitle}_" ;
@@ -3647,15 +3662,15 @@ sub dvd9to5
         {
             # this is a DVD device /dev/dvd (?)
             system("tccat -i $dir -T$title,-1 -P | tcextract -t vob -x ac3 -a0 > $audio");
-        } elsif ( -d "$dir" )
-        {
-            foreach my $file (glob("$dir/*.[VOBvob]")) # .vob too...
+        } elsif ( -d "$dir" ) {
+            foreach my $file (glob("$dir/*.[VvOoBb]")) # .vob too...
             {
                 # TODO add a switch to turn this on (off by default)
                 # For now, it's just on :-)
                 # this will be useful when video is out of sync
                 system("tcprobe -H 500 -i $file > $file.txt");
             }
+            # TODO make sure the directory contains only .VOB files...
             system("tccat -i $dir -P | tcextract -t vob -x ac3 -a0 > $audio");
         } else {
             pwarn("No DVD device or Directory given as argument for audio extraction.");

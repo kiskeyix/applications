@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jan-05
 #
@@ -17,7 +17,7 @@ REALDAEMON=/opt/ut/System/ucc-bin      # used when stopping
                                         # if no PID is known
 NAME=ucc            # name of the binary
 DESC="Unreal Tournament Daemon"
-CMDLINE="server $MAP?mutator=BDBMapVote302.BDBMapVote?game=Botpack.CTFGame"
+CMDLINE="server $MAP?mutator=BotPack.ChainsawMelee,AssaultBonusPack.EavyAssaultPlus,BDBMapVote302.BDBMapVote,Relics.RelicDeath,Relics.RelicStrength,Relics.RelicRegen,Relics.RelicRedemption,Relics.RelicDefense,Relics.RelicSpeed?game=Botpack.CTFGame"
 
 CHUID=""            # change uid command
 
@@ -47,7 +47,7 @@ case "$1" in
     --make-pidfile --pidfile $PID \
     --verbose --exec $DAEMON $CMDLINE || echo -n "<Failed> "
     echo -n "$NAME"
-    if [ "$UID" -eq 0 -a $2 != "noftpshut" ]; then
+    if [ "$UID" -eq 0 -a x$2 != "xnoftpshut" ]; then
         # shutdown ftp server now
         echo -e "\nShutting down ftp server"
         $FTPSHUT now

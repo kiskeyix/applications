@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.87 $
+# $Revision: 1.88 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -60,7 +60,7 @@ my $INFO = 0;
 my $VERSION = 0;
 my $TVREC = 0;
 # numbers
-my $TITLESET=1; # default titleset when doing dvd9todvd5 or dvdbackup. 
+my $TITLESET=1; # default titleset when doing dvd9to5 or dvdbackup. 
                 # override from command line with --titleset=N
 
 # strings
@@ -255,11 +255,11 @@ my $usage="
 
     \n # to rip a DVD
     \n cd /scratch_disk && mkdir DVD
-    \n V2dvix ./DVD rip # or V2divx --dvdbackup ./DVD 
+    \n V2dvix ./DVD rip # or V2divx --dvdbackup --titleset=1 ./DVD 
     \n # to convert to DVD5
     \n mkdir DVD5 && cd DVD5
     \n V2divx --dvd9-to-dvd5 /scratch_disk/DVD # or, if --dvdbackup:
-    \n # V2divx --dvd9-to-dvd5 /scratch_disk/DVD/\"DVD_TITLE_HERE\"
+    \n # V2divx --dvd9-to-dvd5 /scratch_disk/DVD/ --titleset=\"DVD_TITLE_HERE\"
     \n # to make a .avi
     \n mkdir /scratch_disk/AVI && cd /scratch_disk/AVI
     \n V2divx /scratch_disk/DVD 680 # replace 680 with desired size

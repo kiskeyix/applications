@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.12 $
+# $Revision: 1.13 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Aug-18
+# Last modified: 2004-Sep-30
 #
 # BUGS: if replacement string contains invalid characters
 #       nothing gets done. Have to find a way to escape
@@ -107,6 +107,18 @@ if (
     print $usage;
 }
 
+sub is_binary
+{
+    # returns 1 if true
+    my $file = shift;
+    my $file_t = qx/file "$file"/;
+    if ( $file_t =~ m/elf|executable/i )
+    {
+        return 1;
+    }
+    return 0;
+}
+
 sub do_file_ary {
     # uses find() to recur thru directories
     # returns an array of files
@@ -139,7 +151,8 @@ sub process_file {
     if ( 
         $_ =~ m($f_pattern) &&
         -f $_ && 
-        $base_name !~ m($EXCEPTION_LIST)
+        $base_name !~ m($EXCEPTION_LIST) &&
+        ! is_binary ($_)
     ) {
         s/^\.\/*//g;
         push @ls,$_;

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Oct-12
 #
@@ -7,31 +7,31 @@
 #
 # NOTE: this will freeze users computers, or crash their IM.
 # Be polite! :-) Gaim does not get overloaded, but don't
-# send a huge limit or gaim will freeze... Note that 
+# send a huge limit or gaim will freeze... Note that
 # your peer's bandwith will suffer too.
-# 
+#
 # The main purpose of this script is to bother people
 # if you don't want to bother them, then don't use this....
 #
 # usage: write in a IM window (one to one. no chats yet)
-#   
+#
 #   _r ## or _rand ## or _are ##
 #   , sends random number of characters from global LIMIT/2 up to ##
 #   NOTE: added _are because r gets substituted by 'are' by default
 #
 #   _s ## or _xs ##
-#   , _s sends random smilies up to ## 
+#   , _s sends random smilies up to ##
 #    and _xs is the extended version of this... more smiles
 #    mostly MSN specific though
 #
-#   _x message,## 
+#   _x message,##
 #   , where message is a string that will be repeated ## times
 #
 #   _z text,##
 #   , zig zags text ## number of times
-#   
 #
-# TODO: 
+#
+# TODO:
 #   - test chat part (hey, I don't chat as often)
 #   - modularize code into sub() calls for routines
 #
@@ -48,142 +48,147 @@ $VERSION = "0.0.8";
 $NAME = "xp2p";
 
 %PLUGIN_INFO = (
-    perl_api_version => 2,
-    name             => $NAME,
-    version          => $VERSION,
-    summary          => "The main purpose of this script is to bother people by sending annoying messages",
-    description      => "The main purpose of this script is to bother people by sending annoying messages \n\t- _r ## or _rand ## or _are ##, sends random number of characters from global LIMIT/2 up to ## NOTE: added _are because r gets substituted by 'are' by default \n\t- _s ## or _xs ## , _s sends random smilies up to ## and _xs is the extended version of this... more smiles mostly MSN specific though \n\t- _x message,## , where message is a string that will be repeated ## times \n\t- _z text,## , zig zags text ## number of times",
-    author           => "Luis Mondesi",
-    url              => "",
-    load             => "plugin_load"
-);
+		perl_api_version =>2,
+		name =>$NAME,
+		version =>$VERSION,
+		summary =>"The main purpose of this script is to bother people by sending annoying messages",
+		description =>"The main purpose of this script is to bother people by sending annoying messages \n\t- _r ## or _rand ## or _are ##, sends random number of characters from global LIMIT/2 up to ## NOTE: added _are because r gets substituted by 'are' by default \n\t- _s ## or _xs ## , _s sends random smilies up to ## and _xs is the extended version of this... more smiles mostly MSN specific though \n\t- _x message,## , where message is a string that will be repeated ## times \n\t- _z text,## , zig zags text ## number of times",
+		author =>"Luis Mondesi", 
+		url =>"", 
+		load =>"plugin_load"
+		);
 
-$LIMIT = 10; # default limit for all text sent
+$LIMIT = 10;
+# default limit for all text sent
 
 # list of smiles
-@smilies = ("C:)",
-    "C:-)",
-    "O-)",
-    ">:)",
-    ">:-)",
-    ":-o)))",
-    ":-O)))",
-    "8-|)",
-    ":-]",
-    ":-)",
-    ":-(",
-    ";-)",
-    ":-P",
-    "=-O",
-    ":-*",
-    ">:o",
-    "8-)",
-    ":-\$",
-    ":-!",
-    ":-[",
-    "O:-)",
-    ":-/",
-    ":'(",
-    ":-X",
-    ":-D");
+@smilies = (
+		"C:)",
+	    "C:-)",
+	    "O-)",
+	    ">:)",
+	    ">:-)",
+	    ":-o)))",
+	    ":-O)))",
+	    "8-|)",
+	    ":-]",
+	    ":-)",
+	    ":-(",
+	    ";-)",
+	    ":-P",
+	    "=-O",
+	    ":-*",
+	    ">:o",
+	    "8-)", 
+		":-\$", 
+		":-!", 
+		":-[", 
+		"O:-)", 
+		":-/", 
+		":'(", 
+		":-X", 
+		":-D"
+		);
 
-@msn_smilies = ("(a)",
-    "(A)",
-    ":-@",
-    ":@",
-    ":-[",
-    ":[",
-    "(B)",
-    "(b)",
-    "(Z)",
-    "(z)",
-    "(U)",
-    "(u)",
-    "(@)",
-    "(^)",
-    "(o)",
-    "(O)",
-    "(C)",
-    "(c)",
-    ":'(",
-    ":`(",
-    "(W)",
-    "(w)",
-    "(6)",
-    "(&)",
-    "(D)",
-    "(d)",
-    "(E)",
-    "(e)",
-    "(~)",
-    "(F)",
-    "(f)",
-    "(G)",
-    "(g)",
-    "(X)",
-    "(x)",
-    "(%)",
-    "(L)",
-    "(l)",
-    "(H)",
-    "(h)",
-    "(M)",
-    "(m)",
-    "(I)",
-    "(i)",
-    "(K)",
-    "(k)",
-    ":-D",
-    ":D",
-    ":-d",
-    ":d",
-    ":->",
-    ":>",
-    ":-|",
-    ":|",
-    "(8)",
-    ":-O",
-    ":O",
-    ":-o",
-    ":o",
-    "(T)",
-    "(t)",
-    "(P)",
-    "(p)",
-    "(?)",
-    "(r)",
-    "(R)",
-    "({)",
-    "(})",
-    ":-(",
-    ":(",
-    ":-<",
-    "(S)",
-    "(s)",
-    ":-)",
-    ":)",
-    "(*)",
-    "(#)",
-    "(N)",
-    "(n)",
-    "(Y)",
-    "(y)",
-    ":-P",
-    ":P",
-    ":-p",
-    ":p",
-    ":-S",
-    ":S",
-    ":-s",
-    ":s",
-    ";-)",
-    ";)",
-    ":S-",
-    ":-\$",
-    ":\$");
+@msn_smilies = (
+		"(a)",
+		"(A)",
+		":-@",
+		":@",
+		":-[",
+		":[",
+		"(B)",
+		"(b)",
+		"(Z)",
+		"(z)",
+		"(U)",
+		"(u)",
+		"(@)",
+		"(^)",
+		"(o)",
+		"(O)",
+		"(C)",
+		"(c)",
+		":'(",
+		":`(",
+		"(W)",
+		"(w)",
+		"(6)",
+		"(&)",
+		"(D)",
+		"(d)",
+		"(E)",
+		"(e)",
+		"(~)",
+		"(F)",
+		"(f)",
+		"(G)",
+		"(g)",
+		"(X)",
+		"(x)",
+		"(%)",
+		"(L)",
+		"(l)",
+		"(H)",
+		"(h)",
+		"(M)",
+		"(m)",
+		"(I)",
+		"(i)",
+		"(K)",
+		"(k)",
+		":-D",
+		":D",
+		":-d",
+		":d",
+		":->",
+		":>",
+		":-|",
+		":|",
+		"(8)",
+		":-O",
+		":O",
+		":-o",
+		":o",
+		"(T)",
+		"(t)",
+		"(P)",
+		"(p)",
+		"(?)",
+		"(r)",
+		"(R)",
+		"({)",
+		"(})",
+		":-(",
+		":(",
+		":-<",
+		"(S)",
+		"(s)",
+		":-)",
+		":)",
+		"(*)",
+		"(#)",
+		"(N)",
+		"(n)",
+		"(Y)",
+		"(y)",
+		":-P",
+		":P",
+		":-p",
+		":p",
+		":-S", 
+		":S", 
+		":-s", 
+		":s", 
+		";-)", 
+		";)", 
+		":S-", 
+		":-\$", 
+		":\$"
+		);
 
 # list of characters
-@chars = qw/1 2 3 4 5 6 7 8 9 0 ! @ $ % ^ & * ( ) _ + = ` ~ a b c d e f g h i j k l m n o p q r s t u v w x y z < > ? [ ] { } " ' : ; | /;
+@chars = qw / 1 2 3 4 5 6 7 8 9 0 ! @ $ % ^ & * ( ) _ + = ` ~ a b c d e f g h i j k l m n o p q r s t u v w x y z < > ? [ ]  { } "  '  :  ;  |  /;
 
 sub plugin_init 
 {
@@ -192,85 +197,115 @@ sub plugin_init
 
 sub plugin_load
 {
-    Gaim::debug_info("$NAME plugin", "plugin_load\n");
-    
-    $plugin = shift;
-
+    my $plugin = shift;
+	my $data = "";
+	
+	# im
+	Gaim::signal_connect(
+		Gaim::Connections::handle, 
+		"sending-im-msg",
+		$plugin, 
+		\&xtext_user, 
+		$data
+	);
+	Gaim::signal_connect(
+		Gaim::Conversations::handle, 
+		"displaying-im-msg",
+		$plugin, 
+		\&xtext_user, 
+		$data
+	);
+	# chat
     Gaim::signal_connect(
-        Gaim::Conversation::handle(),
-        "sent-im-msg", 
+        Gaim::Connections::handle, 
+        "sending-chat-msg", 
         $plugin,
-        \&xtext_user,
-        $NAME
+        \&xchat_user,
+		$data
     );
-
-#    Gaim::signal_connect(
-#        Gaim::Conversation::handle, 
-#        "sending-chat-message", 
-#        $plugin,
-#        \&xchat_user
-#    );
+	Gaim::signal_connect(
+		Gaim::Conversations::handle, 
+		"displaying-chat-msg",
+		$plugin, 
+		\&xtext_user, 
+		$data
+	);
 }
 
 # main functions
 sub xtext_user 
 {
-    $index = $_[0];
-    $who = $_[1];       # sender
-    $message = $_[2];
-    $flag = $_[3]; 
-    $type = $_[4];
+	# sent_im_msg_cb(GaimAccount *account, 
+	# 	const char *recipient, 
+	# 	const char *buffer, 
+	# 	void *data)
+    $account = $_[0];
+	$recipient = $_[1];
+	$message = $_[2];
+	$flag = $_[3];
+	$type = $_[4];
 
     $type = ( $type eq "chat" ) ? "chat" : "im";
-
+	
     #Various debug prints to show what has been passed in
-    Gaim::debug_info ( "\nindex:  ",  $index);
-    Gaim::debug_info ( "\nwho:  ",  $who);
-    Gaim::debug_info ( "\nmessage:  ",  $message);
-    Gaim::debug_info ( "\nflag:  ",  $flag);
-    Gaim::debug_info ( "\ntype:  ",  $type);
-
-    @im_array = Gaim::ims(); #get the array of IM's
-
-    #find the correct IM
-
-    for ($i = 0; $i <= $#im_array; $i++)
-    {
-        if ( Gaim::Conversation::get_name( Gaim::Conversation::IM::get_conversation ( $im_array[$i] ) ) eq $who )
-        {
+    Gaim::debug_info ( "\naccount : ",  $account);
+    Gaim::debug_info ( "\nrecipient: ",  $recipient);
+    Gaim::debug_info ( "\nmessage: ",  $message);
+	Gaim::debug_info ( "\nflag: ",  $flag);
+    Gaim::debug_info ( "\ntype: ",  $type);
+	
+	if ( $type eq "chat" )
+	{
+		@im_array = Gaim::chats();
+	} else {
+		@im_array = Gaim::ims(); #get the array of IM's
+	}
+	for ($i = 0; $i <= $#im_array; $i++)
+	{
+		Gaim::debug_info ( "$i.im_array", $im_array[$i]);
+		if ( Gaim::Conversation::get_name( Gaim::Conversation::IM::get_conversation ( $im_array[$i] ) ) eq $recipient )
+		#find the correct IM
+		{
+			Gaim::debug_info ( "SAME: $i.im_array", $im_array[$i]);
+			$im = $im_array[$i];
+		} # end im_array
+	} # end for i
             #  _x string to repeat,##
             if ($message =~ m/.*_x /i) {
-               repeate_msg($im_array[$i],$message,$type); 
+               repeat_msg($im,$message,$type); 
+				$_[2]=""; # reset message
             } 
 
             # _s ##
             # sends ## of random smilies
             elsif ($message =~ m/.*_s /i) {
-                rand_smiles($im_array[$i],$message,$type,"normal");
+                rand_smiles($im,$message,$type,"normal");
+				$_[2]=""; # reset message
             } # end if
 
             # _xs ##
             # sends ## of random smilies
             elsif ($message =~ m/.*_xs /i) {
-                rand_smiles($im_array[$i],$message,$type,"msn");
+                rand_smiles($im,$message,$type,"msn");
+				$_[2]=""; # reset message
             }
 
             # _z string,##
             # zig zags text up to ##
             elsif ($message =~ m/.*_z /i) 
             {
-                zip_zag_msg($im_array[$i],$message,$type);
+                zip_zag_msg($im,$message,$type);
+				$_[2]=""; # reset message
             }
 
             # _rand ## or _r ##
             # send random stuff up to ##
             elsif ($message =~ m/.*_rand |.*_r |.*_are /i) 
             {
-                rand_msg($im_array[$i],$message,$type);
+                rand_msg($im,$message,$type);
+				$_[2]=""; # reset message
             } # last elsif
             # messages that don't comply go thru automatically
-        } # end if $sender
-    } # end for $i
 } # end xtext_user
 
 sub xchat_user 
@@ -324,7 +359,7 @@ sub rand_smiles
     $limit = ($limit =~ /\d+/) ? $limit : $LIMIT;
 
     # reset $message
-    $message = "";
+    $message = " ";
 
     if ( $smile_type ne "normal" )
     {
@@ -366,12 +401,12 @@ sub zig_zag_msg
     {
         if ( $j % 8 < 4 ) 
         {
-            $wspace .= "   "; # add 3 spaces to text
+            $wspace .= " "; # add 3 spaces to text
         } else {
             $wspace =~ s/[\s]{3}//o; # remove 3 spaces from text
         }
         $j++;
-        if ( $type eq "chat" )
+        if ( $type eq " chat " )
         { 
             Gaim::Conversation::Chat::send($im, $wspace.$message);
         } else {
@@ -384,7 +419,7 @@ sub rand_msg
 {
     # maybe the user would decide to pipe this to get the meaning of
     # life like:
-    # print rand_msg() | grep -i "meaning of life"
+    # print rand_msg() | grep -i " meaning of life "
     # :-)
 
     ($im,$message,$type) = @_;
@@ -397,7 +432,7 @@ sub rand_msg
     for ($j=0;$j<$limit;$j++) 
     {
 
-        $message = ""; # reset message
+        $message = " "; # reset message
         # to make things a little bit more exciting!
         # multiply limit times 8 number of characters
         # but, if this number happens to be greater than

@@ -1,17 +1,17 @@
 #!/bin/sh
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Apr-04
+# Last modified: 2004-May-06
 #
 # DESCRIPTION: fixes gcc symlinks when updating to a new version under debian
 # USAGE: ./fix_gcc.sh
 # CHANGELOG:
 #
 
-PRIORITY=51 # 0 - 100. higher is better
+PRIORITY=52 # 0 - 100. higher is better
 
-GCC="/usr/bin/gcc-3.3"
-GPP="/usr/bin/g++-3.3"
+GCC="/usr/bin/gcc-3.4"
+GPP="/usr/bin/g++-3.4"
 
 # to remove do:
 # sudo update-alternatives --remove-all $GCC

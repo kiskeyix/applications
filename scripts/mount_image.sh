@@ -1,7 +1,11 @@
 #!/bin/sh
-# $Revision: 1.6 $
+#
+# Title="Mount Image"
+# Title[es]="Montar Imagen"
+#
+# $Revision: 1.7 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Oct-30
+# Last modified: 2003-Oct-31
 #
 # DESCRIPTION: Opens a dialog and asks user how to mount an image
 # INSTALL: needs zenity (or another graphical dialog replacement) 
@@ -47,41 +51,55 @@ SU="gksu --disable-grab "       # xsu|gnome-sudo. graphical representation of "s
 DIALOG="zenity" # gdialog|xdialog. dialog replacement for Gnome
 MOUNT="mount"   # mount command
 
-# Messages
-TIT_ENCRYPTED[en]="Encryption"
-MSG_ENCRYPTED[en]="Is this an encrypted image?"
 
-TIT_MOUNT[en]="Mount Image"
-MSG_MOUNTED[en]="already mounted"
+# language settings
 
-TIT_FORMAT[en]="Select filesystem type"
-TIT_CYPHER[en]="Select Cypher"
+set_english()
+{
+    LANG="en"
+    # Messages
+    TIT_ENCRYPTED="Encryption"
+    MSG_ENCRYPTED="Is this an encrypted image?"
 
-# spanish
-TIT_ENCRYPTED[es]="Cifrado"
-MSG_ENCRYPTED[es]="¿Este es un archivo cifrado?"
+    TIT_MOUNT="Mount Image"
+    MSG_MOUNTED="already mounted"
 
-TIT_MOUNT[es]="Montar Imagen"
-MSG_MOUNTED[es]="ya está montado"
+    TIT_UMOUNT="Unmount Filesystem"
 
-TIT_FORMAT[es]="Selecciona el tipo de formato"
-TIT_CYPHER[es]="Selecciona Cifrado"
+    TIT_FORMAT="Select filesystem type"
+    TIT_CYPHER="Select Cypher"
+
+}
+
+set_spanish()
+{
+    LANG="es"
+    # spanish
+    TIT_ENCRYPTED="Cifrado"
+    MSG_ENCRYPTED="¿Este es un archivo cifrado?"
+
+    TIT_MOUNT="Montar imagen"
+    MSG_MOUNTED="ya está montado"
+
+    TIT_UMOUNT="Desmontar la imagen"
+
+    TIT_FORMAT="Selecciona el tipo de formato"
+    TIT_CYPHER="Selecciona módulo cifrado"
+}
 
 # determine language to use:
 if [ -n $LANG ]; then
-    if [ "`echo $LANG | grep \"^en\"`" ]; then
-        echo "Using English"
-        LANG="en"
-    elif [ "`echo $LANG | grep \"^es\"`" ]; then
+    if [ "`echo $LANG | grep \"^es\"`" ]; then
         echo "Using Spanish"
-        LANG="es"
+        set_spanish
     else
         echo "Using default language"
-        LANG="en"
+        set_english
     fi
 else
     echo "Using default language"
     LANG="en"
+    set_english
 fi
 
 # utilities
@@ -90,7 +108,7 @@ ask_cypher()
     TMP=""
 
     TMP=$($DIALOG --list \
-            --title="${TIT_CYPHER[$LANG]}" \
+            --title="${TIT_CYPHER}" \
             --radiolist --editable \
             --column="Selected" --column="Cypher" $CYPHERS)
     if [ -z $TMP ]; then
@@ -107,7 +125,7 @@ ask_filesystem()
     TMP=""
 
     TMP=$($DIALOG --list \
-    --title="${TIT_FORMAT[$LANG]}" \
+    --title="${TIT_FORMAT}" \
     --radiolist --editable \
     --column="Selected" --column="Filetype" $FORMATS)
 
@@ -121,7 +139,7 @@ ask_filesystem()
 
 is_encrypted()
 {
-    $DIALOG --title="${TIT_ENCRYPTED[$LANG]}" --question --text="${MSG_ENCRYPTED[$LANG]}"
+    $DIALOG --title="${TIT_ENCRYPTED}" --question --text="${MSG_ENCRYPTED}"
     RET=$?
     if [ $RET -eq 0 ];then
         echo "yes"
@@ -136,7 +154,7 @@ lmount()
     # @arg2 loopdev
     # @arg3 path
     if [ -b $2 ];then
-        $SU -u $SUSER -t "${TIT_MOUNT[$LANG]}" "$MOUNT -t $1 $2 $3"
+        $SU -u $SUSER -t "${TIT_MOUNT}" "$MOUNT -t $1 $2 $3"
         if [ "`mount | grep \"$3\"`" ]; then
             echo "yes"
         else
@@ -145,22 +163,20 @@ lmount()
     else
         # for convenience. $2 is not a block device, try to mount it
         # letting mount find a block device for us
-        $SU -u $SUSER -t "${TIT_MOUNT[$LANG]}" "$MOUNT -o loop -t $1 $2 $3"
+        $SU -u $SUSER -t "${TIT_MOUNT}" "$MOUNT -o loop -t $1 $2 $3"
         if [ "`mount | grep \"$3\"`" ]; then
             echo "yes"
         else
             echo "no"
         fi
     fi
-
-    # we should never reach this
-    echo "no"
 }
 
 unmount()
 {
-    # @arg1 path
-    $SU -u $SUSER -t "Unmount Filesystem" "umount $1"
+    # @arg1 message
+    # @arg2 path
+    $SU -u $SUSER -t "${TIT_UMOUNT}: $1" "umount $2"
     if [ $? -eq 0 ]; then
         echo "yes"
     else
@@ -184,9 +200,6 @@ setup_loop()
         error "Wrong block device $1"
         echo "no"
     fi
-
-    # we should never get here
-    echo "no"
 }
 
 setup_enloop()
@@ -206,9 +219,6 @@ setup_enloop()
         error "Wrong block encrypted device $1"
         echo "no"
     fi
-
-    # we should never get here
-    echo "no"
 }
 
 
@@ -226,9 +236,6 @@ unset_loop()
         error "Wrong block device $1"
         echo "no"
     fi
-
-    # we should never get here
-    echo "no"
 }
 
 error()
@@ -237,6 +244,13 @@ error()
     --text="$1"
 }
 
+info()
+{
+    $DIALOG --info \
+    --text="$1"
+}
+
+
 for arg in $@
 do
 
@@ -244,7 +258,12 @@ do
 
     # if already mounted continue
     if [ "`mount | grep \"${arg}\"`" ]; then
-        echo "$arg ${MSG_MOUNTED[$LANG]}"
+        RET=`unmount "$arg ${MSG_MOUNTED}" "$arg"`
+        if [ $RET = "yes" ]; then
+            info "$arg unmounted successfully"
+        else
+            error "Could not unmount $arg"
+        fi
         continue
     fi
 

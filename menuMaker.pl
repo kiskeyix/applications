@@ -1,6 +1,5 @@
 #!/usr/bin/perl -w
-# do not show so many warnings: -w ;    ;-)
-# Last modified: 2002-Aug-29
+# Last modified: 2002-Dec-27
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # Use this script in Nautilus to create menu HTML files
 # This is part of pictDir2html.pl script, but it can be used
@@ -64,6 +63,7 @@ my $thisFile= "";
 my $x=0;
 my $y=0;
 my $i=0;
+my $j=0; # count number of TR's
 my $total_links=0;
 my @ls = ();
 my $ts = "";
@@ -142,27 +142,35 @@ __EOF__
 #    ";
 #print contents of array @ls
 #print FILE ("$myconfig{header}");
-print FILE ("$myconfig{table}");
+print FILE ("$myconfig{table}\n");
 
-#print all links now
-#foreach file (@files){
+# print all links now
+
+my $tmp_tr = ""; # used to color the rows
+
 while($x>0){
-    if ($myconfig{tr}=~m/\%+bgcolor\%+/i){
-        if (($x % 2) == 0){
-            ($myconfig{tr} = $myconfig{tr}) =~ s/\%+bgcolor\%+/bgcolor=#cccccc/i;
-        }else {
-            ($myconfig{tr} = $myconfig{tr}) =~ s/\%+bgcolor\%+//i;
-        }
-    }
+    # temporarily turn off warnings
+    no warnings;
 
-    print FILE ($myconfig{tr}."\n");
+    if ($myconfig{tr}=~m/\%+bgcolor\%+/i){
+        if (($j % 2) == 0){
+            ($tmp_tr = $myconfig{tr}) =~ s/\%+bgcolor\%+/bgcolor=#efefef/i;
+        } else {
+            ($tmp_tr = $myconfig{tr}) =~ s/\%+bgcolor\%+//i;
+        }
+        
+        print FILE ($tmp_tr."\n");
+        
+    } else {
+        print FILE ($myconfig{tr}."\n");
+    }
     for ($y=1;$y<=$tds;$y++){
+        
         
         if ($y > 1) { print FILE ("\t </td> \n"); }   # close the TD tags
 
 	print FILE ("\t".$myconfig{td}."\n");
 	if ( $ls[$i] ne "" ) {
-            #=~ m/\w/i){
 	    # if link exists, otherwise leave it blank
             ($ts = $ls[$i]) =~ s/(.*)\/$INDEX_HTML/$1/gi;
             $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='$GIF'>":""; # if .new file
@@ -174,8 +182,10 @@ while($x>0){
 	}
 	$i++;
 	$x--;
-    }#end for $y
+        
+    } # end for $y
     print FILE ("</tr>\n");
+    $j++; # incr TR counter
 }
 print FILE ("</table>\n");
 #print FILE ($myconfig{footer}."\n");

@@ -1,70 +1,310 @@
 #!/bin/sh
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Oct-26
+# Last modified: 2003-Oct-29
 #
 # DESCRIPTION: Opens a dialog and asks user how to mount an image
-# USAGE: $0 file.{iso,img,etc}
+# INSTALL: needs zenity (or another graphical dialog replacement) 
+#           and gksu (or another su graphical replacement). Remember
+#           to update the DIALOG and SU variables below if you want
+#           to use other programs than the default "zenity" and
+#           "gksu".
+#           Make this script executable (chmod 0755 mount_image.sh)
+#           Copy this script to "~/.gnome2/nautilus-scripts/Mount Image"
+#           i.e.:
+#           cp mount_image.sh "~/.gnome2/nautilus-scripts/Mount Image"
+#
+# USAGE:    $0 file.{iso,img,etc}
 # CHANGELOG:
 #
+# TIP:  setup "sudo" so that this user doesn't need
+#       to type a password for the commands "losetup",
+#       "umount" and "mount" to avoid unecessary questions
+# 
+# NOTES: 0 -> flase. 1 -> true.
+
+# super user
+SUSER="root"
 
 # encryption support
 DCYPHER="serpent"
-CYPHERS="serpent aes xor"
-# filetypes
-FORMATS="ext2 ext3 iso9660 ntfs msdos fat efs"
+CYPHERS="TRUE serpent FALSE aes FALSE xor"
+
+# filetype formats
+FORMATS="TRUE ext2 FALSE ext3 FALSE iso9660 FALSE ntfs FALSE msdos FALSE fat FALSE efs"
+
+# paths
+MOUNTDIR="$HOME/mnt"
+LOOPDEV="/dev/loop7"    # block device used for encryption. Or else it 
+                        # will use an automatic device assigned by mount
 
 # programs
-LO="losetup"    #
-SU="gksu"       # xsu|gnome-sudo
-DIALOG="zenity" # gdialog|xdialog
-MOUNT="mount"
+LO="losetup"    # setup loop devices
+SU="gksu --disable-grab "       # xsu|gnome-sudo. graphical representation of "su"
+                # TIP: setup "sudo" so that this user doesn't need
+                # to type a password for the commands "losetup",
+                # "umount" and "mount" to avoid unecessary questions
+DIALOG="zenity" # gdialog|xdialog. dialog replacement for Gnome
+MOUNT="mount"   # mount command
 
-IS_ENC="no"
+# booleans
+IS_ENC="no"     # is the filesystem encrypted? will ask later
+LOOPSETUP="no"  # don't mind this... 
+
+# utilities
+lmount()
+{
+    # @arg1 ftype
+    # @arg2 loopdev
+    # @arg3 path
+    if [ -b $2 ];then
+        $SU -u $SUSER -t "Mount Loopback Filesystem" "$MOUNT -t $1 $2 $3"
+        if [ $? -eq 0 ]; then
+            return 1
+        else
+            return 0
+        fi
+    else
+        # for convenience. $2 is not a block device, try to mount it
+        # letting mount find a block device for us
+        $SU -u $SUSER -t "Mount Loopback Filesystem" "$MOUNT -o loop -t $1 $2 $3"
+        if [ $? -eq 0 ]; then
+            return 1
+        else
+            return 0
+        fi
+    fi
+}
+
+unmount()
+{
+    # @arg1 path
+    $SU -u $SUSER -t "Unmount Filesystem" "umount $1"
+    if [ $? -eq 0 ]; then
+        return 1
+    else
+        return 0
+    fi
+}
+
+setup_loop()
+{
+    # @arg1 loop device
+    # @arg2 image
+    if [ -b $1 ]; then
+        $SU -u $SUSER -t "Setup Loopback $1" "$LO $1 $2"
+        if [ $? -eq 0 ]; then
+            return 1
+        else 
+            error "Setting loopback failed"
+            return 0
+        fi
+    else
+        error "Wrong block device $1"
+        return 0
+    fi
+
+    # we should never get here
+    return 0
+}
+
+setup_enloop()
+{
+    # @arg1 loop device
+    # @arg2 image
+    # @arg3 encryption cypher
+    if [ -b $1 ]; then
+        $SU -u $SUSER -t "Setup Loopback $1" "$LO -e $3 $1 $2"
+        if [ $? -eq 0 ]; then
+            return 1
+        else 
+            error "Setting Encrypted loopback failed"
+            return 0
+        fi
+    else
+        error "Wrong block encrypted device $1"
+        return 0
+    fi
+
+    # we should never get here
+    return 0
+}
+
+
+unset_loop()
+{
+    # @arg1 loop device
+    if [ -b $1 ]; then
+        $SU -u $SUSER -t "Unsetting Loopback $1" "$LO -d $1"
+        if [ $? -eq 0 ]; then
+            return 1
+        else 
+            return 0
+        fi
+    else
+        error "Wrong block device $1"
+        return 0
+    fi
+
+    # we should never get here
+    return 0
+}
+
+error()
+{
+        $DIALOG --error \
+                --text="$1"
+}
 
 for arg in $@
 do
 
     file_type=$(file "${arg}")
 
+    # if already mounted continue
     if [ "`df | grep \"${arg}\"`" ]; then
-        $SU -u root -t "Unmount Loopback Filesystem" -d -e -- umount \"${arg}\";
-        continue;
-    fi;
+        continue
+    fi
 
     # this is the filetype we will select
     # if it can be detected
-    case "$ftype" in
+    case "$file_type" in
         *ISO\ 9660\ CD-ROM\ filesystem*)
         mtype="iso9660";
         ;;
         *SGI\ disk\ label*)
         mtype="efs";
         ;;
-        *data*)
-        mtype="data";   # user should supply filetype
         *)
-        mtype="";       # user should supply later...
+        mtype="none";       # user should supply later...
         ;;
     esac;
+ 
+    # try to mount the file system
+    # make directory for this image
+    USERMOUNTDIR="$MOUNTDIR/$arg"
+
+    # directory doesn't exist?
+    mkdir -p $USERMOUNTDIR
   
-    if [ $DIALOG == "zenity" ]; then
-        IS_ENC=`$DIALOG --question "Is this an encrypted image?"`
+    # try mounting the filesystem with what we know so far
+    MOUNTED="no"
+    if [ "`lmount $mtype $arg $USERMOUNTDIR`" ]; then
+        MOUNTED="yes"
     fi
 
-    if [ $IS_ENC == "yes" ]; then
-        # choose encryption type
-        if [ $DIALOG == "zenity" ]; then
-            CYPHER=zenity_choose_encryption
+    if [ $MOUNTED = "yes" ]; then 
+        nautilus $USERMOUNTDIR
+    else
+        exit 0
+        # if mount failed, ask about encryption and filetype
+        unset_loop $LOOPDEV
+        echo "Second unset loop called"
+
+        # TODO make utility function...
+        if [ `$DIALOG --title="Encryption" --question --text="Is this an encrypted image?"`  ]; then
+
+            echo "Encryption is used"
+
+            if [ $SETUPLOOP = "yes" ]; then
+                if [ "`unset_loop $DEVICELOOP`" ]; then
+                    SETUPLOOP="no"
+                else
+                    error "Could not unset loop"
+                fi
+            fi
+
+            # choose encryption type
+            # Zenity might be the only dialog that does this...
+            if [ $DIALOG = "zenity" ]; then
+                echo "Asking about cypher"
+                DCYPHER=$($DIALOG --list \
+                --title="Select Cypher" \
+                --radiolist --editable \
+                --column="Selected" --column="Cypher" "$CYPHERS")
+            fi
+
+            if [ $DIALOG = "zenity" ]; then
+                echo "Asking about filesystem type"
+                mtype=$($DIALOG --list \
+                --title="Select filesystem type" \
+                --radiolist --editable \
+                --column="Selected" --column="Filetype" $FORMATS)
+            else
+                echo "Asking about filesystem type"
+                # TODO this might need modification
+                mtype=$($DIALOG --list \
+                --title="Select filesystem type" \
+                --radiolist --editable \
+                --column="Selected" --column="Filetype" $FORMATS)
+            fi
+
+            # try to setup the encrypted loop
+            if [ "`setup_enloop $DCYPHER $LOOPDEV ${arg}`" ]; then
+                SETUPLOOP="yes"
+            else
+                SETUPLOOP="no"
+            fi
+
+            if [ $SETUPLOOP = "yes" ]; then
+                # loop device setup, now mount
+                if [ "`lmount $mtype $LOOPDEV $USERMOUNTDIR`" ]; then
+                    nautilus $USERMOUNTDIR
+                else
+                    error "Could not mount $LOOPDEV in $USERMOUNTDIR"
+                    unset_loop $LOOPDEV
+                    rmdir $USERMOUNTDIR
+                    rmdir $MOUNTDIR
+                fi
+            else
+                error "Could not setup $LOOPDEV"
+                rmdir $USERMOUNTDIR
+                rmdir $MOUNTDIR
+            fi
+        else
+            # image is not encrypted... ask about filesystem format
+            # and mount
+
+            echo "Encryption is not used"
+
+            if [ "`setup_loop $LOOPDEV ${arg}`"  ]; then
+                LOOPSETUP="yes"
+            fi
+
+            if [ $DIALOG = "zenity" ]; then
+                echo "Asking about filesystem type"
+                mtype=$($DIALOG --list \
+                --title="Select filesystem type" \
+                --radiolist --editable \
+                --column="Selected" --column="Filetype" $FORMATS)
+            else
+                echo "Asking about filesystem type"
+                # TODO this might need modification
+                mtype=$($DIALOG --list \
+                --title="Select filesystem type" \
+                --radiolist --editable \
+                --column="Selected" --column="Filetype" $FORMATS)
+            fi
+
+            if [ $LOOPSETUP = "yes"  ]; then
+                # loop device setup, now mount
+                if [ "`lmount $mtype $LOOPDEV $USERMOUNTDIR`"  ]; then
+                    nautilus $USERMOUNTDIR
+                else
+                    error "Could not mount $LOOPDEV in $USERMOUNTDIR"
+                    unset_loop $LOOPDEV
+                    rmdir $USERMOUNTDIR
+                    rmdir $MOUNTDIR
+                fi
+            else
+                error "Could not setup $LOOPDEV"
+                rmdir $USERMOUNTDIR
+                rmdir $MOUNTDIR
+            fi
         fi
     fi
-
     # reset variables
     IS_ENC="no"
+    LOOPSETUP="no"
 done
 
-zenity_choose_encryption()
-{
-    $DIALOG --list --title="Mount Image" --radiolist --editable --column="Selected" --column="image" 
-
-}

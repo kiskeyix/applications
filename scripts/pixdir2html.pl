@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.66 $
+# $Revision: 1.67 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -133,7 +133,7 @@
 #   
 #   * read TODO scatter thru the script...
 #
-#   * do html_msg per photo in a .pixdir2htmlrc file:
+#   * do html_msg per photo in a .pixdir2htmlrc file or a pixname.txt file:
 #       pix_"filename" = message for this file
 #
 #   * clean() function to cleanup all files created by this script
@@ -306,7 +306,7 @@ my $MENU_TYPE="classic"; # default menu-type. put 'menu-type: modern' in config 
 # html related
 my $FILE_NAME="index";
 my $MENU_NAME="menu"; 
-
+my $NEW_MENU_NAME="";
 # others
 my $menu_str="";
 
@@ -325,7 +325,7 @@ GetOptions(
     'D|directory=s'     =>  \$ROOT_DIRECTORY,
     'F|front-end=s'     =>  \$DIA,
     'm|menu-type=s'     =>  \$MENU_TYPE,
-    'menu-name=s'       =>  \$MENU_NAME,
+    'menu-name=s'       =>  \$NEW_MENU_NAME,
     # numbers
     'menu-td=i'         =>  \$menu_td,
     'td=i'              =>  \$TD,
@@ -945,7 +945,7 @@ sub thumb_html_files {
         $last_link,
         $LAST_BASE,
         $NEXT_BASE,
-        $HTMLSDIR) = "";
+        $HTMLSDIR) = ""; 
     # TODO find a more elegant solution here
     # init to dummy string:
     my $BASE = "trash/\file";
@@ -1051,6 +1051,14 @@ sub thumb_html_files {
         # image here
         print FILE ("<img src='../$pix_name' alt='$file_name' border=0>\n");
         print FILE ("</div></td></tr>\n<tr><td valign='bottom' align='center'><div align='center'>\n");
+        # set menu-name now (from command-line or config file)
+        if ( $NEW_MENU_NAME gt "" ) 
+        {
+            $MENU_NAME=$NEW_MENU_NAME;
+        } elsif ( defined($config{"$ROOT_DIRECTORY"}{"menuname"}) 
+            && $config{"$ROOT_DIRECTORY"}{"menuname"} gt "" ) {
+            $MENU_NAME=$config{"$ROOT_DIRECTORY"}{"menuname"};
+        } # else MENU_NAME keeps the default name
         if ( 
             $MENU_TYPE eq "modern" 
             || $config{"$BASE"}{"menutype"} eq "modern" 
@@ -1186,6 +1194,14 @@ sub menu_file {
     }   
     $total_links = $x;
     dict_sort(\@ls); 
+    # set menu-name now (from command-line or config file)
+    if ( $NEW_MENU_NAME gt "" ) 
+    {
+        $MENU_NAME=$NEW_MENU_NAME;
+    } elsif ( defined($config{"$ROOT_DIRECTORY"}{"menuname"}) 
+        && $config{"$ROOT_DIRECTORY"}{"menuname"} gt "" ) {
+        $MENU_NAME=$config{"$ROOT_DIRECTORY"}{"menuname"};
+    } # else MENU_NAME keeps the default name
     if ( 
         $MENU_TYPE eq "modern" 
         || $config{"$ROOT_DIRECTORY"}{"menutype"} eq "modern" 

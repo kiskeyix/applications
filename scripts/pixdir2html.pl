@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.21 $
+# $Revision: 1.22 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE:
@@ -40,7 +40,7 @@
 # tr=<tr>
 # new=http://absolute.path.com/images/new.png # for dirs with .new files
 # footer=<a href='#'>A footer here</a>
-# nomenuheader_footer=0
+# menuheader_footer=0
 # 
 # These are the only tags that you can customize for now :-)
 # Required: linux/UNIX "convert" command (to convert images from
@@ -324,7 +324,7 @@ sub mkindex {
             die "Couldn't write file $FILE_NAME to $this_base";
 
         # start HTML
-        #print FILE ("$myconfig{header}\n");
+        print FILE ("$myconfig{header}\n");
 
         # print menu (if any)
         print FILE ("$MENU_STR");
@@ -539,18 +539,18 @@ sub thumb_html_files {
         
         push @ls,$_;
     } #end images array creation
-   
+
     #print all picts now
     foreach(@ls){
-        $pix_name = basename($_);
+        $pix_name = basename($ls[$i]);
         # strip extension from file name
         ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR//g;
         # get base directory
-        ( $BASE = $_ ) =~ s/(.*)\/$pix_name$/$1/g;
+        ( $BASE = $ls[$i] ) =~ s/(.*)\/$pix_name$/$1/g;
         #print STDOUT $BASE."\n";
 
-        if ( $BASE !~ m/$tmp_BASE/ ) {
-            print LOGFILE "+ Reading config for $BASE\n";
+        if ( $BASE ne $tmp_BASE ) {
+            print LOGFILE "+ ThumbHtmlFiles Reading config for $BASE\n";
             # read specific config file for this directory
             if (! -f "$BASE/.nopixdir2htmlrc" ) {
                 %myconfig = init_config($BASE);
@@ -563,15 +563,14 @@ sub thumb_html_files {
         # construct PATH for html directory
         $HTMLSDIR = "$BASE/$HTMLDIR";
 
-        #print STDOUT $HTMLSDIR."\n";
         if (!-d "$HTMLSDIR") { 
             print LOGFILE ("= Making html files directory in $BASE\n");
             mkdir("$HTMLSDIR",0755);
         }
 
-        my $current_html_file = "$HTMLSDIR/$file_name.$EXT";
-        my $current_link = "$file_name.$EXT";
-
+        $current_html_file = "$HTMLSDIR/$file_name.$EXT";
+        $current_link = "$file_name.$EXT";
+        
         if ( -f $current_html_file ){
             print LOGFILE "WARNING: overriding $current_html_file\n";
         } # end if not current_html_file
@@ -593,9 +592,8 @@ sub thumb_html_files {
         print FILE ("<img src='../$pix_name'>\n");
         print FILE ("</td></tr>\n<tr><td valign='bottom' align='center'><div align='center'>\n");
 
-        # back link here
-        
-        if ( -f $last_html_file && ( $BASE eq $LAST_BASE ) ) {
+        # backward link here
+        if ( -f $last_html_file && ($BASE eq $LAST_BASE) ) {
             print FILE ("<a href='$last_link'>&lt;==</a>\n"); 
         } else {
             print FILE ("&lt;==");
@@ -603,23 +601,34 @@ sub thumb_html_files {
 
         # home link here
         print FILE (" | <a href='../$FILE_NAME'>HOME</a> | \n");
-        # next link here
+       
         if ( -f $ls[$i+1] ) {
+            $next_pix_name = "....";
             # calculate next base
             $next_pix_name = basename($ls[$i+1]);
+    
             # get next base directory
             ( $NEXT_BASE = $ls[$i+1] ) =~ s/(.*)\/$next_pix_name$/$1/g;
+
         }
- 
-        if ( ( $BASE =~ m/$NEXT_BASE/ ) && ( $next_pix_name !~ m/$pix_name/ ) ) {
+        #print "ls: '". $ls[$i] ."'. ls+1: '".$ls[$i+1]."'\n";
+        #print "base: '$BASE'. next: '$NEXT_BASE'\n";
+
+        # forward link here
+        if ( -f $ls[$i+1] && ($BASE eq $NEXT_BASE) ) {
+            $next_file_name = "";
+        
             ($next_file_name = $next_pix_name) =~ s/$EXT_INCL_EXPR//g;
+            
+            #print FILE ("==&gt;");
+
             print FILE ("<a href='$next_file_name.$EXT'>==&gt;</a>\n");
+
         } else {
             print FILE ("==&gt;");
             # TODO would be nice to jump to next directory in the
             #       array... 
             #print FILE (" <a href='../$next_file_name.$EXT'> |=&gt;&gt;</a> \n");
-
         }
 
         print FILE ("</div></td></tr>\n");
@@ -645,6 +654,7 @@ sub thumb_html_files {
         $last_link = $current_link;
         # update flags
         $LAST_BASE = $BASE;
+        $NEXT_BASE = "";
         #$PRINT_NEXT_LINK = 0;
     } #end foreach
 
@@ -809,12 +819,13 @@ sub menu_file {
         die "Couldn't write file $MENU_NAME to $ROOT_DIRECTORY";
     }
 
-    if ($myconfig{nomenuheader_footer} == 0) {
-        if ( $MENUONLY > 0 ) {
-            print FILE ($myconfig{header}."\n");
-        }
-        $MENU_STR .= $myconfig{header}."\n";
+    # menus are now part of the index.EXT...
+    # print header only if menuonly is set and we want to show
+    # the header/footer set in .pixdir2htmlrc
+    if ( $MENUONLY > 0 && $myconfig{menuheader_footer} > 0 ) {
+        print FILE ($myconfig{header}."\n");
     }
+
     if ( $MENUONLY > 0 ) {
         print FILE ("$myconfig{table}\n");
     }
@@ -906,12 +917,10 @@ sub menu_file {
     }
     $MENU_STR .= "</table>\n";
 
-    if ($myconfig{nomenuheader_footer} == 0) {
-        if ( $MENUONLY > 0 ) {
-            print FILE ($myconfig{footer}."\n");
-        } 
-        $MENU_STR .= $myconfig{footer}."\n";
-    }
+    # see previous notes on header
+    if ( $MENUONLY > 0 && $myconfig{menuheader_footer} > 0) {
+        print FILE ($myconfig{footer}."\n");
+    } 
 
     if ( $MENUONLY > 0 ) {
         close(FILE);

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.10 $
+# $Revision: 1.11 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2004-Dec-07
 #
@@ -133,6 +133,11 @@ sub _rename
     no warnings;
     print STDOUT ("_"x69,"\n");
     print STDOUT "file\t$this_file\n";
+    # tracks are not that essential:
+    if ( $hashref->{'track'} =~ m/^\s*$/ )
+    {
+        $hashref->{'track'}="xx/yy";
+    }
     foreach(@TAGS)
     {
         return "$_ missing. Bailing out" if ( $hashref->{$_} =~ m/^\s*$/ );

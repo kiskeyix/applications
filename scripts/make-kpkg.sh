@@ -1,7 +1,7 @@
 #!/bin/bash
 # vim: ft=sh:columns=80 :
-# $Revision: 1.38 $
-# $Date: 2005-01-08 20:38:20 $
+# $Revision: 1.39 $
+# $Date: 2005-03-11 19:59:05 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Jan-08
 #
@@ -38,10 +38,12 @@
 #     so that we can use both ccache and distcc. 
 #     Make sure that $CCACHE_DIR is setup correctly (man ccache)
 
-set -e
 
 CCACHE="`command -v ccache 2> /dev/null`"
 DISTCC="`command -v distcc 2> /dev/null`"
+
+# for those who don't have distcc or ccache installed
+set -e
 
 if [[ -x "$CCACHE" && -x "$DISTCC" ]]; then
     echo "Setting up distcc with ccache"

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.36 $
+# $Revision: 1.37 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -147,7 +147,7 @@ my $TD=4;
 my $menu_td=10;
 
 # How big are strings in menus?
-my $STR_LIMIT = 16;
+my $STR_LIMIT = 32;
 
 # dont worry if you don't have a log rotation facility...
 # just leave it as is
@@ -884,12 +884,10 @@ sub menu_file {
     foreach my $directory (@ary){
         if (
             !-f "$ROOT_DIRECTORY/$directory/.nopixdir2htmlrc"
+            && -f "$ROOT_DIRECTORY/$directory/$FILE_NAME.".$myconfig{"ext"}
         ) {
             # note that @ls holds the HTML links...
             # thus, paths are relative and not absolute here:
-
-            #( $directory = $directory ) =~ s,.*,testing,g;
-            #print STDERR "$pwd --> $directory\n";
 
             $ls[$x] = "$directory/$FILE_NAME.".$myconfig{"ext"}; # why not push()? just to keep count I guess...
             $x++; 

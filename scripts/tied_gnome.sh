@@ -1,7 +1,7 @@
 #!/bin/sh
-# $Revision: 1.15 $
+# $Revision: 1.16 $
 # luis mondesi <lemsx1@hotmail.com>
-# Last modified: 2004-Jul-22
+# Last modified: 2004-Oct-07
 #
 # DESCRIPTION:  a simple Gnome 2 script for sysadmins to 
 #		set a bunch of gnome defaults. Remember 
@@ -214,7 +214,7 @@ if [ $SHOW_SPLASH != 0 ]; then
         echo "'$SPLASH_IMAGE' not found"
     fi
 else 
-    set_bool_mandatory "/apps/gnome-session/options/show_splash_screen" "false"
+    unset_mandatory "/apps/gnome-session/options/show_splash_screen"
 fi
 
 set_int_mandatory "/apps/metacity/general/num_workspaces" "$NUMBER_OF_WORKSPACES"

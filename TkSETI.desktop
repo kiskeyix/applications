@@ -1,4 +1,6 @@
 [Desktop Entry]
+Version=1.0
+Encoding=UTF-8
 Name=TkSETI
 Comment=Run Seti@home client
 Exec=/usr/bin/X11/tkseti ~/Develop/seti
@@ -7,3 +9,4 @@ MultipleArgs=true
 Terminal=false
 Type=Application
 Categories=Application;Network
+GenericName[en_US]=Run Seti

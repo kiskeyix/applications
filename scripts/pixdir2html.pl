@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.92 $
+# $Revision: 1.93 $
 # Luis Mondesi  <lemsx1@hotmail.com>
 # 
 # REQUIRED: ImageMagick's Perl module and a dialog 
@@ -656,7 +656,6 @@ sub mkthumb {
         # construct PATH for thumbnail directory
         $THUMBNAILSDIR="$BASE/$THUMBNAIL";
 
-        #print STDOUT $HTMLSDIR."\n";
         if (!-d "$THUMBNAILSDIR") { 
             print $LOGFILE ("= Making thumbnail's directory in $BASE\n");
             mkdir("$THUMBNAILSDIR",0755);
@@ -792,11 +791,11 @@ sub mkthumb_files {
         $current_html_file = "$HTMLSDIR/$file_name.".$config{"$BASE"}{"ext"};
         $current_link = "$file_name.".$config{"$BASE"}{"ext"};
 
-        my $msg = "Creating";
+        my $msg = "= Creating";
         if ( -f $current_html_file ){
-            $msg = "Overriding";
+            $msg = ": Overriding";
         } # end if not current_html_file
-        print $LOGFILE ("= $msg html file '$current_html_file'\n");
+        print $LOGFILE ("$msg html file '$current_html_file'\n");
         # TODO routine for creating file should be called here...
         open(FILE, "> $current_html_file") || 
         mydie("Couldn't write file $current_html_file","mkthumb_files");
@@ -813,8 +812,10 @@ sub mkthumb_files {
             && $config{"$ROOT_DIRECTORY"}{"menuname"} gt "" ) {
             $MENU_NAME=$config{"$ROOT_DIRECTORY"}{"menuname"};
         } # else MENU_NAME keeps the default name
-         if ( $config{"$BASE"}{"menutype"} eq "modern" )
-         {
+        
+        if ( $config{"$BASE"}{"menutype"} eq "modern" )
+        {
+            # TODO use relative path instead of URI here
             print FILE ("\t\t<a class='pdlink' href='".$config{"$BASE"}{"uri"}."/".$MENU_NAME.".".$config{"$BASE"}{"ext"}."'>&lt;&lt;</a>\n");
         }
         # backward link here
@@ -972,8 +973,6 @@ sub menu_file {
             if ( $ls[$i] ne "" ) {
                 # if link exists, otherwise leave it blank
                 $ts = dirname($ls[$i]);
-                #) =~ 
-                #s#(.*)/$FILE_NAME.$config{"$ROOT_DIRECTORY"}{"ext"}#$1#gi;
                 if ( $nautilus_root gt "" ) {
                     $ls[$i] =~ s,$nautilus_root/,,g;
                     $ts =~ s,$nautilus_root/*,,g;

@@ -1,8 +1,8 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Apr-09
+# Last modified: 2004-Oct-05
 # 
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # 
 # VERSION: 0.1
 #
@@ -58,7 +58,7 @@ my $temp_vcard = "$ENV{HOME}/.tmp-vcard.vcf";
 # TODO change this variable to get the addressbook.xml from the 
 #       Zaurus.
 my $zau_xml = "$ENV{HOME}/.palmtopcenter/addressbook/addressbook.xml";
-my $evo_db = "$ENV{HOME}/evolution/local/Contacts/addressbook.db";
+my $evo_db = "$ENV{HOME}/.evolution/local/Contacts/addressbook.db";
 
 my %DBFILE = ();
 

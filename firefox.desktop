@@ -1,6 +1,7 @@
 [Desktop Entry]
 Version=1.0
 Encoding=UTF-8
+Name=No name
 Exec=firefox
 Terminal=false
 MultipleArgs=false

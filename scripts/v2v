@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.60 $
+# $Revision: 1.61 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -64,7 +64,7 @@ GetOptions(
     'r|remote_cmd=s'            => \$RMCMD,
     'L|logo=s'                  => \$LOGO, 
     'l|lang|language=s'         => \$LANGUAGE, 
-    'S|sub_title_opts=s'        => \$EXTSUB ,
+    'S|sub_title_opts=s'        => \$EXTSUB,
     # numbers
     'a|default_audio_channel=i' => \$DEF_AUDIOCHANNEL ,
     'n|nice=i'                  => \$nice
@@ -1162,39 +1162,29 @@ sub readuserconf
         s/^\$//;
         s/\;$//;
         s/["']+//g;         # remove all quotes
+        
         my ($var_name, $value) = split(/\s*=\s*/, $_);
-        print "WARNING : $userconfigfile variable $var_name ".
-        "value not used, set to $$var_name\n".$NORM  
+        
         if ( defined $$var_name 
-        && $var_name ne "DEBUG" 
-        && $var_name ne "INFO");
+            && $var_name ne "DEBUG" 
+            && $var_name ne "INFO"
+        )
+        {
+            print ("WARNING : $userconfigfile variable $var_name ".
+                "value not used, set to $$var_name\n".$NORM) ;
+            next;
+        }
+
         $$var_name = $value if ( ! defined $$var_name  );
+        #print $DEBUG ("|||||| $var_name [$$varname] = $value ||||||\n");
     }
     close (USERCONF);
-
-    $DIVX="ffmpeg" if ( ! defined ($DIVX));
-    if ( ! defined ( $DIVX_OPT ))
-    {    
-        $DIVX_OPT="";
-        $DIVX_OPT="-F mpeg4" if ( $DIVX eq "ffmpeg");  
-        open (USERCONF,">>$userconfigfile");
-        print USERCONF "# Add your encoder specifics options \n\$DIVX_OPT=$DIVX_OPT ; #for example '-F mpeg4' for divx ffmpeg output";
-        close(USERCONF);
-    }
-
-    if ( ! defined ( $AO ))
-    {
-        $AO="mp3";
-        open (USERCONF,">>$userconfigfile");
-        print USERCONF "\n# This is the output Audio format\n# allowed formats are : mp3 or ogg (if ogmtools are installed )\n\$AO=$AO;";
-        close(USERCONF);
-    }
-
+    
     $XV=xv if ( ! defined ($XV));
     $XINE=xine if ( ! defined ($XINE));
     $AVIPLAY=aviplay if ( ! defined ($AVIPLAY));
     $RMCMD=ssh if ( ! defined ($RMCMD));
-    $XTERM="xterm \%s -e" if ( ! defined ($XTERM) ); print $DEBUG "+ using terminal $XTERM\n";
+    $XTERM="xterm \%s -e" if ( ! defined ($XTERM) ); 
     $POSLOGO=4 if ( ! defined ($POSLOGO));
     $CLUSTER_CONFIG="/see/your/V2divxrc" if ( ! defined ($CLUSTER_CONFIG));
     $TIMELOGO=25 if ( ! defined ($TIMELOGO));
@@ -1205,7 +1195,27 @@ sub readuserconf
     $nice=10 if ( ! defined ($nice));
     $INFO="STDOUT" if ( ! defined ($INFO));
     $DEBUG="/dev/null" if ( ! defined ($DEBUG));
-    if ( ! defined ($EXTSUB))
+
+    $DIVX="ffmpeg" if ( ! defined ($DIVX));
+    if ( ! defined ( $DIVX_OPT ))
+    {    
+        $DIVX_OPT="";
+        $DIVX_OPT="-F mpeg4" if ( $DIVX eq "ffmpeg");  
+        open (USERCONF,">>$userconfigfile");
+        print USERCONF "# Add your encoder specifics options \n\$DIVX_OPT=$DIVX_OPT ; #for example '-F mpeg4' for divx ffmpeg output";
+        close(USERCONF);
+    }
+    #print $DEBUG ("\n++++++++++ AO1 -> $AO \n");
+    if ( ! defined ($AO) )
+    {
+        #print $DEBUG ("\n++++++++++ AO -> $AO \n");
+        $AO="mp3";
+        open (USERCONF,">>$userconfigfile");
+        print USERCONF "\n# This is the output Audio format\n# allowed formats are : mp3 or ogg (if ogmtools are installed )\n\$AO=$AO;";
+        close(USERCONF);
+    }
+
+    if ( ! defined ($EXTSUB) )
     {
         open (USERCONF,">>$userconfigfile");
         print USERCONF "# EXT SUBTITLE FILTER 5 LAST OPTIONS (here we just use 3) ...See the docs 8-(\n\$EXTSUB=0:0:255;";
@@ -1213,7 +1223,7 @@ sub readuserconf
         $EXTSUB="0:0:255";
     } 
 
-print $DEBUG " <--- readuserconf\n";
+    print $DEBUG " <--- readuserconf\n";
 } # END readuserconf
 
 sub printinfo

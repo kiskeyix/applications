@@ -1,7 +1,7 @@
-#!/bin/sh
-# $Revision: 1.1 $
+#!/bin/bash
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Sep-24
+# Last modified: 2004-Sep-28
 #
 # DESCRIPTION: A simple script to update my settings in $HOME
 # USAGE: $0 [remove|verbose]

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.50 $
+# $Revision: 1.51 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -496,10 +496,10 @@ __EOF__
     }
 
     #construct a footer if it doesn't yet exist:
-    if ( $config_tmp{$ROOT}{"footer"} =~ /^\s+$/ )
+    if ( $config_tmp{$ROOT}{"footer"} eq "" )
     {
         print $LOGFILE (": Blank footer. Generating my own [$ROOT] ... \n");
-        $config_tmp{$ROOT}{"footer"}="</body></html>";
+        $config_tmp{$ROOT}{"footer"}="</center>\n</body></html>";
     }
         
     # ext can be passed in a .pixdir2htmlrc file
@@ -627,13 +627,7 @@ sub mkindex {
         }
         print FILE ("</tr>\n");
         print FILE ("</table>\n");
-        # close the footer if one doesn't exist:
-        if ( $config{$this_base}{"footer"} eq "" ) {
-            print FILE ("\n</center></body>\n");
-            print FILE ("</HTML>\n");
-        } else {
-            print FILE ($config{$this_base}{"footer"}."\n");
-        }
+        print FILE ($config{$this_base}{"footer"}."\n");
         print FILE ("\n");
         close(FILE);
     } # end for e/a this_base
@@ -974,14 +968,7 @@ sub thumb_html_files {
 
         print FILE ("</div></td></tr>\n");
         print FILE ("</table>\n");
-        # close the footer if one doesn't exist:
-        if ( $config{$BASE}{"footer"} eq "" ) {
-            print FILE ($config{$BASE}{"footer"}."\n");
-            print FILE ("</center></body>\n");
-            print FILE ("</HTML>\n");
-        } else {
-            print FILE ($config{$BASE}{"footer"}."\n");
-        }            
+        print FILE ($config{$BASE}{"footer"}."\n");
         close(FILE);
         # end HTML
         print $LOGFILE ("\n"); 

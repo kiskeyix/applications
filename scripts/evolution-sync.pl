@@ -174,7 +174,7 @@ sub load_control {
 	} else {
 		warn  "Could not open control file  Ill do my best!\n";
 	};
-};		
+}		
 
 
 sub get_xml_file_scp {
@@ -188,7 +188,7 @@ sub get_xml_file_scp {
 	my $password = "";
 	print "getting file\n";
 	system "scp $username\@$ip:/home/root/Applications/datebook/datebook.xml $home";
-};
+}
 
 sub get_zaurus_file_ftp {
 
@@ -205,7 +205,7 @@ sub get_zaurus_file_ftp {
 	$ftp_zaurus->cwd("/home/root/Applications/datebook");
 	$ftp_zaurus->get("datebook.xml");
 	$ftp_zaurus->quit;
-};
+}
 
 
 
@@ -301,7 +301,7 @@ sub load_zaurus_file {
 
 	};
 
-};		
+}		
 		
 
 
@@ -321,7 +321,7 @@ sub put_zaurus_file_ftp {
 	$ftp_zaurus->cwd("/home/root/Applications/datebook");
 	$ftp_zaurus->put("newdatebook.xml", "datebook.xml");
 	$ftp_zaurus->quit;
-};
+}
 	
 sub put_xml_file_scp {
 
@@ -334,7 +334,7 @@ sub put_xml_file_scp {
 	my $password = "";
 	print "storing file\n";
 	system "scp  $home/newdatebook.xml $username\@$ip:/home/root/Applications/datebook/datebook.xml";
-};
+}
 
 
 sub load_evolution {
@@ -452,7 +452,7 @@ sub load_evolution {
 		next; # We must have missed somthing if it gets here ! 
 	};
 	close EVOLUTION_FILE;
-};
+}
 
 
 sub process_ev_alarm {    
@@ -490,7 +490,7 @@ sub process_ev_alarm {
 	
 	return 1;  	# If we get here we don't know what the line is but 
 			# its still in the Valarm 
-};	
+}	
 	
 sub process_vevent {
 
@@ -514,7 +514,7 @@ sub process_vevent {
 		};
 	};	
 	%VEVENT = ();
-};
+}
 	
 sub process_vtodo {
 
@@ -537,7 +537,7 @@ sub process_vtodo {
 		};
 	};	
 	%VTODO = ();
-};
+}
 
 
 sub find_ev_file {
@@ -579,7 +579,7 @@ sub find_ev_file {
 			return $evolution_file;
 		};	
 	};
-};
+}
 
 
 sub check_file {
@@ -592,7 +592,7 @@ sub check_file {
 	} else {
 		return 1;
 	};
-};
+}
 
 sub erase_lists { 	# If we saw the sync id last time and now its gone
 			# must mean we erased it.  -- unless your on the zaurus 
@@ -602,7 +602,7 @@ sub erase_lists { 	# If we saw the sync id last time and now its gone
 		$ev_erlist{$key} = 1  unless $evolution_vevent{$key};
 		$za_erlist{$key} = 1  unless $zaurus_vevent{$key};
 	};
-};	
+}	
 
 
 sub sort_em {
@@ -643,7 +643,7 @@ sub sort_em {
 			&zaurus_master($item) unless ( $ev_erlist{$item} );
 		};
 	};
-};	
+}	
 
 sub evolution_master {
 
@@ -686,7 +686,7 @@ sub evolution_master {
 			
 		}; 
 	};
-};
+}
 
 
 sub zaurus_master {
@@ -823,7 +823,7 @@ sub zaurus_master {
 
 		};
 	}; 
-};
+}
 
 
 
@@ -933,7 +933,7 @@ sub write_zaurus {
 	print NEWDATEBOOK "</DATEBOOK>\n";
 	
 	close NEWDATEBOOK;
-};
+}
 
 sub zaurus_rpt {
 	my $input = shift;
@@ -1016,7 +1016,7 @@ sub zaurus_rpt {
 	push (@data, $freq, $interval, $bindays, $modays, $moweek, $enddate);
 	return @data;
 						
-};
+}
 		
 
 sub write_evolution {
@@ -1081,7 +1081,7 @@ sub write_evolution {
 	
 	close EVOLUTION_FILE;
 	close EVOLUTION_CTL;
-};
+}
 
 sub vcal_time_to_zaurus {
 	my $year;
@@ -1107,7 +1107,7 @@ sub vcal_time_to_zaurus {
  		$time = timelocal($sec,$min,$hour,$mday,( $month - 1) ,$year);
 		return $time;
 	};
-};
+}
 
 sub zaurus_time_to_vcal {
 	
@@ -1141,5 +1141,5 @@ sub zaurus_time_to_vcal {
 
 	$time =  join "", ( $year + 1900 ), $month, $day, "T", $hour, $min, $sec;
 	return $time;
-};
+}
 

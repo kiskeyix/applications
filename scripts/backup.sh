@@ -1,30 +1,51 @@
 #!/bin/sh
-# Last modified: 2002-Nov-16
+######################################################################
+# Last modified: 2003-Feb-05
 # Luis Mondesi < lemsx1@hotmail.com >
-# backup a site every night
+# $Revision: 1.7 $
 # 
-# Out of daily backups keep the 7th backup
-# for e/a week. At the end of the month
-# delete all previous backups for that month.
+# DESC: backup a site every night
+#       Out of daily backups keep the 7th backup
+#       for e/a week. At the end of the month
+#       delete all previous backups for that month.
+# USAGE: backup.sh
+#
+# This reads $HOME/.backuprc which is a file containing the following
+# configurations:
+#   
+#   NAME="backupname"; # name of the file
+#   BAK="/home/bak";
+## List of files matching pattern to exclude
+## these files sit inside one of the 
+## directories being backup
+#   EXCLUDES="--exclude=*.pid --exclude=*.soc \
+#           --exclude=*.sock --exclude=*.log";
+#
+#   DIRS="/etc /var/lib /var/mail /var/spool ";
+#
+# TODO:
+#       - take care of bugs
+#
+######################################################################
 
-NAME="latinomixed"; # name of the file
-BAK="/home/bak";
-# List of files matching pattern to exclude
-# these files sit inside one of the 
-# directories being backup
-EXCLUDES="--exclude=*.pid --exclude=*.soc --exclude=*.sock --exclude=*.log";
+# source config file
+. $HOME/.backuprc
 
-DIRS="/etc /usr/var/www/html/latinomixed.com /usr/var/www/html/accplusli.com /usr/var/www/cvs /var/lib/jabber /var/lib/mysql /var/mail /var/spool /usr/local/lib/webstats /var/lib/ldap ";
 
 ######## NO NEED TO MODIFY #################
 
 TAR="tar $EXCLUDES -cjf ";  # j for bz2 ... do not modify this!!
 WDAY=`date +%w`     # 0-6 day of the week
 MDAY=`date +%d`     # 1-32 day of the month
-FDATE=`date -I`     # iso format. full date. for informational purposes only
+FDATE=`date +%Y-%m-%d`     # iso format. full date. for informational purposes only
 WEEK=`date +%U`     # week only 0-53
 
-cd $BAK;
+if [ -d $BAK ]; then
+    cd $BAK;
+else
+    echo "$BAK is not a directory";
+    exit 1;
+fi
 
 # k, I don't want to do a while loop to find up to
 # what week number we are... (lazy?) we only have

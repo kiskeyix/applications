@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.70 $
+# $Revision: 1.71 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -42,8 +42,21 @@ use Getopt::Long;
 Getopt::Long::Configure('bundling');
 
 # flags
-my ($HELP,$VERSION,$RUNCLUST,$SRTSUBRIP,$OKCLUSTER,$TEST,
-    $DVD9TO5,$TVREC,$DEBUG,$INFO,$Res_DIVX_OPT) = 0;
+my $HELP=0;
+my $RUNCLUST=0;
+my $SRTSUBRIP=0;
+my $OKCLUSTER=0;
+my $TEST = 0;
+my $DVD9TO5 = 0; 
+my $Res_DIVX_OPT = 0;
+my $DEBUG = 0;
+my $INFO = 0;
+my $VERSION = 0;
+my $TVREC = 0;
+# numbers
+my $TITLESET=1; # default titleset when doing dvd9todvd5. 
+                # override from command line with --titleset=N
+
 # strings
 my ($SVIDEO_FORMAT,$ROOT_DIRECTORY,$nice,$DIVX,$DIVX_OPT,
     $XV,$XINE,$CLUSTER_CONFIG,$XTERM,$RMCMD,$AVIPLAY,$LOGO,
@@ -184,82 +197,15 @@ my $urldvdtitle="$GREEN\t V2divx is unable to find dvdtitle in your PATH.\n\t Co
 
 my $warnclust = "\n ERROR: cluster mode. Please see README file\n\n";
 
-my $usage = "$RED            *****  Warning  *****$NORM
-Please note that you are only allowed to use this program according to fair-use laws which vary from country to country. You are not allowed to redistribute 
-copyrighted material. Also note that you have to use this software at your own risk.
-
-------------------------------------------------------
-You may want first rip vob files from a DVD :
-then use:
-
-% V2divx /path/to/vobs rip
-(where /path/to/vobs is the directory where vob files will be ripped)
-It is recommended to rip your DVD with V2divx because it save precious informations about the movie to encode. (probe.rip)
----------------------------------------------------
-
-NB: $RED transcode will encode your movie in $DIVX format , to change this,
-edit your $userconfigfile and change the \$DIVX variable. $NORM
-
-There are 2 ways of using this program to encode your vob file(s):
-
-1: Easy\n
------------
-% V2divx /path/to/vobs 700
-(where 700 is the desired FILESIZE in Megabytes, and /path/to/vobs the directory where are the unencrypted vob files)
-This mode (alias Quick mode) take all parameters in your $userconfigfile  which has been created the first time you have run V2divx. 
-Take a look in it please.
-
-2: Better\n
-----------
-% V2divx /path/to/vobs config 
-This will ask all what it need to make the movie you want ;-)
-( /path/to/vobs is the directory where are the unencrypted vob files).
-
-3) Recording TV\n
-----------
-% V2divx /path/to/moviefiles --tv
-(where /path/to/moviefiles is a directory where V2divx will keep the temporaries movies files.
-
-4) DVD-9 format to DVD-5\n
-% V2divx /path/to/dir --dvd9-to-dvd5
-(where /path/to/dir can be a directory containing .VOB files extracted previously from a DVD or a device /dev/dvd from which to extract a streaming video and audio to create, hopefully, a video.mpeg file of size 4.4GB in the current directory)
-
-------------\n
-V2divx options (override ~/.V2divxrc variables)
-\t -h|--help          show this Help
-\t -v|--version       show version
-\t --tv               start TV recorder mode (see above)
-\t -d|--debug         debug mode
-\t -i|--info          info mode ( show transcode commands )
-\t -c|--with-cluster  run in cluster mode (V2divx ask for this without this opt)
-\t -x|--x-video 'codec'                 encode with this codec
-\t -F|--x-video_opts '-F options'       options for the video codec
-\t -V|--video_player 'command'          use 'command' to show the input Video  
-\t -A|--avi_player 'command'            use 'command' to show avi samples 
-\t -I|--image_viewer 'command'          use 'command' to show images samples 
-\t -C|--cluster_config 'file'           use 'file' as cluster config file
-\t -r|--remote_cmd  'command'           use 'command' as remote commande
-\t -n|--nice 'value'                    use 'value' as nice value 
-\t -L|--logo 'file'                     use 'file' as logo image file 
-\t -l|--lang 'lg'                       use 'lg' as language  (fr,de,es,...)
-\t -S|--SUB_TITLE_opts 'value'          use 'value' as extsub transcode filter option
-\t -a|--default_audio_channel 'int'     use 'int' as default audiochannel
-\t -o|--output_audio 'value'            use 'value' as output audio format (ogg or mp3)
-\t --dvd9-to-dvd5                 converts the VOB files from the directory passed to the script to a 4.4GB MPEG-2 file that can be used in dvdauthor to create a DVD. Will use dvdauthor directly later to setup a simple movie
-
-You can interrupt the program anytime. To continue encoding, just run the script
-without parameters in the same directory.\n$RED\t You MUST NOT run V2divx from the /path/to/vobs directory.\n$NORM
-V2divx v$release
-\n\n \t\t\t (Type q)
-";
-
-my $readme="\n See README file or run $0 --help \n\n \t\t\t (Type q)";
+my $usage="\n V2divx /path/to/vob SIZE\n See README file.\n";
 
 # You may Modify the Next value but take care
 # (see the transcode man pages - about Bits per Pixel)
 # it's used to estimate the image size of the encoded clip
 my $bpp=0.18;   # This value =  bitrate x 1000 / ( fps x height x width ) 
 my $start_time = time;
+my $f_start_time = "";
+#format_date($start_time);
 
 ######################## FUNCTIONS #########################
 
@@ -299,6 +245,56 @@ sub pwarn
     # takes a string and prints a red warn message
     print STDOUT $RED."@_\n".$NORM;
 }
+
+sub format_date 
+{
+    # returns a nicely formatted string:
+    # @param 0 unixtimestamp := number of seconds since 1970
+    # @param 1 "hours" := str "hours" [optional]
+    # if no second parameter is given, returns a date string 
+    # formatted in ISO-8660
+    # if second parameter "hours" is given, it converts
+    # the number of seconds passed to hours
+    if ( exists ($_[1]) && $_[1] eq "hours" ) {
+        # we care about hours
+        return sprintf("%.2f",$_[0] / ( 60 * 60 )); # 3600 number of seconds in an hour
+    }
+
+    # take a UNIX timestamp and returns a nicely formatted string
+    my ($sec,$min,$hour,$mday,$mon,$year) = localtime(shift);
+    my $ADATE=sprintf("%04d-%02d-%02d %02d:%02d:%02d",
+        ($year+=1900),$mon,$mday,$hour,$min,$sec);
+    return $ADATE;
+} # end format date
+
+sub sec_to_hour 
+{
+    # convert seconds into a string HH:MM:SS
+    # @param 0 number of seconds := integer
+    my $seconds = shift;
+
+    my ($days,$hours,$minutes);
+
+    if ( $seconds > 86400) 
+    {
+        pdebug ("ERROR: sec_to_hour: This value is higher than a day");
+        return "00:00:00";
+    }
+
+    # Here we don't care about the number of days in $seconds
+    # however, I included this for those who care about that value
+    # - Luis Mondesi
+    #$days = int($seconds / (24 * 60 * 60));
+    #$seconds -= ($days * 24 * 60 * 60);
+
+    $hours = int($seconds / ( 60 * 60 ));
+    $seconds -= ($hours * 60 * 60);
+
+    $minutes = int($seconds / 60);
+    $seconds -= $minutes * 60;
+
+    return sprintf("%02d:%02d:%02d",$hours,$minutes,$seconds);
+} # end sec_to_hour
 
 sub smily
 {
@@ -487,6 +483,23 @@ sub ask_filesize
     print CONF "#FILESIZE:$FILESIZE\n";
     close(CONF);
 }
+
+sub say_end
+{
+    # simple routine to calculate current time and say it with "flite"
+    # if installed.
+    # substract unixtimestamp from our original timestamp
+    my $end_time = time - $start_time;
+    my $f_end_time = format_date($end_time,"hours");
+    print "Number of Hours: $f_end_time \n";
+    # TODO find where flite is installed
+    if ( -x "/usr/bin/flite" )
+    {
+        # say it outloud using "flite" speech synthetizer
+        system("/usr/bin/flite -t 'Number of hours $f_end_time'");
+    }
+
+} # end say_end()
 
 # === Routines === #
 
@@ -845,7 +858,7 @@ sub printinfo
     my ($start_frames_logo,$end_frames_logo,$endlogo)="";
     my $subtitle=""; # -J opts OR srtsubrip 
     my $add_logo=""; # -J opts 
-    system("clear") if (  ! $DEBUG && ! $INFO );	
+    system("clear") if ( ! $DEBUG ); 
     print "\t*********************************************************\n";
     if ( $TVREC )
     {
@@ -1002,8 +1015,9 @@ sub get_tail
 } # end get_tail
 
 sub get_fps {
-    # Get a video file as arg.
+    # @param 0 file := video file as arg.
     # and sets a global $FPS and global $VIDEONORM
+    # plus returns $FPS string
     pdebug (" + ---> Enter get_fps");
     my $info=`transcode -i "@_" -c 1-2 2> /dev/null` 
         or mydie "Problem when running \'transcode -i @_ \'";
@@ -1013,7 +1027,7 @@ sub get_fps {
     $VIDEONORM=($FPS=~ m,2[39]\.9,)?"NTSC":$VIDEONORM;
     pdebug (" + fps = $FPS , videonorm= $VIDEONORM : in get_fps");
     pdebug (" + <---  get_fps");
-    
+    return $FPS; 
 }
 
 sub ask_telecine {
@@ -1052,7 +1066,7 @@ sub ogmerge
         smily("ogmerge");
     }
 
-    print("$sys && rename tmp/temp.ogg $_[0]\n") if ( $INFO);
+    print("$sys && rename tmp/temp.ogg $_[0]\n") if ( $INFO );
     rename("tmp/temp.ogg","$_[0]");
     pdebug (" <--- ogmerge");
 }
@@ -1126,7 +1140,7 @@ sub tv_recorder
         unlink("tmp/pass2_done") if ( -e "tmp/pass2_done");
         system("$sys"); 
         system("touch tmp/Record_done");
-        print "$sys \n"  if ( $INFO);
+        print "$sys \n"  if ( $INFO );
     } else {
         pwarn("\t Recording already done, remove \"tmp/Record_done\" to record again \n");
         sleep(2);
@@ -1161,56 +1175,6 @@ sub tv_recorder
     pdebug ("<--- TV Recorder");
     exit(0);
 }    
-
-sub format_date 
-{
-    # returns a nicely formatted string:
-    # @param 0 unixtimestamp := number of seconds since 1970
-    # @param 1 "hours" := str "hours" [optional]
-    # if no second parameter is given, returns a date string 
-    # formatted in ISO-8660
-    # if second parameter "hours" is given, it converts
-    # the number of seconds passed to hours
-    if ( exists ($_[1]) && $_[1] eq "hours" ) {
-        # we care about hours
-        return sprintf("%.2f",$_[0] / ( 60 * 60 )); # 3600 number of seconds in an hour
-    }
-
-    # take a UNIX timestamp and returns a nicely formatted string
-    my ($sec,$min,$hour,$mday,$mon,$year) = localtime(shift);
-    my $ADATE=sprintf("%04d-%02d-%02d %02d:%02d:%02d",
-        ($year+=1900),$mon,$mday,$hour,$min,$sec);
-    return $ADATE;
-} # end format date
-
-sub sec_to_hour 
-{
-    # convert seconds into a string HH:MM:SS
-    # @param 0 number of seconds := integer
-    my $seconds = shift;
-
-    my ($days,$hours,$minutes);
-
-    if ( $seconds > 86400) 
-    {
-        pdebug ("ERROR: sec_to_hour: This value is higher than a day");
-        return "00:00:00";
-    }
-
-    # Here we don't care about the number of days in $seconds
-    # however, I included this for those who care about that value
-    # - Luis Mondesi
-    #$days = int($seconds / (24 * 60 * 60));
-    #$seconds -= ($days * 24 * 60 * 60);
-
-    $hours = int($seconds / ( 60 * 60 ));
-    $seconds -= ($hours * 60 * 60);
-
-    $minutes = int($seconds / 60);
-    $seconds -= $minutes * 60;
-
-    return sprintf("%02d:%02d:%02d",$hours,$minutes,$seconds);
-} # end sec_to_hour
 
 sub srt_subrip
 {
@@ -1390,7 +1354,7 @@ sub makelogo
             my $sys = "transcode -q 0 -i $VOBPATH $final_params -w $BITRATE,$keyframes "
                 ."-J $filter -y $DIVX,null $DIVX_OPT $VID_OPT -R 1,tmp/$DIVX.logo.log "
                 ."-o /dev/null";
-            print "$sys \n" if ( $INFO);
+            print "$sys \n" if ( $INFO );
             system("nice -$nice $sys") == 0  or ( system("touch tmp/logop1.finish")==0 and mydie "Failed to execute : $sys" ) ;
             system("touch tmp/logop1.finish");
             wait;
@@ -1413,7 +1377,7 @@ sub makelogo
             my $sys = "transcode -q 0 -i $VOBPATH $final_params -w $BITRATE,$keyframes "
                 ."-J $filter -y $DIVX,null $DIVX_OPT $VID_OPT "
                 ."-R 2,tmp/$DIVX.logo.log -o tmp/$TITLE-logo.$EXT";
-            print "$sys \n" if ( $INFO);
+            print "$sys \n" if ( $INFO );
             system("nice -$nice $sys")== 0  or ( system("touch tmp/wait.finish")==0 and mydie "Failed to execute: $sys");
             system("touch tmp/logop2.finish");
             wait;
@@ -1429,7 +1393,7 @@ sub makelogo
     # And finally merge logo and withoutlogo parts
     pinfo("$v2d\t Merging Logo and 'withoutlogo' parts ");
     my $sys = "avimerge -i tmp/$TITLE-logo.$EXT tmp/$TITLE-withoutlogo.$EXT -o tmp/2-${TITLE}.$EXT";
-    print "$sys \n"  if ( $INFO);
+    print "$sys \n"  if ( $INFO );
     system("nice -$nice $sys")==0 or mydie "Failed to execute: $sys";;
     pdebug ("<--- makelogo");
 }
@@ -1601,19 +1565,9 @@ sub readuserconf
         $AO=($var_name eq "AO" && $AO eq "" )?$value:$AO;
         $EXTSUB=($var_name eq "EXTSUB" && $EXTSUB eq "" )?$value:$EXTSUB;
         pdebug ("$var_name  = $value");
-        pwarn("-- WARNING --\n  \$DEBUG variable is no more use, use $0 --debug instead.\n") if ( $var_name eq "DEBUG");
-        pwarn("-- WARNING --\n \$INFO variable is no more use, use $0 --info instead.\n") if ( $var_name eq "INFO");
+        pwarn("-- WARNING --\n  \$DEBUG variable ignored, use $0 --debug instead.\n") if ( $var_name eq "DEBUG");
+        pwarn("-- WARNING --\n \$INFO variable ignored, use $0 --info instead.\n") if ( $var_name eq "INFO");
         
-        #if ( defined $$var_name 
-        #    && $var_name ne "DEBUG" 
-        #    && $var_name ne "INFO"
-        #)
-        #{
-        #    print "WARNING : $userconfigfile variable $var_name ".
-        #        "value not used, set to $$var_name\n".$NORM ;
-        #    next;
-        #}
-
     }
     pwarn("\t Warning :  DIVX_OPT reset to \"$DIVX_OPT\"\n") if ( $DEBUG && $Res_DIVX_OPT);
     close (USERCONF);
@@ -1780,7 +1734,7 @@ sub twoac
         pinfo("$v2d\t Extracting and encoding the second audio channel");
         $sys="transcode -i \"$vobpath\" -x null,$audio_format -s $audio_rescale -b $AUDIO_BITRATE ".
             "-g 0x0 -y raw,$AO -a $AC2 $ac2_output -u 50";
-        print "$sys \n" if ( $INFO);
+        print "$sys \n" if ( $INFO );
         system("nice -$nice $sys")==0 or mydie "Unable to encode the second audio channel";
         system("touch tmp/enc_audiochannel2.finish") ;
         print"\n";
@@ -1793,7 +1747,7 @@ sub twoac
             ."  -p add-on-AC2.$EXT";
         $sys="ogmmerge -o tmp/3-${TITLE}_2ac.$EXT tmp/2-${TITLE}_sync.$EXT"
             ."  add-on-AC2.$EXT" if ( $AO eq "ogg" );
-        print "$sys \n" if ( $INFO);
+        print "$sys \n" if ( $INFO );
         system("nice -$nice $sys 1> /dev/null")==0 
             or mydie "Unable to merge movie and second audio channel";
         rename("tmp/3-${TITLE}_2ac.$EXT","tmp/2-${TITLE}_sync.$EXT") 
@@ -1828,14 +1782,14 @@ sub merge
             { 	
                 pinfo("$v2d\t Seq. unit :\t\t\t   | $i");
                 $sys = "avimerge -i tmp/2-*_$i.$EXT -o tmp/tmp_movie_$i.$EXT";
-                print "$sys \n" if ( $INFO);
+                print "$sys \n" if ( $INFO );
                 system("nice -$nice $sys 1> /dev/null");
             }
             if ( $CLUSTER > 0 )
             {
                 $sys = "avimerge -i tmp/tmp_movie_*.$EXT -o tmp/2-$TITLE.$EXT ".
                     "&& rm tmp/tmp_movie_*.$EXT ";
-                print "$sys \n" if ( $INFO);
+                print "$sys \n" if ( $INFO );
                 system("nice -$nice $sys 1> /dev/null");
             } else {
                 print "Renaming tmp/tmp_movie_0.$EXT tmp/2-$TITLE.$EXT\n" if ( $INFO );
@@ -1908,7 +1862,7 @@ sub merge
             my $pid = fork();
             mydie "couldn't fork" unless defined $pid;
             if ($pid)
-            {   print "$sys \n" if ( $INFO);
+            {   print "$sys \n" if ( $INFO );
                 system("nice -$nice $sys")==0 
                     or ( system("touch tmp/extract_ogg1.finish") && mydie "Unable to run\'$sys\'");
                 system("touch tmp/extract_ogg1.finish");
@@ -1972,21 +1926,13 @@ sub finish
             $sys="ogmsplit -c $start_of_file_hour-$end_of_file_hour tmp/2-${TITLE}_sync.$EXT ".
                 "-o $TITLE.$EXT && mv $TITLE-000001.$EXT $TITLE.$EXT" if ( $AO eq "ogg" );
             pinfo("$v2d\t Splitting the result to $nbr_frames frames.\n");
-            print "$sys \n" if ( $INFO);
+            print "$sys \n" if ( $INFO );
             system("nice -$nice $sys");
         }
         system("touch tmp/finish");
     }
 
-    # substract unixtimestamp from our original timestamp
-    my $end_time = time - $start_time;
-    my $f_end_time = format_date($end_time,"hours");
-    print "Number of Hours: $f_end_time \n";
-    if ( -x "/usr/bin/flite" )
-    {
-        # say it outloud using "flite" speech synthetizer
-        system("/usr/bin/flite -t 'Number of hours $f_end_time'");
-    }
+    say_end();
 
     print " Now take a look at the end of $TITLE.$EXT\n".
     "\t If for some reason the movie file doesn't reach the end credits,".
@@ -2138,7 +2084,7 @@ sub cluster
                 if ($pid)
                 {
                     $sys="$RMCMD $rhost 'cd ".$wdir." && ".$0." -v' >/dev/null 2>&1";  
-                    print "$sys \n" if ( $INFO);
+                    print "$sys \n" if ( $INFO );
                     $rs=system ("$sys");
                     system("touch tmp/checknode.finish");
                     wait;
@@ -2472,7 +2418,7 @@ sub aviencode
                 " -J ${filter}astat=\"tmp/astat\" -y $DIVX,null $DIVX_OPT -x ".
                 "$in_video_codec,$audio_format $VID_OPT -R 1,tmp/$DIVX.${TITLE}${node}_${i}.log ".
                 " -o /dev/null"; 
-            print "$sys \n" if ( $INFO);
+            print "$sys \n" if ( $INFO );
             my $pid = fork();
             mydie "couldn't fork" unless defined $pid;
             if ($pid)
@@ -2666,7 +2612,6 @@ sub get_params
             $VOBPATH= $ARGV[$i];
             $i ++;
         } else {	
-            system ("echo \"$readme\" | less -R ");
             if ( $DVDTITLE eq "" ) 
             {
                 print $urldvdtitle;
@@ -3506,7 +3451,7 @@ sub ripdvd
         {
             $sys="tccat -i $dvd -T $longestTitle,$i,$angle ".
                 "| split -b 1024m - ${TITLE}_T${longestTitle}_C${i}_" ;
-            print "$sys \n" if ( $INFO);
+            print "$sys \n" if ( $INFO );
             system("nice -$nice $sys");
         }
     } else {
@@ -3538,36 +3483,26 @@ sub ripdvd
 sub dvd9to5
 {
     # @param 0 directory := string path to directory or device holding VOBs
+    # @param 1 integer := title to rip from DVD. Defaults to 1
     # output will be a video.mpeg file in the current directory
     # the audio and video files will be kept
     my $dir = shift;
-  
-    # flags
-    my $AUDIO = 0; # indicates audio was extracted successfully
-    my $VIDEO = 0; # indicates video was extracted successfully
+    my $title = shift;
+
+    $title = ($title =~ /\d+/) ? $title : 1;
     # files
-    my $audio = "audio.0";
+    my $audio = "audio.ac3";
     my $video = "video.m2v";
 
-    # do all DVD have AC3 sound?
     if ( !-f "$audio" )
     {
         if ( -b "$dir" )
         {
             # this is a DVD device /dev/dvd (?)
-            system("tccat -i $dir -T1,-1 -P | tcextract -t vob -x ac3 -a0 > $audio");
-            if ( $? == 0)
-            {
-                $AUDIO = 1;
-            }
+            system("tccat -i $dir -T$title,-1 -P | tcextract -t vob -x ac3 -a0 > $audio");
         } elsif ( -d "$dir" )
         {
             system("tccat -i $dir -P | tcextract -t vob -x ac3 -a0 > $audio");
-            if ( $? == 0)
-            {
-                $AUDIO = 1;
-            }
-
         } else {
             pwarn("No DVD device or Directory given as argument for audio extraction.");
         }
@@ -3576,21 +3511,14 @@ sub dvd9to5
     }
     if (!-f "$video")
     {
+        # my $TCREQUANT=1.13924050632911392405
         if ( -b "$dir" )
         {
             # this is a DVD device /dev/dvd (?)
-            system("tccat -i $dir -T1,-1 -P | tcextract -t vob -x mpeg2 | tcrequant -o $video -f 1.57122151287947");
-            if ( $? == 0)
-            {
-                $VIDEO = 1;
-            }
+            system("tccat -i $dir -T$title,-1 -P | tcextract -t vob -x mpeg2 | tcrequant -o $video -f 1.57122151287947");
         } elsif ( -d "$dir" )
         {
             system("tccat -i $dir -P | tcextract -t vob -x mpeg2 | tcrequant -o $video -f 1.57122151287947");
-            if ( $? == 0)
-            {
-                $VIDEO = 1;
-            }
         } else {
             pwarn("No DVD device or Directory given as argument for video extraction.");
         }
@@ -3598,30 +3526,59 @@ sub dvd9to5
         pwarn("Video file $video exists. Not extracting new video.");
     }
     # multiplex audio and video
-    if ( ($AUDIO > 0 && $VIDEO > 0) || (-f "$audio" && -f "$video"))
+    if (-f "$audio" and -f "$video")
     {
+        no warnings; # suppress warnings here
+        my $VERBOSITY = ( $DEBUG == 0 ) ? 0 : 2;
         # join sound+video in file video.mpeg in current directory
         # and add navigational information for dvdauthor
-        system("mplex -S4400 -f 8 -o video.mpeg $video $audio");
+        my $TCMPLEX = qx/which tcmplex/;
+        my $MPLEX = qx/which mplex/;
+        chomp($TCMPLEX);
+        chomp($MPLEX);
+        if ( -x $TCMPLEX ) 
+        {
+            # favor tcmplex over mplex. mplex chokes on some movies
+            my $fps = get_fps("$video"); # can't pass fps to tcmplex
+            my $args = ""; # extra options for TCMPLEX
+            if ( $fps !~ /^25\.0/ ) { $args .= " -N" ;} # NTSC
+            # -D 0 # dont correct sync
+            # -m d # DVD mode
+            my $sys = "$TCMPLEX $args -d $VERBOSITY -D 0 -o video.mpeg -i video.m2v -p audio.ac3 -m d";
+            pinfo("$sys") if ( $DEBUG );
+            system("$sys");
+        } elsif ( -x $MPLEX ) {
+            # -S 4400 # split at 4.4GB
+            # -f 8 # produce dvdauthor compliant/navigational MPEG-2
+            my $sys = "$MPLEX -v $VERBOSITY -S 4400 -f 8 -o 'video\%d.mpeg' $video $audio";
+            pinfo("$sys") if ( $DEBUG );
+            system("$sys");
+        } else {
+            pwarn("No multiplex application found in your PATH. Tried tcmplex [$TCMPLEX] and mplex [$MPLEX]");
+        }
     } else {
         if ( !-f "$audio") { pwarn("Audio file $audio missing"); }
         if ( !-f "$video") { pwarn("Video file $video missing"); }
-        pdebug("Audio=$AUDIO. Video=$VIDEO.");
     }
 
+    say_end();
     # a few things one might want to do:
-    #mkdir -f test
-    #dvdauthor -o test -c 00:00:00.000,00:03:58.640,00:11:03.880,00:11:47.560,00:13:51.760,00:16:47.600,00:19:28.760,video.mpeg
-    #dvdauthor -T -o test
+    #tcprobe -i /dev/dvd -T 1 -H 10 2>&1 | egrep "\[Chapter ..\] " |\
+    #cut -d " " -f 4 | perl -pi -e 's/\n/,/' |  \
+    #perl -pi -e 's/,$//' >chap.list
+    #
+    #dvdauthor -t -a ac3+en -c `cat chap.list` -o dvd movie-new.vob
+    #
+    #dvdauthor -T -o dvd
+    #
+    #mkisofs -dvd-video -udf -o dvd.iso dvd
     # However, some users might use their video.mpeg with DVDAuthor or
     # other GUIs to master their DVDs with menus and other widgets
-}
+} # end dvd9to5()
 
 # ************ End of Functions Declarations *********** #
 
 # ********************* MAIN () ************************ #
-
-system("clear");
 
 # Read or create the user configuration file
 # we kept .vob2divxrc for backward compatibility
@@ -3668,17 +3625,36 @@ GetOptions(
     'l|lang|language=s'         => \$LANGUAGE, 
     'S|SUB_TITLE_opts=s'        => \$EXTSUB,
     # numbers
-    'a|default_audio_channel=i' => \$DEF_AUDIOCHANNEL ,
+    'a|default_audio_channel=i' => \$DEF_AUDIOCHANNEL,
+    'titleset=i'                => \$TITLESET,
     'n|nice=i'                  => \$nice
 );
 # reset DIVX_OPT if DIVX is pass as parameter and not DIVX_OPT
 $Res_DIVX_OPT=1 if ( $DIVX ne "" && $DIVX_OPT eq "" );
 
-# let the time begin
-my $f_start_time = format_date($start_time);
+#------------ Execution Starts Here ---------------#
+
+# Show release and exit
+if ( $VERSION )
+{
+    print STDOUT "V2divx v$release\n";
+    exit(0);
+}
+
+system("clear") if ( ! $DEBUG );
+
+$f_start_time = format_date($start_time);
 pinfo("Start Time: $f_start_time \n");
 
-#------------ Execution Starts Here ---------------#
+if ( $TEST ) 
+{
+    # work in progress... this is how a test should work:
+    # get 2 minutes of video
+    #transcode -q 1 -a 0 -x vob,ac3 -i $ARGV[0] -w 6800 -V -M 1 -F "8,-q 1 -g 15 -G 15 -d" -A -N 0x2000 -E 48000 -b 384 -y mpeg2enc,raw -o ./tmp/VTS_01_1 -J cut=00:01:00.0-00:02:00.0,extsub=1 --print_status 100,1
+
+    # Then to put them back together
+    #tcmplex -o ./tmp/VTS_01_1.vob -i ./tmp/VTS_01_1.m2v -p ./tmp/VTS_01_1 -m d 
+}
 
 if ( defined $ARGV[1] &&  $ARGV[1] eq "config")
 {
@@ -3710,13 +3686,6 @@ if ( $RUNCLUST )
     }
     # We do never come here !
     exit(1);
-}
-
-# Show release and exit
-if ( $VERSION )
-{
-    print "V2divx v$release\n";
-    exit(0);
 }
 
 # rip a DVD
@@ -3757,7 +3726,7 @@ if ( $SRTSUBRIP )
 # Convert from DVD9 format to DVD5
 if ($DVD9TO5 > 0)
 {
-    dvd9to5($ARGV[0]);
+    dvd9to5($ARGV[0],$TITLESET);
     exit(0);
 }
 
@@ -3769,7 +3738,7 @@ if (
     || $HELP == 1
 )
 {
-    system (" echo \"$usage\" | less -R ");
+    print STDOUT "$usage";
     exit(1);
 }
 
@@ -3809,6 +3778,5 @@ if (1)
     # We do never come here !
     exit(1);
 }
-
 
 #EOF#

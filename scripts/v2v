@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.9 $
+# $Revision: 1.10 $
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
 #               Dominique CARON <domiATlpm.univ-montp2.fr> 
 #		Tom ROTH <tomATtomroth.de>
@@ -82,9 +82,9 @@ $userconfig="
 \$INFO=STDOUT;
 
 # EXT SUBTITLE FILTER 5 LAST OPTIONS (here we just use 3) ...See the docs 8-(
-\$EXTSUB=0:0:255;
+    \$EXTSUB=0:0:255;
 
-";
+    ";
 
 ############# SOME VARIABLES ###################
 $release="2.2.0 (C) 2002-2003 Dominique Caron";
@@ -140,8 +140,8 @@ my $start_time = time;
 my $f_start_time = format_date($start_time);
 print $GREEN."Start Time: $f_start_time \n".$NORM;
 
-# Read or create the user configuration file
-# we kept .vob2divxrc for backward compatibility
+#  Read or create the user configuration file
+#  we kept .vob2divxrc for backward compatibility
 if ( -e $HOME."/.vob2divxrc" )  
 {
     rename($HOME."/.vob2divxrc",$userconfigfile);
@@ -157,7 +157,7 @@ if ( -e $userconfigfile )
     readuserconf;
 }
 
-#    Find the transcode release 
+#     Find the transcode release 
 $tr_vers=`transcode -v 2>&1 | awk '{print \$2}'| sed s/^v// `;
 @Vers = split /\./,$tr_vers;
 if (  $Vers[0] < $MAJOR  || ( $Vers[0] == $MAJOR && $Vers[1] < $MINOR ) )
@@ -170,15 +170,15 @@ if (  $Vers[0] < $MAJOR  || ( $Vers[0] == $MAJOR && $Vers[1] < $MINOR ) )
     exit(1);
 }
 
-# Test if the $DIVX module is OK
+#  Test if the $DIVX module is OK
 $module=`transcode -c 2-3 -y $DIVX,null 2>&1 | grep 'critical error'`;
 if ( $module ne "" )
 {      
     print $RED." According to your \$DIVX variable, ".
-        "you want to encode with $DIVX libraries\n But it ".
-        " seems that $DIVX libraries are not installed on ".
-        " your system\n Please install it or change ".
-        "the \$DIVX variable in your $userconfigfile\n".$NORM;
+    "you want to encode with $DIVX libraries\n But it ".
+    " seems that $DIVX libraries are not installed on ".
+    " your system\n Please install it or change ".
+    "the \$DIVX variable in your $userconfigfile\n".$NORM;
     exit(0);
 }
 $clust_percent="--cluster_percentage --a52_dolby_off ";
@@ -194,7 +194,9 @@ foreach $pgm ( $XV , $XINE , $AVIPLAY )
 }
 
 $PGMF=system("which $PGMFINDCLIP >/dev/null 2>&1 ");
-if ( $PGMF == 0  ) { $PGMFINDCLIP=OK; }
+if ( $PGMF == 0  ) {
+    $PGMFINDCLIP=OK;
+}
 
 $SUBRIP=system("which subtitle2pgm >/dev/null 2>&1 ");
 $SUBRIP=system("which pgm2txt >/dev/null 2>&1 ") if ( $SUBRIP == 0 );
@@ -202,7 +204,9 @@ $SUBRIP=system("which srttool >/dev/null 2>&1 ") if ( $SUBRIP == 0 );
 $SUBRIP="OK" if ( $SUBRIP == 0 );
 
 my $junk=system("which $DVDTITLE >/dev/null 2>&1 ");
-if ( $junk != 0  ) { 	$DVDTITLE=""; }
+if ( $junk != 0  ) {
+    $DVDTITLE="";
+}
 $urldvdtitle=$GREEN."\t V2divx is unable to find dvdtitle in your PATH.\n\t Code Sources of dvdtitle are available at : \n\t http://www.lpm.univ-montp2.fr/~domi/V2divx/dvdtitle.tgz\n ".$NORM."\n";
 
 $warnclust = 
@@ -215,8 +219,8 @@ b) You must have rsh or ssh permission on each node,
 c) You need to have a $RED${CLUSTER_CONFIG}$NORM file (change this value in your $userconfigfile) on the node you run V2divx on.
 This file must contain all the nodenames of your cluster:the percentage of frames to encode by each node.
 Syntax of this file:
-# This is a Comment
-# nodename:percentage
+#  This is a Comment
+#  nodename:percentage
 asterix:25   #  Duron 333 Mhz
 obelix:5  # 486 66Mhz
 vercingetorix:70 # Thunderbird 1.2 Ghz
@@ -304,12 +308,12 @@ Enter '$0 -h ' to have a small help
 ";
 
 
-# You may Modify the Next value but take care
-# (see the transcode man pages - about Bits per Pixel)
-# it's used to estimate the image size of the encoded clip
+#  You may Modify the Next value but take care
+#  (see the transcode man pages - about Bits per Pixel)
+#  it's used to estimate the image size of the encoded clip
 $bpp=0.18;   # This value =  bitrate x 1000 / ( fps x height x width ) 
 
-############# FUNCTIONS #########################
+# ############ FUNCTIONS #########################
 
 sub format_date 
 {
@@ -371,7 +375,7 @@ sub srt_subrip
         if ($pid)
         {
             print $GREEN."$v2d\t Making subtitle images. This may take a while...\n".$NORM;
-# try diffrent positions for zero  when output is not optimal (default  255,255,0,255)
+            #  try diffrent positions for zero  when output is not optimal (default  255,255,0,255)
             $sys="cat $vobpath/* | tcextract -x ps1 -t vob -a 0x2@_[0] | subtitle2pgm -c @def_grey[$i] -C 15 -o tmp/$dvdtitle";
             print $INFO $sys."\n";
             system("nice -$nice $sys") == 0  or ( system("touch tmp/srtpgm.finish")==0 and mydie "Unable to run $sys" ) ;
@@ -387,7 +391,7 @@ sub srt_subrip
     if ( ! -f "tmp/srtpgm2txt_done")
     {
         unlink "$dvdtitle.srt" if ( -f "$dvdtitle.srt");
-#run pgm2txt without ocr using a db file (db file can be reused for other rips )
+        # run pgm2txt without ocr using a db file (db file can be reused for other rips )
         system ("pgm2txt -v -f @_[1] -d  tmp/$dvdtitle");
         unlink "tmp/$dvdtitle*.pgm";
         system("touch tmp/srtpgm2txt_done");
@@ -401,7 +405,7 @@ sub srt_subrip
     } else {
         print $RED."$v2d\t $dvdtitle.srt already done, remove it to remake it\n".$NORM;
     }	
-#    maybe spell checking should be optional
+    #     maybe spell checking should be optional
     $ilang="-d french" if ( @_[1] eq 'fr');
     $ilang="-d german" if ( @_[1] eq 'de');
     $ilang="-d spanish" if ( @_[1] eq 'es');
@@ -425,9 +429,11 @@ sub mydie
 use sigtrap qw(handler mydie normal-signals error-signals) ;
 
 sub makelogo
-{	print $DEBUG "---> Enter makelogo\n";
+{
+    print $DEBUG "---> Enter makelogo\n";
     if ( $addlogo > 300 )
-    { 	print $RED."Unable to create your Logo in cluster Mode\n".$NORM ;
+    {
+        print $RED."Unable to create your Logo in cluster Mode\n".$NORM ;
         sleep 5 ;
         return(1);
     }
@@ -495,15 +501,18 @@ sub audiorescale
         if ( $1  > 1)
         {
             $audio_rescale = $1;
-        }else
-        {	$audio_rescale = 1;
+        } else 
+        {
+            $audio_rescale = 1;
         }
-    }else
-    {	if ( ! -e "tmp/astat" )
-        {	print $RED."Unable to find a suggested Volume rescale !\n 1 is use for -s parameter\n".$NORM;
+    } else 
+    {
+        if ( ! -e "tmp/astat" )
+        {
+            print $RED."Unable to find a suggested Volume rescale !\n 1 is use for -s parameter\n".$NORM;
             $audio_rescale=1;
             sleep 2;
-        }else
+        } else 
         {
             $audio_rescale=`cat tmp/astat`;
             chomp($audio_rescale);
@@ -512,7 +521,7 @@ sub audiorescale
     print $DEBUG "<--- audiorescale\n";
 }  # END audiorescale
 
-# This function just display a clock to wait
+#  This function just display a clock to wait
 sub smily
 {
     unlink("tmp/$_[0].finish");
@@ -543,7 +552,7 @@ sub chk_wdir
     chomp($wdir);
     #chdir($wdir);
     print $DEBUG "+ Working directory ".`pwd`;
-    
+
     # Move probe.rip and dvdtitle
     system ("mv $vobpath/dvdtitle tmp/dvdtitle") if ( -f "$vobpath/dvdtitle");
     system ("mv $vobpath/probe.rip tmp/probe.rip") if ( -f "$vobpath/probe.rip");
@@ -566,7 +575,8 @@ sub chk_wdir
     {   
         videoformat("$vobpath/$file");
         if ( $i == 0 )
-        {       $tmp=$in_video_codec;
+        {
+            $tmp=$in_video_codec;
             print $GREEN."$v2d\t Video Input Format:\t\t\t   | $in_video_codec\n".$NORM;
             mydie "$vobpath/$file has not a valid video format" if ( $in_video_codec eq null );
         }
@@ -581,49 +591,51 @@ sub chk_wdir
     print $DEBUG "Last file : $lastvob\n";
     ( -f "$vobpath/$sample" and -f "$vobpath/$lastvob" ) or mydie "Unable to find samples files in \"$vobpath\" (files MUST be have the same Video format)";
 
-# Vrfy probe.rip
-    if ( -e "tmp/probe.rip")
+#  Vrfy probe.rip
+if ( -e "tmp/probe.rip")
+{
+    #  We need to verify if user has not remove some file(s) since the rip
+    print $INFO "\t Number of vob files:$i\n";
+    closedir(VOB);
+    open (PROBE,"<tmp/probe.rip");
+    while(<PROBE>)
     {
-# We need to verify if user has not remove some file(s) since the rip
-        print $INFO "\t Number of vob files:$i\n";
-        closedir(VOB);
-        open (PROBE,"<tmp/probe.rip");
-        while(<PROBE>)
+        if ( $_=~ m,Number of vob files:(\d+),)
         {
-            if ( $_=~ m,Number of vob files:(\d+),)
+            if ( "$i" ne "$1" )
             {
-                if ( "$i" ne "$1" )
-                {
-# If user has remove some files we cannot use probe.rip anymore
-                    print $RED."Number of vob files in probe.rip is not exact, V2divx will create extract.txt \n".$NORM;
-                    system ("touch tmp/probe.rip-BAD");
-                }
-                $flag=0; last;
-            } else {
-                $flag=1;
+                #  If user has remove some files we cannot use probe.rip anymore
+                print $RED."Number of vob files in probe.rip is not exact, V2divx will create extract.txt \n".$NORM;
+                system ("touch tmp/probe.rip-BAD");
             }
+            $flag=0; last;
+        } else {
+            $flag=1;
         }
-        close(PROBE);
-        print $RED."Oups...no number of Vob files in the probe.rip file!\n".$NORM if ( $flag eq 1 );
     }
+    close(PROBE);
+    print $RED."Oups...no number of Vob files in the probe.rip file!\n".$NORM if ( $flag eq 1 );
+}
 
-    if ( ! defined($dvdtitle) && -e "tmp/dvdtitle")
-    {   $dvdtitle=`cat tmp/dvdtitle`;
-        chomp($dvdtitle);
-    }
-    print $DEBUG "<--- chk_wdir\n";
+if ( ! defined($dvdtitle) && -e "tmp/dvdtitle")
+{
+    $dvdtitle=`cat tmp/dvdtitle`;
+    chomp($dvdtitle);
+}
+print $DEBUG "<--- chk_wdir\n";
 } # End Check Working directories
 
-
 sub get_audio_channel
-{	print $DEBUG "---> Enter get_audio_channel\n";	
+{	
+    print $DEBUG "---> Enter get_audio_channel\n";	
     $number_of_ac=0;
     my($i)=0;
     if ( -e "tmp/probe.rip" )
     {
         open (RIP,"<tmp/probe.rip");
         while(<RIP>)
-        {       chomp;
+        {       
+            chomp;
             if ( $_ =~ m,(?:ac3|mpeg2ext|lpcm|dts|mp3) ([^\s]+) ,)
             {
                 print $GREEN."$v2d\t Language of audio stream $i:\t\t   | $1\n".$NORM if ( ! defined(@_[0])); 
@@ -639,12 +651,12 @@ sub get_audio_channel
     } else {
         $probe=`tcprobe -i $vobpath 2>&1 | grep 'audio track:'` or mydie "Problem when running \'tcprobe -i $vobpath\'";
     }
-# If this is so complicated this is because ... YES sometime audio channel are not in order !!
+    # If this is so complicated this is because ... YES sometime audio channel are not in order !!
     @line=split /\n/,$probe;
     $tmp=$line[0];
-    # set flag to false to test for audio
+    #  set flag to false to test for audio
     $flag_ac_detected = "0"; # this flag is just for this
-    # following loop and nothing else
+    #  following loop and nothing else
 
     foreach $tmp ( @line )
     {	
@@ -661,14 +673,13 @@ sub get_audio_channel
             $number_of_ac++;
             $tmp=$line[$number_of_ac];
             $number_of_ac--;
-#			 mydie " There is NO audio track in your clip,\n Sorry, at this moment, I'm unable to work on it ....";
+            # 			 mydie " There is NO audio track in your clip,\n Sorry, at this moment, I'm unable to work on it ....";
             $NOAUDIO=1;
             print $RED."$v2d\t No audio channels in this Clip\n".$NORM;
             print $DEBUG "  <--- get_audio_channel\n";
 
             return(0);
-        } elsif ( $flag_ac_detected eq 0) 
-        { 
+        } elsif ( $flag_ac_detected eq 0) { 
             mydie "Unable to get audio track info ?\n";
         }
     }
@@ -678,8 +689,7 @@ sub get_audio_channel
     {
         $audio_channel=$findaudio_channel;
         print $GREEN."$v2d\t Audio channel for $RED$LANGUAGE$GREEN language:\t\t   | $audio_channel\n\t (You may modify your \$LANGUAGE variable in your $userconfigfile)\n".$NORM;
-    } else
-    {
+    } else {
         print $GREEN."$v2d\t Unable to find your Language ($LANGUAGE) in:\t   | tmp/probe.rip \n$v2d\t Default audio channel is set to ";
         if ( $DEF_AUDIOCHANNEL <= @achannels[$number_of_ac])
         { 
@@ -705,7 +715,7 @@ sub readuserconf
     while (<USERCONF>)
     {
         chomp;
-# On an idea of tom roth <tom@tomroth.de>
+        #  On an idea of tom roth <tom@tomroth.de>
         s[/\*.*\*/][];      #  /* comment */
         s[//.*][];          #  // comment
         s/#.*//;            #  # comment
@@ -735,7 +745,8 @@ sub readuserconf
     $INFO="STDOUT" if ( ! defined ($INFO));
     $DEBUG="/dev/null" if ( ! defined ($DEBUG));
     if ( ! defined ($EXTSUB))
-    { open (USERCONF,">>$HOME/.V2divxrc");
+    {
+        open (USERCONF,">>$HOME/.V2divxrc");
         print USERCONF "# EXT SUBTITLE FILTER 5 LAST OPTIONS (here we just use 3) ...See the docs 8-(\n\$EXTSUB=0:0:255;";
         close(USERCONF);
         $EXTSUB="0:0:255";
@@ -750,12 +761,15 @@ sub printinfo
     print $v2d."   V:\tVideo Output format:\t(1)| $DIVX\n";
     print $v2d."   V:\tVideo Input interlaced:\t   | ";
     if ( defined($deintl) || $params=~ m,-I 3, )
-    {  	print $RED."YES\n".$NORM;
+    {
+        print $RED."YES\n".$NORM;
         print $v2d."   V:\tDeinterlaced with:\t(2)| ";
         print "MPlayer postproc\n" if ( $deintl =~ m,pp, );
         print "YUVdenoise \n" if ( $deintl =~ m,yuvdenoise,); 
         print "-I 3\n" if ($params=~ m,-I 3, )
-    } else {	print "NO\n";}
+    } else {
+        print "NO\n";
+    }
 
     print $v2d."   V:\tLogo file name:\t\t(1)| $LOGO\n";
     if ( ( $addlogo && $CLUSTER eq "NO" ) || ( $addlogo ne 0 && $addlogo <= 300 && $CLUSTER ne NO))
@@ -766,8 +780,8 @@ sub printinfo
         $endlogo=$beginlogo+$addlogo;
         print  $v2d."   V:\tLogo starting time:\t(2)| $beginlogo s.\n";
         print  $v2d."   V:\tLogo ending time:\t(2)| $endlogo s.\n";
-    }else
-    { 	print $v2d."   V:\tLogo inserted:\t\t   | ${RED}NO${NORM}\n";
+    } else {
+        print $v2d."   V:\tLogo inserted:\t\t   | ${RED}NO${NORM}\n";
     }
     get_audio_channel("junk") if (! defined($findaudio_channel));
     print $v2d."   A:\tLanguage Audio channel:\t(1)| $LANGUAGE\n" if (defined($findaudio_channel)) ;
@@ -777,108 +791,109 @@ sub printinfo
     my $i=1;
     while(<CC>)
     {	
-        if ( $_=~ m,([^\s#]*)#*,)	
-                {	
-                print $v2d."   C:\tCluster node $i:\t\t(3)| $1% frames to process\n" if ( $CLUSTER ne NO && $1 ne "" );
-                $i++ if ( $CLUSTER ne NO && $1 ne "" );
-                }	
-                }
-                print $v2d."   V:\tFrames to encode:\t   | $nbr_frames, @ $FPS frames per/sec\n";
-                printf($v2d." A/V:\tRuntime to encode:\t   | %d hours:%d minutes:%d sec\n",int($runtime/3600),int($runtime-int($runtime/3600)*3600)/60,$runtime-int($runtime/60)*60);
-                $params =~ m,-a (\d) .*,;
-                print $v2d."   A:\tPrimary Audio channel:\t   | $1\n";
-                if ( defined($ac2))
-                {	chomp($ac2);
-                print $v2d."   A:\tSecundary Audio Channel:(2)| $ac2\n";
-                }
-                printf($v2d."   A:\tAudio size:\t\t   | %.2f Mb @ (2) $audio_bitrate Kb/s\n",$audio_size);
-                $videosize=$bitrate*1000*$runtime/(1024*1024*8);
-                printf($v2d."   V:\tEstimated Video Size:\t   | %.2f Mb @ %d Kb/s\n",$videosize,$bitrate);
-                $totalsize=$videosize+$audio_size;
-                printf($v2d." A/V:\tEstimated Total Size:\t(2)| %.2f Mb\n",$totalsize);
-                print $v2d."   V:\tInput Frame Size:\t   | ${Xaxis}x$Yaxis\n";
-                printf($v2d."   V:\tClipped Frame Size:\t   | %dx%d \n",$Xaxis-2*$lr,$Yaxis-2*$tb);
-                printf($v2d."   V:\tOriginal aspect ratio:\t   | %.2f:1\n",$aspect_ratio);
-                print $v2d."   V:\tOutput Frame Size:\t   | ${NXaxis}x$NYaxis\n";
-                printf($v2d."   V:\tFinal aspect ratio:\t   | %.2f:1\n",$NXaxis/$NYaxis);
-                printf($v2d."   V:\tAspect ratio error:\t   | %.2f %\n",$AR);
-                printf($v2d."   V:\tBits Per Pixel:\t\t   | %.3f\n",$fbpp);
-                print $v2d." A/V:\tFinal AVI file name:\t   | $RED$dvdtitle$NORM.avi\n";
-                print  $DEBUG $v2d."   T:\tTrcode main parameters:\t(2)| $params\n";
-                my $filter=$add_logo.$deintl.$sub_title;
-                print $DEBUG $v2d."   T:\tOptional Filters:\t(2)| $filter\n";
-                print "\n";
-                print "(1)This value can be modify in your $userconfigfile\n";
-                print "(2)This value can be modify in tmp/V2divx.conf\n";
-                print "(3)This value can be modify in your $CLUSTER_CONFIG\n" if ( $CLUSTER ne NO);
-                print $RED."\tYou can say \'no\' at this time, modify by hand some parameters \n\t in the tmp/V2divx.conf(BUT TAKE CARE!) \n\t or in your $userconfigfile,\n\t and then rerun V2divx without parameters\n".$NORM;
-                print " Ready to encode (y|N)? ";
-                $rep=<STDIN>;
-                chomp($rep);
-                mydie "" if ( $rep ne "y" && $rep ne "Y" );
-                $SIG{CHLD}='IGNORE';
-                my $pid= fork();
-                mydie "couldn't fork" unless defined $pid;
-                if ( $pid == 0 )
-                {
-                if ( ! -e "$dvdtitle.srt" && $sub_title =~ m,SRT_(\d+)_(.*),)
-                {
-                system("xterm -e $0 $vobpath srtsubrip &")==0 or print STDERR "couldn't exec xterm -e $0 $vobpath srtsubrip\n";
-                }
-                exit(0);
+        if ( $_=~ m,([^\s#]*)#*, )
+        {	
+            print $v2d."   C:\tCluster node $i:\t\t(3)| $1% frames to process\n" if ( $CLUSTER ne NO && $1 ne "" );
+            $i++ if ( $CLUSTER ne NO && $1 ne "" );
+        }	
+    }
+    print $v2d."   V:\tFrames to encode:\t   | $nbr_frames, @ $FPS frames per/sec\n";
+    printf($v2d." A/V:\tRuntime to encode:\t   | %d hours:%d minutes:%d sec\n",int($runtime/3600),int($runtime-int($runtime/3600)*3600)/60,$runtime-int($runtime/60)*60);
+    $params =~ m,-a (\d) .*,;
+    print $v2d."   A:\tPrimary Audio channel:\t   | $1\n";
+    if ( defined($ac2))
+    {
+        chomp($ac2);
+        print $v2d."   A:\tSecundary Audio Channel:(2)| $ac2\n";
+    }
+    printf($v2d."   A:\tAudio size:\t\t   | %.2f Mb @ (2) $audio_bitrate Kb/s\n",$audio_size);
+    $videosize=$bitrate*1000*$runtime/(1024*1024*8);
+    printf($v2d."   V:\tEstimated Video Size:\t   | %.2f Mb @ %d Kb/s\n",$videosize,$bitrate);
+    $totalsize=$videosize+$audio_size;
+    printf($v2d." A/V:\tEstimated Total Size:\t(2)| %.2f Mb\n",$totalsize);
+    print $v2d."   V:\tInput Frame Size:\t   | ${Xaxis}x$Yaxis\n";
+    printf($v2d."   V:\tClipped Frame Size:\t   | %dx%d \n",$Xaxis-2*$lr,$Yaxis-2*$tb);
+    printf($v2d."   V:\tOriginal aspect ratio:\t   | %.2f:1\n",$aspect_ratio);
+    print $v2d."   V:\tOutput Frame Size:\t   | ${NXaxis}x$NYaxis\n";
+    printf($v2d."   V:\tFinal aspect ratio:\t   | %.2f:1\n",$NXaxis/$NYaxis);
+    printf($v2d."   V:\tAspect ratio error:\t   | %.2f %\n",$AR);
+    printf($v2d."   V:\tBits Per Pixel:\t\t   | %.3f\n",$fbpp);
+    print $v2d." A/V:\tFinal AVI file name:\t   | $RED$dvdtitle$NORM.avi\n";
+    print  $DEBUG $v2d."   T:\tTrcode main parameters:\t(2)| $params\n";
+    my $filter=$add_logo.$deintl.$sub_title;
+    print $DEBUG $v2d."   T:\tOptional Filters:\t(2)| $filter\n";
+    print "\n";
+    print "(1)This value can be modify in your $userconfigfile\n";
+    print "(2)This value can be modify in tmp/V2divx.conf\n";
+    print "(3)This value can be modify in your $CLUSTER_CONFIG\n" if ( $CLUSTER ne NO);
+    print $RED."\tYou can say \'no\' at this time, modify by hand some parameters \n\t in the tmp/V2divx.conf(BUT TAKE CARE!) \n\t or in your $userconfigfile,\n\t and then rerun V2divx without parameters\n".$NORM;
+    print " Ready to encode (y|N)? ";
+    $rep=<STDIN>;
+    chomp($rep);
+    mydie "" if ( $rep ne "y" && $rep ne "Y" );
+    $SIG{CHLD}='IGNORE';
+    my $pid= fork();
+    mydie "couldn't fork" unless defined $pid;
+    if ( $pid == 0 )
+    {
+        if ( ! -e "$dvdtitle.srt" && $sub_title =~ m,SRT_(\d+)_(.*),)
+        {
+            system("xterm -e $0 $vobpath srtsubrip &")==0 or print STDERR "couldn't exec xterm -e $0 $vobpath srtsubrip\n";
+        }
+        exit(0);
 
-                } 
-                $sub_title="" if ( $sub_title =~ m,SRT_,);
-                }
+    } 
+    $sub_title="" if ( $sub_title =~ m,SRT_,);
+}
 
-                sub interlaced
-                {
-                print $GREEN."$v2d\t Detecting if frames are interlaced:\t   | ".$NORM;
-                my $pid = fork();
-                mydie "couldn't fork" unless defined $pid;
-                if ($pid)
-                { 
-                $interlace=`transcode -i "$vobpath/$sample" -J 32detect=verbose -c 200-201 2>&1 | grep interlaced`;
-                system("touch tmp/intl.finish");
-                wait;
-                } else {
-                    smily(intl);
-                }
-                if ( ! ( $interlace =~  m,interlaced = (yes),))
-                {
-                ( $interlace =~  m,interlaced = (no),) or mydie "Unable to Detect Interlacing in $vobpath/$sample";
-                $INTERLACE="no";
-                print $GREEN."NO\n".$NORM;
-                } else {
-                $INTERLACE="yes";
-                print $RED."YES\n".$NORM;
-                }
-                }
+sub interlaced
+{
+    print $GREEN."$v2d\t Detecting if frames are interlaced:\t   | ".$NORM;
+    my $pid = fork();
+    mydie "couldn't fork" unless defined $pid;
+    if ($pid)
+    { 
+        $interlace=`transcode -i "$vobpath/$sample" -J 32detect=verbose -c 200-201 2>&1 | grep interlaced`;
+        system("touch tmp/intl.finish");
+        wait;
+    } else {
+        smily(intl);
+    }
+    if ( ! ( $interlace =~  m,interlaced = (yes),))
+    {
+        ( $interlace =~  m,interlaced = (no),) or mydie "Unable to Detect Interlacing in $vobpath/$sample";
+        $INTERLACE="no";
+        print $GREEN."NO\n".$NORM;
+    } else {
+        $INTERLACE="yes";
+        print $RED."YES\n".$NORM;
+    }
+}
 
-                sub findclip
-                {
-                if ( $PGMFINDCLIP eq OK )
-                {
-                print $GREEN."$v2d\t Trying to detect best Clipping:\t   | ".$NORM;
-                opendir(VOB,$vobpath);
-                my(@files)=grep {! /^\./ & -f "$vobpath/$_"}readdir(VOB);
-                closedir(VOB);
-                my $da;
-                my $db;
-                @files = sort { 
-                    ($da = lc $a) =~ s/[\W_]+//g;
-                    ($db = lc $b) =~ s/[\W_]+//g;
-                    $da cmp $db;
-                } @files;
-                #@files=sort @files;
-                my $i=0;
-                my $pid = fork();
-                mydie "couldn't fork" unless defined $pid;
-                if ($pid)
-                { 	
-                    foreach $file (@files)
-                    {	
-                    $sys="transcode -M 1 -q 0 -z -K -x $in_video_codec,null -i \"$vobpath/$file\" -y ppm,null -c 130-135  -o autoclip$i  >/dev/null 2>&1";
+sub findclip
+{
+    if ( $PGMFINDCLIP eq OK )
+    {
+        print $GREEN."$v2d\t Trying to detect best Clipping:\t   | ".$NORM;
+        opendir(VOB,$vobpath);
+        my(@files)=grep {! /^\./ & -f "$vobpath/$_"}readdir(VOB);
+        closedir(VOB);
+        my $da;
+        my $db;
+        @files = sort { 
+            ($da = lc $a) =~ s/[\W_]+//g;
+            ($db = lc $b) =~ s/[\W_]+//g;
+            $da cmp $db;
+        } @files;
+        #@files=sort @files;
+        my $i=0;
+        my $pid = fork();
+        mydie "couldn't fork" unless defined $pid;
+        if ($pid)
+        { 	
+            foreach $file (@files)
+            {	
+                $sys="transcode -M 1 -q 0 -z -K -x $in_video_codec,null -i \"$vobpath/$file\" -y ppm,null -c 130-135  -o autoclip$i  >/dev/null 2>&1";
                 # DO WE REALLY NEED video_magic ?
                 # $sys="transcode -M 1 -q 0 -z -K -i\
                 # \"$vobpath/$file\" -y ppm,null -c 130-135\
@@ -886,877 +901,944 @@ sub printinfo
                 print $DEBUG "$sys\n";
                 system ("$sys")==0 or 
                 ( system("touch tmp/fndclip.finish && /bin/rm autoclip*.pgm ")==0 and  
-                    mydie "Unable to encode to ppm file ($vobpath/$file)" );
+                mydie "Unable to encode to ppm file ($vobpath/$file)" );
                 $i++;
-                        }
-                        system("touch tmp/fndclip.finish");
-                        wait;
-                    } else {
-                        smily(fndclip);
-                    }
-                    $clip=`pgmfindclip -b 8,8 autoclip*.pgm` or ( system("/bin/rm autoclip*.pgm") and mydie "Problem to run \'pgmfindclip -b 8,8\'\n Your pgmfindclip release is may be too old ...\n");
-                    chomp($clip);
-                    @clip=split /,/,$clip;
-
-# We put the clipping border same size ( the smallest )
-                    $clip[0]=$clip[2] if ( $clip[2] < $clip[0] ) ;
-                    $clip[1]=$clip[3] if ( $clip[3] < $clip[1] ) ;
-                    system("/bin/rm autoclip*.pgm");
-                    $tb=$clip[0];
-                    $lr=$clip[1];
-                    print $GREEN."-j $tb,$lr\n".$NORM;
-                } else {
-                    print $RED."$v2d\t pgmfindclip in your PATH:\t\t   | NO\n".$NORM;
-                    print $INFO "You may find pgmfindclip at http://www9.informatik.uni-erlangen.de/~Vogelgsang/bp/tctools.html\n";
-                    sleep(2);
-                    $tb=0;
-                    $lr=0;
-                }
             }
+            system("touch tmp/fndclip.finish");
+            wait;
+        } else {
+            smily(fndclip);
+        }
+        $clip=`pgmfindclip -b 8,8 autoclip*.pgm` or ( system("/bin/rm autoclip*.pgm") and mydie "Problem to run \'pgmfindclip -b 8,8\'\n Your pgmfindclip release is may be too old ...\n");
+        chomp($clip);
+        @clip=split /,/,$clip;
 
-#		ASK if Cluster is used 
-            sub ask_clust
-            {
-                print $DEBUG "--->  Enter ask_clust\n";
-                open(CONF,">>tmp/V2divx.conf");
-                unlink("tmp/cluster.args");
-                $CLUSTER="NO";
-                print $GREEN."$v2d\t Cluster config file exist:\t\t   |".$NORM;
-                if ( ! -e $CLUSTER_CONFIG )
-                {
-                    print $RED." NO\n".$NORM;
-                } else {
-                    print $GREEN." Yes\n".$NORM if ( -e $CLUSTER_CONFIG );
-                    print " Do you want to use a cluster (y|N)? ";
-                    $rep=<STDIN>;
-                    chomp($rep);
-                    if ( $rep eq "y" || $rep eq "Y" || $rep eq "o" || $rep eq "0")
-                    {	
-                        create_nav if ( ! -e "tmp/filenav-ok" or ! -e "tmp/file.nav" );
-                        $strF=`tail -1 tmp/file.nav | awk '{print \$1}'`;
-                        chomp($strF);
-                        if ( $strF > 0 )  # Take care there are several sequence units !!
-                        {       
-                            $display=$strF + 1;
-                            if ( $strF > 10 )
-                            { 	print $RED."\tThere is too much sequence units in this clip to encode it\n\tin cluster mode with a good video quality\n\tReversing to NO CLUSTER...\n".$NORM;
-                                $strF=NO;
-                                sleep(2);
-                            }
-                        }
-# WE need create-extract in CLUSTER Mode to have $audio_rescale :-(
-                        create_extract if ( $strF ne NO && ( ! -e "tmp/extract-ok" || ! -e "tmp/extract.text"));
-                        $CLUSTER=$strF;
-                    }
-                }
-                print CONF "#CLUSTER:$CLUSTER # YOU CAN REMOVE BUT NOT MODIFY THIS LINE\n";
-                close(CONF);
-                print $DEBUG "<--- ask_clust\n";
-# End sub ask_clust
+        #  We put the clipping border same size ( the smallest )
+        $clip[0]=$clip[2] if ( $clip[2] < $clip[0] ) ;
+        $clip[1]=$clip[3] if ( $clip[3] < $clip[1] ) ;
+        system("/bin/rm autoclip*.pgm");
+        $tb=$clip[0];
+        $lr=$clip[1];
+        print $GREEN."-j $tb,$lr\n".$NORM;
+    } else {
+        print $RED."$v2d\t pgmfindclip in your PATH:\t\t   | NO\n".$NORM;
+        print $INFO "You may find pgmfindclip at http://www9.informatik.uni-erlangen.de/~Vogelgsang/bp/tctools.html\n";
+        sleep(2);
+        $tb=0;
+        $lr=0;
+    }
 }
 
-#********** Cluster MODE ************
-sub cluster
-{ 	
-    print $DEBUG "--->  Enter cluster\n";
-    $wdir=`pwd`;
-    chomp($wdir);
-    ( -e $CLUSTER_CONFIG ) or mydie $warnclust;
-
-    open(GOODNODE,">/tmp/node");
-    $NODE=`grep -v "^[[:space:]]*#" $CLUSTER_CONFIG | grep -v '^[[:space:]]*$$' | wc -l`;
-    print $GREEN."$v2d\t Number of Nodes:\t\t   | $NODE$NORM\n";	
-    if ( $NODE != 0 )
+# 		ASK if Cluster is used 
+sub ask_clust
+{
+    print $DEBUG "--->  Enter ask_clust\n";
+    open(CONF,">>tmp/V2divx.conf");
+    unlink("tmp/cluster.args");
+    $CLUSTER="NO";
+    print $GREEN."$v2d\t Cluster config file exist:\t\t   |".$NORM;
+    if ( ! -e $CLUSTER_CONFIG )
     {
-        $poweroff=0;
-        $poweron=0;
-        $localhost=`hostname`;
-        chomp($localhost);
-        @allnodes=`grep -v "^[[:space:]]*#" $CLUSTER_CONFIG | grep -v '^[[:space:]]*$$'| awk -F"#" '{print \$1}'`;
-        foreach $node  ( @allnodes )	
-        {
-            @chost=split /:/, $node;
-            $rhost=$chost[0];
-            if ( $rhost ne "$localhost" )
-            {	
-                $rs=system("$RMCMD $rhost whoami >/dev/null 2>&1");
-                if ( $rs != 0 )
+        print $RED." NO\n".$NORM;
+    } else {
+        print $GREEN." Yes\n".$NORM if ( -e $CLUSTER_CONFIG );
+        print " Do you want to use a cluster (y|N)? ";
+        $rep=<STDIN>;
+        chomp($rep);
+        if ( $rep eq "y" || $rep eq "Y" || $rep eq "o" || $rep eq "0")
+        {	
+            create_nav if ( ! -e "tmp/filenav-ok" or ! -e "tmp/file.nav" );
+            $strF=`tail -1 tmp/file.nav | awk '{print \$1}'`;
+            chomp($strF);
+            if ( $strF > 0 )  # Take care there are several sequence units !!
+            {       
+                $display=$strF + 1;
+                if ( $strF > 10 )
                 {
-                    $NODE = $NODE - 1;
-                    print $RED."\tNode $rhost unreachable ...\n";
-                    $P=$chost[1];
-                    chomp($P);
-                    $poweroff = $poweroff + $P;
-                    print "\tNeed to calculate $poweroff % of frames on other node(s)\n".$NORM;
-                    last if ( $poweroff >= 100 );
+                    print $RED."\tThere is too much sequence units in this clip to encode it\n\tin cluster mode with a good video quality\n\tReversing to NO CLUSTER...\n".$NORM;
+                    $strF=NO;
+                    sleep(2);
+                }
+            }
+            #  WE need create-extract in CLUSTER Mode to have $audio_rescale :-(
+                create_extract if ( $strF ne NO && ( ! -e "tmp/extract-ok" || ! -e "tmp/extract.text"));
+                $CLUSTER=$strF;
+            }
+        }
+        print CONF "#CLUSTER:$CLUSTER # YOU CAN REMOVE BUT NOT MODIFY THIS LINE\n";
+        close(CONF);
+        print $DEBUG "<--- ask_clust\n";
+        #  End sub ask_clust
+    }
+
+    # ********** Cluster MODE ************
+    sub cluster
+    { 	
+        print $DEBUG "--->  Enter cluster\n";
+        $wdir=`pwd`;
+        chomp($wdir);
+        ( -e $CLUSTER_CONFIG ) or mydie $warnclust;
+
+        open(GOODNODE,">/tmp/node");
+        $NODE=`grep -v "^[[:space:]]*#" $CLUSTER_CONFIG | grep -v '^[[:space:]]*$$' | wc -l`;
+        print $GREEN."$v2d\t Number of Nodes:\t\t   | $NODE$NORM\n";	
+        if ( $NODE != 0 )
+        {
+            $poweroff=0;
+            $poweron=0;
+            $localhost=`hostname`;
+            chomp($localhost);
+            @allnodes=`grep -v "^[[:space:]]*#" $CLUSTER_CONFIG | grep -v '^[[:space:]]*$$'| awk -F"#" '{print \$1}'`;
+            foreach $node  ( @allnodes )	
+            {
+                @chost=split /:/, $node;
+                $rhost=$chost[0];
+                if ( $rhost ne "$localhost" )
+                {	
+                    $rs=system("$RMCMD $rhost whoami >/dev/null 2>&1");
+                    if ( $rs != 0 )
+                    {
+                        $NODE = $NODE - 1;
+                        print $RED."\tNode $rhost unreachable ...\n";
+                        $P=$chost[1];
+                        chomp($P);
+                        $poweroff = $poweroff + $P;
+                        print "\tNeed to calculate $poweroff % of frames on other node(s)\n".$NORM;
+                        last if ( $poweroff >= 100 );
+                    } else {
+                        $P=$chost[1];
+                        chomp($P);
+                        print GOODNODE "$rhost:$P\n";
+                        $poweron = $poweron + $P;
+                    }
                 } else {
                     $P=$chost[1];
                     chomp($P);
+                    print $DEBUG "Host : ".$chost[0]." , Pow = $P\n";
                     print GOODNODE "$rhost:$P\n";
                     $poweron = $poweron + $P;
                 }
-            } else {
-                $P=$chost[1];
-                chomp($P);
-                print $DEBUG "Host : ".$chost[0]." , Pow = $P\n";
-                print GOODNODE "$rhost:$P\n";
-                $poweron = $poweron + $P;
             }
+            $addpower = $poweroff / $NODE;
+            close(GOODNODE);
+        } else {
+            unlink("/tmp/node");
         }
-        $addpower = $poweroff / $NODE;
-        close(GOODNODE);
-    } else {
-        unlink("/tmp/node");
-    }
-    if ( -e "/tmp/node" )
-    {	
-        $tabpower="";
-        $sumpow=0;
-        $max=0;	
-        $i=0;
-        @allnodes=`cat /tmp/node`;
-        unlink("/tmp/node");
-        foreach $node (@allnodes )     
-        { 
-            @chost=split /:/, $node; 
-            $rhost=$chost[0];
-            if ( $sumpow < 100 )
-            {	
-                $pow=$chost[1];
-                $pow=$pow + $addpower;
-                $max=$sumpow + $pow;
-                $pow = 100 - $sumpow if ( $max > 100 );
-                open(CLUSTERARGS,">tmp/cluster.args");
-                print CLUSTERARGS "$sumpow,$pow\n";
-                close(CLUSTERARGS);
-                print $GREEN."$v2d\t Encoding on node $rhost:\t   | -W $sumpow,$pow\n".$NORM;
-                if ( $rhost ne "$localhost" ) 
-                { 	
-                    system ("xterm -n rhost -e $RMCMD $rhost $0 runclust $wdir &");
-                } else {
-                    system ("xterm -n $rhost -e $0 runclust $wdir &");
-                }
-                $tabpower[$i]=$sumpow;
-                $i++;
-                $sumpow= $sumpow + $pow;
-                sleep (7);
-            }
-        }
-        if  ( $sumpow <  100 )
-        {
-            $pow = 100 - $sumpow;
-            open(CLUSTERARGS,">tmp/cluster.args");
-            print  CLUSTERARGS "$sumpow,$pow\n";
-            close(CLUSTERARGS);
-            print $GREEN."$v2d\t Encoding on localnode with:\t\t   | -W $sumpow,$pow to finish\n".$NORM;
-            system ("xterm -e $0 runclust $wdir &");
-            $tabpower[$i]=$sumpow;
-            sleep(3);
-        }
-        print $GREEN."$v2d\t Wait for nodes finish ....\n".$NORM;
-        foreach $endnode ( @tabpower )
+        if ( -e "/tmp/node" )
         {	
-            while ( ! -e "tmp/2-$dvdtitle${endnode}_0.finish" )
-            {
-                print "\r|"; sleep(1); print "\r/"; sleep(1); print "\r-"; sleep(1); print "\r\\"; sleep(1);
+            $tabpower="";
+            $sumpow=0;
+            $max=0;	
+            $i=0;
+            @allnodes=`cat /tmp/node`;
+            unlink("/tmp/node");
+            foreach $node (@allnodes )     
+            { 
+                @chost=split /:/, $node; 
+                $rhost=$chost[0];
+                if ( $sumpow < 100 )
+                {	
+                    $pow=$chost[1];
+                    $pow=$pow + $addpower;
+                    $max=$sumpow + $pow;
+                    $pow = 100 - $sumpow if ( $max > 100 );
+                    open(CLUSTERARGS,">tmp/cluster.args");
+                    print CLUSTERARGS "$sumpow,$pow\n";
+                    close(CLUSTERARGS);
+                    print $GREEN."$v2d\t Encoding on node $rhost:\t   | -W $sumpow,$pow\n".$NORM;
+                    if ( $rhost ne "$localhost" ) 
+                    { 	
+                        system ("xterm -n rhost -e $RMCMD $rhost $0 runclust $wdir &");
+                    } else {
+                        system ("xterm -n $rhost -e $0 runclust $wdir &");
+                    }
+                    $tabpower[$i]=$sumpow;
+                    $i++;
+                    $sumpow= $sumpow + $pow;
+                    sleep (7);
+                }
             }
-            print $GREEN."$v2d\t Node $endnode has finished to encode\n".$NORM;
-        }	
-        merge;
-        twoac;
-        finish;
-        unlink("tmp/cluster.args");
-    } else {
-        print $RED."\tNothing to do :-(\n".$NORM;
+            if  ( $sumpow <  100 )
+            {
+                $pow = 100 - $sumpow;
+                open(CLUSTERARGS,">tmp/cluster.args");
+                print  CLUSTERARGS "$sumpow,$pow\n";
+                close(CLUSTERARGS);
+                print $GREEN."$v2d\t Encoding on localnode with:\t\t   | -W $sumpow,$pow to finish\n".$NORM;
+                system ("xterm -e $0 runclust $wdir &");
+                $tabpower[$i]=$sumpow;
+                sleep(3);
+            }
+            print $GREEN."$v2d\t Wait for nodes finish ....\n".$NORM;
+            foreach $endnode ( @tabpower )
+            {	
+                while ( ! -e "tmp/2-$dvdtitle${endnode}_0.finish" )
+                {
+                    print "\r|"; sleep(1); print "\r/"; sleep(1); print "\r-"; sleep(1); print "\r\\"; sleep(1);
+                }
+                print $GREEN."$v2d\t Node $endnode has finished to encode\n".$NORM;
+            }	
+            merge;
+            twoac;
+            finish;
+            unlink("tmp/cluster.args");
+        } else {
+            print $RED."\tNothing to do :-(\n".$NORM;
+        }
+        print $DEBUG "<--- cluster\n";
+        exit(0);
+        #  End cluster Sub routine
     }
-    print $DEBUG "<--- cluster\n";
-    exit(0);
-# End cluster Sub routine
-}
 
 
-#  ******************** Create Nav File (For cluster) ********************
+    #   ******************** Create Nav File (For cluster) ********************
 
-sub create_nav
-{
-    print $GREEN."$v2d\t Using Cluster, creating:\t\t   | tmp/file.nav".$NORM;
-    my $pid = fork();
-    mydie "couldn't fork" unless defined $pid;
-    if ($pid)
+    sub create_nav
     {
-        $sys = "cat $vobpath/*.[Vv][Oo][Bb] | tcdemux -W > tmp/file.nav";
-        print $INFO $sys."\n";
-        system ("nice -$nice $sys") == 0  or ( system ("touch tmp/filenav.finish")== 0 and mydie "Unable to create file nav" );
-        system("touch tmp/filenav.finish");	
-        wait;
-        system("touch tmp/filenav-ok");
-    } else {
-        smily(filenav);
-    }
-}
-
-
-# ***********************Create extract info (to calculate bitrate) *******
-
-sub create_extract
-{
-    print $DEBUG "--->  Enter create_extract\n";
-    get_audio_channel if ( ! defined($audio_channel));
-    $audio_format=audioformat("-a $audio_channel") if ( $NOAUDIO != 1 );	
-    a_bitrate if ( ! defined($audio_bitrate));
-    $info=`transcode -i $vobpath -c 1-2 2> /dev/null` or mydie "Problem when running \'transcode -i $vobpath\'";
-    $info =~ m,V:\s+encoding\s+fps.*\|\s+(\d+\.\d+),;
-    my($FPS)=$1;
-    if ( $NOAUDIO == 1  || $need_time == 1 )  
-    {
-        # || $in_video_magic eq 'mpeg2'(OK V=mpeg2,A=mp3.mpg)  
-        # || $in_video_magic eq 'vdr' )
-        print $RED." A tcextract bug do not allow me to extract correct informations from this  $in_video_magic streams\n".$NORM if ( $need_time == 1 );
-        print $RED." As there is no audio channel, V2divx is unable to extract some informations from this Clip\n".$NORM if ( $NOAUDIO == 1 ); 
-        print " So please, say me how long is this movie (in seconds)?:";
-        my $rep=<STDIN>;
-        chomp($rep);
-        my $frames=floor($rep*$FPS);
-        my $audiosize=$audio_bitrate*1000*$rep/(1024*1024*8);
-        open(EXTRACT,">tmp/extract.text");
-        print EXTRACT "[V2dscan] audio frames=$frames, estimated clip length=$rep seconds
-        [V2dscan] V: $frames frames, $rep sec @ $FPS fps
-        [V2dscan] A: $audiosize MB @ $audio_bitrate kbps";
-        close(EXTRACT);
-        system("touch tmp/extract-ok");
-
-    } elsif ( $in_video_magic eq 'mov' ) {
-        my $info=`tcprobe -i $vobpath/$sample 2>&1` or mydie "Error when running 'tcprobe -i $vobpath/$sample'";
-        my $frames = $1 if ( $info =~ m, length: (\d+) frames,);
-        my $rep = floor($frames/$FPS);
-        my $audiosize=$audio_bitrate*1000*$rep/(1024*1024*8);
-        print $DEBUG " Frames = $frames , lenght = $rep , audiosize = $audiosize \n";
-        open(EXTRACT,">tmp/extract.text");
-        print EXTRACT "[V2dscan] audio frames=$frames, estimated clip length=$rep seconds
-        [V2dscan] V: $frames frames, $rep sec @ $FPS fps
-        [V2dscan] A: $audiosize MB @ $audio_bitrate kbps";
-        close(EXTRACT);
-        system("touch tmp/extract-ok");
-    } else {
-        print $GREEN."$v2d\t Creating :\t\t\t\t   | tmp/extract.text".$NORM."\n";
+        print $GREEN."$v2d\t Using Cluster, creating:\t\t   | tmp/file.nav".$NORM;
         my $pid = fork();
         mydie "couldn't fork" unless defined $pid;
         if ($pid)
         {
-            my $tmp = `tcprobe -i $vobpath/$sample 2>&1` or mydie "Error when running 'tcprobe -i $vobpath/$sample'";
-            if ( $tmp =~ m,-e (\d+)\,(\d+)\,(\d+) \[\d+\,\d+\,\d+\],)
-            { 	$bits=$2;
-            $bits=16 if ( $bits == 0 );
-            $tmp_channels=($3 > 2) ? 2 : $3;
-            $audio_rate="$1,$bits,$tmp_channels";
+            $sys = "cat $vobpath/*.[Vv][Oo][Bb] | tcdemux -W > tmp/file.nav";
+            print $INFO $sys."\n";
+            system ("nice -$nice $sys") == 0  or ( system ("touch tmp/filenav.finish")== 0 and mydie "Unable to create file nav" );
+            system("touch tmp/filenav.finish");	
+            wait;
+            system("touch tmp/filenav-ok");
+        } else {
+            smily(filenav);
         }
-        print $DEBUG "\nAudio rate = $audio_rate \n";
-        if ( $audio_format eq 'pcm' ) # Do not need to decode audio
-        { 
-            if (  $in_video_magic eq 'avi' )
+    }
+
+
+    #  ***********************Create extract info (to calculate bitrate) *******
+
+    sub create_extract
+    {
+        print $DEBUG "--->  Enter create_extract\n";
+        get_audio_channel if ( ! defined($audio_channel));
+        $audio_format=audioformat("-a $audio_channel") if ( $NOAUDIO != 1 );	
+        a_bitrate if ( ! defined($audio_bitrate));
+        $info=`transcode -i $vobpath -c 1-2 2> /dev/null` or mydie "Problem when running \'transcode -i $vobpath\'";
+        $info =~ m,V:\s+encoding\s+fps.*\|\s+(\d+\.\d+),;
+        my($FPS)=$1;
+        if ( $NOAUDIO == 1  || $need_time == 1 )  
+        {
+            # || $in_video_magic eq 'mpeg2'(OK V=mpeg2,A=mp3.mpg)  
+            # || $in_video_magic eq 'vdr' )
+            print $RED." A tcextract bug do not allow me to extract correct informations from this  $in_video_magic streams\n".$NORM if ( $need_time == 1 );
+            print $RED." As there is no audio channel, V2divx is unable to extract some informations from this Clip\n".$NORM if ( $NOAUDIO == 1 ); 
+            print " So please, say me how long is this movie (in seconds)?:";
+            my $rep=<STDIN>;
+            chomp($rep);
+            my $frames=floor($rep*$FPS);
+            my $audiosize=$audio_bitrate*1000*$rep/(1024*1024*8);
+            open(EXTRACT,">tmp/extract.text");
+            print EXTRACT "[V2dscan] audio frames=$frames, estimated clip length=$rep seconds
+            [V2dscan] V: $frames frames, $rep sec @ $FPS fps
+            [V2dscan] A: $audiosize MB @ $audio_bitrate kbps";
+            close(EXTRACT);
+            system("touch tmp/extract-ok");
+
+        } elsif ( $in_video_magic eq 'mov' ) {
+            my $info=`tcprobe -i $vobpath/$sample 2>&1` or mydie "Error when running 'tcprobe -i $vobpath/$sample'";
+            my $frames = $1 if ( $info =~ m, length: (\d+) frames,);
+            my $rep = floor($frames/$FPS);
+            my $audiosize=$audio_bitrate*1000*$rep/(1024*1024*8);
+            print $DEBUG " Frames = $frames , lenght = $rep , audiosize = $audiosize \n";
+            open(EXTRACT,">tmp/extract.text");
+            print EXTRACT "[V2dscan] audio frames=$frames, estimated clip length=$rep seconds
+            [V2dscan] V: $frames frames, $rep sec @ $FPS fps
+            [V2dscan] A: $audiosize MB @ $audio_bitrate kbps";
+            close(EXTRACT);
+            system("touch tmp/extract-ok");
+        } else {
+            print $GREEN."$v2d\t Creating :\t\t\t\t   | tmp/extract.text".$NORM."\n";
+            my $pid = fork();
+            mydie "couldn't fork" unless defined $pid;
+            if ($pid)
             {
-                chk_wdir if ( ! defined($sample));
-                $sys = "nice -$nice tcextract -i \"$vobpath/$sample\" -x $audio_format | nice -$nice tcscan -b $audio_bitrate -x pcm -f $FPS -e $audio_rate 2>> tmp/extract.text  >> tmp/extract.text";
+                my $tmp = `tcprobe -i $vobpath/$sample 2>&1` or mydie "Error when running 'tcprobe -i $vobpath/$sample'";
+                if ( $tmp =~ m,-e (\d+)\,(\d+)\,(\d+) \[\d+\,\d+\,\d+\],)
+                {
+                    $bits=$2;
+                    $bits=16 if ( $bits == 0 );
+                    $tmp_channels=($3 > 2) ? 2 : $3;
+                    $audio_rate="$1,$bits,$tmp_channels";
+                }
+                print $DEBUG "\nAudio rate = $audio_rate \n";
+                if ( $audio_format eq 'pcm' ) # Do not need to decode audio
+                { 
+                    if (  $in_video_magic eq 'avi' )
+                    {
+                        chk_wdir if ( ! defined($sample));
+                        $sys = "nice -$nice tcextract -i \"$vobpath/$sample\" -x $audio_format | nice -$nice tcscan -b $audio_bitrate -x pcm -f $FPS -e $audio_rate 2>> tmp/extract.text  >> tmp/extract.text";
+                    } else {
+                        $sys = "cat $vobpath/* | nice -$nice tcextract -x $audio_format -t $in_video_magic | nice -$nice tcscan -b $audio_bitrate -x pcm -f $FPS -e $audio_rate 2>> tmp/extract.text  >> tmp/extract.text";
+                    }
+                } elsif (  $audio_format eq mp3  || $in_video_magic eq 'avi') {
+                    chk_wdir if ( ! defined($sample));
+                    $sys = "nice -$nice tcextract -i \"$vobpath/$sample\" -x $audio_format | nice -$nice tcdecode -x $audio_format | nice -$nice tcscan -b $audio_bitrate -x pcm -e $audio_rate -f $FPS 2>> tmp/extract.text  >> tmp/extract.text";
+                } else {
+                    $sys = "cat $vobpath/* | nice -$nice tcextract -x $audio_format -t $in_video_magic | nice -$nice tcdecode -x $audio_format | nice -$nice tcscan -b $audio_bitrate -x pcm -e $audio_rate -f $FPS 2>> tmp/extract.text  >> tmp/extract.text";
+                }
+                print $INFO "\n$sys\n";
+                print $DEBUG "+ Working directory ".`pwd`;
+                system ("nice -$nice $sys") == 0  
+                    or ( 
+                    system("touch tmp/extract.finish") == 0 
+                        and mydie "Unable to create extract.finish. $!" 
+                ) ;
+                system("touch tmp/extract.finish");
+                wait;
+                system("touch tmp/extract-ok");
             } else {
-                $sys = "cat $vobpath/* | nice -$nice tcextract -x $audio_format -t $in_video_magic | nice -$nice tcscan -b $audio_bitrate -x pcm -f $FPS -e $audio_rate 2>> tmp/extract.text  >> tmp/extract.text";
+                smily(extract);
             }
-        } elsif (  $audio_format eq mp3  || $in_video_magic eq 'avi') {
-            chk_wdir if ( ! defined($sample));
-            $sys = "nice -$nice tcextract -i \"$vobpath/$sample\" -x $audio_format | nice -$nice tcdecode -x $audio_format | nice -$nice tcscan -b $audio_bitrate -x pcm -e $audio_rate -f $FPS 2>> tmp/extract.text  >> tmp/extract.text";
-        } else {
-            $sys = "cat $vobpath/* | nice -$nice tcextract -x $audio_format -t $in_video_magic | nice -$nice tcdecode -x $audio_format | nice -$nice tcscan -b $audio_bitrate -x pcm -e $audio_rate -f $FPS 2>> tmp/extract.text  >> tmp/extract.text";
         }
-        print $INFO "\n$sys\n";
-        print $DEBUG "+ Working directory ".`pwd`;
-        system ("nice -$nice $sys") == 0  
-            or ( 
-            system("touch tmp/extract.finish") == 0 
-                and mydie "Unable to create extract.finish. $!" 
-        ) ;
-        system("touch tmp/extract.finish");
-        wait;
-        system("touch tmp/extract-ok");
-    } else {
-        smily(extract);
-    }
-}
-print "\n";
-$duree=`cat tmp/extract.text`;
-$duree =~ m,estimated clip length=(\d+.\d+) seconds,;
-print $GREEN."$v2d\t Estimated Clip Length:\t\t  | $1 sec\n".$NORM;
-print $DEBUG "<--- create_extract\n";
-}
-
-# **********************Calculate How many Frames to encode ******************
-
-sub calculate_nbrframe
-{
-    print $DEBUG "---> Enter calculate_nbrframe\n";
-    # We need Info about Clip
-
-    if ( -e "tmp/probe.rip" && ! -e "tmp/probe.rip-BAD")
-    {  	
-        $info = `cat tmp/probe.rip`;
-        $LOG="tmp/probe.rip";
-    } else {
-        create_extract if (! -e "tmp/extract-ok" || ! -e "tmp/extract.text" );
-        $info = `cat tmp/extract.text`;
-        $LOG="tmp/extract.text";
-    }
-
-    ($info =~ m,V: (\d+) frames,) or mydie "Unable to find number of frames to encode in $LOG" ;
-    $tot_frames = $1;
-
-    $info=`transcode -i $vobpath -c 1-2 2> /dev/null` or mydie "Problem when running \'tcprobe -i $vobpath\'";
-    $info =~ m,V: encoding fps     \| (\d+\.\d+)\n,;
-    $FPS=$1;
-
-    $nbr_frames= floor($tot_frames - ($deb_sec+$last_sec)*$FPS);
-    print $DEBUG "Number of frames: $nbr_frames\n";
-    print $DEBUG "<--- calculate_nbrframe\n";
-}
-
-# ********** Calculate Bitrate ****************
-
-sub calculate_bitrate
-{	
-    print $DEBUG "--->  Enter calculate_bitrate\n";
-
-    # We need Audio Bitrate
-    a_bitrate if ( ! defined($audio_bitrate) );
-
-    # And Also Info about Clip
-    if ( -e "tmp/probe.rip" && ! -e "tmp/probe.rip-BAD" )
-    {       
-        $info = `cat tmp/probe.rip`;
-        $LOG="tmp/probe.rip";
-    } else {
-        if (! -e "tmp/extract-ok" ||  ! -e "tmp/extract.text" )
-        {       create_extract;
-    }
-    $info = `cat tmp/extract.text`;
-    $LOG="tmp/extract.txt";
-}
-
-( $info =~ m,frames\, (\d+) sec @ ,) or mydie "Unable to find Video Runtime in $LOG";
-$fulltime=$1;
-mydie " ERROR : You said end credits is $last_sec sec. long, but this movie in only $fulltime sec." if ( $fulltime < $last_sec );
-$runtime=$fulltime - ($deb_sec+$last_sec);
-if ( $NOAUDIO != 1 )
-{
-    ( $info =~ m, A: (\d+\.*\d*) MB @ ,) or mydie "Unable to find Audio Size in $LOG";
-    $audio_size = $1*$runtime/$fulltime;
-    ( $info =~ m, A: .* MB @ (\d+) kbps,) or mydie "Unable to find audio bitrate in $LOG";
-    $audio_size = $audio_size*$audio_bitrate/$1;
-    $audio_size=2*$audio_size if ( defined($ac2));
-} else {
-    $audio_size = 0;
-}
-
-ask_filesize if ( ! $filesize );
-
-$bitrate = floor(($filesize - $audio_size)/$runtime * 1024 * 1024 * 8 / 1000);
-if ($bitrate < 20)
-{	
-    print $RED."\n#### ATTENTION ####\n\tCalculated bitrate is $bitrate kbps, \nwhich does not make much sense, I'll use 700 kbps instead. \nFilesize will not match your preferred filesize. Sorry\n".$NORM." Press Enter -->";
-    $junk=<STDIN>;
-    $bitrate = 700;
-}
-# audio_rescale for CLUSTER mode
-$info=`cat tmp/extract.text` if ( -f "tmp/extract.text");
-if ( $info =~ m,suggested volume rescale=(\d+.*\d+),)
-{		$audio_rescale = $1;
-}
-print $DEBUG "Bitrate : $bitrate\n";
-
-print $DEBUG "<--- calculate_bitrate\n";
-
-} # END calculate_bitrate
-
-# ********** Main Avi encode ***************
-
-sub aviencode
-{       	print $DEBUG "--->  Enter aviencode\n";
-# Zooming MUST have been call before aviencode
-# zooming will give us $filesize $bitrate and 	Zoom
-$params .=" -$Zoom_mode ${NXaxis}x$NYaxis" if ($Zoom_mode eq Z);
-$params .=" -$Zoom_mode $zH,$zW,$row" if ($Zoom_mode eq B);
-
-printinfo if ( ! -e "tmp/cluster.args");
-cluster if ( $CLUSTER ne "NO" && ! -e "tmp/cluster.args");
-
-
-if (  $CLUSTER ne "NO" )	
-{ 	$cluster=`cat tmp/cluster.args`;
-chomp($cluster);
-$cluster="-W $cluster,tmp/file.nav";
-$node=`cat tmp/cluster.args| awk -F, '{print \$1}'`;
-chomp($node);
-$fparams="$params $cluster";
-chomp($CLUSTER);
-$sequnit=$CLUSTER;
-} else {
-    $cluster="";
-    $sequnit=0;
-# Encode all frames (only if $last_sec AND $deb_sec < 600 ) , we'll split after
-if ( $deb_sec < 600 )
-{  $from_frames=0; } else {  $from_frames=$deb_sec*$FPS}
-if ( $last_sec < 600 )
-{ $to_frames=$tot_frames; } else { $to_frames=$tot_frames-$last_sec*$FPS }
-$fparams="$params -c $from_frames-$to_frames";
-#        	$fparams="$params "; # MODIF -c $from_frames-$to_frames";
-}
-
-system("rm tmp/*.done  2> /dev/null");
-
-$start_frames_logo=floor(($deb_sec+$beginlogo)*$FPS);
-$end_frames_logo=floor($addlogo*$FPS+$start_frames_logo);
-
-for ( $i=$sequnit; $i >= 0 ; $i--  )
-{      
-    print("*** SEQ UNIT = $i ********\n***  Cluster NODE number : $node ******* \n")  if (  $CLUSTER ne "NO" );
-    if ( $addlogo && $i == 0 && $CLUSTER eq "NO" )
-    {
-        $add_logo=",logo=file=$LOGO:posdef=$poslogo:rgbswap=$RGBSWAP:range=$start_frames_logo-$end_frames_logo";
-    }else
-    {	 $add_logo="";
-}
-
-$filter=$add_logo.$deintl.$sub_title;
-# WE NEED the next 4 lines  because in non cluster mode we do not have the $sequnit value, 
-# And WE want encode all the sequences unit (so, no -S option) .
-if ( $sequnit != 0 )
-{	
-    $seqopt="-S $i,all";
-} else {       
-    $seqopt="";
-}
-
-$params =~ m/-a (\d) .*/;
-$audio_params="-a $1";
-$audio_format=audioformat("$audio_params") if ( ! defined($audio_format));
-# Only ONE FILE allowed if input Video type is AVI, QT, DV , MPEG2
-$vobpath="$vobpath/$sample" if ( $in_video_magic eq divx || $in_video_magic eq mov || $in_video_magic eq 'mpeg2'  || $in_video_magic eq dv  );
-# Let transcode find it, if in audio type is "declared" as PCM
-$audio_format="" if ( $audio_format eq pcm );
-$audio_format="vob" if ( $in_video_codec eq vob );
-#
-if (! -e "tmp/1-${dvdtitle}${node}_${i}.finish")
-{
-    unlink("tmp/merge.finish");
-    unlink("tmp/2-${dvdtitle}${node}_${i}.finish");
-    print $GREEN."$v2d\t Encode: $vobpath Pass One ....\n".$NORM;
-    my $pid = fork();
-    mydie "couldn't fork" unless defined $pid;
-    if ($pid)
-    {
-        wait;
-        system("touch tmp/1-${dvdtitle}${node}_${i}.finish");
-    } else
-    {	
-        $sys = "transcode -i $vobpath $seqopt $clust_percent $fparams -w $bitrate,$keyframes -J astat=\"tmp/astat\"$filter -y $DIVX,null -x $in_video_codec,$audio_format $VID_OPT -R 1,tmp/$DIVX.${dvdtitle}${node}_${i}.log -o /dev/null"; 
-        print $INFO "$sys\n";
-        system("nice -$nice $sys"); 
         print "\n";
-        exit(0);
+        $duree=`cat tmp/extract.text`;
+        $duree =~ m,estimated clip length=(\d+.\d+) seconds,;
+        print $GREEN."$v2d\t Estimated Clip Length:\t\t  | $1 sec\n".$NORM;
+        print $DEBUG "<--- create_extract\n";
     }
-} else
-{	print $RED."${dvdtitle}${node}_${i} already encoded, remove \"tmp/1-${dvdtitle}${node}_${i}.finish\" to reencode \n".$NORM;
-}
-audiorescale;
-if (! -e "tmp/2-${dvdtitle}${node}_${i}.finish")
-{	
-    $filter="-J $filter" if ( $filter ne "" );
-    unlink("tmp/merge.finish");	
-    print $GREEN."$v2d\t Encode: $vobpath Pass Two ....\n".$NORM;
-    my $pid = fork();
-    mydie "couldn't fork" unless defined $pid;
-    if ($pid)
-    {	wait;
-    system("touch tmp/2-${dvdtitle}${node}_${i}.finish");
-} else
-{	
-    $sys = "transcode -i $vobpath $seqopt $clust_percent $fparams -s $audio_rescale -w $bitrate,$keyframes -b $audio_bitrate -y $DIVX -x $in_video_codec,$audio_format $VID_OPT $filter -R 2,tmp/$DIVX.${dvdtitle}${node}_${i}.log -o tmp/2-${dvdtitle}${node}_${i}.avi";
-    print $INFO "$sys\n";
-    system("nice -$nice $sys"); 
-    print"\n";
-    exit(0);
-}
-} else
-{	print $RED."${dvdtitle}${node}_${i} already encoded, remove \"tmp/2-${dvdtitle}${node}_${i}.finish\" to reencode \n".$NORM;
-}
-} # end boucle for
-if ( $CLUSTER ne "NO")
-{       print ("Finish ... Wait \n ");
-sleep (3);
-}
-print $DEBUG "<--- aviencode\n";
-} # END Aviencode
 
-#			********* MERGING ( and syncing )Function **************
-sub merge
-{	print $DEBUG "--->  Enter merge\n";
-if (! -e "tmp/merge.finish" )
-{       unlink("tmp/sync.finish"); 
-unlink("tmp/finish");
-print $GREEN."$v2d\t Merging the sequence units\n".$NORM;	
-my $pid = fork();
-mydie "couldn't fork" unless defined $pid;
-if ($pid)
-{	wait;
-system("touch tmp/merge.finish");
-} else {	
-# $CLUSTER  is known because we've pass through aviencode before
-for ( $i=$CLUSTER ; $i >= 0 ; $i-- )
-{ 	print $GREEN."$v2d\t Seq. unit :\t\t\t   | $i\n".$NORM;	
-$sys = "avimerge -i tmp/2-*_$i.avi -o tmp/tmp_movie_$i.avi";
-print $INFO "$sys\n";
-system("nice -$nice $sys 1> /dev/null");
-}
-if ( $CLUSTER > 0 )
-{
-    $sys = "avimerge -i tmp/tmp_movie_*.avi -o tmp/2-$dvdtitle.avi && rm tmp/tmp_movie_*.avi";
-    print $INFO "$sys\n";
-    system("nice -$nice $sys 1> /dev/null");
-} else {
-    rename("tmp/tmp_movie_0.avi","tmp/2-$dvdtitle.avi");
-}
-exit(0);
-}
-}else
-{       
-    print $RED."*.avi of $dvdtitle are already merge ... remove \"tmp/merge.finish\" to re-merge it\n".$NORM;
-}
-print $DEBUG "<--- merge\n";
+    #  **********************Calculate How many Frames to encode ******************
 
-
-################# add audio in cluster mode ############################
-
-print $DEBUG "--->  Enter synchro\n";
-audiorescale;
-if (! -e "tmp/sync.finish" )
-{	
-    unlink("tmp/finish");
-    unlink("tmp/sync.done") if ( -e "tmp/sync.done" );
-# We need to catch the keyframe...
-$from_frames=$deb_sec*$FPS;
-$to_frames=$tot_frames-$last_sec*$FPS;
-$synclogo=int(($end_frames_logo+$keyframes)/$keyframes)*$keyframes;
-if ( $addlogo ne 0 && $addlogo <= 300 )
-{	 $start_frames=$synclogo;
-} else {
-    $start_frames=$from_frames;
-}
-$params =~ m/-a (\d) .*/;
-$audio_params="-a $1";
-print $GREEN."$v2d\t Merging Video and Audio streams\n".$NORM;
-my $pid = fork();
-mydie "couldn't fork" unless defined $pid;
-if ($pid)
-{       wait;
-system("touch tmp/sync.finish");
-} else {
-    $sys = "transcode -p $vobpath $audio_params -b $audio_bitrate -c $start_frames-$to_frames -s $audio_rescale -i tmp/2-$dvdtitle.avi -P 1 -x avi,vob -y raw -o tmp/2-${dvdtitle}_sync.avi -u 50";
-    print $INFO "$sys\n";
-    system("nice -$nice $sys")==0 or mydie "Unable to merge Audio and Video";
-    unlink("tmp/enc_audiochannel2.finish") if ( -e "tmp/enc_audiochannel2.finish");
-    exit(0);
-}
-}else
-{	print $RED."$dvdtitle is already sync, remove \"tmp/sync.finish\" to re-sync it\n".$NORM;
-}
-print $DEBUG "<--- synchro\n";
-} # END merge
-
-
-####################### Encode the optionnal second audio channel #############
-
-sub twoac
-{
-    print $DEBUG "---> Enter twoac\n";
-    return() if ( ! defined($ac2));
-    audioformat("-a $ac2");
-    if ( ! -e "tmp/enc_audiochannel2.finish" )
-    { 	 
-        unlink("tmp/finish") if ( -e "tmp/finish");
-        unlink("tmp/audiochannel2.finish" ) if ( -e "tmp/audiochannel2.finish" );
-        print $GREEN."$v2d\t Encoding the second audio channel\n".$NORM;	
-        $sys="transcode -i $vobpath -x null -s $audio_rescale -b $audio_bitrate -g 0x0 -y raw -a $ac2  -o add-on-ac2.avi -u 50";
-        print $INFO $sys."\n";
-        system("nice -$nice $sys")==0 or mydie "Unable to encode the second audio channel";
-        system("touch tmp/enc_audiochannel2.finish") ;
-        print"\n";
-    }
-    if ( ! -e "tmp/audiochannel2.finish" )
+    sub calculate_nbrframe
     {
-        unlink("tmp/finish") if ( -e "tmp/finish");
-        print $GREEN."$v2d\t Merging the second audio channel\n".$NORM;	
-        $sys="avimerge -i tmp/2-${dvdtitle}_sync.avi -o tmp/3-${dvdtitle}_2ac.avi -p add-on-ac2.avi";
-        print $INFO "$sys\n";
-        system("nice -$nice $sys 1> /dev/null")==0 or mydie "Unable to merge movie and second audio channel";
-        rename("tmp/3-${dvdtitle}_2ac.avi","tmp/2-${dvdtitle}_sync.avi") && system("touch tmp/audiochannel2.finish") ;
-    }
-    print $DEBUG "<--- twoac\n";
-} # END 2ac
+        print $DEBUG "---> Enter calculate_nbrframe\n";
+        # We need Info about Clip
 
-#################### Finish the work ########################
-
-sub finish
-{
-    print $DEBUG "---> Enter finish\n";
-    if (! -e "tmp/finish")
-    {
-        $from_frames=$deb_sec*$FPS;
-        $to_frames=$nbr_frames+$from_frames;
-        if ( ($CLUSTER eq NO && ($last_sec eq 0 || $last_sec > 600) &&  ($deb_sec eq 0  || $deb_sec > 600)) || $CLUSTER ne NO )
-        {
-            makelogo if ( $CLUSTER ne NO && $add_logo );
-            print $GREEN."$v2d\t Renaming tmp/2-${dvdtitle}_sync.avi $dvdtitle.avi\n".$NORM ;
-            rename("tmp/2-${dvdtitle}_sync.avi","$dvdtitle.avi");
+        if ( -e "tmp/probe.rip" && ! -e "tmp/probe.rip-BAD")
+        {  	
+            $info = `cat tmp/probe.rip`;
+            $LOG="tmp/probe.rip";
         } else {
-            $sys="avisplit -t $from_frames-$to_frames -i  tmp/2-${dvdtitle}_sync.avi -o $dvdtitle.avi && mv $dvdtitle.avi-0000 $dvdtitle.avi";
-            print $GREEN."$v2d\t Splitting the result to $nbr_frames frames.\n".$NORM;
-            print $INFO "$sys\n";
-            system("nice -$nice $sys");
+            create_extract if (! -e "tmp/extract-ok" || ! -e "tmp/extract.text" );
+            $info = `cat tmp/extract.text`;
+            $LOG="tmp/extract.text";
         }
-        system("touch tmp/finish");
+
+        ($info =~ m,V: (\d+) frames,) or mydie "Unable to find number of frames to encode in $LOG" ;
+        $tot_frames = $1;
+
+        $info=`transcode -i $vobpath -c 1-2 2> /dev/null` or mydie "Problem when running \'tcprobe -i $vobpath\'";
+        $info =~ m,V: encoding fps     \| (\d+\.\d+)\n,;
+        $FPS=$1;
+
+        $nbr_frames= floor($tot_frames - ($deb_sec+$last_sec)*$FPS);
+        print $DEBUG "Number of frames: $nbr_frames\n";
+        print $DEBUG "<--- calculate_nbrframe\n";
     }
 
-# substract unixtimestamp from our original timestamp
-my $end_time = time - $start_time;
-my $f_end_time = format_date($end_time,"hours");
-print "Number of Hours: $f_end_time \n";
-if ( -x "/usr/bin/flite" )
-{
-# say it outloud using "flite" speech synthetizer
-system("/usr/bin/flite -t 'Number of hours $f_end_time'");
-}
+    #  ********** Calculate Bitrate ****************
 
-print " Now take a look at the end of $dvdtitle.avi\n\t If for some reason the divx file does'nt reach the end credits, just edit tmp/V2divx.conf, decrease the last_sec value, remove the tmp/finish file and then run V2divx without parameters.";
-print " Is you divx file OK? (y/N): ";
-$rep=<STDIN>;
-chomp($rep);
-if ($rep eq "O" or $rep eq "o" or $rep eq "y" or $rep eq "Y")
-{
-    print "May I clean the tmp directory and other temporaries and log files ? (y/N): ";
-    $rep=<STDIN>;
-    chomp($rep);
-    if ($rep eq "O" or $rep eq "o" or $rep eq "y" or $rep eq "Y")
-    {
-        rename("tmp/dvdtitle",$vobpath."/dvdtitle") if ( -e "tmp/dvdtitle" );
-        rename("tmp/probe.rip",$vobpath."/probe.rip") if ( -e "tmp/probe.rip" );
-        system("/bin/rm -rf tmp/*  video_s._-j_* audio_sample* add-on-ac2.avi");
-    }
-}
-print $DEBUG "<--- finish\n";
-mydie $NORM."Bye !!!";
-}  # ENd finish
+    sub calculate_bitrate
+    {	
+        print $DEBUG "--->  Enter calculate_bitrate\n";
 
+        # We need Audio Bitrate
+        a_bitrate if ( ! defined($audio_bitrate) );
 
-#  *************   Get Audio Bitrage ************
+        # And Also Info about Clip
+        if ( -e "tmp/probe.rip" && ! -e "tmp/probe.rip-BAD" )
+        {       
+            $info = `cat tmp/probe.rip`;
+            $LOG="tmp/probe.rip";
+        } else {
+            if (! -e "tmp/extract-ok" ||  ! -e "tmp/extract.text" )
+            {
+                create_extract;
+            }
+            $info = `cat tmp/extract.text`;
+            $LOG="tmp/extract.txt";
+        }
 
-sub a_bitrate
-{      	
-    print $DEBUG "--->  Enter Audio_bitrate\n";
-    $audio_bitrate ='null' if ( $NOAUDIO == 1 );
-    while ( $audio_bitrate ne 'null' && $audio_bitrate ne 32 && $audio_bitrate ne 48 && $audio_bitrate ne 64 && $audio_bitrate ne 96 && $audio_bitrate ne 128 && $audio_bitrate ne 256 )
-    {
-        print " Enter the desired MP3 Audio output bitrate (Kb/s) [default:96]: ";
-        $audio_bitrate=<STDIN>;
-        chomp($audio_bitrate);
-        if ( $audio_bitrate eq "" )
+        ( $info =~ m,frames\, (\d+) sec @ ,) or mydie "Unable to find Video Runtime in $LOG";
+        $fulltime=$1;
+        mydie " ERROR : You said end credits is $last_sec sec. long, but this movie in only $fulltime sec." if ( $fulltime < $last_sec );
+        $runtime=$fulltime - ($deb_sec+$last_sec);
+        if ( $NOAUDIO != 1 )
         {
-            $audio_bitrate=96;
-            last;
+            ( $info =~ m, A: (\d+\.*\d*) MB @ ,) or mydie "Unable to find Audio Size in $LOG";
+            $audio_size = $1*$runtime/$fulltime;
+            ( $info =~ m, A: .* MB @ (\d+) kbps,) or mydie "Unable to find audio bitrate in $LOG";
+            $audio_size = $audio_size*$audio_bitrate/$1;
+            $audio_size=2*$audio_size if ( defined($ac2));
+        } else {
+            $audio_size = 0;
         }
-    }
-    $audio_bitrate=0 if  ( $audio_bitrate eq 'null');
-    open (CONF,">>tmp/V2divx.conf");
-    print CONF "#audio_bitrate:$audio_bitrate\n";
-    close CONF;	
-    print $DEBUG "<--- Audio_bitrate\n";
-}
 
-#*********************** Read actual conf
-sub readconf
-{
-    print $DEBUG "---> Enter readconf\n";
-    if ( -e "tmp/V2divx.conf")
-    {
-        open (CONF,"<tmp/V2divx.conf");
-        while (<CONF>)
-        {       chomp;
-        s[/\*.*\*/][];      #  /* comment */
-        s[//.*][];          #  // comment
-        s/^#//;		    # 	Remove the first #
-        s/#.*//;            #  # comment
-        s/^\s+//;           #  whitespace before stuff
-        s/\s+$//;           #  whitespace after stuff
-        next unless length; #  If our line is empty, we ignore it
-        my ($var_name, $value) = split(/:/, $_);
-        $$var_name = $value;
-    }
-    close(CONF);
-}
-print $DEBUG " VOBPATH :$vobpath\n";
-print $DEBUG " PARAMS :$params\n";
-print $DEBUG " FILESIZE:$filesize\n";
-print $DEBUG " CLUSTER :$CLUSTER\n";
-print $DEBUG " audio_bitrate :$audio_bitrate\n";
-print $DEBUG " dvdtitle:$dvdtitle\n";
-print $DEBUG "<--- readconf\n";
-}
+        ask_filesize if ( ! $filesize );
 
-# ********************* Get Needed parameters ************
-sub get_params
-{  	
-    print $DEBUG "--->  Enter get_params\n";
-    if ( ! -e "tmp/V2divx.conf")
-# We are in Quick Mode
-{
-    $i = 0;
-    if ( $ARGV[$i])
-    {	$vobpath = $ARGV[$i];
-    $i ++;
-} else
-{	system ("echo \"$readme\" | less -R ");
-if ( $DVDTITLE eq "" ) { print $urldvdtitle;}
-exit(1);
-}
-mydie "Path: $vobpath does not exist." if (! -e $vobpath);
-mkdir ("tmp",0777);
-if ($ARGV[$i] > 1)
-{	$filesize = $ARGV[$i];
-}else
-{
-    mydie "\'$ARGV[$i]\' is not a valid filesize.\n Please supply filesize \n\t or \"sample\" if you want to create samples for cropping.";
-}
-} else 
-# We are in 'continue' mode
-{   
-    readconf;
-}
-
-chk_wdir;
-$audio_bitrate=96 if ( ! defined($audio_bitrate));	
-ask_clust if (! defined($CLUSTER) );
-
-#   For Quick mode only .....	
-
-if ( ! defined($params) ) 
-{
-    $dvdtitle=movie if ( ! defined ($dvdtitle));
-    findclip;
-    get_audio_channel if ( ! defined($audio_channel));
-    interlaced;
-    if ( $INTERLACE eq yes )
-    {
-        $PP=`transcode -J pp=lb -c 9-11  2>&1 | grep failed`;
-        if ( $PP eq "" )
+        $bitrate = floor(($filesize - $audio_size)/$runtime * 1024 * 1024 * 8 / 1000);
+        if ($bitrate < 20)
         {	
-            $deintl=",pp=lb";
-        }else
-        {
-            $params=" -I 3 ";
-        } 
-    }
-    $params .= "-a $audio_channel " if ( $audio_channel ne '' );
-    $params .= "-j $tb,$lr";
-}
-zooming;
-if ( ! defined($addlogo) && -e $LOGO )
-{
-    $LG=`transcode -J logo=help -c 9-11  2>&1 | grep rgbswap`;
-    if ( $LG ne "" )
-    {
-        $beginlogo=$STARTLOGO;  
-        if ( $TIMELOGO+$beginlogo > $runtime)
-        {
-            $addlogo=$runtime-$STARTLOGO;
-        } else {
-            $addlogo=$TIMELOGO; 
+            print $RED."\n#### ATTENTION ####\n\tCalculated bitrate is $bitrate kbps, \nwhich does not make much sense, I'll use 700 kbps instead. \nFilesize will not match your preferred filesize. Sorry\n".$NORM." Press Enter -->";
+            $junk=<STDIN>;
+            $bitrate = 700;
         }
-        $poslogo=$POSLOGO;
-    } else {
-        print $RED."Transcode is not compile with ImageMagick.\nUnable to encode your Logo $LOGO\n".$NORM; sleep 1;
+        #  audio_rescale for CLUSTER mode
+        $info=`cat tmp/extract.text` if ( -f "tmp/extract.text");
+        if ( $info =~ m,suggested volume rescale=(\d+.*\d+),)
+        {
+            $audio_rescale = $1;
+        }
+        print $DEBUG "Bitrate : $bitrate\n";
+
+        print $DEBUG "<--- calculate_bitrate\n";
+
+    } # END calculate_bitrate
+
+    #  ********** Main Avi encode ***************
+
+    sub aviencode
+    {
+        print $DEBUG "--->  Enter aviencode\n";
+        #  Zooming MUST have been call before aviencode
+        #  zooming will give us $filesize $bitrate and 	Zoom
+        $params .=" -$Zoom_mode ${NXaxis}x$NYaxis" if ($Zoom_mode eq Z);
+        $params .=" -$Zoom_mode $zH,$zW,$row" if ($Zoom_mode eq B);
+
+        printinfo if ( ! -e "tmp/cluster.args");
+        cluster if ( $CLUSTER ne "NO" && ! -e "tmp/cluster.args");
+
+
+        if (  $CLUSTER ne "NO" )	
+        {
+            $cluster=`cat tmp/cluster.args`;
+            chomp($cluster);
+            $cluster="-W $cluster,tmp/file.nav";
+            $node=`cat tmp/cluster.args| awk -F, '{print \$1}'`;
+            chomp($node);
+            $fparams="$params $cluster";
+            chomp($CLUSTER);
+            $sequnit=$CLUSTER;
+        } else {
+            $cluster="";
+            $sequnit=0;
+            # Encode all frames (only if $last_sec AND $deb_sec < 600 ) , we'll split after
+            if ( $deb_sec < 600 )
+            {  
+                $from_frames=0;
+            } else {
+                $from_frames=$deb_sec*$FPS}
+                if ( $last_sec < 600 )
+                { 
+                    $to_frames=$tot_frames; 
+                } else { 
+                    $to_frames=$tot_frames-$last_sec*$FPS 
+                }
+                $fparams="$params -c $from_frames-$to_frames";
+                #$fparams="$params "; # MODIF -c $from_frames-$to_frames";
+            }
+
+            system("rm tmp/*.done  2> /dev/null");
+
+            $start_frames_logo=floor(($deb_sec+$beginlogo)*$FPS);
+            $end_frames_logo=floor($addlogo*$FPS+$start_frames_logo);
+
+            for ( $i=$sequnit; $i >= 0 ; $i--  )
+            {      
+                print("*** SEQ UNIT = $i ********\n***  Cluster NODE number : $node ******* \n")  if (  $CLUSTER ne "NO" );
+                if ( $addlogo && $i == 0 && $CLUSTER eq "NO" )
+                {
+                    $add_logo=",logo=file=$LOGO:posdef=$poslogo:rgbswap=$RGBSWAP:range=$start_frames_logo-$end_frames_logo";
+                } else {	 
+                    $add_logo="";
+                }
+
+                $filter=$add_logo.$deintl.$sub_title;
+                # WE NEED the next 4 lines  because in non cluster mode we do not have the $sequnit value, 
+                # And WE want encode all the sequences unit (so, no -S option) .
+                if ( $sequnit != 0 )
+                {	
+                    $seqopt="-S $i,all";
+                } else {       
+                    $seqopt="";
+                }
+
+                $params =~ m/-a (\d) .*/;
+                $audio_params="-a $1";
+                $audio_format=audioformat("$audio_params") if ( ! defined($audio_format));
+                # Only ONE FILE allowed if input Video type is AVI, QT, DV , MPEG2
+                $vobpath="$vobpath/$sample" if ( $in_video_magic eq divx || 
+                $in_video_magic eq mov || 
+                $in_video_magic eq 'mpeg2'  || 
+                $in_video_magic eq dv  );
+                # Let transcode find it, if in audio type is "declared" as PCM
+                $audio_format="" if ( $audio_format eq pcm );
+                $audio_format="vob" if ( $in_video_codec eq vob );
+
+                if (! -e "tmp/1-${dvdtitle}${node}_${i}.finish")
+                {
+                    unlink("tmp/merge.finish");
+                    unlink("tmp/2-${dvdtitle}${node}_${i}.finish");
+                    print $GREEN."$v2d\t Encode: $vobpath Pass One ....\n".$NORM;
+                    my $pid = fork();
+                    mydie "couldn't fork" unless defined $pid;
+                    if ($pid)
+                    {
+                        wait;
+                        system("touch tmp/1-${dvdtitle}${node}_${i}.finish");
+                    } else {	
+                        $sys = "transcode -i $vobpath $seqopt $clust_percent $fparams -w $bitrate,$keyframes -J astat=\"tmp/astat\"$filter -y $DIVX,null -x $in_video_codec,$audio_format $VID_OPT -R 1,tmp/$DIVX.${dvdtitle}${node}_${i}.log -o /dev/null"; 
+                        print $INFO "$sys\n";
+                        system("nice -$nice $sys"); 
+                        print "\n";
+                        exit(0);
+                    }
+                } else {	
+                    print $RED."${dvdtitle}${node}_${i} already encoded, remove \"tmp/1-${dvdtitle}${node}_${i}.finish\" to reencode \n".$NORM;
+                }
+                audiorescale;
+                if (! -e "tmp/2-${dvdtitle}${node}_${i}.finish")
+                {	
+                    $filter="-J $filter" if ( $filter ne "" );
+                    unlink("tmp/merge.finish");	
+                    print $GREEN."$v2d\t Encode: $vobpath Pass Two ....\n".$NORM;
+                    my $pid = fork();
+                    mydie "couldn't fork" unless defined $pid;
+                    if ($pid)
+                    {	
+                        wait;
+                        system("touch tmp/2-${dvdtitle}${node}_${i}.finish");
+                    } else {	
+                        $sys = "transcode -i $vobpath $seqopt $clust_percent $fparams -s $audio_rescale -w $bitrate,$keyframes -b $audio_bitrate -y $DIVX -x $in_video_codec,$audio_format $VID_OPT $filter -R 2,tmp/$DIVX.${dvdtitle}${node}_${i}.log -o tmp/2-${dvdtitle}${node}_${i}.avi";
+                        print $INFO "$sys\n";
+                        system("nice -$nice $sys"); 
+                        print"\n";
+                        exit(0);
+                    }
+                } else {	
+                    print $RED."${dvdtitle}${node}_${i} already encoded,".
+                    " remove \"tmp/2-${dvdtitle}${node}_${i}.finish\" ".
+                    "to reencode \n".$NORM;
+                }
+            } # end boucle for
+
+            if ( $CLUSTER ne "NO")
+            {       
+                print ("Finish ... Wait \n ");
+                sleep (3);
+            }
+
+            print $DEBUG "<--- aviencode\n";
+        } # END Aviencode
+
+        # ********* MERGING ( and syncing )Function **************#
+        sub merge
+        {	
+            print $DEBUG "--->  Enter merge\n";
+            if (! -e "tmp/merge.finish" )
+            {       
+                unlink("tmp/sync.finish"); 
+                unlink("tmp/finish");
+                print $GREEN."$v2d\t Merging the sequence units\n".$NORM;	
+                my $pid = fork();
+                mydie "couldn't fork" unless defined $pid;
+                if ($pid)
+                {	
+                    wait;
+                    system("touch tmp/merge.finish");
+                } else {	
+                    # $CLUSTER  is known because we've pass through aviencode before
+                    for ( $i=$CLUSTER ; $i >= 0 ; $i-- )
+                    { 	
+                        print $GREEN."$v2d\t Seq. unit :\t\t\t   | $i\n".$NORM;	
+                        $sys = "avimerge -i tmp/2-*_$i.avi -o tmp/tmp_movie_$i.avi";
+                        print $INFO "$sys\n";
+                        system("nice -$nice $sys 1> /dev/null");
+                    }
+                    if ( $CLUSTER > 0 )
+                    {
+                        $sys = "avimerge -i tmp/tmp_movie_*.avi -o tmp/2-$dvdtitle.avi && rm tmp/tmp_movie_*.avi";
+                        print $INFO "$sys\n";
+                        system("nice -$nice $sys 1> /dev/null");
+                    } else {
+                        rename("tmp/tmp_movie_0.avi","tmp/2-$dvdtitle.avi");
+                    }
+                    exit(0);
+                }
+            } else {       
+                print $RED."*.avi of $dvdtitle are already merge ... remove \"tmp/merge.finish\" to re-merge it\n".$NORM;
+            }
+            print $DEBUG "<--- merge\n";
+
+
+            ################# add audio in cluster mode ############################
+
+            print $DEBUG "--->  Enter synchro\n";
+            audiorescale;
+            if (! -e "tmp/sync.finish" )
+            {	
+                unlink("tmp/finish");
+                unlink("tmp/sync.done") if ( -e "tmp/sync.done" );
+                # We need to catch the keyframe...
+                $from_frames=$deb_sec*$FPS;
+                $to_frames=$tot_frames-$last_sec*$FPS;
+                $synclogo=int(($end_frames_logo+$keyframes)/$keyframes)*$keyframes;
+                if ( $addlogo ne 0 && $addlogo <= 300 )
+                {	 
+                    $start_frames=$synclogo;
+                } else {
+                    $start_frames=$from_frames;
+                }
+                $params =~ m/-a (\d) .*/;
+                $audio_params="-a $1";
+                print $GREEN."$v2d\t Merging Video and Audio streams\n".$NORM;
+                my $pid = fork();
+                mydie "couldn't fork" unless defined $pid;
+                if ($pid)
+                {       
+                    wait;
+                    system("touch tmp/sync.finish");
+                } else {
+                    $sys = "transcode -p $vobpath $audio_params -b $audio_bitrate -c $start_frames-$to_frames -s $audio_rescale -i tmp/2-$dvdtitle.avi -P 1 -x avi,vob -y raw -o tmp/2-${dvdtitle}_sync.avi -u 50";
+                    print $INFO "$sys\n";
+                    system("nice -$nice $sys")==0 or mydie "Unable to merge Audio and Video";
+                    unlink("tmp/enc_audiochannel2.finish") if ( -e "tmp/enc_audiochannel2.finish");
+                    exit(0);
+                }
+            } else {	
+                print $RED."$dvdtitle is already sync, remove \"tmp/sync.finish\" to re-sync it\n".$NORM;
+            }
+            print $DEBUG "<--- synchro\n";
+        } # END merge
+
+
+        # ############## Encode the optionnal second audio channel ###########
+
+        sub twoac
+        {
+            print $DEBUG "---> Enter twoac\n";
+            return() if ( ! defined($ac2));
+            audioformat("-a $ac2");
+            if ( ! -e "tmp/enc_audiochannel2.finish" )
+            { 	 
+                unlink("tmp/finish") if ( -e "tmp/finish");
+                unlink("tmp/audiochannel2.finish" ) if ( -e "tmp/audiochannel2.finish" );
+                print $GREEN."$v2d\t Encoding the second audio channel\n".$NORM;	
+                $sys="transcode -i $vobpath -x null -s $audio_rescale -b $audio_bitrate -g 0x0 -y raw -a $ac2  -o add-on-ac2.avi -u 50";
+                print $INFO $sys."\n";
+                system("nice -$nice $sys")==0 or mydie "Unable to encode the second audio channel";
+                system("touch tmp/enc_audiochannel2.finish") ;
+                print"\n";
+            }
+            if ( ! -e "tmp/audiochannel2.finish" )
+            {
+                unlink("tmp/finish") if ( -e "tmp/finish");
+                print $GREEN."$v2d\t Merging the second audio channel\n".$NORM;	
+                $sys="avimerge -i tmp/2-${dvdtitle}_sync.avi -o tmp/3-${dvdtitle}_2ac.avi -p add-on-ac2.avi";
+                print $INFO "$sys\n";
+                system("nice -$nice $sys 1> /dev/null")==0 or mydie "Unable to merge movie and second audio channel";
+                rename("tmp/3-${dvdtitle}_2ac.avi","tmp/2-${dvdtitle}_sync.avi") && system("touch tmp/audiochannel2.finish") ;
+            }
+            print $DEBUG "<--- twoac\n";
+        } # END 2ac
+
+        # ################### Finish the work ########################
+
+        sub finish
+        {
+            print $DEBUG "---> Enter finish\n";
+            if (! -e "tmp/finish")
+            {
+                $from_frames=$deb_sec*$FPS;
+                $to_frames=$nbr_frames+$from_frames;
+                if ( ($CLUSTER eq NO && ($last_sec eq 0 || $last_sec > 600) &&  ($deb_sec eq 0  || $deb_sec > 600)) || $CLUSTER ne NO )
+                {
+                    makelogo if ( $CLUSTER ne NO && $add_logo );
+                    print $GREEN."$v2d\t Renaming tmp/2-${dvdtitle}_sync.avi $dvdtitle.avi\n".$NORM ;
+                    rename("tmp/2-${dvdtitle}_sync.avi","$dvdtitle.avi");
+                } else {
+                    $sys="avisplit -t $from_frames-$to_frames -i  tmp/2-${dvdtitle}_sync.avi -o $dvdtitle.avi && mv $dvdtitle.avi-0000 $dvdtitle.avi";
+                    print $GREEN."$v2d\t Splitting the result to $nbr_frames frames.\n".$NORM;
+                    print $INFO "$sys\n";
+                    system("nice -$nice $sys");
+                }
+                system("touch tmp/finish");
+            }
+
+            # substract unixtimestamp from our original timestamp
+            my $end_time = time - $start_time;
+            my $f_end_time = format_date($end_time,"hours");
+            print "Number of Hours: $f_end_time \n";
+            if ( -x "/usr/bin/flite" )
+            {
+                # say it outloud using "flite" speech synthetizer
+                system("/usr/bin/flite -t 'Number of hours $f_end_time'");
+            }
+
+            print " Now take a look at the end of $dvdtitle.avi\n".
+            "\t If for some reason the divx file doesn't reach the end credits,".
+            " just edit tmp/V2divx.conf, decrease the \$last_sec value, ".
+            "remove the tmp/finish file and then run V2divx without ".
+            "parameters.";
+            print " Is you divx file OK? (y/N): ";
+            $rep=<STDIN>;
+            chomp($rep);
+            if ($rep eq "O" or $rep eq "o" or $rep eq "y" or $rep eq "Y")
+            {
+                print "May I clean the tmp directory and other temporaries and log files ? (y/N): ";
+                $rep=<STDIN>;
+                chomp($rep);
+                if ($rep eq "O" or $rep eq "o" or $rep eq "y" or $rep eq "Y")
+                {
+                    rename("tmp/dvdtitle",$vobpath."/dvdtitle") if ( -e "tmp/dvdtitle" );
+                    rename("tmp/probe.rip",$vobpath."/probe.rip") if ( -e "tmp/probe.rip" );
+                    system("/bin/rm -rf tmp/*  video_s._-j_* audio_sample* add-on-ac2.avi");
+                }
+            }
+            print $DEBUG "<--- finish\n";
+            mydie $NORM."Bye !!!";
+        }  # ENd finish
+
+
+        #   *************   Get Audio Bitrage ************ #
+
+        sub a_bitrate
+        {      	
+            print $DEBUG "--->  Enter Audio_bitrate\n";
+            $audio_bitrate ='null' if ( $NOAUDIO == 1 );
+            while ( $audio_bitrate ne 'null' && $audio_bitrate ne 32 && $audio_bitrate ne 48 && $audio_bitrate ne 64 && $audio_bitrate ne 96 && $audio_bitrate ne 128 && $audio_bitrate ne 256 )
+            {
+                print " Enter the desired MP3 Audio output bitrate (Kb/s) [default:96]: ";
+                $audio_bitrate=<STDIN>;
+                chomp($audio_bitrate);
+                if ( $audio_bitrate eq "" )
+                {
+                    $audio_bitrate=96;
+                    last;
+                }
+            }
+            $audio_bitrate=0 if  ( $audio_bitrate eq 'null');
+            open (CONF,">>tmp/V2divx.conf");
+            print CONF "#audio_bitrate:$audio_bitrate\n";
+            close CONF;	
+            print $DEBUG "<--- Audio_bitrate\n";
+        }
+
+        # *********************** Read actual conf
+        sub readconf
+        {
+            print $DEBUG "---> Enter readconf\n";
+            if ( -e "tmp/V2divx.conf")
+            {
+                open (CONF,"<tmp/V2divx.conf");
+                while (<CONF>)
+                {       
+                    chomp;
+                    s[/\*.*\*/][];      #  /* comment */
+                    s[//.*][];          #  // comment
+                    s/^#//;		    # 	Remove the first #
+                    s/#.*//;            #  # comment
+                    s/^\s+//;           #  whitespace before stuff
+                    s/\s+$//;           #  whitespace after stuff
+                    next unless length; #  If our line is empty, we ignore it
+                    my ($var_name, $value) = split(/:/, $_);
+                    $$var_name = $value;
+                }
+                close(CONF);
+            } 
+
+            print $DEBUG " VOBPATH :$vobpath\n";
+            print $DEBUG " PARAMS :$params\n";
+            print $DEBUG " FILESIZE:$filesize\n";
+            print $DEBUG " CLUSTER :$CLUSTER\n";
+            print $DEBUG " audio_bitrate :$audio_bitrate\n";
+            print $DEBUG " dvdtitle:$dvdtitle\n";
+            print $DEBUG "<--- readconf\n";
+        } # end readconf
+
+        #  ************* Get Needed parameters ************ #
+        sub get_params
+        {  	
+            print $DEBUG "--->  Enter get_params\n";
+            if ( ! -e "tmp/V2divx.conf")
+            {
+                # We are in Quick Mode
+                $i = 0;
+                if ( $ARGV[$i])
+                {	
+                    $vobpath = $ARGV[$i];
+                    $i ++;
+                } else {	
+                    system ("echo \"$readme\" | less -R ");
+                    if ( $DVDTITLE eq "" ) {
+                        print $urldvdtitle;
+                    }
+                    exit(1);
+                }
+                mydie "Path: $vobpath does not exist." if (! -e $vobpath);
+                mkdir ("tmp",1777);
+                if ($ARGV[$i] > 1)
+                {	
+                    $filesize = $ARGV[$i];
+                } else {
+                    mydie "\'$ARGV[$i]\' is not a valid filesize.\n Please supply filesize \n\t or \"sample\" if you want to create samples for cropping.";
+                }
+            } else {   
+                # We are in 'continue' mode
+                readconf;
+            }
+
+            chk_wdir;
+            $audio_bitrate=96 if ( ! defined($audio_bitrate));	
+            ask_clust if (! defined($CLUSTER) );
+
+            #   For Quick mode only .....	
+
+            if ( ! defined($params) ) 
+            {
+                $dvdtitle=movie if ( ! defined ($dvdtitle));
+                findclip;
+                get_audio_channel if ( ! defined($audio_channel));
+                interlaced;
+                if ( $INTERLACE eq yes )
+                {
+                    $PP=`transcode -J pp=lb -c 9-11  2>&1 | grep failed`;
+                    if ( $PP eq "" )
+                    {	
+                        $deintl=",pp=lb";
+                    } else {
+                        $params=" -I 3 ";
+                    } 
+                }
+                $params .= "-a $audio_channel " if ( $audio_channel ne '' );
+                $params .= "-j $tb,$lr";
+            }
+            zooming;
+            if ( ! defined($addlogo) && -e $LOGO )
+            {
+                $LG=`transcode -J logo=help -c 9-11  2>&1 | grep rgbswap`;
+                if ( $LG ne "" )
+                {
+                    $beginlogo=$STARTLOGO;  
+                    if ( $TIMELOGO+$beginlogo > $runtime)
+                    {
+                        $addlogo=$runtime-$STARTLOGO;
+                    } else {
+                        $addlogo=$TIMELOGO; 
+                    }
+                    $poslogo=$POSLOGO;
+                } else {
+                    print $RED."Transcode is not compile with ImageMagick.\nUnable to encode your Logo $LOGO\n".$NORM; sleep 1;
+                }
+            }
+
+            # End Quick mode Configuration
+
+
+            $dvdtitle=movie if ( ! defined($dvdtitle));
+
+            open(CONF,">tmp/V2divx.conf");
+            if ( defined($vobpath) ) {
+                print CONF "#vobpath:$vobpath # DO NOT MODIFY THIS LINE\n";
+            }
+            if ( defined($last_sec) ) {
+                print CONF "#last_sec:$last_sec\n";
+            }
+            if ( defined($deb_sec) ) {
+                print CONF "#deb_sec:$deb_sec\n";
+            }
+            if ( defined($audio_bitrate) ) {print CONF "#audio_bitrate:$audio_bitrate\n";
+        }
+        if ( defined($filesize) ) {
+            print CONF "#filesize:$filesize\n";
+        }
+        if ( defined($addlogo) ){
+            print CONF "#addlogo:$addlogo # THIS VALUE IS THE DURING TIME OF LOGO (in sec.)\n";
+        }
+        if ( defined($beginlogo) ){
+            print CONF "#beginlogo:$beginlogo\n";
+        }
+        if ( defined($poslogo) ){
+            print CONF "#poslogo:$poslogo\n";
+        }
+        if ( defined($dvdtitle) ){
+            print CONF "#dvdtitle:$dvdtitle # DO NOT MODIFY THIS LINE\n";
+        }
+        if ( defined($params) ) {
+            print CONF "#params:$params# YOU MUST KNOW WHAT YOU DO IN THIS LINE\n";
+        }
+        if ( defined($CLUSTER) ) {
+            print CONF "#CLUSTER:$CLUSTER # YOU CAN REMOVE BUT NOT MODIFY THIS LINE\n";
+        }
+        if ( defined($sub_title) ) {print CONF "#sub_title:$sub_title\n";
     }
+    if ( defined($deintl) ) {print CONF "#deintl:$deintl\n";
 }
-
-# End Quick mode Configuration
-
-
-$dvdtitle=movie if ( ! defined($dvdtitle));
-
-open(CONF,">tmp/V2divx.conf");
-if ( defined($vobpath) ) {print CONF "#vobpath:$vobpath # DO NOT MODIFY THIS LINE\n";}
-if ( defined($last_sec) ) { print CONF "#last_sec:$last_sec\n";}
-if ( defined($deb_sec) ) { print CONF "#deb_sec:$deb_sec\n";}
-if ( defined($audio_bitrate) ) {print CONF "#audio_bitrate:$audio_bitrate\n";}
-if ( defined($filesize) ) { print CONF "#filesize:$filesize\n";}
-if ( defined($addlogo) ){ print CONF "#addlogo:$addlogo # THIS VALUE IS THE DURING TIME OF LOGO (in sec.)\n";}
-if ( defined($beginlogo) ){ print CONF "#beginlogo:$beginlogo\n";}
-if ( defined($poslogo) ){ print CONF "#poslogo:$poslogo\n";}
-if ( defined($dvdtitle) ){ print CONF "#dvdtitle:$dvdtitle # DO NOT MODIFY THIS LINE\n";}
-if ( defined($params) ) { print CONF "#params:$params# YOU MUST KNOW WHAT YOU DO IN THIS LINE\n";}
-if ( defined($CLUSTER) ) { print CONF "#CLUSTER:$CLUSTER # YOU CAN REMOVE BUT NOT MODIFY THIS LINE\n";}
-if ( defined($sub_title) ) {print CONF "#sub_title:$sub_title\n";}
-if ( defined($deintl) ) {print CONF "#deintl:$deintl\n";}
-if ( defined($ac2) ) {print CONF "#ac2:$ac2\n";}
+if ( defined($ac2) ) {print CONF "#ac2:$ac2\n";
+}
 close(CONF);
 
 print $DEBUG "<--- get_params\n";
-}
-###################### Audio Input format ###################
-sub audioformat
-{
-    print $DEBUG "---> Enter audioformat\n";
-    if ( $NOAUDIO == 1 )
-    {	$audio_format=null;
-    return($audio_format);
-    print $DEBUG "<--- Audio_format\n";
-}
-@_[0] ="-a 0" if (! defined(@_[0]));
-return("null") if ( @_[0] eq "-a null");
-my $audio_format=`tcprobe -i "$vobpath/$sample" 2> /dev/null ` or mydie "Problem when running \'tcprobe -i ".$vobpath."/".$sample."\'";
-( $audio_format =~ m,audio track: @_[0] [^n]*n 0x(\d+) .*,) or mydie "Unable to find audio channel ".@_[0]." format";
-my $tmp=$1;
-SWITCH: 
-{  # FIXME
-    if ( $tmp == 2000 ) {  $audio_format=ac3 ; last SWITCH;}
-    if (  $tmp == 1 ) {  $audio_format=pcm ; last SWITCH;}
-    if ( $tmp == 10001 ) {  $audio_format=pcm ; last SWITCH;}
-    if ( $tmp eq "1000F" ) {  $audio_format=dts ; last SWITCH;}
-    if ( $tmp == 55  || $tmp == 50 ) # mpeg2ext is mp3
-    {
-        $audio_format=mp3;
-        $MP3=`transcode -x null,mp3 -c 9-11 2>&1 | grep failed`;
-        if ( $MP3 ne "" )
-        {
-            print $RED;
-            print("\n *******   WARNING !! *************\n It seems that your transcode is'nt compiled with lame , it's not able to encode this audio channel \n\n");
-            print $NORM;
-            exit(1);
-        }
-        last SWITCH;
     }
-    mydie "Unable to find a known audio format ($tmp is unknown)";
+    # ##################### Audio Input format ###################
+    sub audioformat
+    {
+        print $DEBUG "---> Enter audioformat\n";
+        if ( $NOAUDIO == 1 )
+        {
+            $audio_format=null;
+            return($audio_format);
+            print $DEBUG "<--- Audio_format\n";
+        }
+        @_[0] ="-a 0" if (! defined(@_[0]));
+        return("null") if ( @_[0] eq "-a null");
+        my $audio_format=`tcprobe -i "$vobpath/$sample" 2> /dev/null ` or mydie "Problem when running \'tcprobe -i ".$vobpath."/".$sample."\'";
+        ( $audio_format =~ m,audio track: @_[0] [^n]*n 0x(\d+) .*,) or mydie "Unable to find audio channel ".@_[0]." format";
+        my $tmp=$1;
+        SWITCH: 
+        {
+# FIXME
+if ( $tmp == 2000 ) {
+    $audio_format=ac3 ; last SWITCH;
 }
-print $DEBUG "<--- Audio_format\n";
-return($audio_format);
+if (  $tmp == 1 ) {
+    $audio_format=pcm ; last SWITCH;
+}
+if ( $tmp == 10001 ) {
+    $audio_format=pcm ; last SWITCH;
+}
+if ( $tmp eq "1000F" ) {
+    $audio_format=dts ; last SWITCH;
+}
+if ( $tmp == 55  || $tmp == 50 ) # mpeg2ext is mp3
+{
+    $audio_format=mp3;
+    $MP3=`transcode -x null,mp3 -c 9-11 2>&1 | grep failed`;
+    if ( $MP3 ne "" )
+    {
+        print $RED;
+        print("\n *******   WARNING !! *************\n It seems that your transcode is'nt compiled with lame , it's not able to encode this audio channel \n\n");
+        print $NORM;
+        exit(1);
+    }
+    last SWITCH;
+}
+mydie "Unable to find a known audio format ($tmp is unknown)";
+    }
+    print $DEBUG "<--- Audio_format\n";
+    return($audio_format);
 }
 
 sub videoformat_old
-{ 	print $DEBUG "---> Enter videoformat\n";
-$in_video_magic='vob' if ( $probe =~ m,MPEG program stream,);
-$in_video_magic='mov' if ( $probe =~ m,QuickTime movie,);
-$in_video_magic='m2v' if ( $probe =~ m,elementary stream,);
-$in_video_magic='vdr' if ( $probe =~ m,Digital Video,);
-$in_video_magic='avi' if ( $probe =~ m,RIFF data\, AVI video,);
-$in_video_codec='mpeg2' if ( $probe =~ m,MPEG .* stream,);
-$in_video_codec='mpeg2' if ( $probe =~ m,elementary stream,);
-$in_video_codec='dv' if ( $probe =~ m,Digital Video,);
-$in_video_codec='dv' if ( $probe =~ m,codec=[Dd][vV][sS][dD],);
-$in_video_codec='ffmpeg' if ( $probe =~ m,codec=[mM][jJ][pP][gG],);
+{
+    print $DEBUG "---> Enter videoformat\n";
+    $in_video_magic='vob' if ( $probe =~ m,MPEG program stream,);
+    $in_video_magic='mov' if ( $probe =~ m,QuickTime movie,);
+    $in_video_magic='m2v' if ( $probe =~ m,elementary stream,);
+    $in_video_magic='vdr' if ( $probe =~ m,Digital Video,);
+    $in_video_magic='avi' if ( $probe =~ m,RIFF data\, AVI video,);
+    $in_video_codec='mpeg2' if ( $probe =~ m,MPEG .* stream,);
+    $in_video_codec='mpeg2' if ( $probe =~ m,elementary stream,);
+    $in_video_codec='dv' if ( $probe =~ m,Digital Video,);
+    $in_video_codec='dv' if ( $probe =~ m,codec=[Dd][vV][sS][dD],);
+    $in_video_codec='ffmpeg' if ( $probe =~ m,codec=[mM][jJ][pP][gG],);
 }
 
 sub videoformat
@@ -1771,38 +1853,39 @@ sub videoformat
     $in_video_magic=$1 if ( $probe =~ m,V=([^\|.]*)\|A=,);
     print $DEBUG "+ Type of video: $in_video_magic \n";
     if ( $in_video_magic eq 'mov' )
-    {  # FIXME .. at least for dvc video format ?
-        $VID_OPT='-z -k';
-        $REV_VID=' ';
-# Make nothing ?? FIXME		$RGBSWAP=0;
-}
-if ( $in_video_magic eq '(null)' || $in_video_magic eq null )
-{ 
-# Trying with tcprobe .. 
-# in this case We need audio_codec also !!
-print $DEBUG "transcode failed ... trying with tcprobe\n";
-my $probe2=`tcprobe -i @_[0] 2>&1`;
-$in_video_magic='divx' if ( $probe2 =~ m,codec=[dD][xX]50,);
-$in_video_magic='divx' if ( $probe2 =~ m,codec=[dD][iI][vV][3xX],);
-# DOES NOT WORK $in_video_magic='avi' if ( $probe2 =~ m,codec=[Ii][vV]32,);
-print $DEBUG  "tcprobe has detect : $in_video_magic \n";
-}
-$in_video_codec="$in_video_magic";
-print $DEBUG "<--- videoformat : $in_video_magic \n";
-mydie "@_[0] : Unknown file type"       if ( $in_video_magic eq 'null' || $in_video_magic eq '(null)' );
+    {
+# FIXME .. at least for dvc video format ?
+$VID_OPT='-z -k';
+$REV_VID=' ';
+#  Make nothing ?? FIXME		$RGBSWAP=0;
+    }
+    if ( $in_video_magic eq '(null)' || $in_video_magic eq null )
+    { 
+        #  Trying with tcprobe .. 
+        #  in this case We need audio_codec also !!
+        print $DEBUG "transcode failed ... trying with tcprobe\n";
+        my $probe2=`tcprobe -i @_[0] 2>&1`;
+        $in_video_magic='divx' if ( $probe2 =~ m,codec=[dD][xX]50,);
+        $in_video_magic='divx' if ( $probe2 =~ m,codec=[dD][iI][vV][3xX],);
+        #  DOES NOT WORK $in_video_magic='avi' if ( $probe2 =~ m,codec=[Ii][vV]32,);
+        print $DEBUG  "tcprobe has detect : $in_video_magic \n";
+    }
+    $in_video_codec="$in_video_magic";
+    print $DEBUG "<--- videoformat : $in_video_magic \n";
+    mydie "@_[0] : Unknown file type"       if ( $in_video_magic eq 'null' || $in_video_magic eq '(null)' );
 
-if ( $in_video_magic eq 'dv' )   # Need to know the container (raw,avi?)
-{
-    print $DEBUG "DV File ... need to know the container ...\n";
-    my $probe2=`tcprobe -i @_[0] 2>&1`;
-    $need_time=1 if ( $probe2 =~ m,Digital Video,);
+    if ( $in_video_magic eq 'dv' )   # Need to know the container (raw,avi?)
+    {
+        print $DEBUG "DV File ... need to know the container ...\n";
+        my $probe2=`tcprobe -i @_[0] 2>&1`;
+        $need_time=1 if ( $probe2 =~ m,Digital Video,);
+    }
+
+    #  WARNING Sometime transcode is unable to find formats ... use tcprobe (videoformat_old) in this case to 
 }
 
-# WARNING Sometime transcode is unable to find formats ... use tcprobe (videoformat_old) in this case to 
-}
 
-
-#******************* Make Audio sample **************
+# ******************* Make Audio sample **************
 sub make_sample
 {
     @actmp=split / /,@_[0];
@@ -1864,7 +1947,7 @@ sub ask_logo
                 $poslogo=<STDIN>;
                 chomp($poslogo);
                 $poslogo=$POSLOGO if ( ! ($poslogo =~ m,[12345],));
-            }else
+            } else 
             {
                 $addlogo=0;
             }
@@ -1884,90 +1967,91 @@ sub ask_logo
     print CONF "#beginlogo:$beginlogo\n" if ( defined($beginlogo));
     close(CONF);
 }
-# END ask_logo
+#  END ask_logo
 
 
-#******************Evaluate the Zoom*********************
+# ******************Evaluate the Zoom*********************
 sub zooming
 {
     print $DEBUG "---> Enter Zooming\n";
-# We need the Bitrate to calculate new image Size for the bpp
-calculate_bitrate;
-#       We need also the Frame rate $FPS
-calculate_nbrframe if ( ! defined ($nbr_frames));
+    #  We need the Bitrate to calculate new image Size for the bpp
+    calculate_bitrate;
+    #        We need also the Frame rate $FPS
+    calculate_nbrframe if ( ! defined ($nbr_frames));
 
-$probe = `tcprobe -i  "$vobpath/$sample" 2> /dev/null ` or mydie "Problem when running \'tcprobe -i $vobpath/$sample\'";
+    $probe = `tcprobe -i  "$vobpath/$sample" 2> /dev/null ` or mydie "Problem when running \'tcprobe -i $vobpath/$sample\'";
 
-($probe =~ m,import frame size: -g (\d+)x,) or mydie "Unable to find Width image size";
-$Xaxis=$1;
+    ($probe =~ m,import frame size: -g (\d+)x,) or mydie "Unable to find Width image size";
+    $Xaxis=$1;
 
-( $probe =~ m,import frame size: -g \d+x(\d+).*,) or mydie "Unable to find Hight image size";
-$Yaxis=$1;
+    ( $probe =~ m,import frame size: -g \d+x(\d+).*,) or mydie "Unable to find Hight image size";
+    $Yaxis=$1;
 
-( $probe =~ m,aspect ratio: (\d+):(\d+).*,) or ( $probe =~ m,frame size: -g (\d+)x(\d+).*,) or mydie "Unable to find Image Aspect ratio";
-$aspect_ratio=$1/$2;
-$params =~ m/-j (\d+),(\d+).*/;
-$tb=$1;
-$lr=$2;
-print $DEBUG "Top/Bot crop= $tb, Lef/Right crop = $lr \n";
+    ( $probe =~ m,aspect ratio: (\d+):(\d+).*,) or ( $probe =~ m,frame size: -g (\d+)x(\d+).*,) or mydie "Unable to find Image Aspect ratio";
+    $aspect_ratio=$1/$2;
+    $params =~ m/-j (\d+),(\d+).*/;
+    $tb=$1;
+    $lr=$2;
+    print $DEBUG "Top/Bot crop= $tb, Lef/Right crop = $lr \n";
 
-# New in 1.0.2
-$visual_Yaxis=$Xaxis/$aspect_ratio;
-$aspect_ratio=($Xaxis-2*$lr)/($visual_Yaxis*(1-2*$tb/$Yaxis));
+    #  New in 1.0.2
+    $visual_Yaxis=$Xaxis/$aspect_ratio;
+    $aspect_ratio=($Xaxis-2*$lr)/($visual_Yaxis*(1-2*$tb/$Yaxis));
 
-if ( $Yaxis-2*$tb > 0 && $Xaxis-2*$lr > 0 )
-{
-    $bpp=$bpp*$Yaxis*$Xaxis/(($Yaxis-2*$tb)*($Xaxis-2*$lr));
-}else
-{	
-    mydie  "Something crazy !! Your image has a null or negative Size?\nAre you trying holographics movie ;-)?\n transcode is bad to do that ....";
-}
-
-# New Width Image = SQRT (Bitrate * aspect / QualityRatio x FPS )
-$NXaxis=sqrt(1000*$bitrate*$aspect_ratio/($bpp*$FPS));
-print $DEBUG "$NXaxis=sqrt(1000*(Vbitrate)$bitrate*(A_R)$aspect_ratio/((bpp)$bpp*(fps)$FPS))\n";
-# Finale Image MUST have a multiple of 16 size
-@NXaxis[1]=16*floor($NXaxis/16);
-@NXaxis[2]=16*ceil($NXaxis/16);
-# Limits 	
-for ( $i=1 ; $i<3 ; $i++ )
-{
-    @NXaxis[$i]= 16*floor(($Xaxis-2*$lr)/16) if ( @NXaxis[$i] > $Xaxis-2*$lr );
-    @NXaxis[$i]= 720 if ( $NXaxis > 720 );
-    @NXaxis[$i]= 320 if ( $NXaxis < 320);
-}
-
-#                       New Height
-# Finale Image MUST have a multiple of 16 size
-@NYaxis[1]=16*floor((@NXaxis[1]/$aspect_ratio)/16);
-@NYaxis[2]=16*ceil((@NXaxis[1]/$aspect_ratio)/16);
-@NYaxis[3]=16*floor((@NXaxis[2]/$aspect_ratio)/16);
-@NYaxis[4]=16*ceil((@NXaxis[2]/$aspect_ratio)/16);
-
-# If we can find similar AR with better BPP ... get it !
-# Avec 1 poids de 110, si AR varie de 1% , BPP ne doit pas varier de plus de 0.009 bpp (1/110)
-$weight=110;
-# Quality = BPP*weight-%aspect_ratio_error 
-$Quality=$weight*1000*$bitrate/(@NXaxis[1]*@NYaxis[1]*$FPS)-abs(@NXaxis[1]/@NYaxis[1]-$aspect_ratio)*100/$aspect_ratio;
-for ( $i=1; $i < 5 ; $i++ )
-{	
-    for ( $j=1; $j<3; $j++ )
-    {	print $DEBUG "---------------------\n";	
-    printf($DEBUG " bpp=%.3f",1000*$bitrate/(@NXaxis[$j]*@NYaxis[$i]*$FPS));
-    printf($DEBUG " and AR_err=%.3f %\n",abs(@NXaxis[$j]/@NYaxis[$i]-$aspect_ratio)*100/$aspect_ratio);
-    $tmp=$weight*1000*$bitrate/(@NXaxis[$j]*@NYaxis[$i]*$FPS)-abs(@NXaxis[$j]/@NYaxis[$i]-$aspect_ratio)*100/$aspect_ratio;
-    printf($DEBUG "Quality = %.6f\n",$tmp);
-    if ( $tmp >= $Quality)
-    { 	
-        $Quality=$tmp;
-        $NXaxis=@NXaxis[$j];
-        $NYaxis=@NYaxis[$i];
-        $fbpp=1000*$bitrate/($NXaxis*$NYaxis*$FPS);
-        print $DEBUG "X($j)=$NXaxis, Y($i)=$NYaxis ---CATCH !! \n";
+    if ( $Yaxis-2*$tb > 0 && $Xaxis-2*$lr > 0 )
+    {
+        $bpp=$bpp*$Yaxis*$Xaxis/(($Yaxis-2*$tb)*($Xaxis-2*$lr));
+    } else 
+    {	
+        mydie  "Something crazy !! Your image has a null or negative Size?\nAre you trying holographics movie ;-)?\n transcode is bad to do that ....";
     }
-}
-}
-# Limits but normally impossible to fall into
+
+    #  New Width Image = SQRT (Bitrate * aspect / QualityRatio x FPS )
+    $NXaxis=sqrt(1000*$bitrate*$aspect_ratio/($bpp*$FPS));
+    print $DEBUG "$NXaxis=sqrt(1000*(Vbitrate)$bitrate*(A_R)$aspect_ratio/((bpp)$bpp*(fps)$FPS))\n";
+    #  Finale Image MUST have a multiple of 16 size
+    @NXaxis[1]=16*floor($NXaxis/16);
+    @NXaxis[2]=16*ceil($NXaxis/16);
+    #  Limits 	
+    for ( $i=1 ; $i<3 ; $i++ )
+    {
+        @NXaxis[$i]= 16*floor(($Xaxis-2*$lr)/16) if ( @NXaxis[$i] > $Xaxis-2*$lr );
+        @NXaxis[$i]= 720 if ( $NXaxis > 720 );
+        @NXaxis[$i]= 320 if ( $NXaxis < 320);
+    }
+
+    #                        New Height
+    #  Finale Image MUST have a multiple of 16 size
+    @NYaxis[1]=16*floor((@NXaxis[1]/$aspect_ratio)/16);
+    @NYaxis[2]=16*ceil((@NXaxis[1]/$aspect_ratio)/16);
+    @NYaxis[3]=16*floor((@NXaxis[2]/$aspect_ratio)/16);
+    @NYaxis[4]=16*ceil((@NXaxis[2]/$aspect_ratio)/16);
+
+    #  If we can find similar AR with better BPP ... get it !
+    #  Avec 1 poids de 110, si AR varie de 1% , BPP ne doit pas varier de plus de 0.009 bpp (1/110)
+    $weight=110;
+    #  Quality = BPP*weight-%aspect_ratio_error 
+    $Quality=$weight*1000*$bitrate/(@NXaxis[1]*@NYaxis[1]*$FPS)-abs(@NXaxis[1]/@NYaxis[1]-$aspect_ratio)*100/$aspect_ratio;
+    for ( $i=1; $i < 5 ; $i++ )
+    {	
+        for ( $j=1; $j<3; $j++ )
+        {
+            print $DEBUG "---------------------\n";	
+            printf($DEBUG " bpp=%.3f",1000*$bitrate/(@NXaxis[$j]*@NYaxis[$i]*$FPS));
+            printf($DEBUG " and AR_err=%.3f %\n",abs(@NXaxis[$j]/@NYaxis[$i]-$aspect_ratio)*100/$aspect_ratio);
+            $tmp=$weight*1000*$bitrate/(@NXaxis[$j]*@NYaxis[$i]*$FPS)-abs(@NXaxis[$j]/@NYaxis[$i]-$aspect_ratio)*100/$aspect_ratio;
+            printf($DEBUG "Quality = %.6f\n",$tmp);
+            if ( $tmp >= $Quality)
+            { 	
+                $Quality=$tmp;
+                $NXaxis=@NXaxis[$j];
+                $NYaxis=@NYaxis[$i];
+                $fbpp=1000*$bitrate/($NXaxis*$NYaxis*$FPS);
+                print $DEBUG "X($j)=$NXaxis, Y($i)=$NYaxis ---CATCH !! \n";
+            }
+        }
+    }
+#  Limits but normally impossible to fall into
 if ( $NXaxis > $Xaxis )
 { 
     $NXaxis=16*ceil(($Xaxis-2*$lr)/16);
@@ -1979,7 +2063,7 @@ if ( $NYaxis > $Yaxis )
     $NXaxis=16*ceil(($NYaxis*$aspect_ratio)/16);
 }
 
-#  zH zW and row are the -B parameters
+#   zH zW and row are the -B parameters
 $row=16;
 $zH=floor(($Yaxis-2*$tb-$NYaxis)/$row);
 $zW=floor(($Xaxis-2*$lr-$NXaxis)/$row);
@@ -1997,143 +2081,150 @@ print $DEBUG "<--- Zooming\n";
 }	
 
 
-# ********************** Config ****************************
+#  ********************** Config ****************************
 
 sub config
-{       print $DEBUG "--->  Enter config\n";
-mydie "There is still a tmp/V2divx.conf , please remove all tmp files\n (or at least tmp/V2divx.conf) before running V2divx /path/to/vob sample" if ( -e "tmp/V2divx.conf") ;
-$vobpath = $ARGV[0];
-mydie "Directory \"$vobpath\" does not exist \n Sorry" if ( ! -e $vobpath );
-mkdir ("tmp",0777);
-chk_wdir;
+{       
+    print $DEBUG "--->  Enter config\n";
+    mydie "There is still a tmp/V2divx.conf , please remove all tmp files\n (or at least tmp/V2divx.conf) before running V2divx /path/to/vob sample" if ( -e "tmp/V2divx.conf") ;
+    $vobpath = $ARGV[0];
+    mydie "Directory \"$vobpath\" does not exist \n Sorry" if ( ! -e $vobpath );
+    mkdir ("tmp",0777);
+    chk_wdir;
 
-open(CONF,">>tmp/V2divx.conf");
-print CONF "#vobpath:$vobpath # DO NOT MODIFY THIS LINE\n";
-close(CONF);
+    open(CONF,">>tmp/V2divx.conf");
+    print CONF "#vobpath:$vobpath # DO NOT MODIFY THIS LINE\n";
+    close(CONF);
 
-print "\n You will have a look with \'$XINE\' on the File $lastvob.\n Look how long (in seconds) is the end credits (so we can remove it),\n you also may find which audio stream and subtitle number you will choose.\n";
-print " Press Enter -> ";
-$junk=<STDIN>;
-system ("$XINE $vobpath/$lastvob >/dev/null 2>&1");
-# How many second remove from end of movie...
-print " How long (in seconds) are the end credits (we will not process it and so increase video bitrate) [default:0]? "; 
-$last_sec=<STDIN>;
-chomp($last_sec);
+    print "\n You will have a look with \'$XINE\' on the File $lastvob.\n Look how long (in seconds) is the end credits (so we can remove it),\n you also may find which audio stream and subtitle number you will choose.\n";
+    print " Press Enter -> ";
+    $junk=<STDIN>;
+    system ("$XINE $vobpath/$lastvob >/dev/null 2>&1");
+    # How many second remove from end of movie...
+    print " How long (in seconds) are the end credits (we will not process it and so increase video bitrate) [default:0]? "; 
+    $last_sec=<STDIN>;
+    chomp($last_sec);
 
-$last_sec=0 if ( $last_sec eq "" || $last_sec < 10 );
-print " How many seconds will you remove from the beginning [default:0]? ";
-$deb_sec=<STDIN>;
-chomp($deb_sec);
-$deb_sec=0 if ( $deb_sec eq "" );
+    $last_sec=0 if ( $last_sec eq "" || $last_sec < 10 );
+    print " How many seconds will you remove from the beginning [default:0]? ";
+    $deb_sec=<STDIN>;
+    chomp($deb_sec);
+    $deb_sec=0 if ( $deb_sec eq "" );
 
-print $RED."\t**** WARNING ****\nIn cluster mode we split the movie after it's completly encoded\n".$NORM and sleep(5) if ( $last_sec > 600 or $deb_sec > 600 ); 
+    print $RED."\t**** WARNING ****\nIn cluster mode we split the movie after it's completly encoded\n".$NORM and sleep(5) if ( $last_sec > 600 or $deb_sec > 600 ); 
 
-open(CONF,">>tmp/V2divx.conf");
-print CONF "#last_sec:$last_sec\n";
-print CONF "#deb_sec:$deb_sec\n";
-close CONF;
+    open(CONF,">>tmp/V2divx.conf");
+    print CONF "#last_sec:$last_sec\n";
+    print CONF "#deb_sec:$deb_sec\n";
+    close CONF;
 
-#*************SOUND SAMPLE**********************
-$as=20;
-get_audio_channel;
-if ( $NOAUDIO != 1 )
-{
-    print " Do you want to make Sound samples to find which audio channel is the one you want (y|N)? ";
-    $rep=<STDIN>;
-    chomp($rep);
-    $pcm_swb="";
-    my($chkpcm)=0;
-    if ( $rep eq "o" ||   $rep eq "O" ||  $rep eq "y" ||  $rep eq "Y" )
+    #*************SOUND SAMPLE**********************
+    $as=20;
+    get_audio_channel;
+    if ( $NOAUDIO != 1 )
     {
-        for ($i = 0; $i <= $number_of_ac; $i ++)
+        print " Do you want to make Sound samples to find which audio channel is the one you want (y|N)? ";
+        $rep=<STDIN>;
+        chomp($rep);
+        $pcm_swb="";
+        my($chkpcm)=0;
+        if ( $rep eq "o" ||   $rep eq "O" ||  $rep eq "y" ||  $rep eq "Y" )
         {
-            make_sample(" -y $DIVX $VID_OPT -a $i $pcm_swb ", "audio_sample._-a_${i}_", $audiosample_length);
-            print " To ear this audio sample, please press Enter ->";
+            for ($i = 0; $i <= $number_of_ac; $i ++)
+            {
+                make_sample(" -y $DIVX $VID_OPT -a $i $pcm_swb ", "audio_sample._-a_${i}_", $audiosample_length);
+                print " To ear this audio sample, please press Enter ->";
+                $junk=<STDIN>;
+                system("$AVIPLAY audio_sample._-a_${i}_.avi > /dev/null 2>&1 ") or mydie "Problem to run \'$AVIPLAY audio_sample._-a_${i}_.avi\'";
+                my($audio_format)=audioformat("-a $i");
+                if ($audio_format eq "pcm" && $chkpcm eq 0 )
+                {
+                    print $GREEN."$v2d\t Audio channel $i format:\t\t   | $audio_format\n".$NORM;
+                    print " Was the sound completly noisy (y|N)? ";
+                    $rep= <STDIN>;
+                    chomp($rep);
+                    if ( $rep eq "O" or $rep eq "o" or $rep eq "y" or $rep eq "Y")
+                    {
+                        print $GREEN."$v2d\t Remake this sample with option:\t   | -d\n".$NORM;
+                        $pcm_swb='-d' ;
+                        unlink("audio_sample._-a_${i}_.avi");
+                        $i--;
+                        $chkpcm=1;
+                        next;	
+                    }
+                    $chkpcm=1;
+                }
+                print " Was it the Audio channel you want (y|N)? ";
+                $rep= <STDIN>;
+                chomp($rep);
+                if ($rep eq "O" or $rep eq "o" or $rep eq "y" or $rep eq "Y")
+                {     
+                    unlink("audio_sample._-a_${i}_.avi");
+                    $as=$i;
+                    last;
+                } elsif  ($i == $number_of_ac )
+                {
+                    print $RED."\tNo more Audio channels !\n".$NORM;
+                }
+                unlink("audio_sample._-a_${i}_.avi");
+                $chkpcm=0;
+            }
+        }
+        while ( ! grep (/$as/,@achannels) )
+        {
+            print " Enter audio stream number to process [default:$audio_channel]? ";
+            $as=<STDIN>;
+            chomp($as);
+            $as = $audio_channel if ( $as eq "" );
+            print $RED."$as : is not an available audio channel.\n".$NORM if  ( ! grep (/$as/,@achannels) );
+        }
+        $audio_channel=$as;
+        my($auf)=audioformat("-a $as");
+        print $GREEN."$v2d\t Audio channel $as format:\t\t   | $auf\n".$NORM;
+        if ($auf eq 'pcm' && $chkpcm eq 0 )
+        {
+            print $RED."$v2d\t As this audio channel is PCM format, it may be completly noisy\n".$NORM;	
+            make_sample(" -y $DIVX $VID_OPT -a $as", "audio_sample._-a_${as}_", $audiosample_length);
+            print " Ear this audio sample, please press Enter ->";
             $junk=<STDIN>;
-            system("$AVIPLAY audio_sample._-a_${i}_.avi > /dev/null 2>&1 ") or mydie "Problem to run \'$AVIPLAY audio_sample._-a_${i}_.avi\'";
-            my($audio_format)=audioformat("-a $i");
-            if ($audio_format eq "pcm" && $chkpcm eq 0 )
-            {       print $GREEN."$v2d\t Audio channel $i format:\t\t   | $audio_format\n".$NORM;
-            print " Was the sound completly noisy (y|N)? ";
-            $rep= <STDIN>;
+            system("$AVIPLAY audio_sample._-a_${as}_.avi > /dev/null 2>&1 ") ;# or mydie "Problem to run \'$AVIPLAY audio_sample._-a_${as}_.avi\'";
+            unlink("audio_sample._-a_${as}_.avi");
+            print " Was this sample completly noisy (y|N)? ";
+            $rep=<STDIN>;
             chomp($rep);
             if ( $rep eq "O" or $rep eq "o" or $rep eq "y" or $rep eq "Y")
-            {	print $GREEN."$v2d\t Remake this sample with option:\t   | -d\n".$NORM;
-            $pcm_swb='-d' ;
-            unlink("audio_sample._-a_${i}_.avi");
-            $i--;
-            $chkpcm=1;
-            next;	
+            {
+                $pcm_swb="-d";
+            }
         }
-        $chkpcm=1;
+
+        $good_audio="-a $audio_channel $pcm_swb";
+        if ( $number_of_ac > 0 )
+        {
+            print " Do you want to have another audio channel in your AVI movie (take care of the Video quality which decrease with 2 audio channels for the same movie size), this audio channel will be encoded at the same bitrate than the first audio channel (y|N)? ";
+            $rep=<STDIN>;
+            chomp($rep);
+            if ( $rep eq "y" || rep eq "O" ||  $rep eq "o" ||  $rep eq "Y" )
+            {
+                $ac2=100;
+                while($ac2>$number_of_ac || $ac2 == $audio_channel )
+                {	
+                    print " Enter the other audio channel number you want(MAX=$number_of_ac): ";
+                    $ac2=<STDIN>;
+                }
+                chomp($ac2);
+                $auf2=audioformat("-a $ac2");
+                print $GREEN."$v2d\t Audio channel $ac2 format:\t\t | $auf2\n".$NORM;
+                open (CONF,">>tmp/V2divx.conf");
+                print CONF "#ac2:$ac2 $pcm_swb\n";
+                close(AC2);
+            }
+        }
+        a_bitrate;
     }
-    print " Was it the Audio channel you want (y|N)? ";
-    $rep= <STDIN>;
-    chomp($rep);
-    if ($rep eq "O" or $rep eq "o" or $rep eq "y" or $rep eq "Y")
-    {     
-        unlink("audio_sample._-a_${i}_.avi");
-        $as=$i;
-        last;
-    }elsif ($i == $number_of_ac )
-    {       print $RED."\tNo more Audio channels !\n".$NORM;
-}
-unlink("audio_sample._-a_${i}_.avi");
-$chkpcm=0;
-}
-}
-while ( ! grep (/$as/,@achannels) )
-{
-    print " Enter audio stream number to process [default:$audio_channel]? ";
-    $as=<STDIN>;
-    chomp($as);
-    $as = $audio_channel if ( $as eq "" );
-    print $RED."$as : is not an available audio channel.\n".$NORM if  ( ! grep (/$as/,@achannels) );
-}
-$audio_channel=$as;
-my($auf)=audioformat("-a $as");
-print $GREEN."$v2d\t Audio channel $as format:\t\t   | $auf\n".$NORM;
-if ($auf eq 'pcm' && $chkpcm eq 0 )
-{       print $RED."$v2d\t As this audio channel is PCM format, it may be completly noisy\n".$NORM;	
-make_sample(" -y $DIVX $VID_OPT -a $as", "audio_sample._-a_${as}_", $audiosample_length);
-print " Ear this audio sample, please press Enter ->";
-$junk=<STDIN>;
-system("$AVIPLAY audio_sample._-a_${as}_.avi > /dev/null 2>&1 ") ;# or mydie "Problem to run \'$AVIPLAY audio_sample._-a_${as}_.avi\'";
-unlink("audio_sample._-a_${as}_.avi");
-print " Was this sample completly noisy (y|N)? ";
-$rep=<STDIN>;
-chomp($rep);
-if ( $rep eq "O" or $rep eq "o" or $rep eq "y" or $rep eq "Y")
-{ $pcm_swb="-d";
-}
-}
-
-$good_audio="-a $audio_channel $pcm_swb";
-if ( $number_of_ac > 0 )
-{
-    print " Do you want to have another audio channel in your AVI movie (take care of the Video quality which decrease with 2 audio channels for the same movie size), this audio channel will be encoded at the same bitrate than the first audio channel (y|N)? ";
-    $rep=<STDIN>;
-    chomp($rep);
-    if ( $rep eq "y" || rep eq "O" ||  $rep eq "o" ||  $rep eq "Y" )
-    {	$ac2=100;
-    while($ac2>$number_of_ac || $ac2 == $audio_channel )
-    {	
-        print " Enter the other audio channel number you want(MAX=$number_of_ac): ";
-        $ac2=<STDIN>;
-    }
-    chomp($ac2);
-    $auf2=audioformat("-a $ac2");
-    print $GREEN."$v2d\t Audio channel $ac2 format:\t\t | $auf2\n".$NORM;
-    open (CONF,">>tmp/V2divx.conf");
-    print CONF "#ac2:$ac2 $pcm_swb\n";
-    close(AC2);
-}
-}
-a_bitrate;
-}
 
 
-#****************CROPPING TOP/BOTTOM ***********************
+# ****************CROPPING TOP/BOTTOM ***********************
 findclip;
 print " Clipping Top/Bottom \n You must have the smallest black LetterBox at top/bottom \n (It's better to leave black LetterBox at top/bottom if you intend to have SubTitle)\n";
 print " To see the first sample, please press Enter -->";
@@ -2147,7 +2238,9 @@ while ( $rep ne "O" &&  $rep ne "o" && $rep ne "y" && $rep ne "Y" )
     system ($sys."  > /dev/null");
     $tmp = `/bin/ls -1 video_s._-j_$tb,$lr_*.ppm`;
     @aclip = split /\n/, $tmp;
-    foreach $file ( @aclip  ) { system ("$XV $file") }
+    foreach $file ( @aclip  ) {
+        system ("$XV $file")
+    }
     print " (Don't care about colors or upside down please)\n Are Top/Bottom LetterBoxes (-j $RED$tb$NORM,$lr) OK ?(y), to big (b) or to small (s): ";
     $rep= <STDIN>;
     chomp($rep);
@@ -2156,13 +2249,15 @@ while ( $rep ne "O" &&  $rep ne "o" && $rep ne "y" && $rep ne "Y" )
         system("rm video_s._-j_$tb,$lr_*.ppm" );
         $top_bot=1;
         last;
-    }elsif ( $rep eq "S" || $rep eq "s"  )
+    } elsif  ( $rep eq "S" || $rep eq "s"  )
     {
         system("rm video_s._-j_$tb,$lr_*.ppm");
         $top_bot=0;
         $tb=$tb-$inc;
-        if ( $tb < 0 ) { $tb = 0;}
-    }elsif  ( $rep eq "B" || $rep eq "b"  )
+        if ( $tb < 0 ) {
+            $tb = 0;
+        }
+    } elsif   ( $rep eq "B" || $rep eq "b"  )
     {
         system("rm video_s._-j_$tb,$lr_*.ppm" );
         $top_bot=0;
@@ -2171,7 +2266,7 @@ while ( $rep ne "O" &&  $rep ne "o" && $rep ne "y" && $rep ne "Y" )
 }
 
 
-#***************** CROPPING LEFT RIGHT **************************
+# ***************** CROPPING LEFT RIGHT **************************
 print " Now Clipping Left/Right \n";
 print " To see the first sample, please press Enter -->";
 $rep=<STDIN>;
@@ -2192,21 +2287,21 @@ while ( $rep ne "O" &&  $rep ne "o" && $rep ne "y" && $rep ne "Y" )
         system("rm video_s._-j_$tb,$lr_*.ppm");
         $left_right=1;
         last;
-    }elsif ( $rep eq "B" || $rep eq "b"  )
-    {
+    } elsif  ( $rep eq "B" || $rep eq "b"  ) {
         system("rm video_s._-j_$tb,$lr_*.ppm");
         $left_right=0;
         $lr=$lr+$inc;
-    }elsif  ( $rep eq "S" || $rep eq "s"  )
-    {
+    } elsif   ( $rep eq "S" || $rep eq "s"  ) {
         system("rm video_s._-j_$tb,$lr_*.ppm");
         $left_right=0;
         $lr=$lr-$inc;
-        if ( $lr < 0 ) { $lr = 0 ;}
+        if ( $lr < 0 ) {
+            $lr = 0 ;
+        }
     }
 }
 
-#************************* SUBTITLE ***********************
+# ************************* SUBTITLE ***********************
 $st=20;
 if ( $in_video_magic eq 'mov' )
 {
@@ -2244,33 +2339,34 @@ if ( ($SUBT =~ m,detected \((\d+)\) subtitle,) || ( defined($number_of_st) && $n
         }
         print $GREEN."$v2d\t Detected subrip Transcode contrib:\t\t | ";
         if ( $SUBRIP eq "OK" && $in_video_magic eq 'vob' )
-        {	print "yes\n".$NORM;
-        print " Do you want subtitles to be in the movie Encoded or in a separate File (E|f)? ";
-        $rep= <STDIN>;
-        chomp($rep);
-    }else
-    {	
-        print $RED."NO\n".$NORMAL;
-    }
-    if ($rep eq "F" or $rep eq "f")
-    { 	
-        open(PROBE,"<tmp/probe.rip");
-        while(<PROBE>)
         {
-            $stlang=$1 if ( $_=~ m, subtitle 0${st}=<(.*)>,);
+            print "yes\n".$NORM;
+            print " Do you want subtitles to be in the movie Encoded or in a separate File (E|f)? ";
+            $rep= <STDIN>;
+            chomp($rep);
+        } else 
+        {	
+            print $RED."NO\n".$NORMAL;
         }
-        close(PROBE);
-        $sub_title="SRT_${st}_${stlang}";
-    } else {
-        $sub_title=",extsub=$st:$tb:0:1:$EXTSUB";
+        if ($rep eq "F" or $rep eq "f")
+        { 	
+            open(PROBE,"<tmp/probe.rip");
+            while(<PROBE>)
+            {
+                $stlang=$1 if ( $_=~ m, subtitle 0${st}=<(.*)>,);
+            }
+            close(PROBE);
+            $sub_title="SRT_${st}_${stlang}";
+        } else {
+            $sub_title=",extsub=$st:$tb:0:1:$EXTSUB";
+        }
+        open (CONF,">>tmp/V2divx.conf");
+        print CONF "#sub_title:$sub_title\n";
+        close (CONF);
     }
-    open (CONF,">>tmp/V2divx.conf");
-    print CONF "#sub_title:$sub_title\n";
-    close (CONF);
-}
 
 }
-#************** ANTIALIASING & DEINTERLACING ******************** 
+# ************** ANTIALIASING & DEINTERLACING ******************** 
 interlaced;
 print " Do you want to deinterlace this movie(";
 print "Y|n)? " if ( $INTERLACE eq "yes" );
@@ -2292,24 +2388,25 @@ if ( $rep eq "O" || $rep eq "o" || $rep eq "y" || $rep eq "Y" || ($INTERLACE eq 
     chomp($rep);
     open (CONF,">>tmp/V2divx.conf");
     if ( ($rep eq "C" || $rep eq "c") && $PP eq "" )
-    {	 $deintl=",pp=lb";
-    print CONF "#deintl:$deintl\n";
-}elsif  ( $rep eq "B" || $rep eq "b" ) 
-{
-    $deintl=",yuvdenoise=sharpen=100:deinterlace=1";
-    print CONF "#deintl:$deintl\n";
-}else {
-    $dintl=" -I 3";
+    {
+        $deintl=",pp=lb";
+        print CONF "#deintl:$deintl\n";
+    } elsif  ( $rep eq "B" || $rep eq "b" ) 
+    {
+        $deintl=",yuvdenoise=sharpen=100:deinterlace=1";
+        print CONF "#deintl:$deintl\n";
+    } else  {
+        $dintl=" -I 3";
+    }
+    close (CONF);
 }
-close (CONF);
-}
-#Sorry, only RGB input allowed for now: $deintl="_-J_smartdeinter=diffmode=2:highq=1:cubic=1";
+# Sorry, only RGB input allowed for now: $deintl="_-J_smartdeinter=diffmode=2:highq=1:cubic=1";
 print " Does your clip need Antialiasing (slower) (y|N)? ";
 $rep= <STDIN>;
 chomp($rep);
 
 $aalias=" -C 3" if ( $rep eq "O" || $rep eq "o" || $rep eq "y" || $rep eq "Y" );
-#       Write parameters
+#        Write parameters
 ( $left_right eq 1 && $top_bot eq 1 ) or mydie "Oups Sorry.. I miss some parameters :-(";
 $params = "$good_audio -j $tb,$lr$dintl$aalias";
 open (CONF,">>tmp/V2divx.conf");
@@ -2317,15 +2414,18 @@ print CONF "#params:$params # YOU MUST KNOW WHAT YOU DO IN THIS LINE\n";
 close(CONF);
 
 zooming;
-#    Ask for a Logo
+#     Ask for a Logo
 ask_logo;
-#     Search DVD Title
+#      Search DVD Title
 if ( ! defined($dvdtitle))
-{	print " Enter the title of this movie (blank space available): ";
-$dvdtitle=<STDIN>;
-$dvdtitle =~ s/ /_/g;
-chomp($dvdtitle);
-if ( $dvdtitle eq "" ) { $dvdtitle="movie";}
+{
+    print " Enter the title of this movie (blank space available): ";
+    $dvdtitle=<STDIN>;
+    $dvdtitle =~ s/ /_/g;
+    chomp($dvdtitle);
+    if ( $dvdtitle eq "" ) {
+        $dvdtitle="movie";
+    }
 }
 open (CONF,">>tmp/V2divx.conf");
 print CONF "#dvdtitle:$dvdtitle # DO NOT MODIFY THIS LINE\n";
@@ -2333,7 +2433,7 @@ close(CONF);
 
 }   # END Config 
 
-#*************** RIP A DVD ***********************
+# *************** RIP A DVD ***********************
 sub ripdvd
 { 	
     $vobpath = $ARGV[0];
@@ -2346,8 +2446,7 @@ sub ripdvd
     { 
         $dvdtitle=`$DVDTITLE $dvd 2> /dev/null` or die "Problem when running \'dvdtitle $dvd\'";
         chomp($dvdtitle);
-    }else
-    {  	
+    } else {  	
         print " V2divx does'nt find dvdtitle, please enter this DVD Movie Title: ";
         $dvdtitle=<STDIN>;
         $dvdtitle =~ s/ /_/g;
@@ -2366,104 +2465,108 @@ sub ripdvd
     print " titles: total=$totalTitles\n";
 
     @checkTitles = 1 .. $totalTitles;
-# now probe each title and find longest
-$longestLen   = 0;
-$longestTitle = 0;
-for(@checkTitles) {
-# call tcprobe for info
-$probe = `tcprobe -i \"$dvd\" 2>&1 -T $_` or die "Problem when running \'tcprobe -i $dvd\'";
-# extract title playback time -> titlelen
-($probe =~ m,title playback time: .* (\d+) sec,) or die "No time found in tcprobe for title $_ !";
-$titleLen[$_] = $1;
-# extract title set (VTS file) -> titleset
-($probe =~ m,title set (\d+),) or die "No title set found in tcprobe for title $_! ";
-$titleSet[$_] = $1;
-# extract angles
-($probe =~ m,(\d+) angle\(s\),) or die "No angle found in tcprobe for title $_ !";
-$angles = $1;
-# extract chapters
-($probe =~ m,(\d+) chapter\(s\),) or die "No chapter found in tcprobe for title $_ !";
-$chapters = $1;
+    #  now probe each title and find longest
+    $longestLen   = 0;
+    $longestTitle = 0;
+    for(@checkTitles) {
+        #  call tcprobe for info
+        $probe = `tcprobe -i \"$dvd\" 2>&1 -T $_` or die "Problem when running \'tcprobe -i $dvd\'";
+        #  extract title playback time -> titlelen
+        ($probe =~ m,title playback time: .* (\d+) sec,) or die "No time found in tcprobe for title $_ !";
+        $titleLen[$_] = $1;
+        #  extract title set (VTS file) -> titleset
+        ($probe =~ m,title set (\d+),) or die "No title set found in tcprobe for title $_! ";
+        $titleSet[$_] = $1;
+        #  extract angles
+        ($probe =~ m,(\d+) angle\(s\),) or die "No angle found in tcprobe for title $_ !";
+        $angles = $1;
+        #  extract chapters
+        ($probe =~ m,(\d+) chapter\(s\),) or die "No chapter found in tcprobe for title $_ !";
+        $chapters = $1;
 
-# calc hour, minute of title len
-$sec  = $titleLen[$_];
-$hour = int($sec / 3600);
-$sec -= $hour * 3600;
-$min  = int($sec / 60);
-$sec -= $min * 60;
+        #  calc hour, minute of title len
+        $sec  = $titleLen[$_];
+        $hour = int($sec / 3600);
+        $sec -= $hour * 3600;
+        $min  = int($sec / 60);
+        $sec -= $min * 60;
 
-# verbose
-printf("%02d: len=%02d:%02d:%02d titleset=%02d angles=%02d chapters=%02d\n", $_,$hour,$min,$sec,$titleSet[$_],$angles,$chapters);
+        #  verbose
+        printf("%02d: len=%02d:%02d:%02d titleset=%02d angles=%02d chapters=%02d\n", $_,$hour,$min,$sec,$titleSet[$_],$angles,$chapters);
 
-# find largest title
-if($titleLen[$_] > $longestLen) {
-    $longestLen   = $titleLen[$_];
-    $longestTitle = $_;
-}
-}
-print " The Main Title seems to be the Title No : $longestTitle, OK ? (y/n) :";
-$rep=<STDIN>;
-chomp($rep);
-if ( $rep ne "o" &&  $rep ne "O" && $rep ne "y" && $rep ne "Y" ) 
-{ 	
-    print "Ups... Enter the Title number please : ";
-    $longestTitle=<STDIN>;
-    chomp($longestTitle);
-}
-#  Check if this title is multiangle ....
-$probe = `tcprobe -i \"$dvd\" 2>&1 -T $longestTitle` or die "Problem when running \'tcprobe -i $dvd\'";
-($probe =~ m,(\d+) angle\(s\),) or die "No angle found in tcprobe for title $longestTitle !";
-$angles = $1;
-if ( $angles > 1 )
-{ 	
-    print $RED."***************** WARNING!!!! *********************\n\t This is a multi angles video stream. \n";
-    print $NORM." Do you know which angle number you want to rip (y|N)? ";
+        #  find largest title
+        if($titleLen[$_] > $longestLen) {
+            $longestLen   = $titleLen[$_];
+            $longestTitle = $_;
+        }
+    }
+    print " The Main Title seems to be the Title No : $longestTitle, OK ? (y/n) :";
     $rep=<STDIN>;
     chomp($rep);
-    die "OK ... Have a look on your DVD to find which angle you like\n Bye" if ( $rep ne "o" &&  $rep ne "O" && $rep ne "y" && $rep ne "Y" );
-    print " OK ... we continue ...\n";
-    print " There is $angles which one do you want? ";
-    print $NORM;
-    $angle=<STDIN>;
-    chomp($angle);
-} else {
-    $angle=1;
-}
-#  Check if this title is multichapter
-($probe =~ m,(\d+) chapter\(s\),) or die "No chapter found in tcprobe for title $longestTitle !";
-$chapter=$1;
-if ( $chapter > 1 )
-{ 	print " Do you want to rip this title chapter by chapter (y|N)? ";
-$rep=<STDIN>;
-chomp($rep);
-}
-#	
-system("/bin/rm -rf $vobpath/*  2> /dev/null");
-open (TITLE,">$vobpath/dvdtitle");
-print TITLE $dvdtitle;
-close(TITLE);
-opendir(VOB,$vobpath);
-chdir($vobpath) or die "Unable to chdir to $vobpath.. please DO NOT USE the ~ character in the /path/to/vob";
-$sys="tcprobe -i $dvd -T $longestTitle >> probe.rip 2>&1 ";
-system ("nice -$nice $sys");
-if ( $rep eq "y" || $rep eq "Y" || $rep eq "o" || $rep eq "0")
-{
-    for ( $i=1;$i<=$chapter;$i++)
+    if ( $rep ne "o" &&  $rep ne "O" && $rep ne "y" && $rep ne "Y" ) 
+    { 	
+        print "Ups... Enter the Title number please : ";
+        $longestTitle=<STDIN>;
+        chomp($longestTitle);
+    }
+    #   Check if this title is multiangle ....
+    $probe = `tcprobe -i \"$dvd\" 2>&1 -T $longestTitle` or die "Problem when running \'tcprobe -i $dvd\'";
+    ($probe =~ m,(\d+) angle\(s\),) or die "No angle found in tcprobe for title $longestTitle !";
+    $angles = $1;
+    if ( $angles > 1 )
+    { 	
+        print $RED."***************** WARNING!!!! *********************\n\t This is a multi angles video stream. \n";
+        print $NORM." Do you know which angle number you want to rip (y|N)? ";
+        $rep=<STDIN>;
+        chomp($rep);
+        die "OK ... Have a look on your DVD to find which angle you like\n Bye" if ( $rep ne "o" &&  $rep ne "O" && $rep ne "y" && $rep ne "Y" );
+        print " OK ... we continue ...\n";
+        print " There is $angles which one do you want? ";
+        print $NORM;
+        $angle=<STDIN>;
+        chomp($angle);
+    } else {
+        $angle=1;
+    }
+    #   Check if this title is multichapter
+    ($probe =~ m,(\d+) chapter\(s\),) or die "No chapter found in tcprobe for title $longestTitle !";
+    $chapter=$1;
+    if ( $chapter > 1 )
+    { 	
+        print " Do you want to rip this title chapter by chapter (y|N)? ";
+        $rep=<STDIN>;
+        chomp($rep);
+    }
+
+    system("/bin/rm -rf $vobpath/*  2> /dev/null");
+    open (TITLE,">$vobpath/dvdtitle");
+    print TITLE $dvdtitle;
+    close(TITLE);
+    opendir(VOB,$vobpath);
+    chdir($vobpath) or die "Unable to chdir to $vobpath.. please DO NOT USE the ~ character in the /path/to/vob";
+    $sys="tcprobe -i $dvd -T $longestTitle >> probe.rip 2>&1 ";
+    system ("nice -$nice $sys");
+    if ( $rep eq "y" || $rep eq "Y" || $rep eq "o" || $rep eq "0")
     {
-        $sys="tccat -i $dvd -T $longestTitle,$i,$angle | split -b 1024m - ${dvdtitle}_T${longestTitle}_C${i}_" ;
+        for ( $i=1;$i<=$chapter;$i++)
+        {
+            $sys="tccat -i $dvd -T $longestTitle,$i,$angle | split -b 1024m - ${dvdtitle}_T${longestTitle}_C${i}_" ;
+            print $INFO $sys."\n";
+            system("nice -$nice $sys");
+        }
+    } else {
+        $sys="tccat -i $dvd -T $longestTitle,-1,$angle | split -b 1024m - ${dvdtitle}_T${longestTitle}_" ;
         print $INFO $sys."\n";
         system("nice -$nice $sys");
     }
-} else {
-    $sys="tccat -i $dvd -T $longestTitle,-1,$angle | split -b 1024m - ${dvdtitle}_T${longestTitle}_" ;
-    print $INFO $sys."\n";
-    system("nice -$nice $sys");
+    #  Check if $dvdtitle is well in the vob file name AND the vob file is well in the current directory 
+    my(@files)=grep {
+        /$dvdtitle/ && -f "$_"
+    } readdir(VOB);
+    closedir(VOB);
+    my($i)=0;
+    foreach $vob (@files){rename($vob,$vob.".vob");$i++;
 }
-# Check if $dvdtitle is well in the vob file name AND the vob file is well in the current directory 
-my(@files)=grep { /$dvdtitle/ && -f "$_" } readdir(VOB);
-closedir(VOB);
-my($i)=0;
-foreach $vob (@files){rename($vob,$vob.".vob");$i++;}
 open (PROBE,">>probe.rip");
 print PROBE "Number of vob files:$i" ;
 close(PROBE);
@@ -2473,7 +2576,7 @@ exit(0);
 } # END ripdvd
 
 
-#********************* MAIN () **************************
+# ********************* MAIN () **************************
 
 if ($ARGV[1] eq "config")
 {
@@ -2547,6 +2650,6 @@ if (1)
     rename("tmp/2-${dvdtitle}_0.avi","tmp/2-${dvdtitle}_sync.avi");
     twoac;
     finish;
-# We do never come here !
+    #  We do never come here !
     exit(1);
 }

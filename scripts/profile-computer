@@ -1,0 +1,21 @@
+#!/usr/bin/perl -w
+# $Revision: 1.1 $
+# Luis Mondesi < lemsx1@hotmail.com >
+# Last modified: 2004-Jul-20
+#
+# DESCRIPTION: spits to STDOUT basic information about the current system
+# USAGE: profile-computer.pl > `hostname`.ini
+# CHANGELOG:
+#
+use strict;
+$|++;
+
+print `hostname`;
+print grep( /model name/i, `cat /proc/cpuinfo` );
+print grep( /MemTotal|SwapTotal/i, `cat /proc/meminfo` );
+
+my @sp = split (//, `lspci`);
+foreach my $line (@sp) {
+    ( $line = $line ) =~ s/^[0-9a-zA-Z]+ //ig;
+    print $line;
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.88 $
+# $Revision: 1.89 $
 # Luis Mondesi  <lemsx1@hotmail.com>
 # 
 # REQUIRED: ImageMagick's Perl module and a dialog 
@@ -210,9 +210,11 @@ main();
 #-------------------------------------------------#
 #                   FUNCTIONS                     #
 #-------------------------------------------------#
+
 sub main {
     $LOGFILE->open("> $LOG");
     $LOGFILE->autoflush(1);
+    my $err = 0;
     my $ARGS = ( $DIA =~ /zenity/ ) ? "" : " --clear --backtitle 'Picture Directory to HTML' ";
     if ( $use_console_progressbar == 1 ) 
     {
@@ -234,34 +236,57 @@ sub main {
     {
         print $LOGFILE 
         ( "! Missing main $CONFIG_FILE. Creating one for you at '$ROOT_DIRECTORY'\n");
-        init_config($ROOT_DIRECTORY,"true");
+        init_config("$ROOT_DIRECTORY","true");
     }
-    # get menu string
-    if ( $THUMBSONLY == 0 && ( $NOMENU != 1 || $config{"$ROOT_DIRECTORY"}{"menutype"} eq "modern" ) ) 
+    # --------------------------- STEPS -----------------------------#
+    # 1.
+    # Create an array of all image files that we will work on.
+    # HINT: check EXCEPT for files we will be ignoring.
+    my @ary = do_file_ary("$ROOT_DIRECTORY");
+    # remove duplicates:
+    my %seen = ();
+    my @uniq = grep(!$seen{$_}++,@ary);
+    @pixfiles = (); # resets (to make sure)
+    @pixfiles = @uniq; # copies all unique files to pixfiles
+    # free up memory:
+    undef @ary;
+    undef %seen;
+    undef @uniq;
+    # 2.
+    # we need to create thumbnails first... 
+    # make all thumbnails and save all thumbs in %thumbfiles
+    # so that mkindex() can create the indices.
+    $err = mkthumb("$ROOT_DIRECTORY");
+    if ( $err > 0 || $THUMBSONLY > 0 ) {
+        exit (0);
+    }
+    # 3.
+    # We need to create a menu string to pass it to mkindex()
+    if ( $err == 0 && ( $NOMENU != 1 || $config{"$ROOT_DIRECTORY"}{"menutype"} eq "modern" ) ) 
     {
         print $LOGFILE ("= Creating menu string\n");
         $menu_str = menu_file();
         if ( $MENUONLY > 0 ) 
         {
+            # When menuonly is set, we print to a menu.$EXT file and exit
             exit (0);
         }
+    } 
+    # 4.
+    # make all supporting HTML files for e/a thumbnail image. 
+    # i.e. under the "t" directory
+    if ( $err == 0 && $NOINDEX == 0 ) {
+        # TODO this should use %thumbfiles (see mkindex())
+        thumb_html_files($ROOT_DIRECTORY);
     }
-    # we need to create thumbnails first... 
-    # TODO separate index creation from mkthumb()
-    # make all thumbnails and save all thumbs in %thumbfiles
-    # so that mkindex() can create the indices.
-    mkthumb($ROOT_DIRECTORY);
-    if ( $THUMBSONLY > 0 ) {
-        exit (0);
-    }
-    # create index files for thumbs
-    if ( $NOINDEX == 0 ) {
+    # 5.
+    # create index.$EXT files for thumbnails. The index file contains
+    # the links to e/a h/tfile.$EXT
+    if ( $err == 0 && $NOINDEX == 0 ) {
         mkindex(\%thumbfiles,$menu_str);  # pass hash reference
                                         # and a menu string
                                         # to be included in e/a file
     }
-    # make all supporting HTML files
-    thumb_html_files($ROOT_DIRECTORY);
     # close progressbar
     if ( $use_console_progressbar != 1 ) 
     {
@@ -412,7 +437,7 @@ sub mkindex {
     # @param 0 hash :=
     #   takes a two-dimensional hash of arrays in the form:
     #   $name{base}->[0] = 'path/file'
-    #   and does a index file for e/a 'base' of
+    #   and does a index.$EXT file for e/a 'base' of
     #   all files referenced 
     # @param 1 string := menu to use for e/a file
 
@@ -513,6 +538,8 @@ sub mkindex {
 sub mkthumb {
     # Creates thumbnails for a given directory
     # and save all to the global hash %thumbfiles
+    # @param 0 := root dir to make the images
+    #
     my $ROOT = $_[0];
     # globals
     %thumbfiles = (); # reset %thumbfiles
@@ -536,15 +563,15 @@ sub mkthumb {
     # init to some strange string...
     my $BASE = ",\/trash";
     my $tmp_BASE = ",\/more_trash";
-    my $i = 0; # counter
+    # error reporting:
+    my $err = 0;
+
+    my $i = 0;
 
     print $LOGFILE ("= Making thumbnails in $ROOT \n");
     #construct array of all image files
     my @ary = ();
-    if ( 
-        defined $pixfiles[0] 
-        && -f $pixfiles[0]
-        ) 
+    if ( defined $pixfiles[0] && -f $pixfiles[0] ) 
     {
         # copy that array instead:
         @ary = @pixfiles;
@@ -552,13 +579,8 @@ sub mkthumb {
         # construct array of all files
         @ary = do_file_ary("$ROOT");
     }
- 
-    # remove duplicates:
-    my %seen = ();
-    my @uniq = grep(!$seen{$_}++,@ary);
-    #print STDERR @uniq;
     # parse array of images
-    foreach (@uniq) {
+    foreach (@ary) {
         $thisFile = basename($_);
         next if ($thisFile =~ m/$EXCEPTION_LIST/);
         next if ($_ =~ m/\b$THUMBNAIL\b/i);
@@ -640,6 +662,7 @@ sub mkthumb {
                 system("convert -geometry $PERCENT $BASE/$pix_name $THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name");
                 if ( $? != 0 ) {
                     print $LOGFILE "** ERROR: conversion failed\n $! ";
+                    $err = 1;
                 }
             } else {
                 # assumes Image::Magick was checked for before
@@ -666,6 +689,7 @@ sub mkthumb {
             progressbar($PROGRESS,$TOTAL);
         }
     } #end for @ls 
+    return $err;
 } # end mkthumb
 
 sub thumb_html_files {
@@ -695,25 +719,15 @@ sub thumb_html_files {
 
     my @ary = ();
 
-    if ( 
-        defined $pixfiles[0] 
-        && -f $pixfiles[0]
-        ) 
+    if ( defined $pixfiles[0] && -f $pixfiles[0] ) 
     {
-        # copy that array instead:
         @ary = @pixfiles;
     } else {
-        # construct array of all files
         @ary = do_file_ary("$ROOT");
     }
-
-    # remove duplicates:
-    my %seen = ();
-    my @uniq = grep(!$seen{$_}++,@ary);
-
     # parse array of files, get images only
     # from it:
-    foreach (@uniq){
+    foreach (@ary){
         $thisFile = basename($_);
         next if ($thisFile =~ m/$EXCEPTION_LIST/);
         next if ($_ =~ m/\/$THUMBNAIL\/.*$EXT_INCL_EXPR$/i);
@@ -886,18 +900,19 @@ sub menu_file {
     my @files=();
     my @pixdir = (); # reset array 
 
-    my @ary = do_dir_ary("$ROOT_DIRECTORY");
-
-    # remove duplicates:
-    my %seen = ();
-    my @uniq = grep(!$seen{$_}++,@ary);
-
+    my @ary = ();
+    if ( defined($pixfiles[0]) && -f $pixfiles[0] )
+    {
+        @ary = @pixfiles;
+    } else {
+        @ary = do_dir_ary("$ROOT_DIRECTORY");
+    }
     # for e/a directory here
     # check if a .nopixdir2htmlrc file exists
     # if it does, then skip it and do the next one.
     # if it doesn't, then assume this will contain
     # a index.$EXT file and add it to the menu. 
-    foreach my $directory (@uniq){
+    foreach my $directory (@ary){
         next if (-f "$directory/.nopixdir2htmlrc");
         # remove ./ from begining of names
         $directory =~ s/^\.\/*//g;

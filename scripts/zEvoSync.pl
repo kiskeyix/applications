@@ -1,8 +1,8 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2002-Nov-17
+# Last modified: 2002-Nov-23
 # 
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # 
 # VERSION: 0.1
 #
@@ -35,7 +35,7 @@
 #       * sync the calendar
 #       * add switches to make life simpler (no need for gui)
 
-my $DBUG = 0;       # use 1 for true
+my $DBUG = 1;       # use 1 for true
 
 use strict;         
 $|++;               # disable buffering on standard output
@@ -409,6 +409,39 @@ sub item_factory_cb {
     }
 }
 
+sub notebook_page_switch {
+	my( $widget, $new_page, $page_num) = @_;
+        if ( $DBUG ) {
+	    print STDERR "Switch page $page_num\n";
+        }
+}
+
+sub create_tab {
+    my ($notebook,$buffer,$label) = @_;
+
+    my $child = new Gtk::Frame();
+    $child->border_width( 10 );
+    
+    my $int_box = new Gtk::VBox( 1, 0 );
+    $int_box->border_width( 10 );
+    $child->add( $int_box );
+    
+    #my $entry = new Gtk::Entry;
+    #$int_box->pack_start($entry, 1, 1, 5);
+
+    $child->show_all();
+ 
+    my $label_box = new Gtk::HBox( 0, 0 );
+    $label_box->pack_start($label, 0, 1, 0);
+    $label_box->show_all();
+
+    my $menu_box = new Gtk::HBox( 0, 0 );
+    $menu_box->show_all();
+
+    $notebook->append_page_menu($child, $label_box, $menu_box);
+
+}
+
 sub init_config_gui {
     
     # load the Gtk module
@@ -453,6 +486,24 @@ sub init_config_gui {
     $box1 = new Gtk::VBox(0, 0);
     $window->add($box1);
     $box1->pack_start($item_factory->get_widget('<main>'), 0, 0, 0);
+
+    # notebook tabs:
+    my $notebook = new Gtk::Notebook;
+    $notebook->signal_connect( 'switch_page', \&notebook_page_switch );
+    $notebook->set_tab_pos(-top);
+    $box1->pack_start($notebook, 1, 1, 0);
+    $notebook->border_width(10);
+                              
+    $notebook->realize;
+   
+    my $ab_buffer = "AddressBook";
+    my $ca_buffer = "Calendar";
+
+    my $ab_child = new Gtk::Label( $ab_buffer ); 
+    my $ca_child = new Gtk::Label( $ca_buffer );
+   
+    create_tab($notebook,$ab_buffer,$ab_child);
+    create_tab($notebook,$ca_buffer,$ca_child);
     
     $label = new Gtk::Label "Backup your files first!";
     

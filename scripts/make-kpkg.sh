@@ -1,8 +1,10 @@
 #!/bin/bash
 # vim: ft=sh:columns=80 :
-# $Revision: 1.31 $
+# $Revision: 1.32 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Oct-11
+# Last modified: 2004-Oct-15
+#
+# LICENSE: GPL (http://www.gnu.org/licenses/gpl.txt)
 #
 # DESCRIPTION:  an interactive wrapper to Debian's "make-kpkg"
 #               to build a custom kernel package using 
@@ -11,36 +13,34 @@
 # USAGE:    cd to /usr/src/linux (or the linux source tree)
 #           and then call:
 #           
-#           make-kpkg.sh #1 #2
+#           make-kpkg.sh N1 N2
 #           
-#               where #1 is the number or string appended to the kernel
+#               where N1 is the number or string appended to the kernel
 #               (01 or 02, or 03..., etc...)
-#               and #2 is the revision of this kernel: 1.0, 1.1 ...
-#               
+#               and N2 is the revision of this kernel: 1.0, 1.1 ...
+# TIPS:
+#   * setup a $HOME/.make-kpkg.rc with the variables found in this 
+#     script (see below) to override them
+#
 # NOTES:
-#   * your modules should be in /usr/src/modules if your kernel
+#   * If your modules are in /usr/src/modules, then your kernel
 #     is in /usr/src/linux. In other words, "modules" dir is parallel
 #     to your "linux" source directory. Same applies to "kernel-patches"
-#
-# CHANGELOG:
-#   See CVS log
-#
+#   * For distcc/ccache to work, the script assumes that 
+#     a symlink /usr/local/bin/gcc -> /usr/bin/ccache exists
+#   * If distributed cc (distcc) is installed, then we will distribute 
+#     our compilation to the hosts found in: ~/.distcc/hosts
+#   * If we also have ccache installed, then we arrange the commands 
+#     so that we can use both ccache and distcc. 
+#     Make sure that $CCACHE_DIR is setup correctly (man ccache)
 
-# TODO: divise a better routine to find executables
-# according to the users $PATH
+CCACHE=`command -v ccache`
+DISTCC=`command -v distcc`
 
-# if distributed cc is installed, then
-#  we will distribute our compilation
-#  to the following hosts:
-# if we also have ccache installed,
-# then we arrange the commands so that
-# we can use both ccache and distcc
-
-
-if [[ -x "/usr/bin/ccache" && -x "/usr/bin/distcc" ]]; then
+if [[ -x "$CCACHE" && -x "$DISTCC" ]]; then
     echo "Setting up distcc with ccache"
-    export MAKEFLAGS="CCACHE_PREFIX=distcc";
-    export CCACHE_PREFIX="distcc"
+    export MAKEFLAGS="CCACHE_PREFIX=$DISTCC";
+    export CCACHE_PREFIX="$DISTCC"
     if [[ -L "/usr/local/bin/gcc" ]]; then
         readlink "/usr/local/bin/gcc" | grep ccache && \
             echo "ccache is correctly setup" &&
@@ -50,15 +50,17 @@ if [[ -x "/usr/bin/ccache" && -x "/usr/bin/distcc" ]]; then
 fi
 
 if [[ -f "$HOME/.distcc/hosts" ]];then
+    # the format of this file is: 
+    #   host1 host2 ... hostN-1 hostN
     echo "Reading $HOME/.distcc/hosts"
     export DISTCC_HOSTS=`cat "$HOME/.distcc/hosts"`
 else
-    export DISTCC_HOSTS="localhost www2"
+    export DISTCC_HOSTS="localhost"
 fi 
 
 CONCURRENCY_LEVEL=5                 # use more than one thread for make
                                     # should detect from the number of
-                                    # hosts above
+                                    # hosts above 
 
 FAKEROOT="fakeroot"
 
@@ -76,19 +78,24 @@ ALL_PATCH_DIR="../kernel-patches/"  # patches are located before
 IMAGE_TOP="../"                     # where to save the resulting 
                                     # .deb files
 
+# read local variables and override defaults:
+if [[ -f "$HOME/.make-kpkg.rc" ]]; then
+    # read user settings for the variables given above
+    source  "$HOME/.make-kpkg.rc"
+fi
+
+# sets all variables:
 export IMAGE_TOP ALL_PATCH_DIR PATCH_THE_KERNEL 
 export MODULE_LOC NO_UNPATCH_BY_DEFAULT 
 export CONCURRENCY_LEVEL
 
 ## get arguments. if --help, print USAGE
 if [[ ! -z $1 && "$1" != "--help" ]]; then
-
     if [[ ! -z $2 ]]; then
         REVISION="$2"
     else
         REVISION="1.0"
     fi
-
     # ask whether to create a kernel image
     makeit=0
     yesno="No"
@@ -182,8 +189,9 @@ if [[ ! -z $1 && "$1" != "--help" ]]; then
         modules_image
     fi
 else
-    echo -e "Usage: $0 ## \n \t Where ## \
-    is an interger or string to append to the kernel name"
+    echo -e "Usage: $0 N1 [N2]\n \t Where N1 \
+    is an interger or string to append to the kernel name. \
+    And optional N2 is a revision for this kernel"
 fi
 
 #eof

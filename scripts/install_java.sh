@@ -1,7 +1,7 @@
 #!/bin/sh
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Feb-11
+# Last modified: 2004-Feb-17
 #
 # DESCRIPTION: a simple debian script to install java from Sun. This is
 #               for java version 1.4.2 and up. You must this as root
@@ -78,10 +78,10 @@ if [ -d "$MOZILLA_DIR/plugins" ]; then
     ln -sf /etc/alternatives/libjavaplugin_oji.so \
         libjavaplugin_oji.so
 
-    echo "Putting Mozilla Firebird in Gnome-2 menu"
+    echo "Putting Mozilla $MOZILLA in Gnome-2 menu"
     echo "[Desktop Entry]" > /usr/share/applications/$MOZILLA.desktop
     echo "Name=Mozilla $MOZILLA" >> /usr/share/applications/$MOZILLA.desktop
-    echo "Comment=Firebird Web Browser"  >> /usr/share/applications/$MOZILLA.desktop
+    echo "Comment=$MOZILLA Web Browser"  >> /usr/share/applications/$MOZILLA.desktop
     echo "Exec=$MOZILLA %U"  >> /usr/share/applications/$MOZILLA.desktop
     echo "Terminal=false"  >> /usr/share/applications/$MOZILLA.desktop
     echo "MultipleArgs=false"  >> /usr/share/applications/$MOZILLA.desktop

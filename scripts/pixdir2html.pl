@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.85 $
+# $Revision: 1.86 $
 # Luis Mondesi  <lemsx1@hotmail.com>
 # 
 # REQUIRED: ImageMagick's Perl module and a dialog 
@@ -984,17 +984,18 @@ sub menu_file {
                         $attempts--;
                         goto IMAGE;
                     }
+                    my $tmp_image="";
+                    if ( -f "$ts/$THUMBNAIL/$image" )
+                    {
+                        $tmp_image="<img src='$ts/$THUMBNAIL/$image' border=0 alt='$tmp_ts album'>";
+                    } else {
+                        $tmp_image="MISSING. Try re-running $0 with no arguments";
+                    }
+                    print FILE ("\t\t<a class='pdlink' href='$ls[$i]' target='_top'>\n\t\t$tmp_image</a></td>\n\t".$config{"$ROOT_DIRECTORY"}{"td"}."\n\t\t<a class='pdlink' href='$ls[$i]' target='_top'>$IMG $tmp_ts</a>\n");
                 } else {
                     print LOGFILE "$ts has no thumbnail [$THUMBNAIL] directory. Have you executed $0 without --menu-only or --menu-type='modern' yet?";
                 }
-                my $tmp_image="";
-                if ( -f "$ts/$THUMBNAIL/$image" )
-                {
-                    $tmp_image="<img src='$ts/$THUMBNAIL/$image' border=0 alt='$tmp_ts album'>";
-                } else {
-                    $tmp_image="MISSING. Try re-running $0 with no arguments";
-                }
-                print FILE ("\t\t<a class='pdlink' href='$ls[$i]' target='_top'>\n\t\t$tmp_image</a></td>\n\t".$config{"$ROOT_DIRECTORY"}{"td"}."\n\t\t<a class='pdlink' href='$ls[$i]' target='_top'>$IMG $tmp_ts</a>\n");
+                # close table row  (TR)
                 print FILE ("\t</td>\n</tr>\n");
                 $i++; # incr file counter
             } 

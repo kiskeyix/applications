@@ -1,0 +1,415 @@
+#!/usr/bin/perl -Tw
+#
+#     muttrc2html - Convert mutt rc files to HTML.
+#     Copyright (C) 1997,2001 David A Pearson
+#     $Revision: 1.1 $
+#   
+#     This program is free software; you can redistribute it and/or modify
+#     it under the terms of the GNU General Public License as published by
+#     the Free Software Foundation; either version 2 of the license, or 
+#     (at your option) any later version.
+#     
+#     This program is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#     GNU General Public License for more details.
+#    
+#     You should have received a copy of the GNU General Public License
+#     along with this program; if not, write to the Free Software
+#     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+#
+# Usage
+# =====
+#
+# This little perl script is a simple attempt at a muttrc to HTML
+# converter. It could come in handy if you want to publish your muttrc file
+# on your web pages.
+#
+# The basic idea behind the script is that it should make comments stand out
+# and should also allow hypertext links to other rc files that you source
+# in.
+#
+# Running the script is simply a case of typing 'muttrc2html' at the shell
+# prompt. By default the script will look for ~/.muttrc and start to convert
+# it to a HTML file in the current directory. You can change the behaviour
+# of the script with settings in a file called ~/.muttrc2htmlrc. Valid
+# settings are:
+#
+# muttrc=<Location of top level muttrc file>
+# TitlePrefix=<Prefix for each web page title>
+# Ignore=<Name of rc file or regular expression>
+# Silent=<1 for don't give info, 0 for do give info>
+# BeginComment=<Opening tag for a comment>
+# EndComment=<Closing tag for a comment>
+# BodyTag=<Tag to declare the start of the document body>
+# ManualVars=<URL of section 6 of the mutt manual>
+#
+# For example, a ~/.muttrc2htmlrc might look like:
+#
+# ----------------------------------------------------------------------
+# muttrc=~/.muttrc
+# TitlePrefix=Dave's mutt config
+# Silent=1
+# Ignore=~/.mutt/mail_aliases
+# Ignore=~/.mutt/defaults.private
+# BeginComment=<STRONG><FONT COLOR="#FF0000">
+# EndComment=</FONT></STRONG>
+# BodyTag=<BODY BGCOLOR="#FFFFFF">
+# ManualVars=http://www.mutt.org/doc/manual/manual-6.html
+# ----------------------------------------------------------------------
+#
+# As you can see, you can repeat the "ignore" setting as many times as
+# you like. Also, note that the ignore lines can use regular expressions,
+# for example:
+#
+#        ignore=private$
+#
+# would ignore any file whose names ends with the text "private".
+#
+# Hiding portions of your rc files
+# ================================
+#
+# For various reasons there maybe portions of your rc files that you don't
+# want to be made visible. While the "Ignore" rules work for whole files
+# this doesn't help if there is just one line or a block of lines (obviously
+# you could place those private portions in their own rc files and ignore
+# them, but that could get messy).
+#
+# To help solve this problem muttrc2html will ignore all lines between the
+# comments "# BeginHTMLIgnore" and "# EndHTMLIgnore". For example:
+#
+# ----------------------------------------------------------------------
+# set foo=bar
+# source ~/.mutt/make.coffee.macro
+# # BeginHTMLIgnore
+# set rootpassword=wibble
+# # EndHTMLIgnore
+# ----------------------------------------------------------------------
+#
+# It ain't perfect, but it should help. BTW, don't take my word that this
+# will work, please check that you don't include sensitive text in the
+# final HTML. Obvious things to check for are passwords (such as the
+# setting for $pop_pass for example).
+#
+# Bugs
+# ====
+#
+# o It assumes too much about the setup of your system.
+# o It doesn't handle more than one source statement on any
+#   one line.
+# o A load more issues I've not considered.
+#
+# If you find any problems or come up with any enhancements please feel free
+# to send them to me.
+#
+# ToDo (better written as MightGetDoneOneDay)
+# ==========================================
+#
+# o Fix bugs.
+# o Option to link keywords to the on-line manual.
+#
+# Author
+# ======
+#
+# Dave Pearson, contact me at davep@davep.org
+#
+# Location
+# ========
+#
+# You can always the latest version of this script at the following:
+#
+#     http://www.davep.org/mutt/muttrc2html
+#
+
+# I think 5.004 is required, feel free to remove this if you wish.
+require 5.004;
+
+# Use some stuff.
+use strict;
+use File::Basename;
+use FileHandle;
+
+# Var's we will be using.
+my ( $home ) = $ENV{ 'HOME' } || ( getpwuid( $< ) )[ 7 ];
+my $config   = "$home/.muttrc2htmlrc";
+my %config   = ( muttrc       => "$home/.muttrc",
+                 titleprefix  => "Mutt configuration",
+                 ignore       => [],
+                 silent       => 0,
+                 begincomment => "<STRONG>",
+                 endcomment   => "</STRONG>",
+                 bodytag      => "<BODY>",
+                 manualvars   => "" );
+my %seen     = ();
+
+# Read in the config file.
+
+if ( open( CONFIG, $config ) )
+{
+    while ( <CONFIG> )
+    {
+        # Ignore comments and blank lines.
+        next if /^\s*$/;
+        next if /^\s*\#/;
+
+        if ( /^\s*(.*?)\s*=\s*(.*)$/ )
+        {
+            if ( lc( $1 ) eq "ignore" )
+            {
+                push( @{ $config{ "ignore" } }, $2 );
+            }
+            else
+            {
+                $config{ lc( $1 ) } = $2;
+            }
+        }
+        else
+        {
+            print "Unrecognised config line '$_'\n";
+        }
+    }
+    
+    close( CONFIG );
+}
+
+# Now go convert the mutt rc file to HTML.
+
+ConvertToHTML( @ARGV ? shift : $config{ "muttrc" }, \%config, \%seen );
+
+######################################################################
+
+sub ConvertToHTML
+{
+    my ( $rcfile, $config, $seen ) = @_;
+    my $htmlfile                   = MakeHTMLName( $rcfile );
+    my $HTMLFILE                   = new FileHandle;
+    my $MUTTRC                     = new FileHandle;
+
+    # Attempt to handle the ~ character.
+    $rcfile = HandleTilde( $rcfile );
+
+    # Check that we've not seen this file yet.
+    if ( !$seen->{ $rcfile } )
+    {
+        # Now remember that we have seen it.
+        $seen->{ $rcfile } = 1;
+        
+        if ( open( $HTMLFILE, ">$htmlfile" ) )
+        {
+            if ( open( $MUTTRC, $rcfile ) )
+            {
+                my $ignoring = 0;
+                
+                # First, keep Vincent happy (Hi Vincent <g>)
+                print $HTMLFILE "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML " .
+                    "3.2 Final//EN\">\n";
+                
+                # Print the usual headers.
+                print $HTMLFILE "<HTML>\n<HEAD>\n<TITLE>" .
+                    $config->{ "titleprefix" } . " [" . $rcfile .
+                        "]</TITLE>\n</HEAD>\n" .
+                            $config->{ "bodytag" } . "\n<PRE>";
+                
+                while ( <$MUTTRC> )
+                {
+                    # Allow for blocks of lines to be ignored.
+                    if ( /^\s*\#\s*BeginHTMLIgnore/i )
+                    {
+                        ++$ignoring;
+                        next;
+                    }
+                    elsif ( /^\s*\#\s*EndHTMLIgnore/i )
+                    {
+                        --$ignoring;
+                        next;
+                    }
+                    elsif ( $ignoring > 0 )
+                    {
+                        next;
+                    }
+                    
+                    # Transform the usual characters for HTML (minus one)
+                    s/&/&amp;/g; # Must come first!
+                    s/\</&lt;/g;
+                    s/\>/&gt;/g;
+
+                    # Apply comment tags to comments (Many thanks to Vincent for
+                    # this one).
+                    s/^(([^\\\'\"]|\\.|\'([^\\]|\\.)*?\'|\"([^\\]|\\.)*?\")*?)\#(.*)/$1$config->{ "begincomment" }\#$5$config->{ "endcomment" }/;
+
+                    # If we are going to attempt to link variables to an on-line mutt
+                    # manual... (thanks to Erik Jacobsen <erik@mint.com> for this
+                    # one).
+                    if ( $config->{ "manualvars" } )
+                    {
+                        if ( /^\s*(un){0,1}set\s+(no|inv){0,1}(\w+)/ )
+                        {
+                            my $varname = $3;
+                            my $varlink = "<A HREF=\"" . $config->{ "manualvars" } .
+                                "#" . $varname . "\">" . $varname . "</A>";
+
+                            s/$varname/$varlink/;
+                        }   
+                    }
+                    
+                    # Now, are we looking at a line that sources in another
+                    # rc file? (this is probably easily fooled).
+                    if ( /^(.*)source(\s+)([^\s\\&]+)(.*)/ )
+                    {
+                        # Looks like we are, split it up.
+                        my ( $one, $two, $three, $four, $five ) =
+                            ( $1, $2, $3, $4, $5 );
+
+                        # Handle undef'd last bit.
+                        $five = "" if !$five;
+
+                        # If we are not supposed to ignore this file.
+                        if ( !IgnoreFile( $three, $config ) )
+                        {
+                            # Convert that file to HTML.
+                            ConvertToHTML( $three, $config, $seen );
+                            
+                            # Re-build the current line.
+                            $_ = $one . "source" . $two .
+                                "<A HREF=\"" . MakeHTMLName( $three ) . "\">".
+                                    $three . "</A>" . $four . $five . "\n";
+                        }
+                        else
+                        {
+                            print "Ignoring $three\n" unless $config->{ "silent" };
+                        }
+                    }
+                    
+                    print $HTMLFILE $_;
+                }
+                
+                close( $MUTTRC );
+                
+                print $HTMLFILE "</PRE>\n</BODY>\n</HTML>\n";
+            }
+            else
+            {
+                print "Error opening " . $rcfile . " ($!)\n";
+            }
+            
+            close( $HTMLFILE );
+        }
+        else
+        {
+            print "Error creating " . $htmlfile . " ($!)\n";
+        }
+    }
+    else
+    {
+        print "I've seen $rcfile once, skipping...\n" unless $config->{ "silent" };
+    }
+}
+
+######################################################################
+
+sub MakeHTMLName
+{
+    my ( $rcfile ) = @_;
+    my $htmlfile   = basename( $rcfile ) . ".html";
+
+    if ( $htmlfile =~ /^\.(.*)$/ )
+    {
+        $htmlfile = $1;
+    }
+
+    $htmlfile;
+}
+
+######################################################################
+
+sub HandleTilde
+{
+    my ( $file ) = @_;
+    my ( $home ) = $ENV{ 'HOME' } || ( getpwuid( $< ) )[ 7 ];
+
+    # TODO: Handle ~user as well.
+    if ( $file =~ /^~\/(.*)$/ )
+    {
+        $file = $home . "/" . $1;
+    }
+    $file;
+}
+
+######################################################################
+
+sub IgnoreFile
+{
+    my ( $file, $config ) = @_;
+    my $ignore = 0;
+    my $re;
+
+    foreach $re ( @{ $config->{ "ignore" } } )
+    {
+        if ( $file =~ /$re/ )
+        {
+            $ignore = 1;
+            last;
+        }
+    }
+    
+    $ignore;
+}
+
+__END__
+
+=head1 NAME
+
+muttrc2tml - Convert mutt rc files to HTML
+
+=head1 SYNOPSIS
+
+muttrc2html [muttrc-file]
+
+=head1 DESCRIPTION    
+
+B<muttrc2html> is little perl script is a simple attempt at a muttrc to HTML
+converter. It could come in handy if you want to publish your muttrc file
+on your web pages.
+
+The basic idea behind the script is that it should make comments stand out
+and should also allow hypertext links to other rc files that you source
+in. There is also some support for linking variable names to an on-line
+mutt manual.
+
+Running the script is simply a case of typing 'muttrc2html' at the shell
+prompt. By default the script will look for ~/.muttrc and start to convert
+it to a HTML file in the current directory. You can change the behaviour
+of the script with settings in a file called ~/.muttrc2htmlrc. Valid
+settings are:
+
+=head2 muttrc=<rc-file>
+
+=head2 TitlePrefix=<prefix>
+
+=head2 Ignore=<regular-expression>
+
+=head2 Silent=<0|1>
+
+=head2 BeginComment=<html>
+
+=head2 EndComment=<html>
+
+=head2 BodyTag=<html>
+
+=head2 ManualVars=<URL>
+
+=head1 OPTIONS
+
+B<muttrc-file> is the optional name of an rc file you want to process. If not
+supplied the file named with the B<muttrc> option in the config file will be
+processed.
+
+=head1 BUGS    
+
+o It assumes too much about the setup of your system.
+o It doesn't handle more than one source statement on any one line.
+o A load more issues I've not considered.
+    
+=head1 AUTHOR
+
+Dave Pearson <davep@davep.org>

@@ -9,14 +9,14 @@ error_reporting(0);
  * http://www.server.com/images/index.php
  *
 
- * $Revision: 1.3 $
+ * $Revision: 1.4 $
  *
- * Last modified: 2004-Apr-05
+ * Last modified: 2004-Oct-28
  */
 
 $DEBUG = true;
 
-$my_domain = "rbsd.com";
+$my_domain = "domain.com";
 
 $send = (! empty($send) ) ? $send : "";
 

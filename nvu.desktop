@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Nvu
+Comment=Nvu WYSIWYG HTML Editor
+Exec=nvu %U
+Terminal=false
+MultipleArgs=false
+Type=Application
+Icon=/usr/local/nvu-0.20/icons/mozicon50.xpm
+Categories=Application;Network

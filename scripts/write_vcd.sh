@@ -1,7 +1,7 @@
 #!/bin/sh
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Jul-23
+# Last modified: 2004-Aug-19
 #
 # DESCRIPTION: a simple script to write VCD .cue files
 # USAGE: run from current directory. pass .cue file
@@ -10,6 +10,6 @@
 #
 
 # device block:
-DEV=/dev/dvd
-
+#DEV=/dev/dvd
+DEV=ATAPI:0,0,0
 cdrdao write --device $DEV --driver generic-mmc $@

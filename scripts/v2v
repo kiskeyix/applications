@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.48 $
+# $Revision: 1.49 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -1459,7 +1459,11 @@ sub ask_clust
         if ( $rep eq "y" || $rep eq "Y" || $rep eq "o" || $rep eq "0")
         {	
             # first find out number of FPS and then create_nav
-            ask_ntsc( get_fps() if ( ! defined($FPS) ) );
+            if ( ! defined($FPS) )
+            {
+                $FPS = get_fps();
+            }
+            ask_ntsc( $FPS );
             create_nav ;
             my $stream_units=`tail -1 tmp/file.nav | awk '{print \$1}'`;
             chomp($stream_units);

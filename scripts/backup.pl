@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.29 $
+# $Revision: 1.30 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Oct-27
+# Last modified: 2004-Dec-24
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
 #               or a user specified command archiver ( tar? )
@@ -219,7 +219,7 @@ if ( $DEBUG != 0 ) {
 if ( -d $CONFIG{"BAK"} ) {
     chdir($CONFIG{"BAK"});
 } else {
-    die "could not change working dir to ".$CONFIG{"BAK"}." ".$!;
+    die("could not change working dir to ".$CONFIG{"BAK"}." $!");
 }
 
 if ( ! -f $TMP_LOCK ) {
@@ -236,7 +236,7 @@ if ( ! -f $TMP_LOCK ) {
         $MIDDLE_STR = $year."-".$mon."-".$mday;
     }
     # write lock file:
-    open(FILE,"> $TMP_LOCK") || die "could not open $TMP_LOCK. $! \n";
+    open(FILE,"> $TMP_LOCK") or die_with_message("could not open $TMP_LOCK. $! \n");
     print FILE $year."-".$mon."-".$mday." ".$hour.":".$min.":".$sec;
     close(FILE); 
 
@@ -326,7 +326,7 @@ if ( ! -f $TMP_LOCK ) {
 
             system($SYSTEM_COMMAND);
             if ( $? !=0 ) {
-                die "Command '$SYSTEM_COMMAND' failed terribly! $!\n";
+                die_with_msg("Command '$SYSTEM_COMMAND' failed terribly! $!\n");
             }
         } else {
 
@@ -404,7 +404,7 @@ if ( ! -f $TMP_LOCK ) {
             print STDOUT "+ users exec: $SYSTEM_COMMAND \n" if ($DEBUG > 0);
             system($SYSTEM_COMMAND);
             if ( $? !=0 ) {
-                die "Command '$SYSTEM_COMMAND' failed terribly! $!\n";
+                die_with_msg("Command '$SYSTEM_COMMAND' failed terribly! $!\n");
             }
         } else {
             if ( -d $v ) {
@@ -462,7 +462,7 @@ if ( ! -f $TMP_LOCK ) {
 
             system($SYSTEM_COMMAND);
             if ( $? !=0 ) {
-                die "Command '$SYSTEM_COMMAND' failed terribly! $!\n";
+                die_with_msg ("Command '$SYSTEM_COMMAND' failed terribly! $!\n");
             }
         } else {
             foreach ( @tmp_dirs ) {
@@ -484,7 +484,9 @@ if ( ! -f $TMP_LOCK ) {
             }
         }
     } # end if $CONFIG{"DIRS"}
-
+   
+    cleanup("Ending backup process...");
+    
     # ++++++++++ END BACKUP PROCESS ++++++++++ #
 
     # debian specific
@@ -500,12 +502,8 @@ if ( ! -f $TMP_LOCK ) {
             " && dselect install \n to restore from this list.\n";
         }
     }
-
-    # gracely exit...
-    unlink "$TMP_LOCK" or die "could not remove ".$TMP_LOCK.". $!\n";
-
 } else {
-    die "Lock file ".$CONFIG{"BAK"}."/$TMP_LOCK exists... exiting.\n";
+    die("Lock file ".$CONFIG{"BAK"}."/$TMP_LOCK exists... exiting.\n");
 }
 
 #------------------------------------------------------#
@@ -621,4 +619,18 @@ sub clean_regex {
     ($string = $string) =~ s/([\.\w]+)\$/*$1/g;
     ($string = $string) =~ s/\+/*/g;
     return $string;
+}
+
+# remove lock
+sub cleanup
+{
+    # gracely exit...
+    unlink "$TMP_LOCK" or die "could not remove ".$TMP_LOCK.". $!\n";
+}
+
+# remove lock and dies with message
+sub die_with_msg
+{
+    unlink "$TMP_LOCK" or die "could not remove ".$TMP_LOCK.". $!\n";
+    die shift;
 }

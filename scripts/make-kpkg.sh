@@ -1,9 +1,8 @@
 #!/bin/bash
 # vim: ft=sh:columns=80 :
-# $Revision: 1.39 $
-# $Date: 2005-03-11 19:59:05 $
-# Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2005-Jan-08
+# $Revision: 1.40 $
+# $Date: 2005-03-11 20:07:11 $
+# Luis Mondesi < lemsx1@gmail.com >
 #
 # LICENSE: GPL (http://www.gnu.org/licenses/gpl.txt)
 # 

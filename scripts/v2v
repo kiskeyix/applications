@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.62 $
+# $Revision: 1.63 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -165,7 +165,7 @@ my $GREEN="\033[0;32m";
 my $NORM="\033[0;39m";
 my $MAJOR=0;
 my $MINOR=6;
-my $VIDEONORM="PAL";   # Default video format
+$VIDEONORM="PAL";   # Default video format
 my $FPS=""; # number of FPS will be detected automatically
 
 #  Functions Declarations
@@ -216,6 +216,7 @@ sub sec_to_hour;
 sub tv_recorder;
 sub ogmerge;
 sub check_system;
+sub tcsync;
 
 system("clear");
 
@@ -435,6 +436,15 @@ if (1)
 }
 
 ######################## FUNCTIONS #########################
+sub tcsync
+{   # Return the sync fine tunning suggested by tcprobe
+    # Regex must be deeper tested
+    my $sync=`tcprobe -i $VOBPATH 2>&1`;
+    my @nsync=split /@_/,$sync;
+    @nsync[1]=~m,-D ([^\(]*)\(frame,;
+    $sync="-D $1";
+    return($sync);
+}
 sub get_tail 
 {
     use vars qw($opt_b $opt_c $opt_f $opt_h $opt_n $opt_r);
@@ -565,22 +575,24 @@ sub check_system
 
     # set the final movie extension
     $EXT="avi";
-    $EXT="ogg" if ( $AO eq "ogg");
+    $EXT="ogm" if ( $AO eq "ogg");
     print $DEBUG " <--- check_system\n";
 }
 
 sub ogmerge
 {   # this function merge an ogg file and a mpeg4 file
     # the result has the name of the mpeg4 file
-    if ( ! -e "tmp/ogmerge.done" )
+    print $DEBUG " ---> Enter ogmerge\n";
+    if ( ! -e "tmp/ogmerge.finish" )
     {   $sys="ogmmerge -o tmp/temp.ogg @_[0] @_[1]";
         print $INFO ("$sys\n");
         system("$sys");
         rename("tmp/temp.ogg","@_[0]");
-        system("touch tmp/ogmerge.done" );
+        system("touch tmp/ogmerge.finish" );
     } else {
         perror("Ogmmerge already done, remove tmp/ogmerge.done to remake it\n");
     }
+    print $DEBUG " <--- ogmerge\n";
 }
 
 sub tv_recorder
@@ -856,9 +868,9 @@ sub makelogo
     pinfo("$v2d\t Making Logo\n");
     $fparams="$params -c $from_frames-$synclogo";
     #    $fparams =$fparams." -M 2 --psu_mode --nav_seek tmp/file.nav --no_split " if ( $VIDEONORM eq "NTSC" );
-    $fparams =$fparams." -M 2 " if ( $VIDEONORM eq "NTSC" );
+    $fparams =$fparams." -M 2 --psu_mode --no_split " if ( $VIDEONORM eq "NTSC" && !  ( $deintl =~ m,ivtc,));
     #     $fparams =$fparams." -M 0 -f 23.976 --psu_mode --nav_seek tmp/file.nav --no_split " if ( $deintl =~ m,ivtc,);
-    $fparams =$fparams." -M 0 -f 23.976 " if ( $deintl =~ m,ivtc,);
+    $fparams =$fparams." -M 0 -f 23.90,1 --psu_mode --no_split " if ( $deintl =~ m,ivtc,);
     $add_logo="logo=file=$LOGO:posdef=$poslogo:rgbswap=$RGBSWAP:range=$start_frames_logo-$end_frames_logo,";
     $filter=$deint.$add_logo.$sub_title."hqdn3d,";
     my($AO)="" if ( $AO eq "mp3");
@@ -1161,6 +1173,12 @@ sub readuserconf
         next unless length; #  If our line is empty, we ignore it
         s/^\$//;
         s/\;$//;
+        # Please Luis DO NOT REMOVE the next two lines .
+        # sometimes users can have $VAR= value ; # comment
+        # We nned to remove the white space before and after value 
+        s/^\s+//;           #  whitespace before value 
+        s/\s+$//;           #  whitespace after value
+
         s/["']+//g;         # remove all quotes
         
         my ($var_name, $value) = split(/\s*=\s*/, $_);
@@ -1241,7 +1259,7 @@ sub printinfo
     }
     print $v2d."   V:\tVideo Output format:\t(1)| $DIVX\n";
     print $v2d."   V:\tVideo Input interlaced:\t   | ";
-    if ( defined($deintl) || $params=~ m,-I 3, )
+    if ( defined($deintl) )
     {
         print $RED."YES\n".$NORM;
         print $v2d."   V:\tDeinterlaced with:\t(2)| ";
@@ -1249,7 +1267,7 @@ sub printinfo
         print "YUVdenoise \n" if ( $deintl =~ m,yuvdenoise,); 
         print "Smartdeinter \n" if ( $deintl =~ m,smartdeinter,); 
         print "ivtc \n" if ( $deintl =~ m,ivtc,); 
-        print "-I 3\n" if ($params=~ m,-I 3, )
+        print "32detect\n" if (($deintl=~ m,32detect,) && ! ($deintl =~ m,ivtc,) )
     } else {
         print "NO\n";
     }
@@ -2031,8 +2049,13 @@ sub aviencode
         $audio_format="" if ( $audio_format eq pcm );
         $audio_format="vob" if ( $in_video_codec eq vob );
         # Add NTSC demuxer opts
-        $fparams =$fparams." -M 2 " if ( $VIDEONORM eq "NTSC" && ! ($deintl =~ m,ivtc,));
-        $fparams =$fparams." -M 0 -f 23.976" if ( $deintl =~ m,ivtc,);
+        $fparams =$fparams." -M 2" if ( $VIDEONORM eq "NTSC" && !  ( $deintl =~ m,ivtc,));
+        # export fps is 23.9 if ivtc
+        $fparams =$fparams."  -M 0 -f 23.90,1 " if ( $deintl =~ m,ivtc,);
+        # if $CLUSTER = NO use psu_mode. I know this is longer and not always necessary
+        # but there is no way to know if it is or not necessary
+        $fparams =$fparams." --psu_mode  --no_split" if ( $CLUSTER eq "NO" && $VIDEONORM eq "NTSC" );
+        #$fparams =$fparams." -M 0 -f 23.976" if ( $deintl =~ m,ivtc,);
         # $fparams =$fparams." --psu_mode --nav_seek tmp/file.nav --no_split " if ( $CLUSTER eq "NO" && $VIDEONORM eq "NTSC" );
         $clust_percent=" --a52_dolby_off " if ( $VIDEONORM eq "NTSC" && $CLUSTER eq "NO" );
         my($AO)=$AO;
@@ -2043,6 +2066,8 @@ sub aviencode
         $audio_format="null" if ( $CLUSTER ne "NO" );
         my($ogg_output)="tmp/ac1.$dvdtitle.ogg";
         my($aogg_output)="-m $ogg_output" if ( $AO eq "ogg" );
+        my $fine_sync=tcsync($audio_params) if ( $CLUSTER eq "NO");
+        print $DEBUG "Fine sync =  $fine_sync\n";
 
         # And Now ... Let the Rolling Stones
 
@@ -2051,7 +2076,7 @@ sub aviencode
             unlink("tmp/2-${dvdtitle}${node}_${i}.finish");
             unlink ("tmp/1-${dvdtitle}${node}.PB");
             pinfo("$v2d\t Encode: $VOBPATH Pass One ....\n");
-            $sys = "transcode -i $VOBPATH $stream_opt $clust_percent $fparams -w $bitrate,$keyframes".
+            $sys = "transcode -i $VOBPATH $stream_opt $fine_sync $clust_percent $fparams -w $bitrate,$keyframes".
                 " -J ${filter}astat=\"tmp/astat\" -y $DIVX,null $DIVX_OPT -x ".
                 "$in_video_codec,$audio_format $VID_OPT -R 1,tmp/$DIVX.${dvdtitle}${node}_${i}.log ".
                 " -o /dev/null"; 
@@ -2083,8 +2108,9 @@ sub aviencode
             $filter=$filter."dnr,normalize";	
             unlink("tmp/merge.finish");	
             unlink("tmp/finish");
+            unlink("tmp/ogmerge.finish");
             pinfo("$v2d\t Encode: $VOBPATH Pass Two ....\n");
-            $sys = "transcode -i $VOBPATH $stream_opt $clust_percent $fparams -s $audio_rescale ".
+            $sys = "transcode -i $VOBPATH $fine_sync $stream_opt $clust_percent $fparams -s $audio_rescale ".
                 "-w $bitrate,$keyframes -b $audio_bitrate,0 -y $DIVX,$AO $aogg_output ".
                 "$DIVX_OPT -x $in_video_codec,$audio_format $VID_OPT -J $filter ".
                 "-R 2,tmp/$DIVX.${dvdtitle}${node}_${i}.log -o tmp/2-${dvdtitle}${node}_${i}.$EXT";
@@ -2374,7 +2400,7 @@ sub readconf
             s/^\s+//;           #  whitespace before stuff
             s/\s+$//;           #  whitespace after stuff
             next unless length; #  If our line is empty, we ignore it
-            my ($var_name, $value) = split(/:/, $_);
+            my ($var_name, $value) = split(/:/, $_, 2);
             $$var_name = $value;
         }
         close(CONF);
@@ -2385,10 +2411,11 @@ sub readconf
     print $DEBUG " CLUSTER :$CLUSTER\n";
     print $DEBUG " audio_bitrate :$audio_bitrate\n";
     print $DEBUG " dvdtitle:$dvdtitle\n";
+    print $DEBUG " deintl:$deintl\n";
     print $DEBUG "<--- readconf\n";
     # set the final movie extension
     $EXT="avi";
-    $EXT="ogg" if ( $AO eq "ogg");
+    $EXT="ogm" if ( $AO eq "ogg");
 } # end readconf
 
 sub get_params
@@ -2447,9 +2474,9 @@ sub get_params
             $PP=`transcode -J pp=lb -c 9-11  2>&1 | grep failed`;
             if ( $PP eq "" )
             {	
-                $deintl=",pp=lb";
+                $deintl="pp=lb,";
             } else {
-                $params=" -I 3 ";
+                $deintl="32detect=force_mode=3,";
             } 
         }
         $params .= "-a $audio_channel " if ( $audio_channel ne '' );
@@ -3231,7 +3258,8 @@ sub config
                 $deintl="smartdeinter=diffmode=2:highq=1:cubic=1,";
                 print CONF "#deintl:$deintl\n";
             } else {
-                $dintl=" -I 3";
+                $deintl="32detect=force_mode=3,";
+                print CONF "#deintl:$deintl\n";
             }
             close (CONF);
         } # END $TELECINE
@@ -3244,7 +3272,7 @@ sub config
     $aalias=" -C 3" if ( $rep eq "O" || $rep eq "o" || $rep eq "y" || $rep eq "Y" );
     #       Write parameters
     ( $left_right eq 1 && $top_bot eq 1 ) or mydie "Oups Sorry.. I miss some parameters :-(";
-    $params = $params.$dintl.$aalias;
+    $params = $params.$aalias;
     open (CONF,">>tmp/V2divx.conf");
     print CONF "#params:$params # YOU MUST KNOW WHAT YOU DO IN THIS LINE\n";
     close(CONF);

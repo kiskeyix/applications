@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Oct-26
 #
@@ -19,6 +19,8 @@ LO="losetup"    #
 SU="gksu"       # xsu|gnome-sudo
 DIALOG="zenity" # gdialog|xdialog
 MOUNT="mount"
+
+IS_ENC="no"
 
 for arg in $@
 do
@@ -47,6 +49,22 @@ do
     esac;
   
     if [ $DIALOG == "zenity" ]; then
-        $DIALOG --question
+        IS_ENC=`$DIALOG --question "Is this an encrypted image?"`
     fi
+
+    if [ $IS_ENC == "yes" ]; then
+        # choose encryption type
+        if [ $DIALOG == "zenity" ]; then
+            CYPHER=zenity_choose_encryption
+        fi
+    fi
+
+    # reset variables
+    IS_ENC="no"
 done
+
+zenity_choose_encryption()
+{
+    $DIALOG --list --title="Mount Image" --radiolist --editable --column="Selected" --column="image" 
+
+}

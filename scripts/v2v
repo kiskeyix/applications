@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.24 $
+# $Revision: 1.25 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -2288,7 +2288,7 @@ sub zooming
     }
     sleep(1);
     $AR=abs(100-($NXaxis*100/($NYaxis*$aspect_ratio)));
-    print $DEBUG "<--- Zooming\n";
+    print $DEBUG "<--- Zooming\n" && sleep(5);
 }	
 
 

@@ -1,7 +1,7 @@
 #!/bin/sh
-# $Revision: 1.11 $
+# $Revision: 1.12 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jul-17
+# Last modified: 2003-Jul-24
 #
 # DESCRIPTION:  an interactive wrapper to Debian's "make-kpkg"
 #               to build a custom kernel package.
@@ -53,14 +53,15 @@ if [ $1 -a $1 != "--help" ]; then
 
     # ask whether to create a kernel image
     makeit=0
+    yesno="n"
 
     echo "Do you want to make the Kernel? [y/N] "
     read yesno
     case $yesno in
-        y* | Y*)
+        [ ]*y* | [ ]*Y*)
             makeit=1
         ;;
-        n* | N*)
+        [ ]*n* | [ ]*N*)
             makeit=0
         ;;
     esac
@@ -79,14 +80,15 @@ if [ $1 -a $1 != "--help" ]; then
     # from ../modules (or /usr/src/modules)
     
     makeit=0
+    yesno="n"
 
     echo "Do you want to make the Kernel Modules? [y/N] "
     read yesno
     case $yesno in
-        y* | Y*)
+        [ ]*y* | [ ]*Y*)
             makeit=1
         ;;
-        n* | N*)
+        [ ]*n* | [ ]*N*)
             makeit=0
         ;;
     esac

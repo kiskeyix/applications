@@ -7,7 +7,7 @@
 if [ -f $1 ]; then
     for file in $*; do
         echo "Adding ${file} to current CVS tree";
-        cvs add $i;
+        cvs add ${file};
         cvs commit -m "first commit" ${file};
     done
 else 

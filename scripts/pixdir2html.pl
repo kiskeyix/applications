@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.44 $
+# $Revision: 1.45 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -1096,7 +1096,7 @@ sub menu_file {
                             ( $ts = $ts ) =~ s,$nautilus_root/*,,g;
                         }
                         my $tmp_ts = str_truncate($ts);
-                        $ts = ucfirst($tmp_ts);
+                        
                         $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='".$config{$ROOT_DIRECTORY}{"new"}."' alt='new'>":""; # if .new file
                         $ts = ucfirst($ts);
                         print FILE ("<a href='".$config{$ROOT_DIRECTORY}{"uri"}."/$ls[$i]' target='_top'>$IMG $ts</a>\n");

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
 #               Dominique CARON <domiATlpm.univ-montp2.fr> 
 #		Tom ROTH <tomATtomroth.de>
@@ -391,14 +391,14 @@ sub srt_subrip
         system ("pgm2txt -v -f @_[1] -d  tmp/$dvdtitle");
         unlink "tmp/$dvdtitle*.pgm";
         system("touch tmp/srtpgm2txt_done");
-    }else{
+    } else {
         print $RED."$v2d\t Pgm2txt already done, remove tmp/srtpgm2txt_done  to remake it\n".$NORM;
     }
     if ( ! -f "$dvdtitle.srt")
     {
         system ("srttool -s -v -i tmp/$dvdtitle.srtx -o $dvdtitle.srt");
         unlink "tmp/$dvdtitle*.pgm.txt";
-    }else{
+    } else {
         print $RED."$v2d\t $dvdtitle.srt already done, remove it to remake it\n".$NORM;
     }	
 #    maybe spell checking should be optional
@@ -416,7 +416,7 @@ sub mydie
     {
         system("mv tmp/dvdtitle $vobpath/dvdtitle") if ( -e "tmp/dvdtitle" );
         system("mv tmp/probe.rip $vobpath/probe.rip") if ( -e "tmp/probe.rip" );
-    }else{ 
+    } else { 
         unlink "tmp/$dvdtitle*.pgm tmp/$dvdtitle.srtx 2> /dev/null";
         sleep(3);
     }
@@ -599,7 +599,7 @@ sub chk_wdir
                     system ("touch tmp/probe.rip-BAD");
                 }
                 $flag=0; last;
-            }else{
+            } else {
                 $flag=1;
             }
         }
@@ -636,7 +636,7 @@ sub get_audio_channel
     if ( $in_video_magic eq 'mov' )
     {
         $probe=`tcprobe -i $vobpath/$sample 2>&1 | grep 'audio track:'` or mydie "Problem when running \'tcprobe -i $vobpath/$sample\'";
-    }else{
+    } else {
         $probe=`tcprobe -i $vobpath 2>&1 | grep 'audio track:'` or mydie "Problem when running \'tcprobe -i $vobpath\'";
     }
 # If this is so complicated this is because ... YES sometime audio channel are not in order !!
@@ -685,7 +685,7 @@ sub get_audio_channel
         { 
             $audio_channel = $DEF_AUDIOCHANNEL;
             print "(see your $userconfigfile): | ".$RED;
-        }else{
+        } else {
             $audio_channel=0;
             print ":\t   | ".$RED;
         }	
@@ -755,7 +755,7 @@ sub printinfo
         print "MPlayer postproc\n" if ( $deintl =~ m,pp, );
         print "YUVdenoise \n" if ( $deintl =~ m,yuvdenoise,); 
         print "-I 3\n" if ($params=~ m,-I 3, )
-    }else{	print "NO\n";}
+    } else {	print "NO\n";}
 
     print $v2d."   V:\tLogo file name:\t\t(1)| $LOGO\n";
     if ( ( $addlogo && $CLUSTER eq "NO" ) || ( $addlogo ne 0 && $addlogo <= 300 && $CLUSTER ne NO))
@@ -849,7 +849,7 @@ sub printinfo
                 ( $interlace =~  m,interlaced = (no),) or mydie "Unable to Detect Interlacing in $vobpath/$sample";
                 $INTERLACE="no";
                 print $GREEN."NO\n".$NORM;
-                }else{
+                } else {
                 $INTERLACE="yes";
                 print $RED."YES\n".$NORM;
                 }
@@ -925,7 +925,7 @@ sub printinfo
                 if ( ! -e $CLUSTER_CONFIG )
                 {
                     print $RED." NO\n".$NORM;
-                }else{
+                } else {
                     print $GREEN." Yes\n".$NORM if ( -e $CLUSTER_CONFIG );
                     print " Do you want to use a cluster (y|N)? ";
                     $rep=<STDIN>;
@@ -989,13 +989,13 @@ sub cluster
                     $poweroff = $poweroff + $P;
                     print "\tNeed to calculate $poweroff % of frames on other node(s)\n".$NORM;
                     last if ( $poweroff >= 100 );
-                }else{
+                } else {
                     $P=$chost[1];
                     chomp($P);
                     print GOODNODE "$rhost:$P\n";
                     $poweron = $poweron + $P;
                 }
-            }else{
+            } else {
                 $P=$chost[1];
                 chomp($P);
                 print $DEBUG "Host : ".$chost[0]." , Pow = $P\n";
@@ -1005,7 +1005,7 @@ sub cluster
         }
         $addpower = $poweroff / $NODE;
         close(GOODNODE);
-    }else{
+    } else {
         unlink("/tmp/node");
     }
     if ( -e "/tmp/node" )
@@ -1033,7 +1033,7 @@ sub cluster
                 if ( $rhost ne "$localhost" ) 
                 { 	
                     system ("xterm -n rhost -e $RMCMD $rhost $0 runclust $wdir &");
-                }else{
+                } else {
                     system ("xterm -n $rhost -e $0 runclust $wdir &");
                 }
                 $tabpower[$i]=$sumpow;
@@ -1249,7 +1249,7 @@ if ( $NOAUDIO != 1 )
     ( $info =~ m, A: .* MB @ (\d+) kbps,) or mydie "Unable to find audio bitrate in $LOG";
     $audio_size = $audio_size*$audio_bitrate/$1;
     $audio_size=2*$audio_size if ( defined($ac2));
-}else{
+} else {
     $audio_size = 0;
 }
 
@@ -1295,7 +1295,7 @@ chomp($node);
 $fparams="$params $cluster";
 chomp($CLUSTER);
 $sequnit=$CLUSTER;
-}else{
+} else {
     $cluster="";
     $sequnit=0;
 # Encode all frames (only if $last_sec AND $deb_sec < 600 ) , we'll split after
@@ -1405,7 +1405,7 @@ mydie "couldn't fork" unless defined $pid;
 if ($pid)
 {	wait;
 system("touch tmp/merge.finish");
-}else{	
+} else {	
 # $CLUSTER  is known because we've pass through aviencode before
 for ( $i=$CLUSTER ; $i >= 0 ; $i-- )
 { 	print $GREEN."$v2d\t Seq. unit :\t\t\t   | $i\n".$NORM;	
@@ -1444,7 +1444,7 @@ $to_frames=$tot_frames-$last_sec*$FPS;
 $synclogo=int(($end_frames_logo+$keyframes)/$keyframes)*$keyframes;
 if ( $addlogo ne 0 && $addlogo <= 300 )
 {	 $start_frames=$synclogo;
-}else{
+} else {
     $start_frames=$from_frames;
 }
 $params =~ m/-a (\d) .*/;
@@ -1455,7 +1455,7 @@ mydie "couldn't fork" unless defined $pid;
 if ($pid)
 {       wait;
 system("touch tmp/sync.finish");
-}else{
+} else {
     $sys = "transcode -p $vobpath $audio_params -b $audio_bitrate -c $start_frames-$to_frames -s $audio_rescale -i tmp/2-$dvdtitle.avi -P 1 -x avi,vob -y raw -o tmp/2-${dvdtitle}_sync.avi -u 50";
     print $INFO "$sys\n";
     system("nice -$nice $sys")==0 or mydie "Unable to merge Audio and Video";
@@ -1513,7 +1513,7 @@ sub finish
             makelogo if ( $CLUSTER ne NO && $add_logo );
             print $GREEN."$v2d\t Renaming tmp/2-${dvdtitle}_sync.avi $dvdtitle.avi\n".$NORM ;
             rename("tmp/2-${dvdtitle}_sync.avi","$dvdtitle.avi");
-        }else{
+        } else {
             $sys="avisplit -t $from_frames-$to_frames -i  tmp/2-${dvdtitle}_sync.avi -o $dvdtitle.avi && mv $dvdtitle.avi-0000 $dvdtitle.avi";
             print $GREEN."$v2d\t Splitting the result to $nbr_frames frames.\n".$NORM;
             print $INFO "$sys\n";
@@ -1673,11 +1673,11 @@ if ( ! defined($addlogo) && -e $LOGO )
         if ( $TIMELOGO+$beginlogo > $runtime)
         {
             $addlogo=$runtime-$STARTLOGO;
-        }else{
+        } else {
             $addlogo=$TIMELOGO; 
         }
         $poslogo=$POSLOGO;
-    }else{
+    } else {
         print $RED."Transcode is not compile with ImageMagick.\nUnable to encode your Logo $LOGO\n".$NORM; sleep 1;
     }
 }
@@ -1868,7 +1868,7 @@ sub ask_logo
             {
                 $addlogo=0;
             }
-        }else{
+        } else {
             print $RED."\tIf you want to add a Logo at the beginning of this movie \n\t You must modify the \$LOGO variable, which point to your image file (actually $LOGO), in $userconfigfile\n".$NORM;
             $junk=<STDIN>;
             $addlogo=0;
@@ -1987,7 +1987,7 @@ if ( ($Xaxis - 2*$lr)/16 == floor(($Xaxis - 2*$lr)/16) && ($Yaxis - 2*$tb)/16 ==
 {
     print $GREEN."$v2d\t Slow Zooming is necessary:\t\t   | NO\n".$NORM if ( ! -e "tmp/cluster.args");
     $Zoom_mode="B";
-}else{
+} else {
     print $GREEN."$v2d\tt Slow Zooming is necessary:\t\t   |$RED YES\n".$NORM if ( ! -e "tmp/cluster.args");
     $Zoom_mode="Z";
 }
@@ -2211,7 +2211,7 @@ $st=20;
 if ( $in_video_magic eq 'mov' )
 {
     $SUBT=`tcprobe -i $vobpath/$sample -H 15 2> /dev/null` or mydie "Problem when running \'tcprobe -i $vobpath/$sample -H 15 \'";
-}else{
+} else {
     $SUBT=`tcprobe -i $vobpath -H 15 2> /dev/null` or mydie "Problem when running \'tcprobe -i $vobpath \'";
 }
 
@@ -2261,7 +2261,7 @@ if ( ($SUBT =~ m,detected \((\d+)\) subtitle,) || ( defined($number_of_st) && $n
         }
         close(PROBE);
         $sub_title="SRT_${st}_${stlang}";
-    }else{
+    } else {
         $sub_title=",extsub=$st:$tb:0:1:$EXTSUB";
     }
     open (CONF,">>tmp/V2divx.conf");
@@ -2426,7 +2426,7 @@ if ( $angles > 1 )
     print $NORM;
     $angle=<STDIN>;
     chomp($angle);
-}else{
+} else {
     $angle=1;
 }
 #  Check if this title is multichapter
@@ -2454,7 +2454,7 @@ if ( $rep eq "y" || $rep eq "Y" || $rep eq "o" || $rep eq "0")
         print $INFO $sys."\n";
         system("nice -$nice $sys");
     }
-}else{
+} else {
     $sys="tccat -i $dvd -T $longestTitle,-1,$angle | split -b 1024m - ${dvdtitle}_T${longestTitle}_" ;
     print $INFO $sys."\n";
     system("nice -$nice $sys");
@@ -2487,20 +2487,21 @@ if ($ARGV[0] eq runclust )
     {
         $wdir=$ARGV[1];
         chdir($wdir) or mydie $wdir." does not exist or is'nt a directory";		
-# We are on a cluster node all needed parameters ARE known via -->
-readconf;
-# And now we can aviencode  
-zooming;
-#next line is not SURE ?
-$SIG{CHLD}='IGNORE';
-aviencode;
-exit(0);
-}else{
-    mydie "Error: Why run V2divx with runclust option ?\n";
+        # We are on a cluster node all needed parameters ARE known via -->
+        readconf;
+        # And now we can aviencode  
+        zooming;
+        #next line is not SURE ?
+        $SIG{CHLD}='IGNORE';
+        aviencode;
+        exit(0);
+    } else {
+        mydie "Error: Why run V2divx with runclust option ?\n";
+    }
+    # We do never come here !
+    exit(1);
 }
-# We do never come here !
-exit(1);
-}
+
 if ( $ARGV[0] eq "-v" )
 {
     print "V2divx v$release\n";
@@ -2508,7 +2509,8 @@ if ( $ARGV[0] eq "-v" )
 }
 
 if ($ARGV[1] eq "rip" )
-{ ripdvd;
+{ 
+    ripdvd;
 }	
 
 if ($ARGV[1] eq "srtsubrip")
@@ -2519,9 +2521,10 @@ if ($ARGV[1] eq "srtsubrip")
 }
 
 if ($ARGV[1] eq "continue" || $ARGV[0] eq "continue" || ! defined($ARGV[0]))
-{	unlink("tmp/cluster.args");
-# We CONTINUE ....
-get_params;
+{	
+    unlink("tmp/cluster.args");
+    # We CONTINUE ....
+    get_params;
 }  
 
 if (defined ($ARGV[0]) && $ARGV[0] ne  "continue" && ! defined($ARGV[1]))
@@ -2545,5 +2548,5 @@ if (1)
     twoac;
     finish;
 # We do never come here !
-exit(1);
+    exit(1);
 }

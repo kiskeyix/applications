@@ -1,6 +1,7 @@
 #!/bin/sh
+# $Revision: 1.10 $
 # luis mondesi <lemsx1@hotmail.com>
-# Last modified: 2003-Oct-22
+# Last modified: 2003-Oct-23
 #
 # DESCRIPTION:  a simple Gnome 2 script for sysadmins to 
 #		set a bunch of gnome defaults. Remember 

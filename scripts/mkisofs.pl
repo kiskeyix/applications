@@ -1,7 +1,10 @@
 #!/usr/bin/perl -w
-# $Revision: 1.15 $
+# $Revision: 1.16 $
 # Luis Mondesi || lemsx1 at gmail !! com 
 # LICENSE: GPL (http://gnu.org/licenses/gpl.txt)
+# 
+# PLEASE NOTE THAT THIS SCRIPT CAN BE USED 'AS-IS' AND IF IT BREAKS
+# YOUR SYSTEM YOU GET TO KEEP BOTH PIECES.
 #
 # A quick nautilus script to make CDROM/DVDROM images (ISOs).
 #
@@ -14,6 +17,26 @@
 # mkisofs.pl --dvd DIR      # makes a DVD image
 # mkisofs.pl --size=780 DIR # makes ISO with 780MB limit
 #
+# mkisofs.pl --debug DIR    # dry-run where no ISO will be actually 
+#                           # done, but everything will proceed as 
+#                           # normal
+# Technical stuff:
+# The script uses "find" to get all files from the directory passed
+# from the command line. It then creates a dummy CD structure using
+# symlinks and finally calls "mkisofs" for e/a CD image to be created.
+# Essentially this means that it will work correctly if:
+#   - you use it under UNIX (or a system that understands symbolic links)
+#   - your mkisofs binary supports the -f switch (follow symlink)
+#
+# Due to some limitations in ISO9660 (and Joliet extensions), this 
+# script attempts to do the "right" thing for files which might violate
+# this. Note that if you will use this CD under *NIX/Linux or Windows,
+# then you will be ok. However, you should ALWAYS test your CD images
+# throughly. You have been warned!
+# 
+# The volume id of the resulting CD/DVD image will be the same as the
+# original DIR passed as an argument
+#
 use strict;
 $|++;
 
@@ -25,16 +48,17 @@ use File::Spec::Functions qw(splitpath curdir updir catfile catdir splitpath);
 use File::stat qw( stat );
 use File::Temp qw( tmpnam );
 
-my $DEBUG=0;
-my $VOLIDMAXLENGTH=32;
-my $FILENAMEMAXLENGTH=59; # gives room to 4 char extensions
-my $ISOLIMIT=680;   # in megabytes (1*1024 kBytes) NOTE: Do not set to 
-                    # your media limit; allow some extra space 
-                    # for ISO9660 overhead (Joliet+RR extentions)
-                    # i.e. 680 for 700MB disks should be fine
+my $USAGE = "mkisofs.pl [--debug] [--version|--help] [--dvd] [--size=N] DIR
+--debug     Prints lots of compreshensive messages about what this
+            script is doing. Do not create ISOs but do everything else.
+--version   Prints version and exits
+--help      Print version number plus this help and exists
+--dvd       Assumes DIR is a DVD tree (made with dvdauthor 
+            for instance) and creates a UDF DVD image
+--size=N    Limits size of CD images to N megabytes
+";
 
-my ($logfh,$logfile) = tmpnam();
-open ($logfh,">$logfile");
+my $nice =  ( -x "/usr/bin/nice" ) ? "/usr/bin/nice":"";
 
 # You could get only the selected files from nautilus, but
 # it's better to let the user put all those files in 
@@ -44,45 +68,77 @@ open ($logfh,">$logfile");
 ###################################################################
 #                 NO NEED TO MODIFY AFTER THIS LINE               #
 ###################################################################
-# some flags
-my ( $DVD ) = 0; 
+
+die ($USAGE) if ( !@ARGV );
+
+# hard coded values:
+
+my $VOLIDMAXLENGTH=32;
+my $FILENAMEMAXLENGTH=59; # gives room to 4 char extensions
+
+# our log file
+my ($logfh,$logfile) = tmpnam();
+open ($logfh,">$logfile");
+
+# users can/must change this from the command line:
+my $ISOLIMIT=680;   # in megabytes (1*1024 kBytes) NOTE: Do not set to 
+                    # your media limit; allow some extra space 
+                    # for ISO9660 overhead (Joliet+RR extentions)
+                    # i.e. 680 for 700MB disks should be fine
+
+# flags
+my ( $PVERSION,$DVD,$DEBUG ) = 0; 
+# the directory we will do an ISO for:
+my $folder = "";
+
 # get options
 GetOptions(
     # flags
     'v|version'     =>  \$PVERSION,
+    'h|help'        =>  \$PVERSION,
     'd|dvd'         =>  \$DVD,
+    'D|debug'       =>  \$DEBUG,
     # numbers
     's|size=i'      =>  \$ISOLIMIT,
-);
+) and $folder = shift;
 
-my $folder = shift;
+if ( $PVERSION > 0 )
+{
+    print STDOUT "Version 1.0\tLuis Mondesi < lemsx1 at gmail dot com >\n\n$USAGE\n";
+    exit(0);
+}
+
+die($USAGE) if ( $folder eq "" || ! -d "$folder" );
+
+# 1. cleanup dir name:
 chomp($folder); # remove end-line
-
-
 $folder =~ s#/+$##; # remove trailing slash(es)
+# 2. generate volume id:
 my $volumeid = do_volid("$folder");
-# put a .iso extension
+# 3. genarate iso name:
 my $name = $folder.".iso";
 
-my $nice =  ( -x "/usr/bin/nice" ) ? "/usr/bin/nice":"";
+print STDOUT ("Directory: $folder | Initial Volume Name: $volumeid | ISO File Name: $name\n") if ( $DEBUG > 0 );
+print STDOUT ("Sleeping for 5 seconds...\n");
+sleep(5) if ( $DEBUG > 0 ); # give a chance to stop the script
 
-print "Argument: $ARGV[0] | Volume Name: $volumeid | FileName: $name\n" if $DEBUG == 1;
-sleep(5) if $DEBUG == 1;
-
-# calculate ISOLIMIT in bytes:
-$ISOLIMIT = POSIX::ceil( $ISOLIMIT * 1024 * 1024);
+# 4. calculate ISOLIMIT in bytes:
+if ( $ISOLIMIT > 0 ) # deal with non-zero positive numbers only
+{
+    $ISOLIMIT = POSIX::ceil( $ISOLIMIT * 1024 * 1024);
+}
 print STDOUT ("ISO Limit: $ISOLIMIT\n");# if ( $DEBUG > 0 );
 
 if ( $ARGV[1] && $ARGV[1] eq "dvd" ) 
 {
-    die("Directory is not valid DVD tree. Missing $folder/VIDEO_TS") if ( !-d "$folder/VIDEO_TS");
-    mkdir("$folder/AUDIO_TS"); # we can afford to try this
+    die("** Directory is not valid DVD tree. Missing $folder/VIDEO_TS") if ( !-d "$folder/VIDEO_TS");
+    mkdir("$folder/AUDIO_TS") if ( ! -d "$folder/AUDIO_TS" ); 
     # fix permissions
     m_system("chmod 0555 '$folder'",0);
     m_system("$nice find '$folder' -type d -exec chmod 0555 {} \\; ",0);
     m_system("$nice find '$folder' -type f -exec chmod 0444 {} \\; ",0);
     # make iso
-    m_system("$nice mkisofs -dvd-video -udf -o '../$name' -V '$volumeid' '$folder'",1);
+    m_system("$nice mkisofs -dvd-video -udf -o '$name' -V '$volumeid' '$folder'",1) if ( $DEBUG == 0 );
 } else {
     # making regular ISO
     my $temp = "$folder-tmp";
@@ -92,6 +148,7 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
     my $i = 1; # dummy counter
     my $nfolder = $folder."$i";
     $name = $nfolder.".iso";
+    $volumeid = do_volid("$nfolder"); # new volumeid based on this dir
 
     my $size = 0; # current size of CD ISO
     
@@ -117,7 +174,7 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
         # makes relative path
         $nbasedir =~ s#\Q$fullpath##g;
         $nbasedir = catdir($nfolder,$nbasedir);
-        m_system ( "mkdir -p \"$nbasedir\"",1 ); # cheat!
+        m_system ( "mkdir -p \"$nbasedir\"",1 ) if ( ! -d "$nbasedir" ); # cheat!
 
         # clean up new filename:
         $new_f =~ s#\s+#_#g; # replace spaces with _
@@ -133,16 +190,17 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
             $new_f =~ s#\.\w{1,3}$##; # be safe
             $new_f .= "$ext"; # appends extension
             do_log("Truncating file $f\n ==> $new_f\n");
-            sleep(3) if ( $DEBUG > 0 );
+            sleep(5) if ( $DEBUG > 0 );
         }
         $new_f = catfile($nbasedir,$new_f);
-        symlink("$f","$new_f") or die "Symlink failed:\n  '$f -> $new_f'\n $! \n";
+        symlink("$f","$new_f") or die ("** Symlink failed:\n  '$f -> $new_f'\n $! \n");
         do_log("$new_f -> $f");
         if ( $size >= $ISOLIMIT )
         {
             my $mb = POSIX::ceil(($size / 1024)/1024);
             print STDOUT ("Making CD ISO of size ".$mb."MB\n");
-            m_system("$nice mkisofs -f -J -r -v -o '../$name' -V '$volumeid' '$nfolder' ",1);
+            sleep(5) if ( $DEBUG > 0 );
+            m_system("$nice mkisofs -f -J -r -v -o '../$name' -V '$volumeid' '$nfolder' ",1) if ( $DEBUG == 0 );
             $size = 0; # reset size
             $i++;
             $nfolder = $folder."$i";
@@ -161,7 +219,7 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
         {
             my $mb = POSIX::ceil(($size / 1024)/1024);
             print STDOUT ("Making CD ISO of size ".$mb."MB\n");
-            m_system("$nice mkisofs -f -J -r -v -o '../$name' -V '$volumeid' '$nfolder' ",1);
+            m_system("$nice mkisofs -f -J -r -v -o '../$name' -V '$volumeid' '$nfolder' ",1) if ( $DEBUG == 0 );
         }
     }
     # cleanup
@@ -186,17 +244,13 @@ sub m_system
 {
     my $cmd = shift;
     my $die = shift;
-    if ( $DEBUG )
-    {
-        print STDOUT $cmd."\n";
-    }
-
+    print STDOUT ("$cmd\n") if ( $DEBUG > 0 );
     if ( system($cmd) )
     {
         print STDERR $!."\n";
         if ( $die > 0 ) 
         {
-            die("Bailing out\n");
+            die("** Bailing out\n");
         }
     }
 }

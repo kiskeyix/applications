@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.57 $
+# $Revision: 1.58 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -172,7 +172,7 @@ my $FPS=""; # number of FPS will be detected automatically
 
 # interactive
 sub ask_filesize;
-sub ask_ntsc;
+sub ask_telecine;
 sub ask_logo;
 sub ask_clust;
 # utilities
@@ -475,7 +475,7 @@ sub get_fps {
     return $FPS;
 }
 
-sub ask_ntsc {
+sub ask_telecine {
     # @param 0 str $FPS := float [25.00 or 23.97 or 29.97 ... ]
     # ask user a yes or no question about whether
     # NTSC is needed and sets proper parameters
@@ -483,7 +483,7 @@ sub ask_ntsc {
     #
     # Also, we assume NTSC (no telecine) if FPS
     # is 29.970 (pass as argument)
-    # example: ask_ntsc($FPS);
+    # example: ask_telecine($FPS);
     $FPS = shift;
     print STDOUT (" Is this Movie a NTSC TELECINE movie".
     " (MPlayer is your friend to know that)? [y|N]");
@@ -493,7 +493,7 @@ sub ask_ntsc {
     $VIDEONORM="NTSC" if ( $FPS =~ m,2[39]\.9, );
     print $DEBUG "+ video normalization: $VIDEONORM | telecine: $TELECINE\n";
     return $VIDEONORM;
-} # end ask_ntsc()
+} # end ask_telecine()
 
 sub check_system
 {
@@ -1443,7 +1443,7 @@ sub ask_clust
             {
                 $FPS = get_fps();
             }
-            $VIDEONORM = ask_ntsc( $FPS );
+            $VIDEONORM = ( $FPS =~ m,2[39]\.9, ) ? "NTSC" : $VIDEONORM;
             create_nav($VIDEONORM);
             # TODO use Perl to read this line
             #get_tail("tmp/file.nav",-1);
@@ -1749,7 +1749,8 @@ sub create_extract
         # since 29.970 is the detected frames per second
         # ask user whether this is a NTSC movie and set variables
         # accordingly
-        ask_ntsc($FPS);
+        ask_telecine($FPS);
+        $VIDEONORM="NTSC";
     } 
     if ( $NOAUDIO == 1  || $need_time == 1 )  
     {
@@ -1861,7 +1862,8 @@ sub calculate_nbrframe
 
     if ( $FPS =~ m,29\.97, && ! defined($TELECINE) )
     {
-        ask_ntsc($FPS);
+        ask_telecine($FPS);
+        $VIDEONORM="NTSC";
     }
     $nbr_frames= floor($tot_frames - ($deb_sec+$last_sec)*$FPS);
     print $DEBUG "Number of frames: $nbr_frames\n";

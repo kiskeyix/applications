@@ -17,7 +17,7 @@ use File::Temp qw( tmpnam );
 
 my $DEBUG=0;
 my $VOLIDMAXLENGTH=32;
-my $FILENAMEMAXLENGTH=60;
+my $FILENAMEMAXLENGTH=59; # gives room to 4 char extensions
 my $ISOLIMIT=680; # in MB
 
 my ($logfh,$logfile) = tmpnam();
@@ -79,18 +79,28 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
         
         my $nbasedir = $basedir;
         # makes relative path
-        $nbasedir =~ s#\Q$fullpath##;
+        $nbasedir =~ s#\Q$fullpath##g;
         $nbasedir = catdir($nfolder,$nbasedir);
         m_system ( "mkdir -p \"$nbasedir\"",1 ); # cheat!
 
         # clean up new filename:
-        $new_f =~ s#\s+#_#; # replace spaces with _
-        $new_f =~ s#_+#_#; # remove excessive _
-        $new_f =~ s#\W+##; # remove non-word char [^0-9a-zA-Z]
-        $new_f  =~ s#^(.{1,$FILENAMEMAXLENGTH)\.(.*)$#$1.$2#; 
+        $new_f =~ s#\s+#_#g; # replace spaces with _
+        $new_f =~ s#_+#_#g; # remove excessive _
+        $new_f =~ s#[\(\)\[\]\#,]+##g; # other chars we don't care
+        #$new_f =~ s#\W+##gi; # remove non-word char [^0-9a-zA-Z-]
+        if ( length( $new_f ) > $FILENAMEMAXLENGTH )
+        {
+            my $ext = $new_f;
+            $ext =~ s#(\w{1,4})$#$1#g; # TODO possible bug...
+            # truncate filename:
+            $new_f = substr($new_f,0,$FILENAMEMAXLENGTH);
+            $new_f =~ s#\.\w{1,3}$##; # be safe
+            $new_f .= ".$ext"; # appends extension
+            do_log("Truncating file $f\n ==> $new_f\n");
+        }
         $new_f = catfile($nbasedir,$new_f);
         symlink("$f","$new_f") or die "Symlink failed:\n  '$f -> $new_f'\n $! \n";
-        do_log($f);
+        do_log("$new_f -> $f");
         if ( $size >= $ISOLIMIT )
         {
             print STDOUT ("Making CD ISO of size ".$size."MB\n");

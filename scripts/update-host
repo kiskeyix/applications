@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.9 $
+# $Revision: 1.10 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2005-Jan-20
+# Last modified: 2005-Jan-21
 #
 # DESCRIPTION: A simple script to update my settings in $HOME
 # USAGE: $0 [--remove|--verbose]
@@ -61,6 +61,7 @@ my $silent = ( ! $VERBOSE ) ? " > /dev/null 2>&1" : "";
 # update master and exit
 if ( $MASTER )
 {
+    my @failed = (); # array of files that failed
     chdir($LOCAL_PATH) or die ("$LOCAL_PATH $!");
     foreach my $i ( @FILES )
     {
@@ -80,12 +81,22 @@ if ( $MASTER )
     foreach my $i ( @FILES )
     {
         $j++;
-        print STDOUT "\r";
-        printf STDOUT ("%20s","localhost"); # host padded
-        printf STDOUT ("|%-".$n_files."s|", "#" x $j); # progress
+        print STDOUT "\r"; 
         my $cmd = "command tar x".$VERBOSE_ARGS."jf '$LOCAL_PATH/$i'";
         system($cmd.$silent);
+        printf STDOUT ("%20s","localhost"); # host padded
+        if ( ! $? ) 
+        {
+            printf STDOUT ("|%-".$n_files."s|", "#" x $j); # progress
+        } else {
+            # last tar command failed?
+            # TODO Find a way to "remember" which file failed
+            printf STDOUT ("|%-".$n_files."s|", "#" x ($j-1)); # progress
+            printf STDOUT ("|%-".$n_files."s|", "!" x 1); # progress
+            push(@failed,"$i");
+        }
     }
+    print "These files failed: ".join ( " ",@failed )."\n" if ( $#failed > 0 );
     print STDOUT "\n";
     exit(0);
 }
@@ -97,6 +108,8 @@ slurp_hosts($REMOTE_HOSTS_FILE);
 foreach my $h ( @hosts )
 {
     next if ( grep(/$EXCLUDE/,$h) );
+    my @failed = (); # array of failes that failed
+
     #print "\e[H"; # return the cursor to the normal position
 
     # we only care about IPs here:
@@ -119,15 +132,25 @@ foreach my $h ( @hosts )
             $j++;
             print STDOUT "\r";
             printf STDOUT ("%20s",$h); # host padded
-            printf STDOUT ("|%-".$n_files."s|", "#" x $j); # progress
             system("scp $LOCAL_PATH/$i $h:$TMP/ ".$silent); 
             my $cmd = "ssh $h command tar x".$VERBOSE_ARGS."jf '$TMP/$i'";
             system($cmd.$silent);
+            if ( ! $? ) 
+            {
+                printf STDOUT ("|%-".$n_files."s|", "#" x $j); # progress
+            } else {
+                # last tar command failed?
+                # TODO Find a way to "remember" which file failed
+                printf STDOUT ("|%-".$n_files."s|", "#" x ($j-1)); # progress
+                printf STDOUT ("|%-".$n_files."s|", "!" x 1); # progress
+                push(@failed,"$i");
+            }
             if ( $REMOVE_FILES )
             {
                 system("ssh $h command rm -f '$TMP/$i' ".$silent);
             }
-        }
+        } 
+        print "$h These files failed: ".join ( " ",@failed )."\n" if ( $#failed > 0 );
         print STDOUT "\n";
     } else {
         # debugging 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.79 $
+# $Revision: 1.80 $
 # Luis Mondesi  <lemsx1@hotmail.com>
 # 
 # REQUIRED: ImageMagick's Perl module and a dialog 
@@ -554,7 +554,7 @@ sub mkthumb {
     my $MESSAGE = "Thumbnails Creation";
     # initial values for gauge
     # TOTAL -> number of elements in ls array
-    my ($PROGRESS,$TOTAL) = (0,( $#ls + 1 ) );
+    my ($PROGRESS,$TOTAL) = (0,$#ls); # + 1 off-by-one ?
     if ( $use_console_progressbar == 1 )
     {
         $GAUGE->new({'name'=>$MESSAGE,'count'=>$TOTAL});
@@ -870,7 +870,7 @@ sub thumb_html_files {
             progressbar($PROGRESS,$TOTAL);
         }
         $PROGRESS++;
-    } #end foreach
+    } #end foreach $i
 } # end thumb_html_files
 
 sub menu_file {

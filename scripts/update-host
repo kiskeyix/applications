@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Jan-20
 #
@@ -75,6 +75,7 @@ if ( $MASTER )
         system("wget $WGET_ARGS $MASTER_HOST/$i ".$silent);
         print STDOUT ( $? ) ? " failed": " done";
     }
+    print STDOUT ("\n");
     chdir("$ENV{'HOME'}");
     foreach my $i ( @FILES )
     {
@@ -103,7 +104,8 @@ foreach my $h ( @hosts )
     {
         if ( ! is_alive($h) )
         {
-            printf STDOUT ("%20s","$h is dead\n");
+            printf STDOUT ("%20s",$h);
+            print STDOUT (" is dead\n");
             next;
         }
         $j=0;

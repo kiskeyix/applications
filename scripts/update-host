@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.20 $
+# $Revision: 1.21 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -191,10 +191,6 @@ if ( $VERBOSE )
 
 ## main ##
 
-my $j =0;
-my $n_files = $#FILES+1;
-my $silent = ( ! $VERBOSE ) ? " > /dev/null 2>&1" : "";
-
 if ( defined ($CONF_FILES) )
 {
     $CONF_FILES =~ s/[,|\s]+/ /g; # separate by single spaces
@@ -206,6 +202,10 @@ if ( $PRINT_FILES )
     print STDOUT (join(",",@FILES),"\n");
     exit 0;
 }
+
+my $j =0;
+my $n_files = $#FILES+1;
+my $silent = ( ! $VERBOSE ) ? " > /dev/null 2>&1" : "";
 
 # update master and exit
 if ( $MASTER )

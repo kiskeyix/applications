@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.17 $
+# $Revision: 1.18 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -369,7 +369,8 @@ sub srt_subrip
     print $DEBUG "subtitle channel=@_[0], subtitle language@_[1]\n";
     if ( ! -e "$HOME/.V2divx_db" )
     {
-        mkdir ("$HOME/.V2divx_db",0777);
+        umask(000); # resets current umask values. Luis Mondesi 
+        mkdir ("$HOME/.V2divx_db",01777);
         print $GREEN."$v2d\t PGM2txt database created:\t\t   | ${RED}${HOME}/.V2divx_db\n".$NORM;
     }
     if ( ! -e "db")
@@ -1754,7 +1755,8 @@ sub get_params
             exit(1);
         }
         mydie "Path: $vobpath does not exist." if (! -e $vobpath);
-        mkdir ("tmp",1777);
+        umask(000); # resets current umask values. Luis Mondesi
+        mkdir ("tmp",01777);
         # Luis Mondesi <lemsx1AT_NOSPAM_hotmail.com> 
         # how does the script knows that the "sample" keyword
         # was given?
@@ -2182,7 +2184,8 @@ sub config
     mydie "There is still a tmp/V2divx.conf , please remove all tmp files\n (or at least tmp/V2divx.conf) before running V2divx /path/to/vob sample" if ( -e "tmp/V2divx.conf") ;
     $vobpath = $ARGV[0];
     mydie "Directory \"$vobpath\" does not exist \n Sorry" if ( ! -e $vobpath );
-    mkdir ("tmp",0777);
+    umask(000); #reset current umask values. Luis Mondesi
+    mkdir ("tmp",01777);
     chk_wdir;
 
     open(CONF,">>tmp/V2divx.conf");

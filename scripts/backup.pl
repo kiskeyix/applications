@@ -1,70 +1,80 @@
 #!/usr/bin/perl -w
-# $Revision: 1.15 $
+# $Revision: 1.16 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jul-06
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
 #              it will create 3 files:
 #
-#               system-%date-tar.bz2
-#               users-%date-tar.bz2
-#               other-%date-tar.bz2
+#               backup-system-%date-tar.bz2
+#               backup-users-%date-tar.bz2
+#               backup-other-%date-tar.bz2
 #               
 #               or 
 #
-#               system-daily-tar.bz2
-#               users-daily-tar.bz2
-#               other-daily-tar.bz2
+#               backup-daily-tar.bz2
+#               backup-daily-tar.bz2
+#               backup-daily-tar.bz2
 #
-# USAGE: backup.pl [daily|weekly|monthly]
+# USAGE: backup.pl [daily]
 #
-# Example $HOME/.backuprc
-# # NOTE that the defaults for these variables are sufficient
-# # for a Debian system.
-# TAR=/usr/local/bin/tar
-# COMPRESS_LEVEL=9
-# # bzip2 or gzip? or don't define if no compression is needed
-# COMPRESS_DO=/usr/bin/gzip
-# # prefix to name of the file
-# NAME=imac-home 
+# SAMPLE CONFIGURATION:
+# ##Example $HOME/.backuprc
+# # --- CUT HERE --- #
+# # uncommend below what you want to customize
+# # BAK must be specify for the script to work properly.
+# # unless you want to put the files in /home/backup
+# #TAR=/usr/local/bin/tar
+# #COMPRESS_LEVEL=9
+# ## bzip2 or gzip? or don't define if no compression is needed
+# #COMPRESS_DO=/usr/bin/gzip
+# ## prefix to name of the file
+# #NAME=imac-home 
 #
+# ## Users must define this
 # BAK=/dir/to/store/backups
-# EXCLUDES=.*this.*|.*that\$
+# #EXCLUDES=.*this.*|.*that\$
 # 
-# DIRS=other_dirs_to_backup_separated_by_spaces_or_commas
-# SYSTEM=system_directories_separated_by_spaces_or_commas
-# LOW_UID=lowest_uid_number_to_backup
-# EXC_ULIST=exclude_users_from_list_separated_by_|
+# #DIRS=other_dirs_to_backup_separated_by_spaces_or_commas
+# #SYSTEM=system_directories_separated_by_spaces_or_commas
+# #LOW_UID=lowest_uid_number_to_backup
+# #EXC_ULIST=exclude_users_from_list_separated_by_|
 #
 # TIPS:
-# Setting the script in debugging mode doesn't create any tar.gz
-# files.
-# To override a default value, just specify what you want
-# in your .backuprc file. For instance: 
-# SYSTEM="". 
-# Would cause the SYSTEM list of directories to be disregarded. 
-# And:
-# SYSTEM=/dir/1 /dir/2 /dir/3
-# Would backup only those directories
+# * If you have "tar" or any other archive utility in your system,
+#   using that makes this process faster than using Archive::Tar...
+#   you have been warned!
+# * Setting the script in debugging mode doesn't create any tar.gz
+#   files.
+# * To override a default value, just specify what you want
+#   in your .backuprc file. For instance: 
+#     SYSTEM="". 
+#   Would cause the SYSTEM list of directories to be disregarded. 
+#   And:
+#     SYSTEM=/dir/1 /dir/2 /dir/3
+#   Would backup only those directories
 #
-# Do not use quotes in your .backuprc except for the regexp strings
+# * Do not use quotes in your .backuprc except for the regexp strings
 #
-# MacOS X users should first make sure they have Archive::Tar installed
-# issue the command:
-# > sudo perl -e shell -MCPAN
+# * MacOS X users should first make sure they have Archive::Tar 
+#   installed
+#   issue the command:
+#     > sudo perl -e shell -MCPAN
 # 
-# and when in CPAN prompt, type:
-# > install Archive::Tar
+#   and when in CPAN prompt, type:
+#     > install Archive::Tar
 # 
-# Then follow the prompts.
+#   Then follow the prompts.
 # 
-# On any UNIX system you can always opt to defined your own version
-# of tar like:
-# TAR = /usr/bin/tar
-# and whether you want to use gzip or bzip2
-# COMPRESS_DO = /usr/bin/gzip
-# and your compression level low "0" & "9" highest
-# COMPRESS_LEVEL=9
+# * On any UNIX system you can always opt to defined your own version
+#   of tar like:
+#     TAR = /usr/bin/tar
+#   and whether you want to use gzip or bzip2
+#     COMPRESS_DO = /usr/bin/gzip
+#   and your compression level low "0" & "9" highest
+#     COMPRESS_LEVEL=9
+#
+# * The script defaults should be enough for a Debian system :-D
 #
 
 use strict;
@@ -160,7 +170,11 @@ if ( ! -f $TMP_LOCK ) {
     open(FILE,"> $TMP_LOCK") || die "could not open $TMP_LOCK. $! \n";
     print FILE $year."-".$mon."-".$mday." ".$hour.":".$min.":".$sec;
     close(FILE); 
-  
+ 
+    # NOTE some *NIX systems don't like the "-x" (executable) check 
+    # if you are using one of those, then change this to "-e" (exists)
+    # or something similar... you have been warned! Solaris?
+    # Same for the -x in the following statement
     if ( exists $CONFIG{"TAR"} && -x $CONFIG{"TAR"} ) {
         $USE_TAR = 1;
         $COMMAND = sprintf("%s cf - xxFILESxx' ",$CONFIG{"TAR"});
@@ -168,11 +182,9 @@ if ( ! -f $TMP_LOCK ) {
         print STDERR "Tar was given but not found! \n";
     }
 
-
     if ( exists $CONFIG{"COMPRESS_DO"} && 
+        $USER_TAR &&
         -x $CONFIG{"COMPRESS_DO"} ) {
-        # file name is STDOUT
-        ( $COMMAND = $COMMAND) =~ s/\%TARFILE\%/-/;
         # reuse COMMAND from above and 
         # pipe it to compress utility
         $COMMAND = sprintf(
@@ -206,7 +218,7 @@ if ( ! -f $TMP_LOCK ) {
             if ( $USE_TAR ) {
                 # TODO maybe this should be in a subroutine?
                 # compression is not needed? then use filename
-                my $TMP_FILE_NAME = "$CONFIG{"NAME"}-system-$MIDDLE_STR.tar";
+                my $TMP_FILE_NAME = $CONFIG{"NAME"}."-system-$MIDDLE_STR.tar";
                 # to allow other formats, let's probe one at a time
                 $TMP_FILE_NAME .= ( $CONFIG{"COMPRESS_DO"} =~ m/bzip2/ ) ? ".bz2" : "";
                 $TMP_FILE_NAME .= ( $CONFIG{"COMPRESS_DO"} =~ m/gzip/ ) ? ".gz" : "";
@@ -224,7 +236,7 @@ if ( ! -f $TMP_LOCK ) {
                 }
             } else {
                 Archive::Tar->create_archive (
-                    "$CONFIG{"NAME"}-system-$MIDDLE_STR.tar.gz", 
+                    $CONFIG{"NAME"}."-system-$MIDDLE_STR.tar.gz", 
                     $CONFIG{"COMPRESS_LEVEL"}, 
                     @filelist
                 );
@@ -272,7 +284,7 @@ if ( ! -f $TMP_LOCK ) {
         if ( $USE_TAR ) {
                 # TODO maybe this should be in a subroutine?
                 # compression is not needed? then use filename
-                my $TMP_FILE_NAME = "$CONFIG{"NAME"}-user-$MIDDLE_STR.tar";
+                my $TMP_FILE_NAME = $CONFIG{"NAME"}."-user-$MIDDLE_STR.tar";
                 # TODO put these in COMPRESS_DO general above
                 # and declare a $EXT scalar holding the string to use
                 # for all file_names
@@ -293,7 +305,7 @@ if ( ! -f $TMP_LOCK ) {
                 }
         } else {
             Archive::Tar->create_archive (
-                "$CONFIG{"NAME"}-users-$MIDDLE_STR.tar.gz", 
+                $CONFIG{"NAME"}."-users-$MIDDLE_STR.tar.gz", 
                 $CONFIG{"COMPRESS_LEVEL"}, 
                 @filelist
             );
@@ -315,13 +327,13 @@ if ( ! -f $TMP_LOCK ) {
             }
         }
 
-        print STDOUT "Backing up other files $CONFIG{"DIRS"} \n";
+        printf STDOUT "Backing up other files %s \n",$CONFIG{"DIRS"};
 
         if ( $DEBUG == 0 ) {
             if ( $USE_TAR ) {
                 # TODO maybe this should be in a subroutine?
                 # compression is not needed? then use filename
-                my $TMP_FILE_NAME = "$CONFIG{"NAME"}-other-$MIDDLE_STR.tar";
+                my $TMP_FILE_NAME = $CONFIG{"NAME"}."-other-$MIDDLE_STR.tar";
                 # TODO put these in COMPRESS_DO general above
                 # and declare a $EXT scalar holding the string to use
                 # for all file_names
@@ -342,7 +354,7 @@ if ( ! -f $TMP_LOCK ) {
                 }
             } else {
                 Archive::Tar->create_archive (
-                    "$CONFIG{"NAME"}-other-$MIDDLE_STR.tar.gz", 
+                    $CONFIG{"NAME"}."-other-$MIDDLE_STR.tar.gz", 
                     $CONFIG{"COMPRESS_LEVEL"}, 
                     @filelist
                 );

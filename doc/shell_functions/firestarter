@@ -1,0 +1,103 @@
+#!/bin/sh
+#
+# Startup script for the Firestarter Application Suite
+#
+# chkconfig: 2345 11 92
+#
+# description: Automates the startup of Firestarter's generated ruleset
+#
+# Script Author:	Paul Drain <pd@cipherfunk.org>
+#   -- a hack taken from the default RH ipchains startup script
+#
+# config: /etc/firestarter/firewall.sh
+#
+
+[ -x /usr/sbin/firestarter ] || exit 0
+
+FS_CONFIG="/etc/firestarter/firewall.sh"
+RETVAL=0
+
+start() {
+	if [ -f $FS_CONFIG ]; then
+	# Clear the existing rulesets out, so we don't run into any duplicates
+	echo "Flushing all current rules and user defined chains:"
+	iptables -F
+	echo "Clearing all current rules and user defined chains:"
+	iptables -X
+	echo "Zeroing all current rules:"
+	iptables -Z
+	echo -n "Applying Firestarter configuration: "
+	$FS_CONFIG
+	RETVAL=$?
+	if [ $RETVAL -eq 0 ]; then
+		echo "done."
+	else
+		echo "failed."
+	fi
+
+	touch /var/lock/firestarter
+	return $RETVAL
+	fi
+}
+
+stop() {
+	echo "Flushing all current rules and user defined chains:"
+	iptables -F
+	echo "Clearing all current rules and user defined chains:"
+	iptables -X
+    	echo "Zeroing all current rules:"
+	iptables -Z
+	echo -n "Resetting built-in chains to the default ACCEPT policy:"
+		iptables -P INPUT ACCEPT
+		iptables -P FORWARD ACCEPT
+		iptables -P OUTPUT ACCEPT
+	echo
+	[ $RETVAL -eq 0 ] && rm -f /var/lock/firestarter
+	return $RETVAL
+}
+
+panic() {
+	echo -n "Changing target policies to DENY: "
+		iptables -P INPUT DENY
+		iptables -P FORWARD DENY
+		iptables -P OUTPUT DENY 
+	echo "done."
+	echo "Flushing all current rules and user defined chains:"
+	iptables -F
+	echo "Clearing all current rules and user defined chains:"
+	iptables -X
+	echo "Zeroing all current rules:"
+	iptables -Z
+	RETVAL=$?
+	echo
+	[ $RETVAL -eq 0 ] && rm -f /var/lock/firestarter
+	return $RETVAL
+}
+
+# See how we were called.
+case "$1" in
+  start)
+	start
+	;;
+  stop)
+	stop
+	;;
+  status)
+	iptables -nL
+	;;
+  restart)
+        stop
+        start
+	;;
+  force-reload)
+  	stop
+	start
+	;;
+  panic)
+	panic
+	;;
+  *)
+	echo "Usage: firestarter {start|stop|status|restart|panic}"
+	exit 1
+esac
+exit $RETVAL

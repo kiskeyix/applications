@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Oct-15
 #
@@ -65,7 +65,7 @@ if [ -d "/usr/local/MozillaFirebird/plugins" ]; then
 #    /usr/local/j2re/plugin/i386/ns610-gcc32/libjavaplugin_oji.so \
 #    50
     
-    ln -s /etc/alternatives/libjavaplugin_oji.so \
+    ln -sf /etc/alternatives/libjavaplugin_oji.so \
         /usr/local/MozillaFirebird/plugins/libjavaplugin_oji.so
 
     echo "Putting Mozilla Firebird in Gnome-2 menu"
@@ -87,7 +87,7 @@ if [ -d "/usr/lib/mozilla-firebird/plugins" ]; then
 #    /usr/local/j2re/plugin/i386/ns610-gcc32/libjavaplugin_oji.so \
 #    50
  
-    ln -s /etc/alternatives/libjavaplugin_oji.so \
+    ln -sf /etc/alternatives/libjavaplugin_oji.so \
         /usr/lib/mozilla-firebird/plugins/libjavaplugin_oji.so
 
 fi

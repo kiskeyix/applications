@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2002-Sep-14
-# $Id: etodo.pl,v 1.1 2002-09-15 00:31:59 luigi Exp $
+# Last modified: 2002-Sep-17
+# $Id: etodo.pl,v 1.2 2002-09-20 15:01:05 luigi Exp $
 #
 # DESC:
 #   This script takes your tasks.ics file from Evolution
@@ -105,10 +105,13 @@ sub get_fields(){
                 # is to remove the due time until a better solution
                 # is achieved
                 #$_ =~ s/^DUE;.*:.*[\s]*([0-9]*)T.*/$i/;
+                # time is in the form YYYYMMDD
+                $_ =~ s/(\d{1,4})(\d{1,2})(\d{1,2})/$1-$2-$3/;
                 $ary[$i]->{dtdue}=$_;
             } 
             if ($_ =~ m/^DTSTART/ ){
                 $_ =~ s/^DTSTART;.*VALUE=DATE:([0-9]{1,8}).*/$1/;
+                $_ =~ s/(\d{1,4})(\d{1,2})(\d{1,2})/$1-$2-$3/;
                 $ary[$i]->{dtstart}=$_;
             }
             if ($_ =~ m/^SUMMARY:/  ) {

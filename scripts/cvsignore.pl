@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2005-Jan-23
 #
@@ -13,6 +13,7 @@ $|++;
 my $revision = "1.0"; # version
 
 # standard Perl modules
+use File::Basename; # basename() && dirname()
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
 

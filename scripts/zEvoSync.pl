@@ -2,7 +2,7 @@
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2002-Nov-16
 # 
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # 
 # VERSION: 0.1
 #
@@ -158,6 +158,25 @@ sub do_evo_sync {
 
     close($temp_file);
 }
+
+# sample printVcard function
+# borrowed from: http://www.heise.de/ix/artikel/1999/05/161/01.shtml
+sub printVcard {
+    my (%hash) = @_;
+    print "begin:vcard\n";
+    print "n:$hash{nachname};$hash{vorname}\n";
+    print "fn: $hash{vorname} $hash{nachname}\n";
+    if (exists $hash{strasse} && exists $hash{plz? &&
+        exists $hash{ort}) {
+        print "adr:;;$hash{strasse};$hash{ort};;$hash{plz};Germany\n";
+    }
+    print "tel;work:$hash{telgesch}\n" if (exists $hash{telgesch});
+    print "tel;fax;work:$hash{faxgesch}\n" if (exists $hash{faxgesch});
+    print "email;internet:$hash{mail}\n" if (exists $hash{mail});
+    print "end:vcard\n";
+}
+
+
 
 #
 # GUI

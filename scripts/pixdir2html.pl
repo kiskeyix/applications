@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.89 $
+# $Revision: 1.90 $
 # Luis Mondesi  <lemsx1@hotmail.com>
 # 
 # REQUIRED: ImageMagick's Perl module and a dialog 
@@ -246,7 +246,6 @@ sub main {
     # remove duplicates:
     my %seen = ();
     my @uniq = grep(!$seen{$_}++,@ary);
-    @pixfiles = (); # resets (to make sure)
     @pixfiles = @uniq; # copies all unique files to pixfiles
     # free up memory:
     undef @ary;
@@ -874,7 +873,7 @@ sub menu_file {
     # the root level of the picture
     # directory (at the first 
     # directory that was passed to the script) or
-    # it puts a menu in e/a index.$EXT file
+    # it returns a string to be put in e/a index.$EXT file
     #
     # if there is a file named .new 
     # inside the given directory,
@@ -900,19 +899,17 @@ sub menu_file {
     my @files=();
     my @pixdir = (); # reset array 
 
-    my @ary = ();
-    if ( defined($pixfiles[0]) && -f $pixfiles[0] )
-    {
-        @ary = @pixfiles;
-    } else {
-        @ary = do_dir_ary("$ROOT_DIRECTORY");
-    }
+    my @ary = do_dir_ary("$ROOT_DIRECTORY");
+    # remove duplicates:
+    my %seen = ();
+    my @uniq = grep(!$seen{$_}++,@ary);
+
     # for e/a directory here
     # check if a .nopixdir2htmlrc file exists
     # if it does, then skip it and do the next one.
     # if it doesn't, then assume this will contain
     # a index.$EXT file and add it to the menu. 
-    foreach my $directory (@ary){
+    foreach my $directory (@uniq){
         next if (-f "$directory/.nopixdir2htmlrc");
         # remove ./ from begining of names
         $directory =~ s/^\.\/*//g;

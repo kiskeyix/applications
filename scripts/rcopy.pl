@@ -1,8 +1,8 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2002-Oct-24
+# Last modified: 2003-Oct-03
 # 
-# $Id: rcopy.pl,v 1.6 2002-12-09 00:46:11 luigi Exp $
+# $Id: rcopy.pl,v 1.7 2003-10-05 06:13:29 luigi Exp $
 # 
 # VERSION: 0.9
 #
@@ -43,15 +43,15 @@
 # 
 
 my $DBUG = 0;       # use 1 for true
-
-use strict;         
-$|++;               # disable buffering on standard output
-      
+     
 use XML::Simple;
 use Config;
 
 if ( $DBUG != 0 ) { use Data::Dumper; }
 
+use strict;         
+$|++;               # disable buffering on standard output
+ 
 # You must customize these variables:
 #
 # xmlconfig has the default path for .rcopy.xml config file

@@ -1,6 +1,6 @@
 #!/bin/sh
 # luis mondesi <lemsx1@hotmail.com>
-# Last modified: 2003-Oct-21
+# Last modified: 2003-Oct-22
 #
 # DESCRIPTION:  a simple Gnome 2 script for sysadmins to 
 #		set a bunch of gnome defaults. Remember 
@@ -18,7 +18,8 @@
 #               Check key values with xkeycaps or xev
 #
 # NOTES: all values are "mandatory" unless specified below. 
-#        Read comments
+#        Read comments. Mandatory cannot be modified by users.
+#        Defaults can be modified later by the user (not mandatory)
 #
 
 GCONFTOOL="/usr/bin/gconftool-2"
@@ -35,13 +36,31 @@ DEFAULT_FONT=1  # set a given font. see below. 1 -> true, 0 -> false
 DEFAULT_MENU_TEAROFF=1  # don't tearoff menus by default 
                         # (this is confusing). 
                         # 1 -> don't tearoff, 0 -> tearoff
+
 DEFAULT_TITLEBAR_FONT=1 # does metacity uses system font? 
                         # or see below to set one. 
                         # 1 -> true, 0 -> false
+
 DEFAULT_BROWSER=1       # use default browser as mandatory? 
                         # see below to specify which browser. 
                         # Non mandatory (false) will set as "default"
                         # 1 -> true, 0 -> false
+
+DISABLE_SOUND_SERVER=1  # enable_esd is dangerous if you setup your 
+                        # /etc/esound/esd.conf to:
+                        # [esd]
+                        # auto_spawn=1
+                        # spawn_options=-terminate -nobeeps -as 3
+                        # spawn_wait_ms=100
+                        # So, we are disabeling this setting. Set to:
+                        # 1->to disable the sound server mandatory
+                        # to all users, and to anything other than 1
+                        # to allow users to set this setting themselves
+
+ENABLE_EVENTS_SOUNDS=1  # A good thing to have... users will need to 
+                        # enable Sound Server at Startup
+                        # or enable_esd with gconf-editor
+                        # (not mandantory) 
 
 # integers
 NUMBER_OF_WORKSPACES=2
@@ -53,8 +72,7 @@ GTK_THEME="Nuvola"
 METACITY_THEME=$GTK_THEME
 ICON_THEME="Nuvola"
 BACKGROUND="/usr/share/wallpapers/All-Good-People-1.jpg"
-SPLASH_IMAGE="/usr/share/pixmaps/splash/Splash-Crystal.png" 
-#"/usr/share/pixmaps/splash/gnome-splash.png" <-- default gnome 
+SPLASH_IMAGE="/usr/share/pixmaps/splash/gnome-splash.png" #<-- default gnome 
 BACKGROUND_ORIENTATION="wallpaper" # wallpaper,centered,scaled,strecthed
 MONOSPACE_FONT_NAME="Sans Bold 12"
 FONT_NAME="Sans Bold 11"
@@ -228,6 +246,21 @@ if [ $DEFAULT_BROWSER != 0 ]; then
 else
     unset_mandatory  "/desktop/gnome/applications/browser/exec"
     set_defaults "/desktop/gnome/applications/browser/exec" "$BROWSER"
+fi
+
+if [ $DISABLE_SOUND_SERVER == 1 ]; then
+    set_bool_mandatory "/desktop/gnome/sound/enable_esd" "false"
+else
+    unset_mandatory "/desktop/gnome/sound/enable_esd"
+fi
+
+if [ $ENABLE_EVENTS_SOUNDS != 0 ]; then
+    unset_mandatory "/desktop/gnome/sound/event_sounds"
+    # we are not unsetting the mandatory for enable_esd
+    # that will be done by setting DISABLE_SOUND_SERVER to anything
+    # other than one
+    set_bool_mandatory "/desktop/gnome/sound/enable_esd" "true"
+    set_bool_defaults "/desktop/gnome/sound/event_sounds" "true"
 fi
 
 #eof

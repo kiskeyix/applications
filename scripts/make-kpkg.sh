@@ -1,7 +1,7 @@
 #!/bin/bash
-# $Revision: 1.22 $
+# $Revision: 1.23 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Dec-05
+# Last modified: 2003-Dec-14
 #
 # DESCRIPTION:  an interactive wrapper to Debian's "make-kpkg"
 #               to build a custom kernel package.
@@ -93,8 +93,9 @@ if [ $1 -a $1 != "--help" ]; then
         ;;
         *)
             echo "Initrd support disabled"
-            BUILD_INITRD=" "
-            INITRD="NO"
+            BUILD_INITRD=""
+            # reset initrd
+            INITRD=""
             INITRD_OK="NO"
         ;;
     esac
@@ -111,6 +112,19 @@ if [ $1 -a $1 != "--help" ]; then
         ;;
     esac
 
+    # ask whether to create all kernel module images
+    # from ../modules (or /usr/src/modules)
+    
+    mmakeit=0
+    myesno="No"
+
+    read -p "Do you want to make the Kernel Modules [$MODULE_LOC] ? [y/N] " myesno
+    case $myesno in
+        y* | Y*)
+            mmakeit=1
+        ;;
+    esac
+ 
 
     if [ $makeit -eq 1 ]; then
         echo -e "Building kernel \n"
@@ -134,21 +148,9 @@ if [ $1 -a $1 != "--help" ]; then
         $BUILD_INITRD \
         $KERNEL_HEADERS
     fi
-
-    # ask whether to create all kernel module images
-    # from ../modules (or /usr/src/modules)
-    
-    mmakeit=0
-    myesno="No"
-
-    read -p "Do you want to make the Kernel Modules [$MODULE_LOC] ? [y/N] " myesno
-    case $myesno in
-        y* | Y*)
-            mmakeit=1
-        ;;
-    esac
-    
-    if [ $mmakeit == 1 ]; then
+  
+    # make the modules
+    if [ $mmakeit -eq 1 ]; then
         make-kpkg clean modules_clean
         make-kpkg   --rootcmd $FAKEROOT \
         --config oldconfig \

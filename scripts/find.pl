@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jan-17
 #
@@ -83,7 +83,7 @@ sub file_ary {
             next;
         }
         # is file a plain text (ASCII) file?
-        next if (!-f "$dir/$thisFile" && !-T "$dir/$thisFile");
+        next unless -f "$dir/$thisFile" && -T "$dir/$thisFile";
        
         # do we want specific file extensions?
         no warnings;

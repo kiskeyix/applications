@@ -1,7 +1,7 @@
 #!/bin/bash
-# $Revision: 1.13 $
+# $Revision: 1.14 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jul-27
+# Last modified: 2003-Jul-30
 #
 # DESCRIPTION:  an interactive wrapper to Debian's "make-kpkg"
 #               to build a custom kernel package.
@@ -23,6 +23,47 @@
 # CHANGELOG:
 #   See CVS log
 #
+
+# TODO: divise a better routine to find executables
+# according to the users $PATH
+
+# see if ccache is here but not distributed cc
+#if [ -x /usr/bin/ccache -a ! -x /usr/bin/distcc ]; then
+#    export MAKEFLAGS="CC=ccache gcc";
+#export MAKEFLAGS="CC=distcc gcc";
+#fi
+
+#if [ -x /usr/bin/distcc -a  -x /usr/bin/ccache ]; then
+#    # if distributed cc is installed, then
+#    #  we will distribute our compilation
+#    #  to the following hosts:
+#    export DISTCC_HOSTS="localhost www2";
+#
+#    # if we also have ccache installed,
+#    # then we arrange the commands so that
+#    # we can use both ccache and distcc
+#    export CCACHE_PREFIX="distcc";
+#
+#    export MAKEFLAGS="CC=ccache distcc gcc";
+#else 
+#    echo "Distcc or ccache not found...";
+#fi
+
+# if distributed cc is installed, then
+#  we will distribute our compilation
+#  to the following hosts:
+# if we also have ccache installed,
+# then we arrange the commands so that
+# we can use both ccache and distcc
+
+export MAKEFLAGS="CCACHE_PREFIX=distcc DISTCC_HOSTS='localhost www2'";
+export CCACHE_PREFIX=distcc 
+
+if [ -f $HOME/.distcc/hosts ]; then
+    export DISTCC_HOSTS=`cat $HOME/.distcc/hosts`
+else
+    export DISTCC_HOSTS='localhost www2'
+fi 
 
 FAKEROOT=fakeroot
 

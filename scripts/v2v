@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.26 $
+# $Revision: 1.27 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -69,6 +69,8 @@
 #   * Use comments to explain your reasoning even if it's obvious
 #     to you what the code does. Comments are your friends, and
 #     they help debugging things later if things go wrong.
+#   * All subroutines should read: my_sub("argument"); 
+#     And not: my_sub "argument";
 
 use POSIX;
 use Env qw(HOME);
@@ -546,7 +548,7 @@ sub makelogo
     if ( $addlogo > 300 )
     {
         print $RED."Unable to create your Logo in cluster Mode\n".$NORM ;
-        sleep 5 ;
+        sleep(5);
         return(1);
     }
     pinfo("$v2d\t Making Logo\n");
@@ -621,7 +623,7 @@ sub audiorescale
         {
             print $RED."Unable to find a suggested Volume rescale !\n 1 is use for -s parameter\n".$NORM;
             $audio_rescale=1;
-            sleep 2;
+            sleep(2);
         } else {
             $audio_rescale=`cat tmp/astat`;
             chomp($audio_rescale);
@@ -1212,7 +1214,7 @@ sub cluster
                 $tabpower[$i]=$sumpow;
                 $i++;
                 $sumpow= $sumpow + $pow;
-                sleep (7);
+                sleep(7);
             }
         }
         if  ( $sumpow <  100 )
@@ -1476,7 +1478,6 @@ sub aviencode
     printinfo if ( ! -e "tmp/cluster.args");
     cluster if ( $CLUSTER ne "NO" && ! -e "tmp/cluster.args");
 
-
     if (  $CLUSTER ne "NO" )	
     {
         $cluster=`cat tmp/cluster.args`;
@@ -1601,7 +1602,7 @@ sub aviencode
         if ( $CLUSTER ne "NO")
         {       
             print ("Finish ... Wait \n ");
-            sleep (3);
+            sleep(3);
         }
         print $DEBUG "<--- aviencode\n";
     } # END Aviencode
@@ -1920,7 +1921,7 @@ sub get_params
             $poslogo=$POSLOGO;
         } else {
             print $RED."Transcode is not compile with ImageMagick.\nUnable to encode your Logo $LOGO\n".$NORM; 
-            sleep 1;
+            sleep(1);
         }
     }
 
@@ -2282,7 +2283,10 @@ sub zooming
     $row=16;
     $zH=floor(($Yaxis-2*$tb-$NYaxis)/$row);
     $zW=floor(($Xaxis-2*$lr-$NXaxis)/$row);
-    if ( ($Xaxis - 2*$lr)/16 == floor(($Xaxis - 2*$lr)/16) && ($Yaxis - 2*$tb)/16 == floor (($Yaxis - 2*$tb)/16) )
+    if ( 
+        ($Xaxis - 2*$lr)/16 == floor(($Xaxis - 2*$lr)/16) 
+        && ($Yaxis - 2*$tb)/16 == floor (($Yaxis - 2*$tb)/16) 
+    )
     {
         pinfo("$v2d\t Slow Zooming is necessary:\t\t   | NO\n") if ( ! -e "tmp/cluster.args");
         $Zoom_mode="B";
@@ -2293,7 +2297,6 @@ sub zooming
     sleep(1);
     $AR=abs(100-($NXaxis*100/($NYaxis*$aspect_ratio)));
     print $DEBUG "<--- Zooming\n";
-    sleep(5); # pause 5 seconds FIXME
 } # end zooming
 
 # ********************** Config ****************************

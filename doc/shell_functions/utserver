@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jan-05
 #
@@ -7,7 +7,7 @@
 # USAGE: utserver [start|stop|restart] 
 #
 
-MAP="CTF-DDay.unr" # startup map
+MAP="CTF-Romra.unr" # startup map
 
 USER=ucc            # userid which owns this process
 PID=/home/ucc/ucc.pid   # Process ID of current server
@@ -47,7 +47,7 @@ case "$1" in
     --make-pidfile --pidfile $PID \
     --verbose --exec $DAEMON $CMDLINE || echo -n "<Failed> "
     echo -n "$NAME"
-    if [ "$UID" -eq 0 ]; then
+    if [ "$UID" -eq 0 -a $2 != "noftpshut" ]; then
         # shutdown ftp server now
         echo -e "\nShutting down ftp server"
         $FTPSHUT now

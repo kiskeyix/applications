@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.65 $
+# $Revision: 1.66 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -163,9 +163,8 @@ Getopt::Long::Configure('bundling');
 use File::Copy;
 use File::Find;     # find();
 use File::Basename; # basename();
-
-# for progressbar
-use FileHandle;
+use FileHandle; # for progressbar
+use Cwd; # pwd
 
 # non-standard modules:
 eval "use Image::Magick";
@@ -187,7 +186,7 @@ if ($@)
 
 # end of loading needed modules
 
-my $VERSION="1.5";
+my $VERSION="1.65";
 
 $|++; # disable buffer (autoflush)
 
@@ -200,7 +199,8 @@ pixdir2html.pl  [-n|--no-menu]
                 [-t|--thumbs-only]
                 [-D|--directory] (.)
                 [-l|--menu-links]
-                [-m|--menu-type] [classic|modern]
+                [-m|--menu-type=[classic|modern]]
+                [--menu-name=[menu]]
                 [-c|--cut-dirs]
                 [-F|--front-end=[Xdialog|zenity|console|...]]
                 [--td]
@@ -215,6 +215,7 @@ no-index  - do not create the index.EXT files after creating thumbnails
 menu-only - only create a menu file and exit
 menu-links- number of links to put in the Menu per row. Default is 10
 menu-type - menu to use for albums (directories). Classic uses plain text menus, modern lays menus vertically with a sample thumbnail and their name
+menu-name - name to use for menu files instead of 'menu'. You might want to use 'index'.
 cut-dirs - number of directories to cut from the Menu string. Default is 0
 extension- use this extension instead of default (php)
 directory- use this directory instead of default (current)
@@ -302,6 +303,13 @@ my $use_console_progressbar = 0; # a simple flag
 
 my $MENU_TYPE="classic"; # default menu-type. put 'menu-type: modern' in config or pass --menu-type="modern" from command line to change
 
+# html related
+my $FILE_NAME="index";
+my $MENU_NAME="menu"; 
+
+# others
+my $menu_str="";
+
 # get options
 GetOptions(
     # flags
@@ -316,7 +324,8 @@ GetOptions(
     'E|extension=s'     =>  \$EXT,
     'D|directory=s'     =>  \$ROOT_DIRECTORY,
     'F|front-end=s'     =>  \$DIA,
-    'm|menu-type=s'     =>  \$MENU_TYPE,             
+    'm|menu-type=s'     =>  \$MENU_TYPE,
+    'menu-name=s'       =>  \$MENU_NAME,
     # numbers
     'menu-td=i'         =>  \$menu_td,
     'td=i'              =>  \$TD,
@@ -407,11 +416,6 @@ if ( $DIA eq "console" ) {
         } # end if DIA eq console
     } # end if MODE
 } # end if DIA
-
-# html related
-my $FILE_NAME="index";
-my $MENU_NAME="menu";
-my $menu_str="";
 
 my $LOGFILE = new FileHandle;
 
@@ -1232,7 +1236,7 @@ sub menu_file {
                 if ( -d "$ts/$THUMBNAIL" )
                 {
                     # We need one thumbnail here. hackish? you bet!
-                    my $pwd = qx/pwd/; chomp($pwd); # TODO don't use `pwd`... Perl?
+                    my $pwd = getcwd();
                     chdir("$ts/$THUMBNAIL") 
                         or mydie("Could not change to dir $ts/$THUMBNAIL. $!\n","menu_file 2");
                     my @glob_ary = glob("t*.???"); # get all files starting with 't' and ending in .??? (3 characters); they might or might not be picture files, but... we are trusting they are for now

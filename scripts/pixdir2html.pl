@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.33 $
+# $Revision: 1.34 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -37,6 +37,7 @@
 # new=http://absolute.path.com/images/new.png # for dirs with .new files
 # footer=<a href='#'>A footer here</a>
 # menuheader_footer=0
+# ext=php
 # 
 # These are the only tags that you can customize for now :-)
 #
@@ -184,8 +185,8 @@ GetOptions(
 
 die $USAGE if $HELP;
 
-my $FILE_NAME="index.$EXT";
-my $MENU_NAME="menu.$EXT";
+my $FILE_NAME="index";
+my $MENU_NAME="menu";
 my $menu_str="";
 
 my $THUMBNAILSDIR="$ROOT_DIRECTORY/$THUMBNAIL";
@@ -259,7 +260,7 @@ sub init_config {
         while (<CONFIG>) {
             next if /^\s*#/;
             chomp;
-            $config_tmp{$1} = $2 if m/^\s*([^=]+)=(.+)/;
+            $config_tmp{"$1"} = $2 if m/^\s*([^=]+)=(.+)/;
         }
         close(CONFIG);
 
@@ -268,34 +269,35 @@ sub init_config {
    Could not find $ROOT/$CONFIG_FILE 
 __EOF__
 
-        $config_tmp{percent}="20%";
-        $config_tmp{title}="Images";
-        $config_tmp{meta}="<meta http-equiv='content-type' content='text/html;charset=iso-8859-1'>";
-        $config_tmp{stylesheet}="<link rel='stylesheet' href='../styles.css' type='text/css'>";
-        $config_tmp{html_msg}="<h1>Free form HTML</h1>";
-        $config_tmp{body}="<body bgcolor='#000000' text='#ffffff'>\n";
-        $config_tmp{p}="<p>";
-        $config_tmp{table}="<table border='0'>";
-        $config_tmp{td}="<td valign='top' align='left'>";
-        $config_tmp{tr}="<tr>";
-        $config_tmp{footer}="";
+        $config_tmp{"percent"}="20%";
+        $config_tmp{"title"}="Images";
+        $config_tmp{"meta"}="<meta http-equiv='content-type' content='text/html;charset=iso-8859-1'>";
+        $config_tmp{"stylesheet"}="<link rel='stylesheet' href='../styles.css' type='text/css'>";
+        $config_tmp{"html_msg"}="<h1>Free form HTML</h1>";
+        $config_tmp{"body"}="<body bgcolor='#000000' text='#ffffff'>\n";
+        $config_tmp{"p"}="<p>";
+        $config_tmp{"table"}="<table border='0'>";
+        $config_tmp{"td"}="<td valign='top' align='left'>";
+        $config_tmp{"tr"}="<tr>";
+        $config_tmp{"footer"}="";
+		$config_tmp{"ext"}=$EXT;
 
     }
     
     #construct a header if it doesn't yet exist:
-    if ( $config_tmp{header} eq "" ) {
+    if ( $config_tmp{"header"} eq "" ) {
 
         print LOGFILE (": Blank header. Generating my own ... \n");
 
-        $config_tmp{header}="<html>
+        $config_tmp{"header"}="<html>
         <head>
-        ".$config_tmp{meta}."
-        <title>".$config_tmp{title}."</title>
-        ".$config_tmp{stylesheet}."
+        ".$config_tmp{"meta"}."
+        <title>".$config_tmp{"title"}."</title>
+        ".$config_tmp{"stylesheet"}."
         </head>\n".
-        $config_tmp{body}."
+        $config_tmp{"body"}."
         \n<center>\n".
-        $config_tmp{html_msg}."
+        $config_tmp{"html_msg"}."
         \n
         ";
     }
@@ -346,17 +348,17 @@ sub mkindex {
         my @files = @{$$hashref{$this_base}};
 
         # FILE_NAME is a global
-        open(FILE, "> $this_base/$FILE_NAME") || 
-            die "Couldn't write file $FILE_NAME to $this_base";
+        open(FILE, "> ".$this_base."/".$FILE_NAME.$myconfig{"ext"}) || 
+            die "Couldn't write file $FILE_NAME.".$myconfig{"ext"}." to $this_base";
 
         # start HTML
-        print FILE ("$myconfig{header}\n");
+        print FILE ($myconfig{"header"}."\n");
 
         # print menu (if any)
         print FILE ("$MENU_STR");
 
         # start table
-        print FILE ("$myconfig{table}\n");
+        print FILE ($myconfig{"table"}."\n");
 
                 #print all picts now
         foreach(@files){
@@ -366,20 +368,20 @@ sub mkindex {
             if ($i == 0) {
                 # open a new row
                 # this row doesn't need bgcolor
-                if ( $myconfig{tr} =~ m/\%+bgcolor\%+/i ) {
-                    ($myconfig{tr} = $myconfig{tr}) =~ s/\%+bgcolor\%+//i;
+                if ( $myconfig{"tr"} =~ m/\%+bgcolor\%+/i ) {
+                    ($myconfig{"tr"} = $myconfig{"tr"}) =~ s/\%+bgcolor\%+//i;
                 }
 
-                print FILE ($myconfig{tr}."\n");
+                print FILE ($myconfig{"tr"}."\n");
             } 
-            print FILE ("\t".$myconfig{td}."\n");
+            print FILE ("\t".$myconfig{"td"}."\n");
 
             ($file_name = $this_file) =~ s/$EXT_INCL_EXPR//gi;
             
             ($file_name = $file_name) =~ s/^$THUMB_PREFIX//; # removes prefix
             
             # EXT is a global and so is THUMBNAIL
-            print FILE ("<a href='$HTMLDIR/$file_name.$EXT'>".
+            print FILE ("<a href='$HTMLDIR/$file_name.".$myconfig{"ext"}."'>".
                 "<img src='$THUMBNAIL/"."$this_file'></a>\n");
             
             print FILE ("\t</td>\n");
@@ -396,7 +398,7 @@ sub mkindex {
         # complete missing TD
         if ($i != 0) {
              for (;$i<$TD;$i++) {
-                 print FILE ("\t".$myconfig{td}."\n");
+                 print FILE ("\t".$myconfig{"td"}."\n");
                  print FILE ("&nbsp;");
                  print FILE ("\t</td>\n");
              }
@@ -405,11 +407,11 @@ sub mkindex {
          print FILE ("</table>\n");
 
         # close the footer if one doesn't exist:
-        if ( $myconfig{footer} eq "" ) {
+        if ( $myconfig{"footer"} eq "" ) {
             print FILE ("\n</center></body>\n");
             print FILE ("</HTML>\n");
         } else {
-            print FILE ($myconfig{footer}."\n");
+            print FILE ($myconfig{"footer"}."\n");
         }
         print FILE ("\n");
         close(FILE);
@@ -636,8 +638,8 @@ sub thumb_html_files {
             mkdir("$HTMLSDIR",0755);
         }
 
-        $current_html_file = "$HTMLSDIR/$file_name.$EXT";
-        $current_link = "$file_name.$EXT";
+        $current_html_file = "$HTMLSDIR/$file_name.".$myconfig{"ext"};
+        $current_link = "$file_name.".$myconfig{"ext"};
         
         if ( -f $current_html_file ){
             print LOGFILE ": Overriding $current_html_file\n";
@@ -649,10 +651,10 @@ sub thumb_html_files {
         die "Couldn't write file $current_html_file";
 
         # start HTML
-        print FILE ("$myconfig{header}\n");
+        print FILE ($myconfig{"header"}."\n");
 
         # start table
-        print FILE ("$myconfig{table}\n");
+        print FILE ($myconfig{"table"}."\n");
         print FILE ("<tr><td>\n");
 
         # image here
@@ -668,7 +670,7 @@ sub thumb_html_files {
         }
 
         # home link here
-        print FILE (" | <a href='../$FILE_NAME'>HOME</a> | \n");
+        print FILE (" | <a href='../$FILE_NAME".$myconfig{"ext"}."'>HOME</a> | \n");
        
         if ( -f $ls[$i+1] ) {
             $next_pix_name = "....";
@@ -691,7 +693,7 @@ sub thumb_html_files {
             
             #print FILE ("==&gt;");
 
-            print FILE ("<a href='$next_file_name.$EXT'>==&gt;</a>\n");
+            print FILE ("<a href='$next_file_name.".$myconfig{"ext"}."'>==&gt;</a>\n");
 
         } else {
             print FILE ("==&gt;");
@@ -704,12 +706,12 @@ sub thumb_html_files {
         print FILE ("</table>\n");
 
         # close the footer if one doesn't exist:
-        if ( $myconfig{footer} eq "" ) {
-            print FILE ($myconfig{footer}."\n");
+        if ( $myconfig{"footer"} eq "" ) {
+            print FILE ($myconfig{"footer"}."\n");
             print FILE ("</center></body>\n");
             print FILE ("</HTML>\n");
         } else {
-            print FILE ($myconfig{footer}."\n");
+            print FILE ($myconfig{"footer"}."\n");
         }            
         close(FILE);
         # end HTML
@@ -859,10 +861,9 @@ sub menu_file {
     foreach(@ary){
         if (
             !-f "$ROOT_DIRECTORY/$_/.nopixdir2htmlrc"
-            #-f "$ROOT_DIRECTORY/$_/$FILE_NAME"
         ) {
             # note that @ls holds the HTML links...
-            $ls[$x] = "$_/$FILE_NAME"; # why not push()?
+            $ls[$x] = "$_/$FILE_NAME".$myconfig{"ext"}; # why not push()?
             $x++; 
         }
     }   
@@ -880,21 +881,21 @@ sub menu_file {
     } @ls;
 
     if ( $MENUONLY > 0 ) {
-        open(FILE, "> $ROOT_DIRECTORY/$MENU_NAME") ||
-        die "Couldn't write file $MENU_NAME to $ROOT_DIRECTORY";
+        open(FILE, "> ".$ROOT_DIRECTORY."/".$MENU_NAME.$myconfig{"ext"}) ||
+        die "Couldn't write file $MENU_NAME".$myconfig{"ext"}." to $ROOT_DIRECTORY";
     }
 
     # menus are now part of the index.EXT...
     # print header only if menuonly is set and we want to show
     # the header/footer set in .pixdir2htmlrc
-    if ( $MENUONLY > 0 && $myconfig{menuheader_footer} > 0 ) {
-        print FILE ($myconfig{header}."\n");
+    if ( $MENUONLY > 0 && $myconfig{"menuheader_footer"} > 0 ) {
+        print FILE ($myconfig{"header"}."\n");
     }
 
     if ( $MENUONLY > 0 ) {
-        print FILE ("$myconfig{table}\n");
+        print FILE ($myconfig{"table"}."\n");
     }
-    $MENU_STR .= "$myconfig{table}\n";
+    $MENU_STR .= $myconfig{"table"}."\n";
 
     # print all links now
 
@@ -904,32 +905,32 @@ sub menu_file {
         # temporarily turn off warnings
         no warnings;
         if ( $MENUONLY > 0 ) {
-            if ($myconfig{tr}=~m/\%+bgcolor\%+/i){
+            if ($myconfig{"tr"}=~m/\%+bgcolor\%+/i){
                 if (($j % 2) == 0){
-                    ($tmp_tr = $myconfig{tr}) =~ s/\%+bgcolor\%+/bgcolor=#efefef/i;
+                    ($tmp_tr = $myconfig{"tr"}) =~ s/\%+bgcolor\%+/bgcolor=#efefef/i;
                 } else {
-                    ($tmp_tr = $myconfig{tr}) =~ s/\%+bgcolor\%+//i;
+                    ($tmp_tr = $myconfig{"tr"}) =~ s/\%+bgcolor\%+//i;
                 }
 
                 print FILE ($tmp_tr."\n");
 
             } else {
-                print FILE ($myconfig{tr}."\n");
+                print FILE ($myconfig{"tr"}."\n");
             }
             for ($y=1;$y<=$menu_td;$y++){
                 # close the TD tags
                 if ($y > 1) { 
                     print FILE ("\t </td> \n"); 
                 }   
-                print FILE ("\t".$myconfig{td}."\n");
+                print FILE ("\t".$myconfig{"td"}."\n");
 
                 if ( $ls[$i] ne "" ) {
                     # if link exists, otherwise leave it blank
                     # TODO there is a better way to do this... find it...
-                    ($ts = $ls[$i]) =~ s#(.*)/$FILE_NAME#$1#gi;
-                    $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='$myconfig{new}' alt='new'>":""; # if .new file
+                    ($ts = $ls[$i]) =~ s#(.*)/$FILE_NAME.$myconfig{"ext"}#$1#gi;
+                    $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='".$myconfig{"new"}."' alt='new'>":""; # if .new file
                     $ts = ucfirst($ts);
-                    print FILE ("<a href='$myconfig{uri}/$ls[$i]' target='_top'>$IMG $ts</a>\n");
+                    print FILE ("<a href='".$myconfig{"uri"}."/$ls[$i]' target='_top'>$IMG $ts</a>\n");
                 } else {
                     print FILE ("&nbsp;");
                 }
@@ -941,32 +942,32 @@ sub menu_file {
 
         } else {
             # TODO cleanup
-            if ($myconfig{tr}=~m/\%+bgcolor\%+/i){
+            if ($myconfig{"tr"}=~m/\%+bgcolor\%+/i){
                 if (($j % 2) == 0){
-                    ($tmp_tr = $myconfig{tr}) =~ s/\%+bgcolor\%+/bgcolor=#efefef/i;
+                    ($tmp_tr = $myconfig{"tr"}) =~ s/\%+bgcolor\%+/bgcolor=#efefef/i;
                 } else {
-                    ($tmp_tr = $myconfig{tr}) =~ s/\%+bgcolor\%+//i;
+                    ($tmp_tr = $myconfig{"tr"}) =~ s/\%+bgcolor\%+//i;
                 }
 
                 $MENU_STR .= $tmp_tr."\n";
 
             } else {
-                $MENU_STR .= $myconfig{tr}."\n";
+                $MENU_STR .= $myconfig{"tr"}."\n";
             }
             for ($y=1;$y<=$menu_td;$y++){
                 # close the TD tags
                 if ($y > 1) { 
                     $MENU_STR .= "\t </td> \n";
                 }   
-                $MENU_STR .= "\t".$myconfig{td}."\n";
+                $MENU_STR .= "\t".$myconfig{"td"}."\n";
 
                 if ( $ls[$i] ne "" ) {
                     # if link exists, otherwise leave it blank
                     # TODO there is a better way to do this... find it...
-                    ($ts = $ls[$i]) =~ s/(.*)\/$FILE_NAME/$1/gi;
-                    $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='$myconfig{new}' alt='new'>":""; # if .new file
+                    ($ts = $ls[$i]) =~ s/(.*)\/$FILE_NAME.$myconfig{"ext"}/$1/gi;
+                    $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='".$myconfig{"new"}."' alt='new'>":""; # if .new file
                     $ts = ucfirst($ts);
-                    $MENU_STR .= "<a href='$myconfig{uri}/$ls[$i]' target='_top'>$IMG $ts</a>\n";
+                    $MENU_STR .= "<a href='".$myconfig{"uri"}."/$ls[$i]' target='_top'>$IMG $ts</a>\n";
                 } else {
                     $MENU_STR .= "&nbsp;";
                 }
@@ -983,8 +984,8 @@ sub menu_file {
     $MENU_STR .= "</table>\n";
 
     # see previous notes on header
-    if ( $MENUONLY > 0 && $myconfig{menuheader_footer} > 0) {
-        print FILE ($myconfig{footer}."\n");
+    if ( $MENUONLY > 0 && $myconfig{"menuheader_footer"} > 0) {
+        print FILE ($myconfig{"footer"}."\n");
     } 
 
     if ( $MENUONLY > 0 ) {

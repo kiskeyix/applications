@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.29 $
+# $Revision: 1.30 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -36,7 +36,10 @@ Getopt::Long::Configure('bundling');
 
 # get options
 # declare empty variables
-my ($HELP,$VERSION,$RUNCLUST,$SRTSUBRIP,$SVIDEO_FORMAT,$ROOT_DIRECTORY)="";
+# flags
+my ($HELP,$VERSION,$RUNCLUST,$SRTSUBRIP) = 0;
+# others
+my ($SVIDEO_FORMAT,$ROOT_DIRECTORY) = "";
 GetOptions(
     # flags
     'h|help'        =>  \$HELP,
@@ -244,14 +247,6 @@ if ( $module ne "" )
 $clust_percent="--cluster_percentage --a52_dolby_off ";
 pinfo("$v2d\t Transcode detected release:\t\t   | $Vers[0].$Vers[1].$Vers[2]\n");
 
-# Luis Mondesi:
-# why do we need to make sure Xine and Aviplay
-# are installed in e/a system?
-# We should only use Xine and/or AVIPLAY if we are in
-# the master host and not in other workstations in the
-# cluster.
-# Domi:
-# That's right Luis ;-)
 if  ( ! $RUNCLUST )
 {
     foreach $pgm ( $XV, $XINE, $AVIPLAY ) 
@@ -1416,23 +1411,10 @@ sub cluster
             sleep(3);
         }
 
-        # TODO
-        # Luis Mondesi 
-        # we should make sure that the processes are actually running
-        # before we continue...
-        # DONE 
-        # Domi Caron
-        # That's right Luis 
         pinfo("$v2d\t Waiting for nodes to finish ....\n");
 
         foreach $endnode ( @tabpower )
         {
-            # Luis Mondesi 
-            # This is a potentially dangerous loop...
-            # Is a transcode process really running?
-            # Domi
-            # Yes .. If NOT there is a tmp/'file'.PB created by aviencode
-    
             while ( ! -e "tmp/2-$dvdtitle${endnode}_0.finish" && ! -e "tmp/2-$dvdtitle${endnode}_0.PB" && ! -e "tmp/1-$dvdtitle${endnode}_0.PB")
             {
                 print "\r|"; 
@@ -1474,6 +1456,8 @@ sub create_nav
     mydie "couldn't fork [function: create_nav]" unless defined $pid;
     if ($pid)
     {
+        # Domi, do we need to use VOB extensions? What if files
+        # don't have this extensions -- Luis 2004-01-07 20:28 EST 
         $sys = "cat $VOBPATH/*.[Vv][Oo][Bb] | tcdemux -W > tmp/file.nav";
         print $INFO $sys."\n";
         system ("nice -$nice $sys") == 0  or ( system ("touch tmp/filenav.finish")== 0 and mydie "Unable to create file nav" );

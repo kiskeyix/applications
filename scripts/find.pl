@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.14 $
+# $Revision: 1.15 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jul-19
+# Last modified: 2004-Sep-26
 #
 # DESC: finds a string in a set of files
 #
@@ -106,12 +106,25 @@ sub do_file_ary {
     return @ls;
 }
 
+sub is_binary
+{
+    # returns 1 if true
+    my $file = shift;
+    my $file_t = qx/file $file/;
+    if ( $file_t =~ m/elf|executable/i )
+    {
+        return 1;
+    }
+    return 0;
+}
+
 sub process_file {
     my $base_name = basename($_);
     if ( 
         $_ =~ m($f_pattern) &&
         -f $_ && 
-        $base_name !~ m($EXCEPTION_LIST)
+        $base_name !~ m($EXCEPTION_LIST) &&
+        ! is_binary ($_)
     ) {
         s/^\.\/*//g;
         push @ls,$_;

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-May-24
+# Last modified: 2003-May-25
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
 #              it will create 3 files:
@@ -54,7 +54,7 @@ my $DEBUG = 0;      # set to 1 to print debugging messages
 my %MY_CONFIG = ();
 my $CONFIG_FILE= $ENV{HOME}."/.backuprc";
 
-$MY_CONFIG{BAK}="/home/backup";        # default backup directory
+$MY_CONFIG{BAK}="/home/backup";     # default backup directory
                                     # you might want to change this
                                     # in your .backuprc file like:
                                     # BAK="/other/dir"
@@ -69,7 +69,7 @@ $MY_CONFIG{EXC_ULIST} = "man|nobody";  # separated by | . Change in
 
 # backup "root" home dir, cvsroot and other important stuff
 
-$MY_CONFIG{SYSTEM}="/etc /home/cvsroot /var/lib/jabber /var/lib/mysql /var/mail /var/spool /var/lib/ldap /var/lib/iptables /root";
+$MY_CONFIG{SYSTEM}="/etc /var/mail /var/spool /var/lib/iptables /root";
 
 #-------------------------------------------------------------#
 #           No need to modify anything below here             #
@@ -146,10 +146,11 @@ if ( ! -f $TMP_LOCK ) {
     # backup users
     my %user = ();                  # user/userdir pair in a hash
 
+    my $users_excluded_pattern = eval($CONFIG{EXC_ULIST});
     while (my @r = getpwent()) {
         # $name,$passwd,$uid,$gid,$quota,$comment,$gcos,$dir,$shell,$expire
         #print "$r[0]:$r[1]:$r[2]:$r[3]:$r[6]:$r[7]:$r[8]\n";
-        if ( $r[0] !~ m/$CONFIG{EXC_ULIST}/i && $CONFIG{LOW_UID} <= $r[2] ) {
+        if ( $r[0] !~ m/$users_excluded_pattern/i && $CONFIG{LOW_UID} <= $r[2] ) {
             $user{$r[0]}=$r[7];
         }
     }

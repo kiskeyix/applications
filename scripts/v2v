@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.21 $
+# $Revision: 1.22 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -21,6 +21,15 @@
 #   * transcode doesn't work with kernel 2.6.0 (not yet)
 #
 # TODO:
+#   * make sure X is only used in the master host and not
+#     in all workstations of the cluster. In other words,
+#     do all configurations needed for the project in the main
+#     workstation from which we are started. After the 
+#     tmp/V2divx.conf file is created, there is no need to
+#     use either Xine or display/xv for any other reason.
+#     The goal should be to use v2divx.pl from workstations
+#     without needing Xfree86 or any other GUI manager.
+#
 #   * code cleanup needed
 #   * "use strict" for Perl to bitch about everything
 #   * test more against latest transcode (0.6.11)
@@ -212,14 +221,21 @@ if ( $module ne "" )
 $clust_percent="--cluster_percentage --a52_dolby_off ";
 pinfo("$v2d\t Transcode detected release:\t\t   | $Vers[0].$Vers[1].$Vers[2]\n");
 
-foreach $pgm ( $XV , $XINE , $AVIPLAY ) 
-{
-    my(@pgm)=split / /,$pgm;
-    if ( system("which @pgm[0] > /dev/null 2>&1 ") )
-    { 
-        print $RED." $pgm is not installed on this System :-( \n Modify your $userconfigfile to reach your configuration (DVD player, DivX player, Image viewer....) \n".$NORM; exit (0);
-    }
-}
+# Luis Mondesi:
+# why do we need to make sure Xine and Aviplay
+# are installed in e/a system?
+# We should only use Xine and/or AVIPLAY if we are in
+# the master host and not in other workstations in the
+# cluster.
+#foreach $pgm ( $XV, $XINE, $AVIPLAY ) 
+#{
+#    my(@pgm)=split / /,$pgm;
+#if ( system("which $pgm[0] > /dev/null 2>&1 ") )
+#{ 
+#    print $RED." $pgm is not installed on this System :-( \n Modify your $userconfigfile to reach your configuration (DVD player, DivX player, Image viewer....) \n".$NORM; 
+#    exit (0);
+#}
+#}
 
 $PGMFINDCLIP=OK if (! system("which $PGMFINDCLIP >/dev/null 2>&1 "));
 
@@ -1206,9 +1222,9 @@ sub cluster
 
 sub create_nav
 {
-    pinfo("$v2d\t Using Cluster, creating:\t\t   | tmp/file.nav");
+    pinfo("$v2d\t Using Cluster, creating:\t\t   | tmp/file.nav\n");
     my $pid = fork();
-    mydie "couldn't fork" unless defined $pid;
+    mydie "couldn't fork [function: create_nav]" unless defined $pid;
     if ($pid)
     {
         $sys = "cat $vobpath/*.[Vv][Oo][Bb] | tcdemux -W > tmp/file.nav";
@@ -2431,7 +2447,10 @@ sub config
         system ("$sys > /dev/null");
         $tmp = `/bin/ls -1 video_s._-j_$tb,$lr_*.ppm`;
         @aclip = split /\n/, $tmp;
-        foreach $file ( @aclip  ){system ("$XV $file")}
+        foreach $file ( @aclip  )
+        { 
+            system ("$XV $file")
+        }
         print " (Don't care about colors or upside down please)\n Are Left/Right LetterBoxes (-j $tb,$RED$lr$NORM) OK ?(y), to big (b) or to small (s): ";
         $rep= <STDIN>;
         chomp($rep);

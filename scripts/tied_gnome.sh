@@ -22,9 +22,18 @@
 #        Defaults can be modified later by the user (not mandatory)
 #
 
+### defauls ###
+#
+# TIP:
+# There is no need to change this settings here, 
+# better just copy these settings to
+# /etc/default/tied_gnome
+# and then make modifications in that file instead
+
+# tool used to set all settings here
 GCONFTOOL="/usr/bin/gconftool-2"
 
-# booleans
+## booleans
 SHOW_SPLASH=1   # 1 -> true, 0 -> false
 DEFAULT_THEME=1 # would you like all users to use your specified 
                 # themes only? see below. 1 -> true, 0 -> false
@@ -62,17 +71,17 @@ ENABLE_EVENTS_SOUNDS=1  # A good thing to have... users will need to
                         # or enable_esd with gconf-editor
                         # (not mandantory) 
 
-# integers
+## integers
 NUMBER_OF_WORKSPACES=2
 
-# strings
+## strings
 MENU_KEY="Super_L"
 RUN_KEY="Super_R"
 GTK_THEME="Nuvola"
 METACITY_THEME=$GTK_THEME
 ICON_THEME="Nuvola"
 BACKGROUND="/usr/share/wallpapers/All-Good-People-1.jpg"
-SPLASH_IMAGE="/usr/share/pixmaps/splash/gnome-splash.png" #<-- default gnome 
+SPLASH_IMAGE="/usr/share/pixmaps/splash/gnome-splash.png"
 BACKGROUND_ORIENTATION="wallpaper" # wallpaper,centered,scaled,strecthed
 MONOSPACE_FONT_NAME="Sans Bold 12"
 FONT_NAME="Sans Bold 11"
@@ -80,12 +89,23 @@ DESKTOP_FONT="Sans Bold 14" # nautilus
 TITLE_BAR_FONT="Sans Bold 10" # only if DEFAULT_TITLEBAR_FONT is 0
 BROWSER="mozilla-firebird"
 
+### end defaults ###
+
+# now read defaults settings for this box if there is any
+# the user could copy any of the settings from above into
+# /etc/defaults/tied_gnome
+if [ -f /etc/default/tied_gnome ];then
+    . /etc/default/tied_gnome
+fi
+
 # functions
 set_defaults()
 {
     # @arg $1 path
     # @arg $2 string
-    $GCONFTOOL --direct --config-source xml:readwrite:/etc/gconf/gconf.xml.defaults --type string --set $1 "$2"
+    $GCONFTOOL --direct \
+    --config-source xml:readwrite:/etc/gconf/gconf.xml.defaults \
+    --type string --set $1 "$2"
     if [ $? != 0 ]; then
         echo "Setting $1 failed"
     fi

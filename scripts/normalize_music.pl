@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2004-Dec-07
 #
@@ -72,6 +72,7 @@ if ( -f $FILE )
     print STDOUT ("to file\t$file\n");
     if ( ! -f "$file" )
     {
+        mkdir($path) if ( ! -d $path );
         if ( ! rename ( $FILE,$file ) )
         {
             print STDOUT ("Renaming $FILE to $file failed. Do you have permissions to write in $path?\n");

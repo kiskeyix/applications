@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.16 $
+# $Revision: 1.17 $
 # Luis Mondesi || lemsx1 at gmail !! com 
 # LICENSE: GPL (http://gnu.org/licenses/gpl.txt)
 # 
@@ -43,7 +43,7 @@ $|++;
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
 
-use POSIX qw(ceil getcwd); # ceil()
+use POSIX qw(ceil getcwd);
 use File::Spec::Functions qw(splitpath curdir updir catfile catdir splitpath);
 use File::stat qw( stat );
 use File::Temp qw( tmpnam );
@@ -87,7 +87,9 @@ my $ISOLIMIT=680;   # in megabytes (1*1024 kBytes) NOTE: Do not set to
                     # i.e. 680 for 700MB disks should be fine
 
 # flags
-my ( $PVERSION,$DVD,$DEBUG ) = 0; 
+my $PVERSION = 0;
+my $DVD = 0;
+my $DEBUG = 0; 
 # the directory we will do an ISO for:
 my $folder = "";
 
@@ -119,7 +121,7 @@ my $volumeid = do_volid("$folder");
 my $name = $folder.".iso";
 
 print STDOUT ("Directory: $folder | Initial Volume Name: $volumeid | ISO File Name: $name\n") if ( $DEBUG > 0 );
-print STDOUT ("Sleeping for 5 seconds...\n");
+print STDOUT ("Sleeping for 5 seconds...\n") if ( $DEBUG > 0 );
 sleep(5) if ( $DEBUG > 0 ); # give a chance to stop the script
 
 # 4. calculate ISOLIMIT in bytes:
@@ -127,7 +129,8 @@ if ( $ISOLIMIT > 0 ) # deal with non-zero positive numbers only
 {
     $ISOLIMIT = POSIX::ceil( $ISOLIMIT * 1024 * 1024);
 }
-print STDOUT ("ISO Limit: $ISOLIMIT\n");# if ( $DEBUG > 0 );
+print STDOUT ("ISO Limit: $ISOLIMIT\n") if ( $DEBUG > 0 );
+sleep(5) if ( $DEBUG > 0 ); # give a chance to stop the script
 
 if ( $ARGV[1] && $ARGV[1] eq "dvd" ) 
 {
@@ -157,10 +160,10 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
     my $fullpath = catdir($rootdir,$folder);
     my @files = find_files( $fullpath );
     
-    mkdir("$temp");
-    chdir("$temp");
+    mkdir("$temp") or die $!;
+    chdir("$temp") or die $!;
 
-    mkdir("$nfolder"); # $name-tmp/$nfolder
+    mkdir("$nfolder") or die $!; # $name-tmp/$nfolder
 
     foreach my $f (@files)
     {
@@ -214,10 +217,10 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
     }
     if ( $size > 0 )
     {
-        my $res = prompt ("Do you want to make ISO of remaining size $size MB ($nfolder|$name)? [y/N]");
+        my $mb = POSIX::ceil(($size / 1024)/1024);
+        my $res = prompt ("Do you want to make ISO $name using the remaining size $mb MB (See $temp/$nfolder)? [y/N] ");
         if ( $res eq "y" )
         {
-            my $mb = POSIX::ceil(($size / 1024)/1024);
             print STDOUT ("Making CD ISO of size ".$mb."MB\n");
             m_system("$nice mkisofs -f -J -r -v -o '../$name' -V '$volumeid' '$nfolder' ",1) if ( $DEBUG == 0 );
         }
@@ -227,7 +230,7 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
     print "Current directory ".getcwd()."\n";
     if ( prompt ("Do you want to delete temporary dir '$temp'? [y/N] ") eq "y" )
     {
-        print STDOUT "Deleting '$temp' and its contents\n";
+        print STDOUT ("...Deleting '$temp' and its contents...\n");
         m_system("rm -fr '$temp'",1);
     } else {
         print STDOUT "++ Remember to delete '$temp' when done ++\n";

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.17 $
+# $Revision: 1.18 $
 # Luis Mondesi || lemsx1 at gmail !! com 
 # LICENSE: GPL (http://gnu.org/licenses/gpl.txt)
 # 
@@ -56,6 +56,7 @@ my $USAGE = "mkisofs.pl [--debug] [--version|--help] [--dvd] [--size=N] DIR
 --dvd       Assumes DIR is a DVD tree (made with dvdauthor 
             for instance) and creates a UDF DVD image
 --size=N    Limits size of CD images to N megabytes
+--batch     Runs in non-interactive mode. Auto-selected for Nautilus
 ";
 
 my $nice =  ( -x "/usr/bin/nice" ) ? "/usr/bin/nice":"";
@@ -81,6 +82,7 @@ my ($logfh,$logfile) = tmpnam();
 open ($logfh,">$logfile");
 
 # users can/must change this from the command line:
+my $ISOLOWEST=2*1024*1024; # lowest size for which we will create ISOs
 my $ISOLIMIT=680;   # in megabytes (1*1024 kBytes) NOTE: Do not set to 
                     # your media limit; allow some extra space 
                     # for ISO9660 overhead (Joliet+RR extentions)
@@ -90,6 +92,7 @@ my $ISOLIMIT=680;   # in megabytes (1*1024 kBytes) NOTE: Do not set to
 my $PVERSION = 0;
 my $DVD = 0;
 my $DEBUG = 0; 
+my $INTERACTIVE=1; # assume we want to run interactively
 # the directory we will do an ISO for:
 my $folder = "";
 
@@ -100,6 +103,7 @@ GetOptions(
     'h|help'        =>  \$PVERSION,
     'd|dvd'         =>  \$DVD,
     'D|debug'       =>  \$DEBUG,
+    'b|batch'       =>  sub { $INTERACTIVE=0; },
     # numbers
     's|size=i'      =>  \$ISOLIMIT,
 ) and $folder = shift;
@@ -110,10 +114,13 @@ if ( $PVERSION > 0 )
     exit(0);
 }
 
-die($USAGE) if ( $folder eq "" || ! -d "$folder" );
+{
+no warnings; # turn of warnings for now
+chomp($folder); # remove end-line
+die($USAGE) if ( ! -d "$folder" );
+} # warnings are restored
 
 # 1. cleanup dir name:
-chomp($folder); # remove end-line
 $folder =~ s#/+$##; # remove trailing slash(es)
 # 2. generate volume id:
 my $volumeid = do_volid("$folder");
@@ -215,20 +222,24 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
             #goto END; # FIXME
         }
     }
-    if ( $size > 0 )
+
+    my $MB = POSIX::ceil(($size / 1024)/1024);
+
+    if ( $size >= $ISOLOWEST )
     {
-        my $mb = POSIX::ceil(($size / 1024)/1024);
-        my $res = prompt ("Do you want to make ISO $name using the remaining size $mb MB (See $temp/$nfolder)? [y/N] ");
-        if ( $res eq "y" )
+        print STDOUT ("Making CD ISO of size ".$MB."MB\n");
+        m_system("$nice mkisofs -f -J -r -v -o '../$name' -V '$volumeid' '$nfolder' ",1) if ( $DEBUG == 0 );
+    } elsif ( $size > 0 ) {
+        if ( $INTERACTIVE == 0 || prompt ("Do you want to make a CD image $name of size $MB MB (See $temp/$nfolder)? [y/N] ") eq "y" )
         {
-            print STDOUT ("Making CD ISO of size ".$mb."MB\n");
+            print STDOUT ("Making CD ISO of size ".$MB."MB\n");
             m_system("$nice mkisofs -f -J -r -v -o '../$name' -V '$volumeid' '$nfolder' ",1) if ( $DEBUG == 0 );
         }
     }
     # cleanup
     chdir($rootdir);
     print "Current directory ".getcwd()."\n";
-    if ( prompt ("Do you want to delete temporary dir '$temp'? [y/N] ") eq "y" )
+    if ( $INTERACTIVE == 0 || prompt ("Do you want to delete temporary dir '$temp'? [y/N] ") eq "y" )
     {
         print STDOUT ("...Deleting '$temp' and its contents...\n");
         m_system("rm -fr '$temp'",1);
@@ -237,7 +248,7 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
     }
 }
 close ($logfh);
-if ( prompt ("Remove temporary log file $logfile? [y/N] ") eq "y" )
+if ( $INTERACTIVE == 0 || prompt ("Remove temporary log file $logfile? [y/N] ") eq "y" )
 {
     unlink ($logfile);
     print STDOUT ("++ Removed log file $logfile ++\n");

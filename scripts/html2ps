@@ -1,6 +1,4 @@
-: # Use perl
-eval 'exec perl -S $0 "$@"'
-  if $running_under_some_shell;
+#! /usr/bin/perl
 
 # This is html2ps version 1.0 beta3, an HTML-to-PostScript converter.
 #   Copyright (C) 1995-2000 Jan Karrman.
@@ -26,9 +24,9 @@ eval 'exec perl -S $0 "$@"'
 # Set the name of the global configuration file. See the installation notes
 # and manual page for more details on configuration files.
 
-$globrc='/usr/local/lib/html2ps/html2psrc';
-$ug='/usr/local/lib/html2ps/html2ps.html';
-
+$globrc='/etc/html2psrc';
+$ug='/usr/share/doc/html2ps/html2ps.html';
+$default_paper=`paperconf` || 'a4';
 $conf=<<'EOR';
 @html2ps {
   package {
@@ -47,7 +45,7 @@ $conf=<<'EOR';
     path: "";
   }
   paper {
-    type: A4;
+    type: $default_paper;
     height: "";
     width: "";
   }
@@ -354,8 +352,8 @@ A:link, HR { color: black }
 
 EOR
 
-eval "require POSIX";
-$posix = !$@;
+use POSIX;
+$posix = 1;
 
 %extend=('quote',1, 'font',1, 'colour',1, 'hyphenation',1);
 %fal=("serif","times", "sans_serif","helvetica", "monospace","courier");
@@ -420,7 +418,7 @@ for(@fo,"draft") {
       ."\$$_\{'font-family'\}:\$body{'font-family'}";
 }
 $user=1;
-if(open(RC,$globrc)) {
+if(open(RC,"<$globrc")) {
   $conf=<RC>;
   print DBG "***** Global file $globrc:\n$conf" if($opt_d);
   &getconf($conf);
@@ -460,7 +458,7 @@ for $rc (@rc) {
   S:for $dir (@hpath) {
     if(-r $rc && !grep(/^$rc$/,@local) || $files{$dir}=~/ $rc /) {
       chdir $dir if($files{$dir}=~/ $rc / && $cwd);
-      if(open(RC,$rc)) {
+      if(open(RC,"<$rc")) {
         $conf=<RC>;
         print DBG "***** Personal file $rc:\n$conf" if($opt_d);
         &getconf($conf);
@@ -495,6 +493,8 @@ die "Ghostscript is required to generate DSC PostScript\n"
 die "Ghostscript is required to generate cross references\n"
  if($opt_R && !$package{'Ghostscript'});
 $tmpname=$posix?POSIX::tmpnam():"h2p_$$";
+sysopen TMP, $tmpname, O_RDWR|O_CREAT|O_EXCL, 0600 or die "$!";
+close TMP;
 ($scr=$tmpname)=~/\w+$/;
 $tempdir=$`;
 
@@ -1023,7 +1023,7 @@ $fl="/FL [/".join("\n/",@docfonts)."] D";
 for $k (keys %ff) {
   $f=$ff{$k};
   if(defined $fontid{$fr{$k}} && !defined($cont{$f})) {
-    open(FONT,$f) || &dbg("Error opening fontfile $f\n");
+    open(FONT,"<$f") || &dbg("Error opening fontfile $f\n");
     ($cont{$f}=<FONT>)=~s/(^|\r?\n|\r)%.*//g;
     close FONT;
   }
@@ -2226,7 +2226,7 @@ if($nimg>=0) {
 }
 @kw=split(/[, ]+/,$kw);
 @Kw=();
-for $i (@kw){push(@Kw,$i) if(!grep(/^$i$/,@Kw))};
+for $i (@kw){push(@Kw,$i) if(!grep(/^\Q$i\E$/,@Kw))};
 $kw=join(', ',@Kw);
 for $i (0..$#z2) {
   $n=0;
@@ -2282,7 +2282,7 @@ sub h2p {
     if($contyp!~m|text/html|i) {$_=" <plaintext>\n$_"};
     unless(($ba2)=$html=~m|(.*://.*/)|) {$ba2=$html."/"};
   } else {
-    if(open(FILE,$html)) {
+    if(open(FILE,"<$html")) {
       &dbg("Reading $html\n") if($opt_W || $opt_d);
       $_=<FILE>;
       if(!/<HTML/i && $html!~/html?$/i && ($html!~/\.ps$/i || $ndoc>1)) {
@@ -2398,7 +2398,7 @@ sub h2p {
     if($type=~/^text\/(html|plain)$/i
      || !$type && $uaddr=~m"(\.html?|://.+/|://[^/]+)$"i) {
       $tag=~/data\s*=\s*/i;
-      if(&open($uaddr,$idoc)) {
+      if(&open($uaddr,"<$idoc")) {
         if($type=~/plain/i) {
           $idoc="<XMP>$idoc</XMP>";
         } else {
@@ -2527,7 +2527,7 @@ sub Subst{
         } elsif($2 eq "virtual") {
           $file=$opt_r.$file;
         }
-        if(open INC,$file) {
+        if(open INC,"<$file") {
           $inc=<INC>;
           &spec($inc);
           close INC;
@@ -3181,12 +3181,12 @@ sub ack {
       close SCRATCH;
       `tex $scr.tex`;
       `dvips -E -o $scr.ps $scr.dvi`;
-      open(LOG,"$scr.log");
+      open(LOG,"<$scr.log");
       $log=<LOG>;
       close LOG;
       ($h,$d)=$log=~/[\w\W]*$prog: +([\d.]+)pt: +([\d.]+)/ ? ($1,$2) : (1,0);
       $above=$h+$d>0?sprintf("%.4f",$h/($h+$d)):0;
-      open(PS,"$scr.ps");
+      open(PS,"<$scr.ps");
       $pic=<PS>;
       if($pic=~/^%!/ && $pic=~/%%BoundingBox: +$V +$V +$V +$V/) {
         $xs=$3-$1;
@@ -3644,7 +3644,7 @@ sub pictops {
     if($opt_O) {
       $orig=$URL;
       unless($orig=~s/\.\w*$/.ps/) {$orig.=".ps"};
-      if(open(ORIG,"$orig")) {
+      if(open(ORIG,"<$orig")) {
         $pic=<ORIG>;
         close ORIG;
         if($pic=~/^%!/ && $pic=~/%%BoundingBox:/) {
@@ -3654,7 +3654,7 @@ sub pictops {
       }
     }
     if(!$flag) {
-      if(open(PIC,"$URL")) {
+      if(open(PIC,"<$URL")) {
         binmode PIC;
         $pic=<PIC>;
         close PIC;
@@ -3698,7 +3698,7 @@ sub pictops {
 #        &run("convert $scr $pg1:-");
         &run("convert $scr $scr\.$pg1");
       }
-      open(PNM,"$scr\.$pg1");
+      open(PNM,"<$scr\.$pg1");
       binmode PNM;
       $pm=<PNM>;
       close PNM;
@@ -4075,7 +4075,7 @@ sub inihyph {
     $rep{$lang}=$refl{$hyfile};
     return;
   }
-  if(open(HYPH,$hyfile)) {
+  if(open(HYPH,"<$hyfile")) {
     &dbg("Reading hyphenation patterns from $hyfile\n") if($opt_d);
     <HYPH>=~/\\patterns{.*/;
     close HYPH;
@@ -4150,7 +4150,7 @@ sub inihyph {
   }
   $hext=$hyphenation_extfile{$lang};
   for(split('\s*:\s*',$hext)) {
-    if(open(HEXT,$_)) {
+    if(open(HEXT,"<$_")) {
       &dbg("Reading hyphenation extensions from $_\n") if($opt_d);
       $hyext.=<HEXT>;
       close HEXT;
@@ -4317,7 +4317,7 @@ sub img {
               push(@IT,1);
               $nli=30000;
               $n=1;
-              $npr=$ps=~s|(.*\n){$nli}|sprintf("$&} D\n/P$nimg\_%d {",$n++)|eg;
+	      $npr=$ps=~s|(.*\n{$nli})|sprintf("$1} D\n/P$nimg\_%d {",$n++)|eg;
               if($npr) {
                 $proc=" (";
                 for $i (0..$npr) {
@@ -4374,7 +4374,7 @@ sub getval{
 sub getconf {
   local($_)=@_;
   while(/\@import\s+(([\w.\/-]+)|"([^"]*)"|'([^']*)')\s*;/) {
-    if(open(SS,$+) && !$read{$+}) {
+    if(open(SS,"<$+") && !$read{$+}) {
       $conf=<SS>;
       $_=$`.$conf.$';
       print DBG "***** $+:\n$conf" if($opt_d);
@@ -4559,7 +4559,7 @@ sub hb {
 sub open {
   if($_[0]=~m|://|) {
     &geturl($_[0],$_[1]);
-  } elsif(open(FILE,$_[0])) {
+  } elsif(open(FILE,"<$_[0]")) {
     $_[1]=<FILE>;
     close FILE;
   } else {

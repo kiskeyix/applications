@@ -1,7 +1,7 @@
 #!/bin/bash
-# $Revision: 1.15 $
+# $Revision: 1.16 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Aug-01
+# Last modified: 2003-Aug-02
 #
 # DESCRIPTION:  an interactive wrapper to Debian's "make-kpkg"
 #               to build a custom kernel package.
@@ -80,17 +80,18 @@ if [ $1 -a $1 != "--help" ]; then
             makeit=1
         ;;
     esac
-  
-    # ask about make the kernel headers
+
+    # ask about making the kernel headers
     yesno="No"
     KERNEL_HEADERS=""
 
     read -p "Do you want to make the Headers pkg for this Kernel? [y/N] " yesno
     case $yesno in
         y* | Y*)
-            KERNEL_HEADERS="kernel_headers"
+        KERNEL_HEADERS="kernel_headers"
         ;;
     esac
+
 
     if [ $makeit == 1 ]; then
         echo -e "Building kernel \n"
@@ -100,6 +101,18 @@ if [ $1 -a $1 != "--help" ]; then
         --append-to-version -custom.$1 \
         --revision $REVISION \
         clean kernel_image $KERNEL_HEADERS
+    fi
+
+    # Sometimes we just want to make the headers indepentently
+    
+    if [ $makeit == 0 -a $KERNEL_HEADERS ]; then
+        echo -e "Building kernel headers only \n"
+        make-kpkg   --rootcmd $FAKEROOT \
+        --initrd \
+        --config oldconfig \
+        --append-to-version -custom.$1 \
+        --revision $REVISION \
+        $KERNEL_HEADERS
     fi
 
     # ask whether to create all kernel module images

@@ -6,7 +6,7 @@ if [ -f $1 ]; then
     for file in $*
     do
         echo "Removing ${file} from current tree";
-        rm -i ${file};
+        /bin/rm ${file};
         cvs delete ${file};
         cvs commit -m "file deleted from current tree" ${file};
     done

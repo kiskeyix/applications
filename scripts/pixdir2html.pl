@@ -1,15 +1,11 @@
 #!/usr/bin/perl 
-# $Revision: 1.23 $
+# $Revision: 1.24 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
-# USAGE:
-#   pixdir2html.pl [-n|--nomenu] [-f|--force] [-h|--help]
-# 
-#   force   - creates a .pixdir2htmlrc in every subdir overriding
-#             any file with that name
-#   nomenu  - do not create menus after finishing creating thumbnails
-#   help    - prints this help and exit
-#   
+# USAGE: 
+#       SEE HELP:
+#           pixdir2html.pl --help
+#
 # DESCRIPTION:
 # 
 # Use this non-interactive script in Nautilus to create HTML files
@@ -439,7 +435,10 @@ sub mkthumb {
         #print STDOUT $BASE."\n";
 
         if ( $BASE !~ m/$tmp_BASE/ ) {
-            if ($FORCE > 0) {
+            if ( 
+                ( $FORCE > 0 ) && 
+                (! -f "$BASE/.nopixdir2htmlrc" ) 
+            ) {
                 if ( 
                     copy("$ROOT_DIRECTORY/$CONFIG_FILE", 
                         "$BASE/$CONFIG_FILE") 
@@ -541,12 +540,14 @@ sub thumb_html_files {
     } #end images array creation
 
     #print all picts now
-    foreach(@ls){
-        $pix_name = basename($_);
+    #foreach(@ls){
+    # $#VAR gets number of elements of an array variable
+    for ( $i=0; $i <= $#ls; $i++) {
+        $pix_name = basename($ls[$i]);
         # strip extension from file name
         ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR//g;
         # get base directory
-        ( $BASE = $_ ) =~ s/(.*)\/$pix_name$/$1/g;
+        ( $BASE = $ls[$i] ) =~ s/(.*)\/$pix_name$/$1/g;
         #print STDOUT "Base: $BASE.\n";
 
         if ( $BASE ne $tmp_BASE ) {
@@ -555,7 +556,8 @@ sub thumb_html_files {
             if (! -f "$BASE/.nopixdir2htmlrc" ) {
                 %myconfig = init_config($BASE);
             }
-        } 
+        }
+
         # update flag
         $tmp_BASE = $BASE;
         next if ( -f "$BASE/.nopixdir2htmlrc" );
@@ -611,6 +613,7 @@ sub thumb_html_files {
             ( $NEXT_BASE = $ls[$i+1] ) =~ s/(.*)\/$next_pix_name$/$1/g;
 
         }
+
         #print "ls: '". $ls[$i] ."'. ls+1: '".$ls[$i+1]."'\n";
         #print "base: '$BASE'. next: '$NEXT_BASE'\n";
 
@@ -647,8 +650,6 @@ sub thumb_html_files {
 
         print LOGFILE ("\n"); 
 
-        # increase array counter
-        $i++; 
         # keep track of links
         $last_html_file = $current_html_file;
         $last_link = $current_link;

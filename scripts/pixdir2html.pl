@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.34 $
+# $Revision: 1.35 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -91,7 +91,7 @@ my $USAGE = "pixdir2html.pl [-n|--nomenu]
  
    force    - creates a .pixdir2htmlrc in every subdir overriding
               any file with that name
-   nomenu   - do not create menus after finishing creating thumbnails
+   nomenu   - do not create menu file after finishing creating thumbnails
    noindex  - do not create the index.EXT files after creating thumbnails
    menuonly - only create a menu file and exit
    menulinks- number of links to put in the Menu per row. Default is 10
@@ -224,7 +224,7 @@ sub main {
 
     # get menu string
     unless ( $NOMENU == 1 ) {
-        print LOGFILE ("= Creating menu file\n");
+        print LOGFILE ("= Creating menu string\n");
         $menu_str = menu_file();
     }
     
@@ -256,11 +256,22 @@ sub init_config {
     my %config_tmp = "";
     
     my $ROOT = shift;
+	
+	my $line="";
+	
     if (open(CONFIG, "<$ROOT/$CONFIG_FILE")){
-        while (<CONFIG>) {
+        while ( defined($line = <CONFIG>) ) {
             next if /^\s*#/;
-            chomp;
-            $config_tmp{"$1"} = $2 if m/^\s*([^=]+)=(.+)/;
+            chomp $line;
+			# attempts to be forgiven about backslashes
+			# to break lines that continues over
+			# multiple lines
+			if ($line =~ s/\\$//) {
+				$line .= <CONFIG>;
+				redo unless eof(CONFIG);
+			}
+			
+            $config_tmp{"$1"} = $2 if ( $line =~ m,^\s*([^=]+)=(.+), );
         }
         close(CONFIG);
 
@@ -348,7 +359,7 @@ sub mkindex {
         my @files = @{$$hashref{$this_base}};
 
         # FILE_NAME is a global
-        open(FILE, "> ".$this_base."/".$FILE_NAME.$myconfig{"ext"}) || 
+        open(FILE, "> ".$this_base."/".$FILE_NAME.".".$myconfig{"ext"}) || 
             die "Couldn't write file $FILE_NAME.".$myconfig{"ext"}." to $this_base";
 
         # start HTML
@@ -670,7 +681,7 @@ sub thumb_html_files {
         }
 
         # home link here
-        print FILE (" | <a href='../$FILE_NAME".$myconfig{"ext"}."'>HOME</a> | \n");
+        print FILE (" | <a href='../$FILE_NAME.".$myconfig{"ext"}."'>HOME</a> | \n");
        
         if ( -f $ls[$i+1] ) {
             $next_pix_name = "....";
@@ -863,7 +874,7 @@ sub menu_file {
             !-f "$ROOT_DIRECTORY/$_/.nopixdir2htmlrc"
         ) {
             # note that @ls holds the HTML links...
-            $ls[$x] = "$_/$FILE_NAME".$myconfig{"ext"}; # why not push()?
+            $ls[$x] = "$_/$FILE_NAME.".$myconfig{"ext"}; # why not push()?
             $x++; 
         }
     }   
@@ -881,8 +892,8 @@ sub menu_file {
     } @ls;
 
     if ( $MENUONLY > 0 ) {
-        open(FILE, "> ".$ROOT_DIRECTORY."/".$MENU_NAME.$myconfig{"ext"}) ||
-        die "Couldn't write file $MENU_NAME".$myconfig{"ext"}." to $ROOT_DIRECTORY";
+        open(FILE, "> ".$ROOT_DIRECTORY."/".$MENU_NAME.".".$myconfig{"ext"}) ||
+        die "Couldn't write file $MENU_NAME.".$myconfig{"ext"}." to $ROOT_DIRECTORY";
     }
 
     # menus are now part of the index.EXT...
@@ -965,8 +976,14 @@ sub menu_file {
                     # if link exists, otherwise leave it blank
                     # TODO there is a better way to do this... find it...
                     ($ts = $ls[$i]) =~ s/(.*)\/$FILE_NAME.$myconfig{"ext"}/$1/gi;
+					
                     $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='".$myconfig{"new"}."' alt='new'>":""; # if .new file
                     $ts = ucfirst($ts);
+					# TODO if number of characters is greater than 32
+					# TODO truncate $ts to a few characters.
+					my @tmp_ts = split(/\//,$ts);
+					$ts = "$tmp_ts[0]..".pop(@tmp_ts);
+					
                     $MENU_STR .= "<a href='".$myconfig{"uri"}."/$ls[$i]' target='_top'>$IMG $ts</a>\n";
                 } else {
                     $MENU_STR .= "&nbsp;";

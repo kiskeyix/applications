@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# 2004-09-22 21:57 EDT $Revision: 1.1 $ 
+# 2004-09-22 21:57 EDT $Revision: 1.2 $ 
 # Luis Mondesi <lemsx1@hotmail.com> 
 # Converts a bookmarks.html(firefox/mozilla/netscape) file 
 # to bookmarks.rss (1.0)
@@ -9,6 +9,9 @@
 # bookmark2rss.pl /path/to/bookmarks.html 
 #
 # The resulting output will be printed to STDOUT
+#
+# TODO
+#   - should live bookmarks be included? hint: instead of "href" look for FEEDURL attribute
 
 use strict;
 $|++;

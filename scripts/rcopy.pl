@@ -2,7 +2,7 @@
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2002-Sep-15
 # 
-# $Id: rcopy.pl,v 1.2 2002-09-15 19:07:32 luigi Exp $
+# $Id: rcopy.pl,v 1.3 2002-09-15 19:12:25 luigi Exp $
 # 
 # LICENSE:
 # GPL
@@ -37,11 +37,14 @@
 # 
 #
 # BUGS: 
-# 1. sync'ing from local to remote not implemented
-# 2. when updating long .xml config files, the update_config
+# 1. when updating long .xml config files, the update_config
 #    becomes annoying!
 # 
 # CHANGELOG:
+# 2002-09-15 15:08  * fixed a bug when the default config
+#                     file didn't exist XMLin wasn't working
+#                     in Perl 5.8.x
+#
 # 2002-07-27 11:09  * finished with update_config, script
 #                     is ready for prime time!
 #                     also did some necessary cleanups

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.58 $
+# $Revision: 1.59 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -1443,6 +1443,7 @@ sub ask_clust
             {
                 $FPS = get_fps();
             }
+            # we don't need to worry if the movie is telecine yet...
             $VIDEONORM = ( $FPS =~ m,2[39]\.9, ) ? "NTSC" : $VIDEONORM;
             create_nav($VIDEONORM);
             # TODO use Perl to read this line
@@ -1749,9 +1750,10 @@ sub create_extract
         # since 29.970 is the detected frames per second
         # ask user whether this is a NTSC movie and set variables
         # accordingly
-        ask_telecine($FPS);
-        $VIDEONORM="NTSC";
+        $VIDEONORM=ask_telecine($FPS);
+        print $DEBUG "+++ Telecine in create_extract: $TELECINE\n";
     } 
+
     if ( $NOAUDIO == 1  || $need_time == 1 )  
     {
         # || $in_video_magic eq 'mpeg2'(OK V=mpeg2,A=mp3.mpg)  
@@ -1861,9 +1863,9 @@ sub calculate_nbrframe
     }
 
     if ( $FPS =~ m,29\.97, && ! defined($TELECINE) )
-    {
-        ask_telecine($FPS);
-        $VIDEONORM="NTSC";
+    { 
+        $VIDEONORM=ask_telecine($FPS);
+        print $DEBUG "+++ Telecine in calculate_nbrframe: $TELECINE\n";
     }
     $nbr_frames= floor($tot_frames - ($deb_sec+$last_sec)*$FPS);
     print $DEBUG "Number of frames: $nbr_frames\n";

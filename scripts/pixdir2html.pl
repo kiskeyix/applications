@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.26 $
+# $Revision: 1.27 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -39,8 +39,9 @@
 # menuheader_footer=0
 # 
 # These are the only tags that you can customize for now :-)
-# Required: linux/UNIX "convert" command (to convert images from
-#	    one format to another or sizes, etc...)
+#
+# REQUIRED: ImageMagick's Perl module and it's dependancies
+#
 # TODO:
 #   * use file_ary from mkthumb to generate the HTML files same
 #     as it's used for the index files
@@ -66,6 +67,8 @@ Getopt::Long::Configure('bundling');
 
 use File::Find;     # find();
 use File::Basename; # basename();
+
+use Image::Magick;
 
 use strict;
 use vars qw( $VERSION @INC );
@@ -208,10 +211,10 @@ sub main {
         menu_file();
         return 0;
     }
-    
-    if (!-x "/usr/bin/convert") {
-        die ("could not find 'convert'. Install ImageMagick.");
-    }
+    # Using Image::Magick now
+    #    if (!-x "/usr/bin/convert") {
+    #        die ("could not find 'convert'. Install ImageMagick.");
+    #    }
     open (LOGFILE,"> $LOG");
     init_config($ROOT_DIRECTORY);
 
@@ -481,14 +484,23 @@ sub mkthumb {
         
             print LOGFILE ("\n= Converting file $BASE/$pix_name into $THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name \n");
 
-            system("convert -geometry $PERCENT $BASE/$pix_name $THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name");
-            if ( $? != 0 ) {
-                die "ERROR: conversion failed\n $! ";
-            }
+            my $image = Image::Magick->new;
 
+            $image->Read("$BASE/$pix_name");
+            $image->Resize("$PERCENT");
+            $image->Write("$THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name");
+            
+            undef $image;
+
+            #system("convert -geometry $PERCENT $BASE/$pix_name $THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name");
+            #if ( $? != 0 ) {
+            #    die "ERROR: conversion failed\n $! ";
+            #}
+        
+             
             print LOGFILE ("\n"); 
 
-                }
+        }
         # end if thumbnail file
    
         # save pixname for the index.html file
@@ -497,7 +509,8 @@ sub mkthumb {
         # update flags
         $LAST_BASE = $BASE;
     } #end foreach @ls
-
+    
+   
     if ( $NOINDEX == 0 ) {
         mkindex(\%pixfiles,$MENU_STR);  # pass hash reference
                                         # and a menu string

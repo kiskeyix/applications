@@ -79,12 +79,23 @@ $GCONFTOOL --direct --config-source xml:readwrite:/etc/gconf/gconf.xml.mandatory
 if [ $? != 0 ]; then
     echo "Setting Run Key failed"
 fi
+# gnome 2.4
+$GCONFTOOL --direct --config-source xml:readwrite:/etc/gconf/gconf.xml.mandatory --type string --set /apps/metacity/global_keybindings/panel_main_menu "$RUN_KEY"
+if [ $? != 0 ]; then
+    echo "Setting Metacity Run Key failed"
+fi
 
 # menu key
 $GCONFTOOL --direct --config-source xml:readwrite:/etc/gconf/gconf.xml.mandatory --type string --set /apps/panel/global/menu_key "$MENU_KEY"
 if [ $? != 0 ]; then
     echo "Setting Menu Key failed"
 fi
+# gnome 2.4
+$GCONFTOOL --direct --config-source xml:readwrite:/etc/gconf/gconf.xml.mandatory --type string --set /apps/metacity/global_keybindings/panel_main_menu "$MENU_KEY"
+if [ $? != 0 ]; then
+    echo "Setting Metacity Menu Key failed"
+fi
+
 
 # themes
 if [ $DEFAULT_THEME != 0 ]; then

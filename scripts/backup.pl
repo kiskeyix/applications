@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.30 $
+# $Revision: 1.31 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2004-Dec-24
 #
@@ -36,7 +36,7 @@
 # #TAR=/usr/local/bin/tar
 # #COMPRESS_LEVEL=9
 # ## bzip2 or gzip? or don't define if no compression is needed
-# #COMPRESS_DO=/usr/bin/gzip
+# #COMPRESS_DO=/bin/gzip
 # ## prefix to name of the file
 # #NAME=imac-home 
 #

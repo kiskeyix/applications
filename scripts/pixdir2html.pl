@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.38 $
+# $Revision: 1.39 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -334,8 +334,8 @@ sub main {
     #print $GAUGE "\x04";
     #print $GAUGE "\x00";
     #print $GAUGE "EOF";
-    $GAUGE->close();
-    #undef($GAUGE);
+    #$GAUGE->close();
+    undef($GAUGE);
 
     # close log
     print $LOGFILE ("$total_directories directories.\n Read log $LOG for details. \n");
@@ -371,8 +371,13 @@ sub init_config {
     $config_tmp{"table"}="<table border='0'>";
     $config_tmp{"td"}="<td valign='top' align='left'>";
     $config_tmp{"tr"}="<tr>";
+    # when header is set, title, meta, stylesheet, etc...
+    # are discarded. So do a complete set
+    # such as <HTML><head><title>...
+    # and close with "footer"
     $config_tmp{"header"}="";
     $config_tmp{"footer"}="";
+    $config_tmp{"menuheader_footer"}=0;
     $config_tmp{"ext"}=$EXT;
 
     if ( -f "$ROOT/$CONFIG_FILE" )

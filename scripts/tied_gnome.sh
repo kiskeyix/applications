@@ -38,7 +38,7 @@ GTK_THEME="Nuvola"
 METACITY_THEME=$GTK_THEME
 ICON_THEME="Nuvola"
 BACKGROUND="/usr/share/wallpapers/All-Good-People-1.jpg"
-SPLASH_IMAGE="/usr/local/share/pixmaps/Splash-Crystal.png" 
+SPLASH_IMAGE="/usr/share/pixmaps/splash/Splash-Crystal.png" 
 #"/usr/share/pixmaps/splash/gnome-splash.png" <-- default gnome 
 BACKGROUND_ORIENTATION="wallpaper" # wallpaper,centered,scaled,strecthed
 MONOSPACE_FONT_NAME="Sans Bold 12"

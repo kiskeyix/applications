@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.18 $
+# $Revision: 1.19 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -10,12 +10,12 @@ $|++;
 
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
-use POSIX;                  # cwd() ... man POSIX
+#use POSIX;                  # cwd() ... man POSIX
 use File::Spec::Functions;  # abs2rel() and other dir/filename specific
-use File::Copy;
-use File::Find;     # find();
-use File::Basename; # basename() && dirname()
-use FileHandle;     # for progressbar
+#use File::Copy;
+#use File::Find;     # find();
+#use File::Basename; # basename() && dirname()
+#use FileHandle;     # for progressbar
 
 ############## NO NEED TO MODIFY THESE #################
 =pod
@@ -35,6 +35,7 @@ B<update-remote-hosts.pl>
 [-l,--local]  
 [--host] 
 [--files]  
+[--print-files]
 [--local-path]
 [--hosts-file]
 [HOSTNAME]
@@ -61,6 +62,12 @@ B<update-remote-hosts.pl> --hosts-file ~/.hosts --files "bashrc.tar.bz2,vimrc.ta
 
 updates only bashrc and vimrc files to all hosts found in ~/.hosts
 
+=head1 BUGS
+
+* --files cannot contain spaces and must be .tar.bz2.
+
+* there is no way to pass $EXCEPTIONS from the command line.
+
 =head1 OPTIONS
 
 =cut
@@ -81,6 +88,7 @@ my @FILES=("bashrc.tar.bz2", "vimrc.tar.bz2", "muttrc.tar.bz2", "Applications.ta
 my %hosts; # global multi-dimensional hash to store hosts' information
 my $VERBOSE=0;
 my $DEBUG=0;
+my $PRINT_FILES=0;
 my $REMOVE_FILES=0;
 my $MASTER=0; # update current host from $MASTER_HOST
 my $LOCAL=0; # do not get any new copies, use the local files instead
@@ -141,6 +149,10 @@ Comma separated list of files to get/upgrade instead of the defaults at @FILES.
 
 Uses FILE instead of ~/.remote-hosts as our hosts file. This file is in the same format as /etc/hosts.
 
+=item --print-files
+
+Prints a list of files and exits. @see --files
+
 =cut
 
 GetOptions(
@@ -152,6 +164,7 @@ GetOptions(
     'V|verbose'         =>  \$VERBOSE,
     'm|master'          =>  \$MASTER,
     'l|local'           =>  \$LOCAL,
+    'print-files'       =>  \$PRINT_FILES,
     # strings
     'host=s'            =>  \$MASTER_HOST,
     'files=s'           =>  \$CONF_FILES,
@@ -177,9 +190,22 @@ if ( $VERBOSE )
 }
 
 ## main ##
+
 my $j =0;
 my $n_files = $#FILES+1;
 my $silent = ( ! $VERBOSE ) ? " > /dev/null 2>&1" : "";
+
+if ( defined ($CONF_FILES) )
+{
+    $CONF_FILES =~ s/[,|\s]+/ /g; # separate by single spaces
+    @FILES = split(/\s/,$CONF_FILES);
+}
+
+if ( $PRINT_FILES )
+{
+    print STDOUT (join(",",@FILES),"\n");
+    exit 0;
+}
 
 # update master and exit
 if ( $MASTER )

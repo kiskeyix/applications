@@ -1,8 +1,8 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2002-Nov-23
+# Last modified: 2003-Apr-09
 # 
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # 
 # VERSION: 0.1
 #
@@ -28,6 +28,8 @@
 #       * DB_File
 #       * XML::Parser
 #       * evolution-addressbook-import must be in users' path
+#         (Path is "/usr/lib/evolution" for Evolution 1.2).
+#         i.e.: PATH=/usr/lib/evolution:$PATH ./zEvoSync.pl
 #
 # BUGS: 
 #
@@ -53,13 +55,26 @@ my $temp_file = "$ENV{HOME}/.tmp-file.xml";
 my $temp_vcard = "$ENV{HOME}/.tmp-vcard.vcf";
 
 # zaurus xml file
+# TODO change this variable to get the addressbook.xml from the 
+#       Zaurus.
 my $zau_xml = "$ENV{HOME}/.palmtopcenter/addressbook/addressbook.xml";
+my $evo_db = "$ENV{HOME}/evolution/local/Contacts/addressbook.db";
 
 my %DBFILE = ();
 
 #--------------------------------------#
 # Definition for functions/subroutines #
 #--------------------------------------#
+
+# failsafe system() call
+sub do_system
+{
+    my ($command) = @_;
+    system ($command);
+    if ($? != 0) {
+        die "Command failed: $command";
+    }
+}
 
 # Takes Zaurus .xml file from your $HOME directory
 # and converts it to vcard format, then passes
@@ -75,6 +90,7 @@ sub do_zau_sync {
     use XML::Parser;
     
     unlink $temp_vcard;
+
     open(FILE,"> $temp_vcard");
     close(FILE);
 
@@ -82,12 +98,15 @@ sub do_zau_sync {
     $p->parsefile($zau_xml);
 
     # you must kill evolution first!
-    system("killev");
+    do_system("killev");
+
+    # no need to double check this now, but... 
     if ($? == 0) {
+        #print STDERR "syncing ...\n";
         # keep a backup
-        rename "$ENV{HOME}/evolution/local/Contacts/addressbook.db", "$ENV{HOME}/evolution/local/Contacts/addressbook.db.bak";
+        rename $evo_db, "$evo_db.bak";
         
-        system("evolution-addressbook-import --sync --input-file='$temp_vcard'");
+        do_system("evolution-addressbook-import --sync --input-file='$temp_vcard'");
     } else {
         print STDERR "Could not kill Evolution using 'killev' program. Make sure 'killev' is in your path and it's executable by your user.";
     }
@@ -417,17 +436,45 @@ sub notebook_page_switch {
 }
 
 sub create_tab {
-    my ($notebook,$buffer,$label) = @_;
+    my ($notebook,$buffer,$label,$type) = @_;
 
     my $child = new Gtk::Frame();
     $child->border_width( 10 );
-    
+   
+    # internal box
     my $int_box = new Gtk::VBox( 1, 0 );
     $int_box->border_width( 10 );
     $child->add( $int_box );
     
     #my $entry = new Gtk::Entry;
     #$int_box->pack_start($entry, 1, 1, 5);
+    my $bget_evo_db = new Gtk::Button("Evolution --> Zaurus");
+    if ($type eq "addr") {
+        $bget_evo_db->signal_connect('clicked', sub{ do_evo_sync(); });
+    } elsif ($type eq "cal") {
+        # connect calendar function
+        $bget_evo_db->set_sensitive(0);
+    } else {
+        # disable button
+        $bget_evo_db->set_sensitive(0);
+    }
+    $int_box->pack_start($bget_evo_db, 1, 1, 0);
+    
+    my $bget_zau_db = new Gtk::Button("Zaurus --> Evolution");
+    if ($type eq "addr") {
+        $bget_zau_db->signal_connect('clicked', sub{ do_zau_sync(); });
+    } elsif ($type eq "cal") {
+        # connect calendar function
+        $bget_zau_db->set_sensitive(0);
+    } else {
+        # disable button
+        $bget_zau_db->set_sensitive(0);
+    }
+        #sub{update_pbar($pbar)});
+        # sub {$window->destroy;});
+    $int_box->pack_start($bget_zau_db, 1, 1, 0);
+    $bget_zau_db->can_default(1);
+    $bget_zau_db->grab_default;
 
     $child->show_all();
  
@@ -460,8 +507,8 @@ sub init_config_gui {
     my @item_factory_entries = (
         ["/_File",              undef,          0,      "<Branch>"],
         #["/File/tearoff1",      undef,          0,      "<Tearoff>"],
-        ["/File/S_ync:Zau to Evo",         "<control>Z",   5,      "<Item>"],
-        ["/File/S_ync:Evo to Zau",         "<control>E",   6,      "<Item>"],
+        ["/File/_Sync:Zau to Evo Addressbook",         "<control>Z",   5,      "<Item>"],
+        ["/File/S_ync:Evo to Zau Addressbook",         "<control>E",   6,      "<Item>"],
         ["/File/sep1",          undef,          0,      "<Separator>"],
         ["/File/_Quit",        "<control>Q",   13,      "<Item>"],
         #["/_Edit",              undef,          0,      "<Branch>"],
@@ -472,7 +519,7 @@ sub init_config_gui {
         ["/Help/_About",        undef,          30,     "<Item>"]
     );
     my ($accel_group, $item_factory, $box1, $label, $label3, $box2, $pbar);
-    my ($separator, $button, $bget_evo_db, $dummy);
+    my ($separator, $dummy);
 
     $accel_group = new Gtk::AccelGroup;
     $item_factory = new Gtk::ItemFactory('Gtk::MenuBar', "<main>", $accel_group);
@@ -502,8 +549,8 @@ sub init_config_gui {
     my $ab_child = new Gtk::Label( $ab_buffer ); 
     my $ca_child = new Gtk::Label( $ca_buffer );
    
-    create_tab($notebook,$ab_buffer,$ab_child);
-    create_tab($notebook,$ca_buffer,$ca_child);
+    create_tab($notebook,$ab_buffer,$ab_child,"addr");
+    create_tab($notebook,$ca_buffer,$ca_child,"cal");
     
     $label = new Gtk::Label "Backup your files first!";
     
@@ -533,18 +580,6 @@ sub init_config_gui {
 
     # init progress bar
     #$pbar->update(0.0);
-
-    $bget_evo_db = new Gtk::Button("Evolution --> Zaurus");
-    $bget_evo_db->signal_connect('clicked', sub{ do_evo_sync(); });
-    $box2->pack_start($bget_evo_db, 1, 1, 0);
-    
-    $button = new Gtk::Button("Zaurus --> Evolution");
-    $button->signal_connect('clicked', sub{ do_zau_sync(); });
-        #sub{update_pbar($pbar)});
-        # sub {$window->destroy;});
-    $box2->pack_start($button, 1, 1, 0);
-    $button->can_default(1);
-    $button->grab_default;
 
     # show all
     if (!visible $window) {

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Last modified: 2002-Sep-20
+# Last modified: 2002-Sep-21
 # Luis Mondesi < lemsx1@hotmail.com >
 # backup a site every night
 # 
@@ -7,14 +7,14 @@
 # for e/a week. At the end of the month
 # delete all previous backups for that month.
 
-NAME="mri-nyc"; # name of the file
-BAK="/var/www/mri-backup";
+NAME="latinomixed"; # name of the file
+BAK="/home/bak";
 # List of files matching pattern to exclude
 # these files sit inside one of the 
 # directories being backup
-EXCLUDES="--exclude=*.soc --exclude=*.sock --exclude=mri-backup";  
+EXCLUDES="--exclude=*.pid --exclude=*.soc --exclude=*.sock --exclude=*.log";
 
-DIRS="/etc /var/www /var/lib/mysql /var/ftp /var/mail /var/spool /usr/local/lib/webstats /var/lib/tripwire /home";
+DIRS="/etc /usr/var/www/html/latinomixed.com /var/lib/jabber /var/lib/mysql /var/mail /var/spool /usr/local/lib/webstats /var/lib/ldap ";
 
 ######## NO NEED TO MODIFY #################
 

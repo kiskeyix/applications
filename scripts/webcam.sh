@@ -1,7 +1,7 @@
 #!/bin/sh
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Feb-05
+# Last modified: 2003-Apr-04
 #
 # DESCRIPTION: a script to start|stop "webcam"
 # USAGE: webcam.sh [start|stop|restart] 
@@ -31,7 +31,7 @@ DESC="Zoom USB Camera with Webcam"
 
 CMDLINE=""          # extra arguments to daemon?
 
-APPENDTONAME=`date +%Y-%m%d`
+APPENDTONAME=`date +%Y-%m-%d`
 
 ##############################################################
 #                       End configuration                    #

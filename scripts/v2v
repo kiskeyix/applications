@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.88 $
+# $Revision: 1.89 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -3747,13 +3747,13 @@ sub dvd9to5
     }
     say_end();
     # ask to make DVD image
-    my $rep = prompt("Do you want to make a DVD iso? [y/N] ");
-    if ( $rep =~ m/^[yY]/ )
-    {
-        #DVD name is chosen for us. we could use basename($dir)...
-        #make_dvd($dir,"V2DVD"); 
-        print "Sorry, this doesn't work yet\n";
-    }
+#     my $rep = prompt("Do you want to make a DVD iso? [y/N] ");
+#     if ( $rep =~ m/^[yY]/ )
+#     {
+#         #DVD name is chosen for us. we could use basename($dir)...
+#         #make_dvd($dir,"V2DVD"); 
+#         print "Sorry, this doesn't work yet\n";
+#     }
 } # end dvd9to5()
 
 sub avitovcd

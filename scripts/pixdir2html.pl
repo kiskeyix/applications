@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.93 $
+# $Revision: 1.94 $
 # Luis Mondesi  <lemsx1@hotmail.com>
 # 
 # REQUIRED: ImageMagick's Perl module and a dialog 
@@ -1306,7 +1306,7 @@ sub process_file {
     if  ( 
         -f $_
         && ! -f $dir_name."/.nopixdir2htmlrc"
-        && $base_name =~ m/$EXT_INCL_EXPR$/ # only pictures please
+        && $base_name =~ m/$EXT_INCL_EXPR$/i # only pictures please
         && $base_name !~ m/^($EXCEPTION_LIST)$/
         && $base_name !~ m/\b$THUMBNAIL\b/
         && $base_name !~ m/\b$HTMLDIR\b/

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.14 $
+# $Revision: 1.15 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2004-Dec-07
 #
@@ -112,13 +112,14 @@ sub process_file {
 sub _mkdir
 {
     my $path = shift;
+    my $root = ( $path =~ m,^([/|\\|:]), ) ? $1 : ""; # relative or full path?
     my @dirs = splitdir($path);
     my $last = "";
     my $flag=1;
     foreach (@dirs)
     {
         next if ( $_ =~ m/^\s*$/ );
-        $last = ( $flag > 1 ) ? catdir($last,$_) : $_ ;
+        $last = ( $flag > 1 ) ? catdir($last,$_) : "$root"."$_" ;
         mkdir ($last) if ( ! -d $last);
         $flag++;
     }

@@ -2,7 +2,7 @@
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2002-Nov-16
 # 
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # 
 # VERSION: 0.1
 #
@@ -47,6 +47,10 @@ use Gtk::Atoms;
 
 # db to xml file for evo addressbook
 my $temp_file = "$ENV{HOME}/evolution/.tmp-file.xml";
+
+# zaurus xml file
+my $zau_xml = "$ENV{HOME}/.palmtopcenter/addressbook/addressbook.xml";
+
 my %DBFILE = ();
 
 #--------------------------------------#
@@ -54,8 +58,12 @@ my %DBFILE = ();
 #--------------------------------------#
 
 sub do_zau_sync {
-    # main function
-    print STDERR "hello world";
+    
+    use XML::Parser;
+    
+    my $p= new XML::Parser(Style => 'Stream');
+    $p->parsefile($zau_xml);
+
 }
 
 #
@@ -161,12 +169,28 @@ sub do_evo_sync {
 
 # sample printVcard function
 # borrowed from: http://www.heise.de/ix/artikel/1999/05/161/01.shtml
+
+# calls for XML::Parser->stream
+sub StartTag {
+    my $p = shift;
+    my $key = shift;
+}
+sub EndTag {
+    my (%vcard) = @_;
+    my $p = shift;
+    my $t = shift;
+    #undef $key;
+    if ($t eq "vcard") {
+        printVcard(%vcard);
+    }
+}
+# prints vCards
 sub printVcard {
     my (%hash) = @_;
     print "begin:vcard\n";
     print "n:$hash{nachname};$hash{vorname}\n";
     print "fn: $hash{vorname} $hash{nachname}\n";
-    if (exists $hash{strasse} && exists $hash{plz? &&
+    if (exists $hash{strasse} && exists $hash{plz} &&
         exists $hash{ort}) {
         print "adr:;;$hash{strasse};$hash{ort};;$hash{plz};Germany\n";
     }
@@ -175,8 +199,6 @@ sub printVcard {
     print "email;internet:$hash{mail}\n" if (exists $hash{mail});
     print "end:vcard\n";
 }
-
-
 
 #
 # GUI

@@ -11,7 +11,7 @@ if [ -f $1 ]; then
     for file in $*; do
         cvs add ${file} 2> /dev/null
         if [ $? == 0 ]; then
-            cvs commit -m "first commit" ${file} > /dev/null 2>&1 &
+            cvs commit -m "first commit" ${file} 
         else
             echo "Error adding = ${file} = to the repository. Please add it by hand"
 

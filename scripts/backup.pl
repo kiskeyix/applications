@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.33 $
+# $Revision: 1.34 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Dec-31
+# Last modified: 2005-Jan-25
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
 #               or a user specified command archiver ( tar? )
@@ -136,6 +136,8 @@
 
 use strict;
 $|++;
+use Getopt::Long;
+Getopt::Long::Configure('bundling');
 
 # test whether we should use Archive::Tar
 my $ARCHIVE_TAR=1; # assume yes
@@ -149,7 +151,7 @@ if ($@)
 use File::Find;     # find();
 use File::Basename; # basename();
 
-my $DEBUG = 1;      # set to 1 to print debugging messages
+my $DEBUG = 0;      # set to 1 to print debugging messages
 
 my %MY_CONFIG = ();
 my $CONFIG_FILE= $ENV{"HOME"}."/.backuprc";
@@ -179,6 +181,15 @@ $MY_CONFIG{"SYSTEM"}="/etc /var/mail /var/spool /var/lib/iptables /root";
 #-------------------------------------------------------------#
 
 my $TMP_LOCK = ".backup-lock";
+my $FREQ = "daily";
+
+## GET OPTIONS ##
+GetOptions(
+    # flags
+    'D|debug'         =>  \$DEBUG,
+    # strings
+    'c|config=s'        =>  \$CONFIG_FILE
+) and $FREQ = shift;
 
 # init defaults from $CONFIG_FILE
 my %TMP_CONFIG = init_config($CONFIG_FILE); # override defaults with...
@@ -226,11 +237,11 @@ if ( -d $CONFIG{"BAK"} ) {
 if ( ! -f $TMP_LOCK ) {
 
     my ($sec,$min,$hour,$mday,$mon,$year) = localtime; # get date
-    $mon += 1; ## adjust Month: 0..11 instead of natural 1 .. 12
+    $mon += 1; ## adjust Month: no 0..11 instead use natural 1..12
     $year += 1900;
 
     my $MIDDLE_STR = "";
-    if ( exists $ARGV[0] && $ARGV[0] =~ /^(daily|weekly|monthly|yearly)$/i )
+    if ( $FREQ =~ /^(daily|weekly|monthly|yearly)$/i )
     {
         $MIDDLE_STR = "$1";
     } else {

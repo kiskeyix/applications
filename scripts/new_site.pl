@@ -1,9 +1,9 @@
 #!/usr/bin/perl -w
-# $Revision: 1.6 $
-# $Date: 2003-03-29 17:33:37 $
+# $Revision: 1.7 $
+# $Date: 2003-09-13 03:50:02 $
 #
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Mar-29
+# Last modified: 2003-Sep-10
 #
 # DESCRIPTION: interactively create a new
 #               virtual website
@@ -105,7 +105,7 @@ if ( $CONFIRM !~ m/^ *y/i){
 # -g popusers to -g GID (500). Also, note that cpu asks for a password
 
 if ( $USE_CPU ) {
-    system("useradd -m -d /home/$WEBMASTER -s /bin/false -g 500 $WEBMASTER ");
+    system("cpu useradd -m -d /home/$WEBMASTER -s /bin/false -g 500 $WEBMASTER ");
 } elsif ( $USE_USERADD ) {
     system("useradd -m -d /home/$WEBMASTER -s /bin/false -g popusers $WEBMASTER ");
     system("passwd $WEBMASTER");

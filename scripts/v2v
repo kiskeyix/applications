@@ -113,8 +113,13 @@ sub chk_wdir;
 sub smily;
 sub audiorescale;
 sub subtitle;
+sub format_date;
 
 system("clear");
+
+my $start_time = time;
+my $f_start_time = format_date($start_time);
+print "Start Time: $f_start_time \n";
 
 # Read or create the user configuration file
 if ( -e $HOME."/.vob2divxrc" )
@@ -272,6 +277,26 @@ Enter '$0 -h ' to have a small help
 $bpp=0.18;   # This value =  bitrate x 1000 / ( fps x height x width ) 
 
 ############# FUNCTIONS #########################
+
+sub format_date 
+{
+    # returns a nicely formatted string:
+    # @param 0 unixtimestamp
+    # @param 1 "hours"
+    # if no second parameter is given, returns a date string 
+    # formatted in ISO-8660
+    # if second parameter "hours" is given, it converts
+    # the number of seconds passed to hours
+    if ( exists ($_[1]) && $_[1] eq "hours" ) {
+        # we care about hours
+        return sprintf("%.2f",$_[0] / ( 60 * 60 )); # 3600 number of seconds in an hour
+    }
+
+    # take a UNIX timestamp and returns a nicely formatted string
+    my ($sec,$min,$hour,$mday,$mon,$year) = localtime(shift);
+    my $ADATE=sprintf("%04d-%02d-%02d %02d:%02d:%02d",($year+=1900),$mon,$mday,$hour,$min,$sec);
+    return $ADATE;
+}
 
 sub srt_subrip
 {
@@ -449,23 +474,24 @@ sub audiorescale
 # This function just display a clock to wait
 sub smily
 {
-    unlink("tmp/@_[0].finish");
+    unlink("tmp/$_[0].finish");
     @t=('|','/','-','\\');
     my $i=0;
-    while(! -e "tmp/@_[0].finish")
+    while(! -e "tmp/$_[0].finish")
     {
         $i=0 if ($i >3);
-        print @t[$i]."\b";
+        print $t[$i]."\b";
         sleep(1); 
         $i++;
     }
     sleep(1);
-    unlink("tmp/@_[0].finish");
+    unlink("tmp/$_[0].finish");
     exit(0);
 }
 
 sub chk_wdir
-{	print $DEBUG "---> Enter chk_wdir\n";
+{	
+    print $DEBUG "---> Enter chk_wdir\n";
 # We check if user is not working in /path/to/vobs
     chomp($vobpath);
     $wdir=`pwd`;
@@ -480,6 +506,7 @@ sub chk_wdir
     opendir(VOB,$vobpath);
     my(@files)=grep {! /^\./ & -f "$vobpath/$_"} readdir(VOB);
     closedir(VOB);
+    # TODO this should sort in dictionary order...
     @files=sort @files;
     my $i=0;
     foreach $file (@files)
@@ -552,7 +579,7 @@ sub get_audio_channel
             }
         }
     }		
-    return(0) if ( defined(@_[0])); # get_audio_channel has been call by printinfo ;-)
+    return(0) if ( defined($_[0])); # get_audio_channel has been call by printinfo ;-)
     if ( $in_video_magic eq 'mov' )
     {
         $probe=`tcprobe -i $vobpath/$sample 2>&1 | grep 'audio track:'` or mydie "Problem when running \'tcprobe -i $vobpath/$sample\'";
@@ -570,7 +597,7 @@ sub get_audio_channel
     {	
         if ( $tmp =~ m,-a (\d) \[, )
         {
-            print $DEBUG "-a DIGIT found \n ";
+            #print $DEBUG "-a DIGIT found \n ";
             $achannels[$number_of_ac]=$1;
             print $INFO "\t -a $achannels[$number_of_ac]\n" ;
             $number_of_ac++;
@@ -1409,6 +1436,12 @@ $i++;
                     }
                     system("touch tmp/finish");
                 }
+
+                # substract unixtimestamp from our original timestamp
+                my $end_time = time - $start_time;
+                my $f_end_time = format_date($end_time,"hours");
+                print "Number of Hours: $f_end_time \n";
+
                 print " Now take a look at the end of $dvdtitle.avi\n\t If for some reason the divx file does'nt reach the end credits, just edit tmp/vob2divx.conf, decrease the last_sec value, remove the tmp/finish file and then run V2divx without parameters.";
                 print " Is you divx file OK? (y/N): ";
                 $rep=<STDIN>;

@@ -1,4 +1,5 @@
 #!/bin/sh
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # This script moves all files containing name NAME
 # case insensitive,
@@ -12,5 +13,5 @@ if [ -d $1 -a -d $3 -a $2 ]; then
     # and then execute mv verbosely ...
     find $1 -path "$3" -prune -o -iname "*$2*" -type f -exec mv -iv {} $3 \; ;
 else
-    echo "Usage: mvall.sh PATHtoDIR NAMEofFILE PATHtoDIRtoMOVEto";
+    echo "Usage: mvall.sh PATHfromDIR NAMEofFILE PATHtoDIRtoMOVEto";
 fi

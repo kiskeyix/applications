@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.63 $
+# $Revision: 1.64 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -558,9 +558,9 @@ sub check_system
         # are ogmtools on this system ?
         $OGMTOOL=system("which ogmmerge >/dev/null 2>&1 ");
         $OGMTOOL=system("which ogmsplit >/dev/null 2>&1 ") if ( $OGMTOOL == 0 );
-        $OGMTOOL=1 if ( $OGMTOOL == 0 );
+        $OGMTOOL="OK" if ( $OGMTOOL == 0 );
         # reset $AO to mp3 if ogmmerge is not found
-        if  ( ! $OGMTOOL  && $AO eq "ogg" )
+        if  ( $OGMTOOL ne "OK"  && $AO eq "ogg" )
         {
             $AO="mp3";
             pwarn("Audio output format reset to MP3, ogmmerge not found on this system\n (Press Enter)");
@@ -2402,17 +2402,20 @@ sub readconf
             next unless length; #  If our line is empty, we ignore it
             my ($var_name, $value) = split(/:/, $_, 2);
             $$var_name = $value;
+            print $DEBUG " \$$var_name = $value \n";
         }
         close(CONF);
     }
-    print $DEBUG " VOBPATH :$VOBPATH\n";
-    print $DEBUG " PARAMS :$params\n";
-    print $DEBUG " FILESIZE:$filesize\n";
-    print $DEBUG " CLUSTER :$CLUSTER\n";
-    print $DEBUG " audio_bitrate :$audio_bitrate\n";
-    print $DEBUG " dvdtitle:$dvdtitle\n";
-    print $DEBUG " deintl:$deintl\n";
-    print $DEBUG "<--- readconf\n";
+    print $DEBUG " OGMTOOL = $OGMTOOL \n";
+    # We need to retest $AO in case user has change
+    # in tmp/V2divx.conf
+    if  ( $OGMTOOL ne "OK"   && $AO eq "ogg" )
+    {
+        $AO="mp3";
+        pwarn("Audio output format reset to MP3, ogmmerge not found on this system\n (Press Enter)");
+        my $junk=<STDIN>;
+}
+
     # set the final movie extension
     $EXT="avi";
     $EXT="ogm" if ( $AO eq "ogg");

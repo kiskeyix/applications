@@ -84,10 +84,11 @@ if [ $MAKELOCALMIRROR -eq 1 ]; then
             mv $k dists/$LOCALRELEASE/main/source > /dev/null 2>&1
         done
     fi
-
+   
     apt-ftparchive packages dists/$LOCALRELEASE/ | gzip > dists/$LOCALRELEASE/main/binary-$ARCH/Packages.gz
     apt-ftparchive contents dists/$LOCALRELEASE/ | gzip > dists/$LOCALRELEASE/main/binary-$ARCH/Contents-$ARCH.gz
     apt-ftparchive sources dists/$LOCALRELEASE/ | gzip > dists/$LOCALRELEASE/main/source/Sources.gz
+    
     debug "Making release file"
     apt-ftparchive release dists/$LOCALRELEASE/ > dists/$LOCALRELEASE/Release
     info "To access your local mirror, add a line"

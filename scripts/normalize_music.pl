@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2004-Dec-07
 #
@@ -13,6 +13,7 @@ $|++;
 my $revision = "1.0"; # version
 
 # standard Perl modules
+use utf8;
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
 use POSIX;                  # cwd() ... man POSIX
@@ -24,14 +25,18 @@ use File::Basename; # basename() && dirname()
 
 use MP3::Tag;
 
+# Globals (no need to change any variables @see $0 --help)
 my $MUSIC_FILES = '\.(mp3|ogg)$'; # files we will find
+my @TAGS = ('song','track','artist','album');
+
+my @ls=();
 
 # Args:
 my $PVERSION=0;
 my $HELP=0;
 my $DEBUG=0;
 
-my $FILE;
+my $FILE=undef;
 
 # get options
 GetOptions(
@@ -55,33 +60,51 @@ if ( $HELP ) {
 
 if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
 
-my @tags = ('song','track','artist','album');
-
-if ( -f $FILE )
+#main
+if ( defined ($FILE) and -f $FILE )
 {
-    my $mp3 = MP3::Tag->new($FILE);
-    my $hashref = $mp3->autoinfo();
-    print STDOUT "file\t$FILE\n";
-    foreach(@tags)
+   print STDERR _rename($FILE),"\n";  # print error if any
+} else {
+    my $aryref = do_file_ary(".");
+    foreach(@$aryref)
     {
-        print STDOUT ($_, "\t", $hashref->{$_}, "\n");
+        print STDERR _rename($_),"\n";
     }
-    my ($track,$garbage) = split(/\//,$hashref->{'track'});
-    $FILE =~ m/(\.[a-zA-Z0-9]{1,5})$/; # catches the extension in $1
-    print STDERR ("DEBUG: EXT $1\n") if ( $DEBUG );
-    my $path = lc( catdir($hashref->{'artist'},$hashref->{'album'}) );
-    my $file = lc( catfile($path,$track."-".$hashref->{'song'}.$1) );
-    print STDOUT ("to file\t$file\n");
-    if ( ! -f "$file" )
-    {
-        print STDERR ("DEBUG: use path $path\n") if ( $DEBUG );
-        _mkdir($path) if ( ! -d "$path" );
-        if ( ! rename ( "$FILE","$file" ) )
-        {
-            print STDOUT ("Renaming $FILE to $file failed. Do you have permissions to write in $path?\n");
-        }
-    } else {
-        print STDOUT ("$FILE skipped ... $file already exist.\n");
+}
+
+# support functions
+sub do_file_ary {
+    # uses find() to recur thru directories
+    # returns an array of files
+    # i.e. in directory "a" with the files:
+    # /a/file.txt
+    # /a/b/file-b.txt
+    # /a/b/c/file-c.txt
+    # /a/b2/c2/file-c2.txt
+    # 
+    # my $aryref = do_file_ary(".");
+    # 
+    # will yield:
+    # a/file.txt
+    # a/b/file-b.txt
+    # a/b/c/file-c.txt
+    # a/b2/c2/file-c2.txt
+    # 
+    my $ROOT = shift;
+    my %opt = (wanted => \&process_file, no_chdir=>1);
+    
+    find(\%opt,$ROOT);
+    return \@ls;
+}
+
+sub process_file {
+    my $base_name = basename($_);
+    if ( 
+        $_ =~ m($MUSIC_FILES)i &&
+        -f $_
+    ) {
+        s/^\.\/*//g;
+        push @ls,$_;
     }
 }
 
@@ -100,6 +123,43 @@ sub _mkdir
         $flag++;
     }
     return $flag; # number of directories created
+}
+
+sub _rename
+{
+    my $this_file=shift;
+    my $mp3 = MP3::Tag->new($this_file);
+    my $hashref = $mp3->autoinfo();
+    no warnings;
+    print STDOUT ("_"x69,"\n");
+    print STDOUT "file\t$this_file\n";
+    foreach(@TAGS)
+    {
+        return "$_ missing. Bailing out" if ( $hashref->{$_} =~ m/^\s*$/ );
+        # clean chars that might not be good for filenames
+        $hashref->{$_} =~ s/[^ραινσϊ\w\d\!\@\*\#\%\(\)\[\]\_\-\:\,\.\'\"\{\}\=\+]//gi;
+        print STDOUT ($_, "\t", $hashref->{$_}, "\n");
+    }
+    my ($track,$garbage) = split(/\//,$hashref->{'track'});
+    $track =~ s/^(\d{2}).*$/$1/g;
+    $this_file =~ m/(\.[a-zA-Z0-9]{1,5})$/; # catches the extension in $1
+    print STDERR ("DEBUG: EXT $1\n") if ( $DEBUG );
+    my $path = lc( catdir($hashref->{'artist'},$hashref->{'album'}) );
+    my $file = lc( catfile($path,$track."-".$hashref->{'song'}.$1) );
+    print STDOUT ("to file\t$file\n");
+    # silently bail out if we have done this file before
+    return "" if ( $file eq $this_file );
+    if ( ! -f "$file" )
+    {
+        print STDERR ("DEBUG: use path $path\n") if ( $DEBUG );
+        _mkdir($path) if ( ! -d "$path" );
+        if ( ! rename ( "$this_file","$file" ) )
+        {
+            print STDOUT ("Renaming $this_file to $file failed. Do you have permissions to write in $path?\n");
+        }
+    } else {
+        print STDOUT ("$file skipped\n"); # we'll never reach here
+    }
 }
 
 __END__

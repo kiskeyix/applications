@@ -1,14 +1,20 @@
 #!/bin/sh
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Apr-04
+# Last modified: 2003-Dec-19
 #
 # DESCRIPTION: a script to start|stop "webcam"
-# USAGE: webcam.sh [start|stop|restart] 
+# USAGE: webcam.sh [start|stop|restart] [config_file]
 # TODO:
 #       -   when user sets EMAILUSER he/she probably don't 
 #           care about an STDERR message ...
 #   
+
+CONFIG_FILE="$HOME/.webcamrc-web"
+
+if [ -f "$2" ]; then
+    CONFIG_FILE="$2"
+fi
 
 EMAILUSER=yes           # should an email notification be sent to $USER?
 EMAILADDRESS="lemsx1@hotmail.com" # public email or local user
@@ -17,9 +23,9 @@ EMAILBIN="/usr/bin/mutt"    # a client that supports -s (subject)
 MV="/bin/mv -fu"    # force move only updated files (fu)
 
 USER=luigi
-PHOTO=$HOME/Documents/mypicts/tmp   # this should be set in a ~/.rc. This directory holds all new picts
+PHOTO="$HOME/Documents/mypicts/tmp"   # this should be set in a ~/.rc. This directory holds all new picts
 
-PID=$HOME/webcam.pid   # Process ID of current server
+PID="$HOME/webcam.pid"   # Process ID of current server
 
 PATH=/bin:/usr/bin  # path to search for commands
 
@@ -31,7 +37,7 @@ DESC="Zoom USB Camera with Webcam"
 
 CMDLINE=""          # extra arguments to daemon?
 
-APPENDTONAME=`date +%Y-%m-%d`
+APPENDTONAME="`date +%Y-%m-%d`"
 
 ##############################################################
 #                       End configuration                    #
@@ -74,11 +80,11 @@ case "$1" in
         mkdir $PHOTO
     fi
 
-    echo -n "Starting $DESC: "
+    echo -n "Starting $DESC [config: $CONFIG_FILE]: "
 
     /sbin/start-stop-daemon --background $CHUID --start \
         --make-pidfile --pidfile $PID \
-        --verbose --exec $DAEMON $CMDLINE || echo -n "<Failed> "
+        --verbose --exec $DAEMON $CMDLINE $CONFIG_FILE || echo -n "<Failed> "
 
     echo -n "$NAME"
     

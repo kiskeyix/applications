@@ -1,7 +1,7 @@
 #!/bin/bash
-# $Revision: 1.17 $
+# $Revision: 1.18 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Aug-30
+# Last modified: 2003-Sep-28
 #
 # DESCRIPTION:  an interactive wrapper to Debian's "make-kpkg"
 #               to build a custom kernel package.
@@ -95,12 +95,13 @@ if [ $1 -a $1 != "--help" ]; then
 
     if [ $makeit == 1 ]; then
         echo -e "Building kernel \n"
+        make-kpkg clean
         make-kpkg   --rootcmd $FAKEROOT \
         --initrd \
         --config oldconfig \
         --append-to-version -custom.$1 \
         --revision $REVISION \
-        clean kernel_image $KERNEL_HEADERS
+        kernel_image $KERNEL_HEADERS
     fi
 
     # Sometimes we just want to make the headers indepentently
@@ -129,11 +130,12 @@ if [ $1 -a $1 != "--help" ]; then
     esac
     
     if [ $mmakeit == 1 ]; then
+        make-kpkg clean modules_clean
         make-kpkg   --rootcmd $FAKEROOT \
         --config oldconfig \
         --append-to-version -custom.$1 \
         --revision $REVISION \
-        modules_clean modules_image
+        modules_image
     fi
 else
     echo -e "Usage: $0 ## \n \t Where ## is an interger or string to append to the kernel name"

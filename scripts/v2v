@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.53 $
+# $Revision: 1.54 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -181,6 +181,7 @@ sub perror;
 sub pwarn;
 sub smily;
 sub get_fps;
+sub get_tail;
 # system
 sub mydie;
 sub config;
@@ -434,6 +435,34 @@ if (1)
 }
 
 ######################## FUNCTIONS #########################
+sub get_tail 
+{
+    use vars qw($opt_b $opt_c $opt_f $opt_h $opt_n $opt_r);
+
+    # reimplementation of 
+    # http://www.perl.com/language/ppt/src/tail/tail.thierry
+    # @param 0 str filename
+    # @param 1 int number of lines [negative -1 means last line]
+    my ($f,$n) = @_;
+    my $i = 0;
+    my @buf;
+    
+    open(FH,$f) or pwarn("Could not open $f for reading: $!\n");
+
+    while(<FH>) {
+        $i++;
+        $buf[$i%(-$n)] = $_;
+    }
+
+    my @tail = (@buf[ ($i%(-$n) + 1) .. $#buf ], 
+    @buf[  0 .. $i%(-$n) ]);
+    @tail = reverse @tail if $opt_r;
+    for (@tail) {
+        # instead of printing, put in @array and return this
+        # instead...
+        print if $_; # @tail may begin or end with undef
+    }
+} # end get_tail
 
 sub get_fps {
     # returns a string with number of frames per second
@@ -450,18 +479,13 @@ sub ask_ntsc {
     # @param 0 str $FPS := float [25.00 or 23.97 or 29.97 ... ]
     # ask user a yes or no question about whether
     # NTSC is needed and sets proper parameters
-    # accordingly.
+    # accordingly. And lastly, returns string $VIDEONORM.
     #
     # Also, we assume NTSC (no telecine) if FPS
     # is 29.970 (pass as argument)
-    #
     # example: ask_ntsc($FPS);
-    #
-    # After that it sets globals VIDEONORM and TELECINE
-    # accordingly. And lastly, returns string $VIDEONORM
     $FPS = shift;
-
-    print(" Is this Movie a NTSC TELECINE movie".
+    print STDOUT (" Is this Movie a NTSC TELECINE movie".
     " (MPlayer is your friend to know that)? [y|N]");
     my $rep=<STDIN>;
     chomp($rep);
@@ -917,9 +941,9 @@ sub audiorescale
     print $DEBUG "<--- audiorescale\n";
 }  # END audiorescale
 
-# This function just display a clock to wait
 sub smily
 {
+    # This function just display a clock to wait
     unlink("tmp/$_[0].finish");
     @t=('|','/','-','\\');
     my $i=0;
@@ -1416,8 +1440,8 @@ sub ask_clust
             }
             $VIDEONORM = ask_ntsc( $FPS );
             create_nav($VIDEONORM);
-
-            # TODO use Perl seek() to read this last line
+            # TODO use Perl to read this line
+            #get_tail("tmp/file.nav",-1);
             my $stream_units=`tail -1 tmp/file.nav | awk '{print \$1}'`;
             chomp($stream_units);
             # Take care if there are too many stream units !!
@@ -1689,22 +1713,21 @@ sub create_nav
     if ($pid)
     {
         $sys = "cat $VOBPATH/* | tcdemux $demux -W > tmp/file.nav";
-        print $INFO $sys."\n";
+        pinfo($sys."\n");
         system ("nice -$nice $sys") == 0  
             or ( system ("touch tmp/filenav.finish")== 0 
-            and mydie "Unable to create file nav" );
+            and mydie "Unable to create file nav\n" );
         system("touch tmp/filenav.finish");	
         wait;
         system("touch tmp/filenav-ok");
     } else {
         smily(filenav);
     }
-}
-
-#  ****** Create extract info (to calculate bitrate) ****** #
+} # end create_nav
 
 sub create_extract
 {
+    #  ****** Create extract info (to calculate bitrate) ****** #
     $TELECINE=0;
     print $DEBUG "--->  Enter create_extract\n";
     get_audio_channel if ( ! defined($audio_channel));
@@ -1805,10 +1828,9 @@ sub create_extract
     print $DEBUG "<--- create_extract\n";
 } # end create_extract
 
-#  ***** Calculate How many Frames to encode ***** #
-
 sub calculate_nbrframe
 {
+    #  ***** Calculate How many Frames to encode ***** #
     print $DEBUG "---> Enter calculate_nbrframe\n";
     # We need Info about Clip
 
@@ -1841,12 +1863,10 @@ sub calculate_nbrframe
     print $DEBUG "<--- calculate_nbrframe\n";
 } # end calculate_nbrframe
 
-#  ********** Calculate Bitrate ****************
-
 sub calculate_bitrate
 {	
+    #  ********** Calculate Bitrate ****************
     print $DEBUG "--->  Enter calculate_bitrate\n";
-
     # We need Audio Bitrate
     a_bitrate if ( ! defined($audio_bitrate) );
 
@@ -1904,10 +1924,9 @@ sub calculate_bitrate
 
 } # END calculate_bitrate
 
-# ********** Main Avi encode ***************
-
 sub aviencode
 {
+    # ********** Main Avi encode ***************
     print $DEBUG "--->  Enter aviencode\n";
     # Zooming MUST have been call before aviencode
     # zooming will give us $filesize $bitrate and 	Zoom
@@ -1986,10 +2005,10 @@ sub aviencode
         $audio_params="-a $1";
         $audio_format=audioformat("$audio_params") if ( ! defined($audio_format));
         # Only ONE FILE allowed if input Video type is AVI, QT, DV , MPEG2
-        $VOBPATH="$VOBPATH/$sample" if ( $in_video_magic eq divx || 
-            $in_video_magic eq mov || 
-            $in_video_magic eq 'mpeg2'  || 
-            $in_video_magic eq dv  );
+        $VOBPATH="$VOBPATH/$sample" if ( $in_video_magic eq "divx" || 
+            $in_video_magic eq "mov" || 
+            $in_video_magic eq "mpeg2"  || 
+            $in_video_magic eq "dv"  );
         # Let transcode find it, if input audio type is "declared" as PCM
         $audio_format="" if ( $audio_format eq pcm );
         $audio_format="vob" if ( $in_video_codec eq vob );
@@ -2081,10 +2100,9 @@ sub aviencode
     print $DEBUG "<--- aviencode\n";
 } # END Aviencode
 
-# ********* MERGING ( and syncing )Function **************#
-
 sub merge
 {	
+    # ********* MERGING ( and syncing )Function **************#
     # Do not merge sequence unit if not cluster mode
     system("touch tmp/merge.finish") if ( $CLUSTER eq "NO" );
 
@@ -2184,10 +2202,9 @@ sub merge
 
 } # END merge
 
-# ######## Encode the optionnal second audio channel ########## #
-
 sub twoac
 {
+    # ######## Encode the optionnal second audio channel ########## #
     print $DEBUG "---> Enter twoac\n";
     return() if ( ! defined($ac2));
     audioformat("-a $ac2");
@@ -2219,10 +2236,9 @@ sub twoac
     print $DEBUG "<--- twoac\n";
 } # END 2ac
 
-# ############ Finish the work ############# #
-
 sub finish
 {
+    # ############ Finish the work ############# #
     print $DEBUG "---> Enter finish\n";
     if (! -e "tmp/finish")
     {
@@ -2292,13 +2308,11 @@ sub finish
     mydie $NORM."Bye !!!";
 }  # ENd finish
 
-#   *************   Get Audio Bitrage ************ #
-
 sub a_bitrate
-{      	
+{ 
+    #   *************   Get Audio Bitrage ************ #  	
     print $DEBUG "--->  Enter Audio_bitrate\n";
-    $AO="null"  if ( $NOAUDIO == 1 );
- 
+    $AO="null"  if ( $NOAUDIO == 1 ); 
     $audio_bitrate ='null' if ( $NOAUDIO == 1 );
     while ( $audio_bitrate ne 'null' 
         && $audio_bitrate ne 32 
@@ -2325,9 +2339,9 @@ sub a_bitrate
     print $DEBUG "<--- Audio_bitrate\n";
 }
 
-# ******** Read actual conf ********** #
 sub readconf
 {
+    # ******** Read actual conf ********** #
     print $DEBUG "---> Enter readconf\n";
     if ( -f "tmp/V2divx.conf")
     {
@@ -2359,9 +2373,9 @@ sub readconf
     $EXT="ogg" if ( $AO eq "ogg");
 } # end readconf
 
-#  ************* Get Needed parameters ************ #
 sub get_params
 {  	
+    #  ************* Get Needed parameters ************ #
     print $DEBUG "--->  Enter get_params\n";
     if ( ! -f "tmp/V2divx.conf")
     {
@@ -2505,10 +2519,9 @@ sub get_params
     print $DEBUG "<--- get_params\n";
 } # end get params
 
-# ##################### Audio Input format ###################
-
 sub audioformat
 {
+    # ##################### Audio Input format ###################
     print $DEBUG "---> Enter audioformat\n";
     if ( $NOAUDIO == 1 )
     {
@@ -2615,9 +2628,9 @@ sub videoformat
     # use tcprobe (videoformat_old) in this case to 
 }
 
-#******************* Make Audio sample **************
 sub make_sample
 {
+    #******************* Make Audio sample **************
     @actmp=split /-a/,@_[0];
     @actmp=split / /,@actmp[1];
     print $DEBUG "Params for sound Samples are: @_[0], on file  @_[1], frames=@_[2]\n";
@@ -2705,12 +2718,11 @@ sub ask_logo
     print CONF "#poslogo:$poslogo\n" if ( defined($poslogo));
     print CONF "#beginlogo:$beginlogo\n" if ( defined($beginlogo));
     close(CONF);
-}
-# END ask_logo
+} # END ask_logo
 
-#******************Evaluate the Zoom*********************
 sub zooming
 {
+    #******************Evaluate the Zoom*********************
     print $DEBUG "---> Enter Zooming\n";
     # We need the Bitrate to calculate new image Size for the bpp
     calculate_bitrate;
@@ -2825,10 +2837,9 @@ sub zooming
     print $DEBUG "<--- Zooming\n";
 } # end zooming
 
-# ********************** Config ****************************
-
 sub config
 {       
+    # ********************** Config ****************************
     print $DEBUG "--->  Enter config\n";
     mydie "There is still a tmp/V2divx.conf , please remove all tmp files".
         "\n (or at least tmp/V2divx.conf) before running V2divx /path/to/vob sample" 
@@ -3241,9 +3252,9 @@ sub config
 
 }   # END Config 
 
-# *************** RIP A DVD ***********************
 sub ripdvd
 { 	
+    # *************** RIP A DVD ***********************
     $VOBPATH= $ARGV[0];
     ( -e $VOBPATH ) or mydie "Directory \"$VOBPATH\" does not exist \n Sorry";
     print " On which device is your DVD [default: /dev/dvd]? " ;

@@ -1,9 +1,9 @@
 #!/usr/bin/perl -w
-# $Revision: 1.2 $
-# $Date: 2003-03-10 00:48:45 $
+# $Revision: 1.3 $
+# $Date: 2003-03-11 00:58:44 $
 #
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Mar-09
+# Last modified: 2003-Mar-11
 #
 # DESCRIPTION: interactively create a new
 #               virtual website
@@ -54,6 +54,13 @@ my $SITE=prompt("Enter site: ");
 my $WEBMASTER=prompt("Enter webmaster username: ");
 my $WEBMASTER_EMAIL="$WEBMASTER\@$SITE";
 
+# default Volume policy for mod_throttle
+my $VOLUME="375m"; # 3Gbits = 375MBytes
+my $PERIOD="4w";   # montly = 4w
+
+$VOLUME=prompt("Please Enter mod_throtle volume[$VOLUME]: ",$VOLUME);
+$PERIOD=prompt("Please Enter mod_throttle period[$PERIOD]: ",$PERIOD);
+
 # virtual hosts go to:
 my $APACHE_CONF="/etc/apache/httpd.conf";
 # virtual email go to:
@@ -62,7 +69,7 @@ my $SMTP_VIRTUAL="/etc/postfix/virtual";
 $APACHE_CONF=prompt("Enter apache config file[$APACHE_CONF]: ",$APACHE_CONF);
 $SMTP_VIRTUAL=prompt("Enter SMTP virtual config file[$SMTP_VIRTUAL]: ",$SMTP_VIRTUAL);
 
-my $APACHE_HOST_TEMPLATE="\n<VirtualHost $SERVER_IP>\nServerAdmin $WEBMASTER_EMAIL\nDocumentRoot /home/$WEBMASTER/$SITE/html\nServerName $SITE\nErrorLog /var/log/apache/$SITE-error.log\nCustomLog /var/log/apache/$SITE-access_log combined\n<Directory />\nAllowOverride FileInfo AuthConfig Limit Options\n</Directory>\n</VirtualHost>\n";
+my $APACHE_HOST_TEMPLATE="\n<VirtualHost $SERVER_IP>\nThrottlePolicy Volume 375m 4w\nServerAdmin $WEBMASTER_EMAIL\nDocumentRoot /home/$WEBMASTER/$SITE/html\nServerName $SITE\nErrorLog /var/log/apache/$SITE-error.log\nCustomLog /var/log/apache/$SITE-access_log combined\n<Directory />\nAllowOverride FileInfo AuthConfig Limit Options\n</Directory>\n</VirtualHost>\n";
 
 # print output to files:
 # summary to STDOUT
@@ -71,6 +78,15 @@ print STDOUT "\tServer IP: $SERVER_IP\n";
 print STDOUT "\tSite: $SITE\n";
 print STDOUT "\tWebmaster: $WEBMASTER\n";
 print STDOUT "\tE-Mail: $WEBMASTER_EMAIL\n";
+
+# prompt user whether he/she wants to go ahead with changes
+my $CONFIRM="n";
+$CONFIRM=prompt("Go ahead and commit these values[N]: ",$CONFIRM);
+
+if ( $CONFIRM !~ m/^ *y/i){
+    print STDERR "Changes discarded\n";
+    exit(0);
+}
 
 # user was created using the following:
 #

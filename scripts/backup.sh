@@ -1,4 +1,5 @@
 #!/bin/sh
+# $Id: backup.sh,v 1.2 2002-09-15 05:36:40 luigi Exp $
 # Last modified: 2002-Jul-30
 # Luis Mondesi < lemsx1@hotmail.com >
 # backup a site every night

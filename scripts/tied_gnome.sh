@@ -1,7 +1,7 @@
 #!/bin/sh
-# $Revision: 1.13 $
+# $Revision: 1.14 $
 # luis mondesi <lemsx1@hotmail.com>
-# Last modified: 2004-Feb-11
+# Last modified: 2004-Apr-12
 #
 # DESCRIPTION:  a simple Gnome 2 script for sysadmins to 
 #		set a bunch of gnome defaults. Remember 
@@ -30,6 +30,8 @@
 # better just copy these settings to
 # /etc/default/tied_gnome
 # and then make modifications in that file instead
+
+DEBUG=0
 
 # tool used to set all settings here
 GCONFTOOL="/usr/bin/gconftool-2"
@@ -98,6 +100,7 @@ BROWSER="firefox"
 # the user could copy any of the settings from above into
 # /etc/defaults/tied_gnome
 if [ -f /etc/default/tied_gnome ];then
+    echo "Reading /etc/default/tied_gnome"
     . /etc/default/tied_gnome
 fi
 
@@ -154,6 +157,9 @@ set_mandatory()
 {
     # @arg $1 path
     # @arg $2 string
+    if [ $DEBUG = 1 ]; then
+        echo "Mandatory: '$1'='$2'"
+    fi
     $GCONFTOOL --direct \
     --config-source xml:readwrite:/etc/gconf/gconf.xml.mandatory \
     --type string --set $1 "$2"
@@ -226,7 +232,11 @@ set_mandatory "/apps/panel/global/menu_key" "$MENU_KEY"
 set_mandatory "/apps/metacity/global_keybindings/panel_main_menu" "$MENU_KEY"
 
 # themes
-if [ $DEFAULT_THEME != 0 ]; then
+if [ $DEFAULT_THEME = 1 ]; then
+    set_mandatory "/desktop/gnome/interface/gtk_theme" "$GTK_THEME"
+    set_mandatory "/desktop/gnome/interface/icon_theme" "$ICON_THEME"
+    set_mandatory "/apps/metacity/general/theme" "$METACITY_THEME"
+else
     # unset mandatory
     unset_mandatory "/desktop/gnome/interface/gtk_theme"
     unset_mandatory "/desktop/gnome/interface/icon_theme"
@@ -238,9 +248,16 @@ if [ $DEFAULT_THEME != 0 ]; then
 fi
 
 # background
-if [ $DEFAULT_BACKGROUND != 0 ]; then
+if [ $DEFAULT_BACKGROUND = 1 ]; then
     set_mandatory "/desktop/gnome/background/picture_filename" "$BACKGROUND"
     set_mandatory "/desktop/gnome/background/picture_options" "$BACKGROUND_ORIENTATION"
+else
+    # remofe old mandatory
+    unset_mandatory "/desktop/gnome/background/picture_filename"
+    unset_mandatory "/desktop/gnome/background/picture_options"
+    # set defaults
+    set_defaults "/desktop/gnome/background/picture_filename" "$BACKGROUND"
+    set_defaults "/desktop/gnome/background/picture_options" "$BACKGROUND_ORIENTATION"
 fi
 
 #fonts

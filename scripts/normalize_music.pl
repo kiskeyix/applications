@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2004-Dec-07
 #
@@ -29,7 +29,7 @@ my $PVERSION=0;
 my $HELP=0;
 my $DEBUG=0;
 
-my $FILE = undef;
+my $FILE;
 
 # get options
 GetOptions(
@@ -41,7 +41,7 @@ GetOptions(
     #'o|option=s'       =>  \$NEW_OPTION,
     # numbers
     #'a|another-option=i'      =>  \$NEW_ANOTHER_OPTION,
-) $FILE = shift;
+) and $FILE = shift;
 
 if ( $HELP ) { 
     use Pod::Text;
@@ -53,20 +53,49 @@ if ( $HELP ) {
 
 if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
 
-if ( defined ($FILE) )
+my @tags = ('song','track','artist','album');
+
+if ( -f $FILE )
 {
-    my $frameIDs_hash = $id3v2->get_frame_ids;
-    foreach my $frame (keys %$frameIDs_hash) {
-        my ($info, $name) = $id3v2->get_frame($frame);
-        if (ref $info) {
-            print "$name ($frame):\n";
-            while(my ($key,$val)=each %$info) {
-                print " * $key => $val\n";
-            }
-        } else {
-            print "$name: $info\n";
-        }
+    my $mp3 = MP3::Tag->new($FILE);
+    my $hashref = $mp3->autoinfo();
+    foreach(@tags)
+    {
+        print STDOUT ($_, "\t", $hashref->{$_}, "\n");
     }
+
+#    $mp3->get_tags();
+#    my $id3v2 = $mp3->{ID3v2} if exists $mp3->{ID3v2};
+#    if ( defined ( $id3v2 ) )
+#    {
+#        my $frameIDs_hash = $id3v2->get_frame_ids;
+#        foreach my $frame (keys %$frameIDs_hash) {
+#            my ($info, $name) = $id3v2->get_frame($frame);
+#            if (ref $info) {
+#                print "$name ($frame):\n";
+#                while(my ($key,$val)=each %$info) {
+#                    print " * $key => $val\n";
+#                }
+#            } else {
+#                print "$name: $info\n";
+#            }
+#        }
+#    } else {
+#        print STDERR "$FILE does not have id3v2 tags\n";
+#    }
+}
+
+sub _mp3_info
+{
+    my $handle = shift;
+    my %record = ();
+
+    $record{"song"} = $handle->song();
+    $record{"track"} = $handle->track();
+    $record{"artist"} = $handle->artist();
+    $record{"album"} = $handle->album();
+
+    return \%record;
 }
 
 __END__

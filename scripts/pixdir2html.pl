@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.12 $
+# $Revision: 1.13 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE:
@@ -120,6 +120,7 @@ my $SAVELOG = "/usr/bin/savelog";
 #**************************************************************#
 
 my @pixdir = (); # for menu
+my @pixfile = (); # for thumbfiles/pictures
 
 my %myconfig = (); # init config hash
 
@@ -425,35 +426,23 @@ sub thumbfile {
     my $i=0;
     my $total_picts=0;
 
-    opendir (DIR,"$ROOT") || die "Couldn't open dir $ROOT";
+    # TODO not needed if do_dir_ary works...
+    # check also while loop
+    #opendir (DIR,"$ROOT") || die "Couldn't open dir $ROOT";
 
     print LOGFILE ("Making HTML files in $ROOT \n");
 
     #construct array of all image files
-    while (defined($thisFile = readdir(DIR))) {
-        next if ($thisFile =~ m/$EXCEPTION_LIST/);
-        next if ($thisFile !~ /\w/);
-        next if ($thisFile =~ /^\..*/); 
-        # we skip the THUMBNAIL directory and the HTML files directory
-        if (
-            -d "$ROOT/$thisFile" 
-            && $thisFile !~ m/^$HTMLDIR$/ 
-            && $thisFile !~ m/^$THUMBNAIL$/
-        ) {
-            # no need to keep going if we have a nopixdir2htmlrc file
-            if (-f "$ROOT/$thisFile/.nopixdir2htmlrc") {
-                print LOGFILE ".nopixdir2htmlrc file exists in ($thisFile). Skipping ...\n";
-                next;
-            }
+    my @ary = do_file_ary("$HTML_DIRECTORY");
 
-            #$total_directories++;
-            push @subdir,"$ROOT/$thisFile";
-        }
+    foreach (@ary){
+        $thisFile = basename($_);
+        next if ($thisFile =~ m/$EXCEPTION_LIST/);
         next if ($thisFile !~ m/$EXT_INCL_EXPR/i);
-        push @ls,$thisFile;
+        print STDOUT $_."\n";
+        push @ls,$_;
         #$total_picts++;
     } #end images array creation
-    closedir(DIR);
 
     #do we already have a dir with this name? no, then create one
     if (!-d "$HTMLSDIR" && !-f "$ROOT/.nopixdir2htmlrc") { 
@@ -473,6 +462,7 @@ sub thumbfile {
 
         #print all picts now
         foreach(@ls){
+            # strip extension from file name
             ($file_name = $_) =~ s/$EXT_INCL_EXPR//g;
 
             my $current_html_file = "$HTMLSDIR/$file_name.$EXT";
@@ -537,9 +527,9 @@ sub thumbfile {
     } # end if not nopixdirhtml...
 
     # loop thru rest of directories
-    foreach(@subdir){
-        thumbfile("$_"); 
-    }
+    #foreach(@subdir){
+    #    thumbfile("$_"); 
+    #}
 }
 
 sub prompt {
@@ -579,14 +569,14 @@ sub do_dir_ary {
     # 
     my $ROOT = shift;
     
-    my %opt = (wanted => \&process, no_chdir=>1);
+    my %opt = (wanted => \&process_dir, no_chdir=>1);
     
     find(\%opt,$ROOT);
     
     return @pixdir;
 }
 
-sub process {
+sub process_dir {
     my $base_name = basename($_);
     if ( 
         !-f $_ && 
@@ -594,6 +584,43 @@ sub process {
     ) {
         s/^\.\/*//g;
         push @pixdir,$_;
+    }
+}
+
+sub do_file_ary {
+    # uses find() to recur thru directories
+    # returns an array of files
+    # i.e. in directory "a" with the files:
+    # /a/file.txt
+    # /a/b/file-b.txt
+    # /a/b/c/file-c.txt
+    # /a/b2/c2/file-c2.txt
+    # 
+    # my @ary = &do_file_ary(".");
+    # 
+    # will yield:
+    # a/file.txt
+    # a/b/file-b.txt
+    # a/b/c/file-c.txt
+    # a/b2/c2/file-c2.txt
+    # 
+    my $ROOT = shift;
+    
+    my %opt = (wanted => \&process_file, no_chdir=>1);
+    
+    find(\%opt,$ROOT);
+    
+    return @pixfile;
+}
+
+sub process_file {
+    my $base_name = basename($_);
+    if ( 
+        -f $_ && 
+        $base_name !~ m/^($EXCEPTION_LIST|$THUMBNAIL|$HTMLDIR|\..*)$/ 
+    ) {
+        s/^\.\/*//g;
+        push @pixfile,$_;
     }
 }
 

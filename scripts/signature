@@ -1,0 +1,62 @@
+#!/bin/sh
+# $Revision: 1.1 $
+# Luis Mondesi < lemsx1@hotmail.com >
+# Last modified: 2003-Nov-11
+#
+# DESCRIPTION:  A simple script to output a signature
+#               to a ~/.signature or STDOUT controlled
+#               from a ~/.signaturerc file
+# USAGE:
+# CHANGELOG:
+#
+
+# -- copy here -- #
+NAME="Luis M"
+POSITION="System Administrator/Web Developer"
+COMPANY="LatinoMixed.com"
+PHONE=""
+EMAIL="lemsx1@latinomixed.com"
+URL="http://www.latinomixed.com/"
+
+SIGNATURE=1
+QUOTE=1
+STDOUT=1
+RECODE=1
+
+# -- end copy --#
+# Now use that to create a ~/.signaturerc file
+# per server
+. "$HOME"/.signaturerc
+
+# signature header
+if [ $STDOUT -eq 1 ]; then
+    echo -e "----)(----- \n$NAME\n$POSITION\n$COMPANY\n$PHONE\n$EMAIL\n"
+else
+    echo -e "----)(----- \n$NAME\n$POSITION\n$COMPANY\n$PHONE\n$EMAIL\n" > "$HOME/.signature"
+fi
+
+# body
+if [ -x /usr/games/fortune -a $QUOTE -eq 1 ]; then
+    # makes our day a bit more fun.... :-)
+    if [ $STDOUT -eq 1 ]; then
+        if [ $RECODE -eq 1 ];then
+            /usr/games/fortune -s | recode -q ISO-8859-1..utf-8
+        else
+            /usr/games/fortune -s
+        fi
+    else
+        if [ $RECODE -eq 1 ];then
+            /usr/games/fortune -s | recode -q ISO-8859-1..utf-8 >> "$HOME/.signature"
+        else
+            /usr/games/fortune -s  >> "$HOME/.signature"
+
+        fi
+    fi
+fi
+
+# footer
+if [ $STDOUT -eq 1 ]; then
+    echo -e "\n \n $URL"
+else
+    echo -e "\n \n $URL" >> "$HOME/.signature"
+fi

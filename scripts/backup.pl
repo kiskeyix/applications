@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.26 $
+# $Revision: 1.27 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Dec-06
+# Last modified: 2004-Feb-20
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
 #               or a user specified command archiver ( tar? )
@@ -136,7 +136,15 @@
 use strict;
 $|++;
 
-use Archive::Tar;
+# test whether we should use Archive::Tar
+my $ARCHIVE_TAR=1; # assume yes
+eval "use Archive::Tar";
+if ($@)
+{
+    print STDERR "Archive::Tar Perl module not found. You must use TAR=/usr/bin/tar and COMPRESS_DO=/usr/bin/gzip in your ~/.backuprc\n";
+    $ARCHIVE_TAR=0;
+}
+
 use File::Find;     # find();
 use File::Basename; # basename();
 
@@ -148,18 +156,18 @@ my $CONFIG_FILE= $ENV{"HOME"}."/.backuprc";
 $MY_CONFIG{"NAME"} = "backup";      # default name
 
 $MY_CONFIG{"BAK"}="/home/backup";     # default backup directory
-                                    # you might want to change this
-                                    # in your .backuprc file like:
-                                    # BAK="/other/dir"
+# you might want to change this
+# in your .backuprc file like:
+# BAK="/other/dir"
 # tar EXCL list regexp. specify EXCLUDES in your .backuprc to modify 
 $MY_CONFIG{"EXCLUDES"}='\.pid$|\.soc$|\.log$';
 
 $MY_CONFIG{"COMPRESS_LEVEL"} = "9"; # default compression level
 
 $MY_CONFIG{"LOW_UID"} = "1000";     # debian standard lowest uid.
-                                    # change in .backuprc
+# change in .backuprc
 $MY_CONFIG{"EXC_ULIST"} = "man|nobody";  # separated by | . Change in
-                                    # .backuprc
+# .backuprc
 
 # backup "root" home dir, cvsroot and other important stuff
 
@@ -215,7 +223,7 @@ if ( -d $CONFIG{"BAK"} ) {
 }
 
 if ( ! -f $TMP_LOCK ) {
-   
+
     my ($sec,$min,$hour,$mday,$mon,$year) = localtime; # get date
 
     $year += 1900;
@@ -232,7 +240,7 @@ if ( ! -f $TMP_LOCK ) {
     $CONFIG{"NAME"} =~ s/ +//g;
     # look for other strange characters...
     #$CONFIG{"NAME"} = clean($CONFIG{"NAME"});
-    
+
     # NOTE some *NIX systems don't like the "-x" (executable) check 
     # if you are using one of those, then change this to "-e" (exists)
     # or something similar... you have been warned! Solaris?
@@ -248,12 +256,12 @@ if ( ! -f $TMP_LOCK ) {
         # to things like: *.log
         ($TMP_EXCLUDES .= clean_regex($CONFIG{"EXCLUDES"})) =~ s/\|/' --exclude='/g; 
         $TMP_EXCLUDES .= "'";
-        
+
         # construct our main command
         $COMMAND = sprintf("%s cf - %s  xxFILESxx 2> /dev/null",
             $CONFIG{"TAR"},
             $TMP_EXCLUDES
-            );
+        );
     } elsif ( exists $CONFIG{"TAR"} && $DEBUG !=0 ) {
         print STDERR "Tar was given but not found! \n";
     }
@@ -280,9 +288,9 @@ if ( ! -f $TMP_LOCK ) {
         # with backup
         # emit an audible alert
         system("/usr/bin/flite -t 'Starting backup process at ".
-                $hour." ".$min."'");
+            $hour." ".$min."'");
     }
-    
+
     # System backup
     if ( exists $CONFIG{"SYSTEM"} ) {
         # backup system
@@ -306,8 +314,8 @@ if ( ! -f $TMP_LOCK ) {
             ( $TMP_COMMAND = $COMMAND) =~ s/xxFILESxx/$TMP_FILE_LIST/;
 
             $SYSTEM_COMMAND = sprintf("%s > %s",
-            $TMP_COMMAND,
-            $TMP_FILE_NAME);
+                $TMP_COMMAND,
+                $TMP_FILE_NAME);
 
             print STDOUT "+ exec: $SYSTEM_COMMAND \n" if ($DEBUG > 0);
 
@@ -323,12 +331,16 @@ if ( ! -f $TMP_LOCK ) {
                     push(@filelist,@ary);
                 }
             }
-
-            Archive::Tar->create_archive (
-                $CONFIG{"NAME"}."-system-$MIDDLE_STR.tar.gz", 
-                $CONFIG{"COMPRESS_LEVEL"}, 
-                @filelist
-            );
+            if ( $ARCHIVE_TAR == 1 )
+            {
+                Archive::Tar->create_archive (
+                    $CONFIG{"NAME"}."-system-$MIDDLE_STR.tar.gz", 
+                    $CONFIG{"COMPRESS_LEVEL"}, 
+                    @filelist
+                );
+            } else {
+                print STDERR "Ditto. Nothing to do because Archive::Tar is not found! \$CONFIG{'SYSTEM'}\n";
+            }
         }
     } # end if $CONFIG{"SYSTEM"} 
 
@@ -381,8 +393,8 @@ if ( ! -f $TMP_LOCK ) {
             ( $TMP_COMMAND = $COMMAND) =~ s/xxFILESxx/$TMP_FILE_LIST/;
 
             $SYSTEM_COMMAND = sprintf("%s > %s",
-            $TMP_COMMAND,
-            $TMP_FILE_NAME);
+                $TMP_COMMAND,
+                $TMP_FILE_NAME);
 
             print STDOUT "+ users exec: $SYSTEM_COMMAND \n" if ($DEBUG > 0);
             system($SYSTEM_COMMAND);
@@ -395,11 +407,16 @@ if ( ! -f $TMP_LOCK ) {
                 push(@filelist,@ary);
             } # end if volume
             #print STDOUT join(" ",@filelist)."\n";
-            Archive::Tar->create_archive (
-                $CONFIG{"NAME"}."-user-$k-$MIDDLE_STR.tar.gz", 
-                $CONFIG{"COMPRESS_LEVEL"}, 
-                @filelist
-            );
+            if ( $ARCHIVE_TAR == 1 )
+            {
+                Archive::Tar->create_archive (
+                    $CONFIG{"NAME"}."-user-$k-$MIDDLE_STR.tar.gz", 
+                    $CONFIG{"COMPRESS_LEVEL"}, 
+                    @filelist
+                );
+            } else {
+                print STDERR "Ditto. Nothing to do because Archive::Tar is not found! \$CONFIG{'USER'} $k\n";
+            }
         } #end if/else use_tar
 
         # reset array
@@ -433,8 +450,8 @@ if ( ! -f $TMP_LOCK ) {
             ( $TMP_COMMAND = $COMMAND) =~ s/xxFILESxx/$TMP_FILE_LIST/;
 
             $SYSTEM_COMMAND = sprintf("%s > %s",
-            $TMP_COMMAND,
-            $TMP_FILE_NAME);
+                $TMP_COMMAND,
+                $TMP_FILE_NAME);
 
             print STDOUT "+ others exec: $SYSTEM_COMMAND \n" if ($DEBUG > 0);
 
@@ -449,12 +466,17 @@ if ( ! -f $TMP_LOCK ) {
                     push(@filelist,@ary);
                 }
             }
+            if ( $ARCHIVE_TAR == 1 )
+            {
 
-            Archive::Tar->create_archive (
-                $CONFIG{"NAME"}."-other-$MIDDLE_STR.tar.gz", 
-                $CONFIG{"COMPRESS_LEVEL"}, 
-                @filelist
-            );
+                Archive::Tar->create_archive (
+                    $CONFIG{"NAME"}."-other-$MIDDLE_STR.tar.gz", 
+                    $CONFIG{"COMPRESS_LEVEL"}, 
+                    @filelist
+                );
+            } else {
+                print STDERR "Ditto. Nothing to do because Archive::Tar is not found! \$CONFIG{'OTHER'}\n";
+            }
         }
     } # end if $CONFIG{"DIRS"}
 

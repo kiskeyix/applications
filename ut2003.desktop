@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Unreal Tournament 2003
+Comment=
+Exec=/usr/local/games/ut2003/ut2003 %U
+Terminal=false
+MultipleArgs=false
+Type=Application
+Icon=/usr/local/games/ut2003/Unreal.xpm
+Categories=Application;Games

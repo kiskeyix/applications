@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Unreal Tournament
+Comment=
+Exec=/usr/local/games/ut/ut %U
+Terminal=false
+MultipleArgs=false
+Type=Application
+Icon=/usr/local/games/ut/icon.xpm
+Categories=Application;Games

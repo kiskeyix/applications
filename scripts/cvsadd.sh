@@ -9,11 +9,14 @@
 
 if [ -f $1 ]; then
     for file in $*; do
-        #echo "Adding ${file} to current CVS tree"
-        cvs add ${file} > /dev/null 2>&1 && cvs commit -m "first commit" ${file} > /dev/null 2>&1 &
-        if [ $? != 0 ]; then
+        cvs add ${file} 2> /dev/null
+        if [ $? == 0 ]; then
+            cvs commit -m "first commit" ${file} > /dev/null 2>&1 &
+        else
             echo "Error adding = ${file} = to the repository. Please add it by hand"
+
         fi
+
     done
 else 
     echo "Usage: cvsadd.sh filename [filename2]"

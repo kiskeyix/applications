@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.23 $
+# $Revision: 1.24 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -1233,6 +1233,7 @@ sub cluster
         {
             # Luis Mondesi 
             # This is a potentially dangerous loop...
+            # Is a transcode process really running?
             while ( ! -e "tmp/2-$dvdtitle${endnode}_0.finish" )
             {
                 print "\r|"; 
@@ -1790,12 +1791,12 @@ sub a_bitrate
     $audio_bitrate ='null' if ( $NOAUDIO == 1 );
     while ( $audio_bitrate ne 'null' && $audio_bitrate ne 32 && $audio_bitrate ne 48 && $audio_bitrate ne 64 && $audio_bitrate ne 96 && $audio_bitrate ne 128 && $audio_bitrate ne 256 )
     {
-        print " Enter the desired MP3 Audio output bitrate (Kb/s) [default:96]: ";
+        print " Enter the desired MP3 Audio output bitrate (Kb/s) [default:128]: ";
         $audio_bitrate=<STDIN>;
         chomp($audio_bitrate);
         if ( $audio_bitrate eq "" )
         {
-            $audio_bitrate=96;
+            $audio_bitrate=128;
             last;
         }
     }
@@ -1875,7 +1876,7 @@ sub get_params
     }
 
     chk_wdir;
-    $audio_bitrate=96 if ( ! defined($audio_bitrate));	
+    $audio_bitrate=128 if ( ! defined($audio_bitrate));	
     ask_clust if (! defined($CLUSTER) );
 
     #   For Quick mode only .....	

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Jan-20
 #
@@ -71,8 +71,8 @@ if ( $MASTER )
             unlink($i); # silently delete old copies
         }
         print STDOUT "\n";
-        printf STDOUT ("%20s","wGetting $MASTER_HOST/$i");
-        system("wget $WGET_ARGS $MASTER_HOST/$i");
+        printf STDOUT ("%20s","wGetting $MASTER_HOST/$i ");
+        system("wget $WGET_ARGS $MASTER_HOST/$i ".$silent);
         print STDOUT ( $? ) ? " failed": " done";
     }
     chdir("$ENV{'HOME'}");

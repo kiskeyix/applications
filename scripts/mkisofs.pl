@@ -1,14 +1,24 @@
 #!/usr/bin/perl -w
-# a quick nautilus script to make isos... 
-# Just select the directory you want and choose this script
+# $Revision: 1.15 $
+# Luis Mondesi || lemsx1 at gmail !! com 
+# LICENSE: GPL (http://gnu.org/licenses/gpl.txt)
+#
+# A quick nautilus script to make CDROM/DVDROM images (ISOs).
+#
+# Simply select the directory you want and choose this script
 # from the nautilus script menu.
 #
-# from the command line you can do:
-# mkisofs.pl DIR
-# or
-# mkisofs.pl DIR dvd # to make a DVD image
+# It can also be used from the command line passing the following 
+# arguments:
+# mkisofs.pl DIR            # makes ISO with default 680MB limit
+# mkisofs.pl --dvd DIR      # makes a DVD image
+# mkisofs.pl --size=780 DIR # makes ISO with 780MB limit
+#
 use strict;
 $|++;
+
+use Getopt::Long;
+Getopt::Long::Configure('bundling');
 
 use POSIX qw(ceil getcwd); # ceil()
 use File::Spec::Functions qw(splitpath curdir updir catfile catdir splitpath);
@@ -18,7 +28,10 @@ use File::Temp qw( tmpnam );
 my $DEBUG=0;
 my $VOLIDMAXLENGTH=32;
 my $FILENAMEMAXLENGTH=59; # gives room to 4 char extensions
-my $ISOLIMIT=680; # in MB (*1024)
+my $ISOLIMIT=680;   # in megabytes (1*1024 kBytes) NOTE: Do not set to 
+                    # your media limit; allow some extra space 
+                    # for ISO9660 overhead (Joliet+RR extentions)
+                    # i.e. 680 for 700MB disks should be fine
 
 my ($logfh,$logfile) = tmpnam();
 open ($logfh,">$logfile");
@@ -28,9 +41,25 @@ open ($logfh,">$logfile");
 # a single directory and then run this script on that directory
 # $ENV{"NAUTILUS_SCRIPT_SELECTED_FILE_PATHS"}
 
-my $folder = $ARGV[0];
+###################################################################
+#                 NO NEED TO MODIFY AFTER THIS LINE               #
+###################################################################
+# some flags
+my ( $DVD ) = 0; 
+# get options
+GetOptions(
+    # flags
+    'v|version'     =>  \$PVERSION,
+    'd|dvd'         =>  \$DVD,
+    # numbers
+    's|size=i'      =>  \$ISOLIMIT,
+);
+
+my $folder = shift;
 chomp($folder); # remove end-line
-$folder =~ s#/$##; # remove trailing slash
+
+
+$folder =~ s#/+$##; # remove trailing slash(es)
 my $volumeid = do_volid("$folder");
 # put a .iso extension
 my $name = $folder.".iso";
@@ -39,6 +68,10 @@ my $nice =  ( -x "/usr/bin/nice" ) ? "/usr/bin/nice":"";
 
 print "Argument: $ARGV[0] | Volume Name: $volumeid | FileName: $name\n" if $DEBUG == 1;
 sleep(5) if $DEBUG == 1;
+
+# calculate ISOLIMIT in bytes:
+$ISOLIMIT = POSIX::ceil( $ISOLIMIT * 1024 * 1024);
+print STDOUT ("ISO Limit: $ISOLIMIT\n");# if ( $DEBUG > 0 );
 
 if ( $ARGV[1] && $ARGV[1] eq "dvd" ) 
 {
@@ -94,19 +127,21 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
         if ( length( $new_f ) > $FILENAMEMAXLENGTH )
         {
             my $ext = $new_f;
-            $ext =~ s#(\w{1,4})$#$1#g; # TODO possible bug...
+            $ext =~ s#(\.\w{1,4})$#$1#g;
             # truncate filename:
             $new_f = substr($new_f,0,$FILENAMEMAXLENGTH);
             $new_f =~ s#\.\w{1,3}$##; # be safe
-            $new_f .= ".$ext"; # appends extension
+            $new_f .= "$ext"; # appends extension
             do_log("Truncating file $f\n ==> $new_f\n");
+            sleep(3) if ( $DEBUG > 0 );
         }
         $new_f = catfile($nbasedir,$new_f);
         symlink("$f","$new_f") or die "Symlink failed:\n  '$f -> $new_f'\n $! \n";
         do_log("$new_f -> $f");
-        if ( POSIX::ceil(($size / 1024)/1024) >= $ISOLIMIT )
+        if ( $size >= $ISOLIMIT )
         {
-            print STDOUT ("Making CD ISO of size ".$size."MB\n");
+            my $mb = POSIX::ceil(($size / 1024)/1024);
+            print STDOUT ("Making CD ISO of size ".$mb."MB\n");
             m_system("$nice mkisofs -f -J -r -v -o '../$name' -V '$volumeid' '$nfolder' ",1);
             $size = 0; # reset size
             $i++;
@@ -124,7 +159,8 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
         my $res = prompt ("Do you want to make ISO of remaining size $size MB ($nfolder|$name)? [y/N]");
         if ( $res eq "y" )
         {
-            print STDOUT ("Making CD ISO of size ".$size."MB\n");
+            my $mb = POSIX::ceil(($size / 1024)/1024);
+            print STDOUT ("Making CD ISO of size ".$mb."MB\n");
             m_system("$nice mkisofs -f -J -r -v -o '../$name' -V '$volumeid' '$nfolder' ",1);
         }
     }
@@ -196,6 +232,7 @@ sub get_size
 sub do_log
 {
     my $l = shift;
+    print STDERR "$l\n" if ( $DEBUG > 0 );
     print $logfh "$l\n";
 }
 

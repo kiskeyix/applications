@@ -1,16 +1,16 @@
 #!/bin/sh
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Nov-11
 #
 # DESCRIPTION:  A simple script to output a signature
-#               to a ~/.signature or STDOUT controlled
+#               to a ~/.signature or STDOUT, controlled
 #               from a ~/.signaturerc file
 # USAGE:
 # CHANGELOG:
 #
 
-# -- copy here -- #
+# -- copy to .signaturerc from here -- #
 NAME="Luis M"
 POSITION="System Administrator/Web Developer"
 COMPANY="LatinoMixed.com"
@@ -25,7 +25,10 @@ STDOUT=1
 RECODE=1
 EVOLUTION=1 # evolution requires sig to be in HTML <br>
 
+FORTUNE_ARGS=" -s 50% computers 50% linux " # see "man fortune" for more
+
 # -- end copy --#
+
 # Now use that to create a ~/.signaturerc file
 # per server
 . "$HOME"/.signaturerc
@@ -46,19 +49,19 @@ else
 fi
 
 # body
-if [ -x /usr/games/fortune -a $QUOTE -eq 1 ]; then
+if [ -x "/usr/games/fortune" -a $QUOTE -eq 1 ]; then
     # makes our day a bit more fun.... :-)
     if [ $STDOUT -eq 1 ]; then
-        if [ $RECODE -eq 1 ];then
-            /usr/games/fortune -s | recode -q ISO-8859-1..utf-8
+        if [ $RECODE -eq 1 -a -x "/usr/bin/recode" ];then
+            /usr/games/fortune $FORTUNE_ARGS | /usr/bin/recode -q ISO-8859-1..utf-8
         else
-            /usr/games/fortune -s
+            /usr/games/fortune $FORTUNE_ARGS
         fi
     else
         if [ $RECODE -eq 1 ];then
-            /usr/games/fortune -s | recode -q ISO-8859-1..utf-8 >> "$HOME/.signature"
+            /usr/games/fortune $FORTUNE_ARGS | /usr/bin/recode -q ISO-8859-1..utf-8 >> "$HOME/.signature"
         else
-            /usr/games/fortune -s  >> "$HOME/.signature"
+            /usr/games/fortune $FORTUNE_ARGS  >> "$HOME/.signature"
 
         fi
     fi

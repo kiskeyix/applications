@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.28 $
+# $Revision: 1.29 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -74,7 +74,7 @@ use strict;
 use vars qw( $VERSION @INC );
 use Config;
 
-my $VERSION="1.0";
+my $VERSION="1.01";
 
 $|++; # disable buffer
 
@@ -159,8 +159,6 @@ my %myconfig = (); # init config hash
 
 my $total_directories=0;
 my $total_links=0;
-
-#my $ROOT_DIRECTORY=".";
 
 my $FORCE=0; 
 my $NOMENU=0; 
@@ -388,9 +386,9 @@ sub mkindex {
         # close the footer if one doesn't exist:
         if ( $myconfig{footer} eq "" ) {
             print FILE ("\n</center></body>\n");
-            print FILE ("</HTML>");
+            print FILE ("</HTML>\n");
         } else {
-            print FILE ($myconfig{footer});
+            print FILE ($myconfig{footer}."\n");
         }
         print FILE ("\n");
         close(FILE);

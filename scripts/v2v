@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.91 $
+# $Revision: 1.92 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -172,6 +172,9 @@ my $Zoom_mode="";   # Zoom mode ( -Z or -B ) init by zooming
 my $tb=0;           # Top/Bottom clipping init by zooming()
 my $lr=0;           # Left/Right clipping init by zooming()
 my $FLAG_GAC=1;     # flag used by get_audio_channel to show only once results
+my $MIRRORED=0;       # by default, we don't mirror images (flip horizontally)
+my $FLIPPED=0;        # by default, we don't flip vertically images
+my $BLUED=0;          # fix blue-color in people's faces
 
 my $node="";
 my $EXT="avi"; # extension of final movie ( avi or ogm)
@@ -232,6 +235,9 @@ my $usage="
     '--dvdbackup'                   Backup a DVD using dvdbackup (interactive) and exit
     '--avi-to-vcd'                  Create VCD Image from AVI (deprecated)
     '--to-vcd'                      Create VCD 2.0 Image from any video file
+    '--flip'                        Flip video vertically (VCD only)
+    '--mirror'                      Flip video horizontally (VCD only)
+    '--blued'                       Fix blue colors in people's faces (VCD only)
     # strings
     '-D|--directory=s'              Use this directory as WORK DIR
     '-s|--source-video-format=s'    Video Format of the Source
@@ -3774,7 +3780,11 @@ sub tovcd
     my $vcdimager = which("vcdimager");
     
     my $multiplex_config = "multiplexer.cfg";
-  
+ 
+    my $flipped = ( $FLIPPED >= 1 ) ? "-J fields=flip":""; # videocore doesn't work here... fields does
+    my $mirrored = ( $MIRRORED >= 1 ) ? "-J fields=invert":"";
+    my $blued = ( $BLUED >= 1 ) ? "-J videocore=rgbswap":""; # or simply -k
+
     # flag
     my $UNLINK_CONFIG=0; # if we created this file, unlink it
     
@@ -3793,9 +3803,9 @@ sub tovcd
         #my $sys = "transcode -E 44100 -b 224 -V -y mpeg2enc,mpeg -F 1,-M2 -Z 352x240 -i $file -o $video";
         # generalized (not just .avi):
         #  - in case of ugly colors in output, remove -V
-        #  - if video is flipped (upside down), use -z 1
-        #  - for vcd 1 use v,4. default is vcd 2.0 (v,1)
-        my $sys = "transcode -i $file -z 0 -V -y mpeg -F v,1 -E 44100 -b 224 -o $video";
+        #  - for vcd 1.0 use v,4. default is vcd 2.0 (v,1)
+        my $sys = "transcode -i $file $flipped $mirrored $blued -V -y mpeg -F v,1 -E 44100 -b 224 -o $video";
+        pdebug($sys);
         system("$sys");
     } else {
         pwarn("Video or audio file $video.[mpa|m1v] exists. Not extracting new video or audio. Please remove these files if you want to re-extract them.");
@@ -4047,6 +4057,9 @@ GetOptions(
     'dvdbackup'                 =>  \$DVDBACKUP,
     'avi-to-vcd'                =>  \$TOVCD,
     'to-vcd'                    =>  \$TOVCD,
+    'flip'                      =>  \$FLIPPED,
+    'mirror'                    =>  \$MIRRORED,
+    'blued'                     =>  \$BLUED,
     # strings
     'D|directory=s'             => \$ROOT_DIRECTORY,
     's|source-video-format=s'   => \$SVIDEO_FORMAT,

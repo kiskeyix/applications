@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.39 $
+# $Revision: 1.40 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -108,8 +108,8 @@ $userconfig="
 #               execution code '-e' or '-x' according to the given
 #               terminal. Xterm requires that all arguments come before
 #               -e for instance.
-#               You can also set it to things like: gnome-terminal -x, 
-#               konsole -x, screen -d -m, etc...
+#               You can also set it to things like: gnome-terminal \%s -x, 
+#               konsole \%s -x, screen -d -m, etc...
 \$XTERM=xterm \%s -e ;
 
 # 		remote command if you intend to use cluster mode
@@ -1418,11 +1418,13 @@ sub cluster
                     # to which XTERM the user wants... gnome-terminal,
                     # konsole, screen, etc... 
                     $this_arg="-n $rhost" if $XTERM =~ /xterm/i;
+                    $this_arg="-t $rhost" if $XTERM =~ /gnome-terminal/i;
                     $this_cmd=sprintf("$XTERM $RMCMD $rhost $0 --runclust $wdir &",$this_arg);
                     print $DEBUG "+ executing $this_cmd\n";
                     system ( $this_cmd );
                 } else {
                     $this_arg="-n $rhost" if $XTERM =~ /xterm/i;
+                    $this_arg="-t $rhost" if $XTERM =~ /gnome-terminal/i;
                     $this_cmd=sprintf("$XTERM $0 --runclust $wdir &",$this_arg);
                     #$this_cmd=sprintf("$XTERM ls --runclust $wdir &",$this_arg);
                     print $DEBUG "+ executing $this_cmd\n";

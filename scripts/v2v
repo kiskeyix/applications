@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.37 $
+# $Revision: 1.38 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -1263,8 +1263,6 @@ sub cluster
                                 "DIR"       => "tmp", # NFS
                                 "SUFFIX"    => ".txt"
                             );
-    # FIXME
-    print $DEBUG "\nfile +++++++> $s_file <----- file\n\n";
     
     # $node_counter is the counter of AVAILABLE nodes
     my $node_counter=`grep -v "^[[:space:]]*#" $CLUSTER_CONFIG | grep -v '^[[:space:]]*$$' | wc -l`;
@@ -1343,9 +1341,6 @@ sub cluster
         # more than requested
         $addpower = $poweroff / $node_counter;
 
-        # FIXME
-        print $DEBUG "\n++++++> Sleeping ... \n";
-        sleep(10);
         close($s_file);
     } else {
         # we don't need cluster-mode?
@@ -1359,9 +1354,6 @@ sub cluster
     # percentages of frames that each nodes
     # need to encode more
     # So we run V2divx on nodes ...
-        # FIXME
-        print $DEBUG "\n++++++> Sleeping ... \n";
-        sleep(10);
     if ( -f "$s_file" )
     {	
         # tabpower is just a table to know when nodes 

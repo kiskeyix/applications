@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.11 $
+# $Revision: 1.12 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE:
@@ -73,12 +73,13 @@ my $VERSION="0.5";
 
 $|++; # disable buffer
 
-my $USAGE = "pixdir2html.pl [-n|--nomenu] [-f|--force]
+my $USAGE = "pixdir2html.pl [-n|--nomenu] [-f|--force] [M|menuonly]
  
-   force   - creates a .pixdir2htmlrc in every subdir overriding
-             any file with that name
-   nomenu  - do not create menus after finishing creating thumbnails
-   help    - prints this help and exit\n";
+   force    - creates a .pixdir2htmlrc in every subdir overriding
+              any file with that name
+   nomenu   - do not create menus after finishing creating thumbnails
+   menuonly - only create a menu file and exit
+   help     - prints this help and exit\n";
 
 # update these if needed
 my $HTML_DIRECTORY=".";
@@ -129,6 +130,7 @@ my $IMAGE_DIRECTORY=".";
 
 my $FORCE=0; 
 my $NOMENU=0; 
+my $MENUONLY=0;
 my $HELP=0;
 
 # get options
@@ -136,12 +138,10 @@ GetOptions(
     'n|nomenu' => \$NOMENU,
     'f|force' => \$FORCE,
     'h|help' => \$HELP,
+    'M|menuonly' =>\$MENUONLY
 );
 
 die $USAGE if $HELP;
-
-#$FORCE++ if $force;
-#$NOMENU++ if $nomenu;
 
 # TODO find a way to pass a directory to
 # which create images right from the command
@@ -161,6 +161,13 @@ main();
 #                     FUNCTIONS                   #
 #-------------------------------------------------#
 sub main {
+    # are we creating a menu file only?
+    if ( $MENUONLY > 0 ) {
+        print LOGFILE ("Creating menu file\n");
+        menu_file();
+        return 0;
+    }
+    
     if (!-x "/usr/bin/convert") {
         die ("could not find 'convert'. Install ImageMagick.");
     }
@@ -180,6 +187,7 @@ sub main {
     }
 
     print STDOUT "$total_directories directories.\n Read log $LOG for details. \n";
+    return 0;
 } # endmain
 
 sub init_config {

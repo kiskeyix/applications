@@ -28,15 +28,18 @@ $volumeid = substr($volumeid,0,$VOLIDMAXLENGTH);
 
 print "Argument: $ARGV[0] | Volume Name: $volumeid | FileName: $name\n" if $DEBUG == 1;
 sleep(5) if $DEBUG == 1;
+
+my $folder = $ARGV[0];
+
 if ( $ARGV[1] eq "dvd" ) 
 {
     # fix permissions
-    system("chmod 0500 ".$ARG[0]);
-    system("find ".$ARG[0]." -type d -exec chmod 0500 {} \; ");
-    system("find ".$ARG[0]." -type f -exec chmod 0400 {} \; ");
+    system("chmod 0500 '$folder'");
+    system("find '$folder' -type d -exec chmod 0500 {} \\; ");
+    system("find '$folder' -type f -exec chmod 0400 {} \\; ");
     # make iso
-    system("mkisofs -dvd-video -o '$name' -V '$volumeid' ".$ARGV[0]);
+    system("mkisofs -dvd-video -udf -o '$name' -V '$volumeid' '$folder'");
 } else {
-    system("mkisofs -J -r -v -o '$name' -V '$volumeid' ".$ARGV[0]);
+    system("mkisofs -J -r -v -o '$name' -V '$volumeid' '$folder' ");
 }
 #eof

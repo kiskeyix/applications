@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.21 $
+# $Revision: 1.22 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jul-06
+# Last modified: 2003-Jul-16
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
 #               or a user specified command archiver ( tar? )
@@ -328,8 +328,8 @@ if ( ! -f $TMP_LOCK ) {
                 # and declare a $EXT scalar holding the string to use
                 # for all file_names
                 # to allow other formats, let's probe one at a time
-                $TMP_FILE_NAME .= ( $CONFIG{"COMPRESS_DO"} =~ m/bzip2/ ) ? ".bz2" : "";
-                $TMP_FILE_NAME .= ( $CONFIG{"COMPRESS_DO"} =~ m/gzip/ ) ? ".gz" : "";
+                $TMP_FILE_NAME .= ( $CONFIG{"COMPRESS_DO"} =~ m/bzip2$/ ) ? ".bz2" : "";
+                $TMP_FILE_NAME .= ( $CONFIG{"COMPRESS_DO"} =~ m/gzip$/ ) ? ".gz" : "";
 
                 my $TMP_FILE_LIST = $v;
                 # put files and tar file name in place holders

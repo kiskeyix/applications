@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2005-Jan-05
+# Last modified: 2005-Jan-20
 #
 # DESCRIPTION: A simple script to update my settings in $HOME
 # USAGE: $0 [--remove|--verbose]
@@ -85,6 +85,7 @@ foreach my $h ( @hosts )
                 system("ssh $h command rm -f '$TMP/$i' ".$silent);
             }
         }
+        print STDOUT "\n";
     } else {
         # debugging 
         print "*** ".$h."\n" if ( $DEBUG );

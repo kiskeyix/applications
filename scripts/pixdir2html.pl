@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.87 $
+# $Revision: 1.88 $
 # Luis Mondesi  <lemsx1@hotmail.com>
 # 
 # REQUIRED: ImageMagick's Perl module and a dialog 
@@ -64,9 +64,11 @@ my $SAVELOG = "/usr/bin/savelog";
 #**************************************************************#
 ###        Nothing below this line should be changed.        ###
 #**************************************************************#
-my @pixdir = ();    # for menu
-my @pixfile = ();   # for thumbfiles/pictures
-my %config = ();    # hash of hashes to hold config per directories
+my @pixdir = ();        # for menu
+my @pixfiles = ();      # for all picture files
+my %thumbfiles = ();    # hash of arrays for all thumbnails 
+                        # created by mkthumb
+my %config = ();        # hash of hashes to hold config per directories
 my $total_links=0;
 my $FORCE=0; 
 my $NOMENU=0; 
@@ -246,10 +248,17 @@ sub main {
     }
     # we need to create thumbnails first... 
     # TODO separate index creation from mkthumb()
-    # make all thumbnails and indices
-    mkthumb($ROOT_DIRECTORY,$menu_str);
+    # make all thumbnails and save all thumbs in %thumbfiles
+    # so that mkindex() can create the indices.
+    mkthumb($ROOT_DIRECTORY);
     if ( $THUMBSONLY > 0 ) {
         exit (0);
+    }
+    # create index files for thumbs
+    if ( $NOINDEX == 0 ) {
+        mkindex(\%thumbfiles,$menu_str);  # pass hash reference
+                                        # and a menu string
+                                        # to be included in e/a file
     }
     # make all supporting HTML files
     thumb_html_files($ROOT_DIRECTORY);
@@ -400,10 +409,8 @@ sub init_config {
 } # end init_config
 
 sub mkindex {
-    # mkindex is a private function called by
-    # mkthumb()
     # @param 0 hash :=
-    #   takes a two-dimensional array in the form:
+    #   takes a two-dimensional hash of arrays in the form:
     #   $name{base}->[0] = 'path/file'
     #   and does a index file for e/a 'base' of
     #   all files referenced 
@@ -427,18 +434,19 @@ sub mkindex {
                 copy("$ROOT_DIRECTORY/$CONFIG_FILE", 
                     "$this_base/$CONFIG_FILE") 
             ) {
-                print $LOGFILE (": Copied ".
+                print $LOGFILE (": mkindex() Copied ".
                     " $ROOT_DIRECTORY/$CONFIG_FILE ".
                     "==> $this_base/$CONFIG_FILE \n");
             }
             # now read the config file
             # and init a %config{this_base} hash for us
+            print $LOGFILE "+ mkindex() Reading config for '$this_base'\n";
             init_config("$this_base");
         } # end if/elsif
         if (! exists $config{"$this_base"} )
         {
             # this should rarely happen
-            print $LOGFILE "+ mkindex Reading config for '$this_base'\n";
+            print $LOGFILE "++ mkindex() Reading config for '$this_base'\n";
             init_config("$this_base");
         }
         # "serialization"
@@ -503,10 +511,13 @@ sub mkindex {
 } # end mkindex
 
 sub mkthumb {
+    # Creates thumbnails for a given directory
+    # and save all to the global hash %thumbfiles
     my $ROOT = $_[0];
-    my $MENU_STR = $_[1];
+    # globals
+    %thumbfiles = (); # reset %thumbfiles
     # locals: reset some locals
-    my (@ls,%pixfiles) = ();
+    my @ls = ();
     my ($thisFile,
         $pix_name,
         $file_name,
@@ -531,12 +542,12 @@ sub mkthumb {
     #construct array of all image files
     my @ary = ();
     if ( 
-        defined $pixfile[0] 
-        && -f $pixfile[0]
+        defined $pixfiles[0] 
+        && -f $pixfiles[0]
         ) 
     {
         # copy that array instead:
-        @ary = @pixfile;
+        @ary = @pixfiles;
     } else {
         # construct array of all files
         @ary = do_file_ary("$ROOT");
@@ -644,7 +655,7 @@ sub mkthumb {
         # end if thumbnail file
 
         # save pixname for the index.html file
-        push @{$pixfiles{"$BASE"}}, "$THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name";
+        push @{$thumbfiles{"$BASE"}}, "$THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name";
         # update flags
         $LAST_BASE = $BASE;
         # update progressbar
@@ -654,12 +665,7 @@ sub mkthumb {
         } else {
             progressbar($PROGRESS,$TOTAL);
         }
-    } #end for @ls
-    if ( $NOINDEX == 0 || $THUMBSONLY == 0 ) {
-        mkindex(\%pixfiles,$MENU_STR);  # pass hash reference
-                                        # and a menu string
-                                        # to be included in e/a file
-    }
+    } #end for @ls 
 } # end mkthumb
 
 sub thumb_html_files {
@@ -690,12 +696,12 @@ sub thumb_html_files {
     my @ary = ();
 
     if ( 
-        defined $pixfile[0] 
-        && -f $pixfile[0]
+        defined $pixfiles[0] 
+        && -f $pixfiles[0]
         ) 
     {
         # copy that array instead:
-        @ary = @pixfile;
+        @ary = @pixfiles;
     } else {
         # construct array of all files
         @ary = do_file_ary("$ROOT");
@@ -1273,7 +1279,7 @@ sub do_file_ary {
     my $ROOT = shift;
     my %opt = (wanted => \&process_file, no_chdir=>1);
     find(\%opt,$ROOT);
-    return @pixfile;
+    return @pixfiles;
 } # end do_file_ary
 
 sub process_file {
@@ -1290,7 +1296,7 @@ sub process_file {
         ) 
     {
         s/^\.\/*//g;
-        push @pixfile,$_;
+        push @pixfiles,$_;
     }
 } #end process_file
 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.17 $
+# $Revision: 1.18 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jul-06
 #
@@ -96,7 +96,7 @@ $MY_CONFIG{"BAK"}="/home/backup";     # default backup directory
                                     # in your .backuprc file like:
                                     # BAK="/other/dir"
 # tar EXCL list regexp. specify EXCLUDES in your .backuprc to modify 
-$MY_CONFIG{"EXCLUDES"}=".*\.pid\$|.*\.soc\$|.*\.log\$";
+$MY_CONFIG{"EXCLUDES"}='\.pid$|\.soc$|\.log$';
 
 $MY_CONFIG{"COMPRESS_LEVEL"} = "9"; # default compression level
 
@@ -170,14 +170,20 @@ if ( ! -f $TMP_LOCK ) {
     open(FILE,"> $TMP_LOCK") || die "could not open $TMP_LOCK. $! \n";
     print FILE $year."-".$mon."-".$mday." ".$hour.":".$min.":".$sec;
     close(FILE); 
- 
+
+    # cleanup name
+    # no spaces allowed here
+    $CONFIG{"NAME"} =~ s/ +//g;
+    # look for other strange characters...
+    #$CONFIG{"NAME"} = clean($CONFIG{"NAME"});
+    
     # NOTE some *NIX systems don't like the "-x" (executable) check 
     # if you are using one of those, then change this to "-e" (exists)
     # or something similar... you have been warned! Solaris?
     # Same for the -x in the following statement
     if ( exists $CONFIG{"TAR"} && -x $CONFIG{"TAR"} ) {
         $USE_TAR = 1;
-        $COMMAND = sprintf("%s cf - xxFILESxx' ",$CONFIG{"TAR"});
+        $COMMAND = sprintf("%s cf - xxFILESxx ",$CONFIG{"TAR"});
     } elsif ( exists $CONFIG{"TAR"} && $DEBUG !=0 ) {
         print STDERR "Tar was given but not found! \n";
     }
@@ -228,11 +234,11 @@ if ( ! -f $TMP_LOCK ) {
                 ( $TMP_COMMAND = $COMMAND) =~ s/xxFILESxx/$TMP_FILE_LIST/;
                 
                 $SYSTEM_COMMAND = sprintf("%s > %s",
-                    $COMMAND,
+                    $TMP_COMMAND,
                     $TMP_FILE_NAME);
                 system($SYSTEM_COMMAND);
                 if ( $? !=0 ) {
-                    print STDERR "Command '$SYSTEM_COMMAND' failed terribly!";
+                    die "Command '$SYSTEM_COMMAND' failed terribly! $!\n";
                 }
             } else {
                 Archive::Tar->create_archive (
@@ -301,7 +307,7 @@ if ( ! -f $TMP_LOCK ) {
                     $TMP_FILE_NAME);
                 system($SYSTEM_COMMAND);
                 if ( $? !=0 ) {
-                    print STDERR "Command '$SYSTEM_COMMAND' failed terribly!";
+                    die "Command '$SYSTEM_COMMAND' failed terribly! $!\n";
                 }
         } else {
             Archive::Tar->create_archive (
@@ -333,7 +339,7 @@ if ( ! -f $TMP_LOCK ) {
             if ( $USE_TAR ) {
                 # TODO maybe this should be in a subroutine?
                 # compression is not needed? then use filename
-                my $TMP_FILE_NAME = $CONFIG{"NAME"}."-other-$MIDDLE_STR.tar";
+                my $TMP_FILE_NAME = $CONFIG{"NAME"}."-other-$MIDDLE_STR.tar"; 
                 # TODO put these in COMPRESS_DO general above
                 # and declare a $EXT scalar holding the string to use
                 # for all file_names
@@ -350,7 +356,7 @@ if ( ! -f $TMP_LOCK ) {
                     $TMP_FILE_NAME);
                 system($SYSTEM_COMMAND);
                 if ( $? !=0 ) {
-                    print STDERR "Command '$SYSTEM_COMMAND' failed terribly!";
+                    die "Command '$SYSTEM_COMMAND' failed terribly! $!\n";
                 }
             } else {
                 Archive::Tar->create_archive (
@@ -448,9 +454,15 @@ sub process_file {
     my $base_name = basename($_);
     if ( 
         -f $_ && 
-        $base_name !~ m/$CONFIG{"EXCLUDES"}/ 
+        $base_name !~ m,$CONFIG{"EXCLUDES"},g
     ) {
         push @tmp_files,clean("$_") ;
+        
+        # use this sleep when testing your regex
+        # just uncomment these lines and set 
+        # $DEBUG to 1
+        #print STDOUT "$_ \n";
+        #if ($_ =~ m/Trash/g) { sleep(3) };
     }
 }
 

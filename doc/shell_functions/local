@@ -35,7 +35,7 @@ set -e # exit if a program ends in non-zero status ( $? )
 
 case "$1" in
     start)
-    echo "Starting 'local' settings "
+    echo -n "Starting 'local' settings "
         echo -n "[hdparm] ->"
         $HDPARM $HDPARMARGS /dev/hda > /dev/null
         RETHDA=$?

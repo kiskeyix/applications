@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jan-05
 #
@@ -7,19 +7,21 @@
 # USAGE: utserver [start|stop|restart] 
 #
 
-MAP="CTF-Adobie.unr" # startup map
+MAP="CTF-DDay.unr" # startup map
 
 USER=ucc            # userid which owns this process
 PID=/home/ucc/ucc.pid   # Process ID of current server
-PATH=/usr/local/games/ut:/bin:/usr/bin  # path to search for commands
-DAEMON=/usr/local/games/ut/ucc
-REALDAEMON=/usr/local/games/ut/System/ucc-bin   # used when stopping
-                                                # if no PID is known
+PATH=/home/ut:/bin:/usr/bin  # path to search for commands
+DAEMON=/home/ut/ucc
+REALDAEMON=/home/ut/System/ucc-bin      # used when stopping
+                                        # if no PID is known
 NAME=ucc            # name of the binary
 DESC="Unreal Tournament Daemon"
 CMDLINE="server $MAP?mutator=BDBMapVote302.BDBMapVote?game=Botpack.CTFGame"
 
 CHUID=""            # change uid command
+
+FTPSHUT="/usr/sbin/ftpshut"          # ftp shut binary
 
 if test ! -f $DAEMON; then
     echo "Daemon $DAEMON doesn't exist"
@@ -35,51 +37,62 @@ set -e
 case "$1" in
     start)
 
-        if test -f $PID; then
-            echo "PID file $PID exists. This usually mean that $DESC is running. Stop $DESC before starting a new one or remove the file if this is an error."
-            exit 1
-        fi
+    if test -f $PID; then
+        echo "PID file $PID exists. This usually mean that $DESC is running. Stop $DESC before starting a new one or remove the file if this is an error."
+        exit 1
+    fi
 
-	echo -n "Starting $DESC: "
-        $CHUID /sbin/start-stop-daemon --background  --start \
-            --make-pidfile --pidfile $PID \
-            --verbose --exec $DAEMON $CMDLINE || echo -n "<Failed> "
-        echo -n "$NAME"
-        ;;
+    echo -n "Starting $DESC: "
+    $CHUID /sbin/start-stop-daemon --background  --start \
+    --make-pidfile --pidfile $PID \
+    --verbose --exec $DAEMON $CMDLINE || echo -n "<Failed> "
+    echo -n "$NAME"
+    if [ -f "$PID" -a "$UID" -eq 0 ]; then
+        # shutdown ftp server now
+        echo -e "\nShutting down ftp server"
+        $FTPSHUT now
+    fi
+    ;;
 
     stop)
-        echo -n "Stopping $DESC: "
-        # --exec is needed when no PID/pidfile is given
-        /sbin/start-stop-daemon --stop --verbose \
-            --pidfile $PID --exec $REALDAEMON || echo -n "<Failed> "
-        echo -n "$NAME"
-        rm -f $PID
-        ;;
+    echo -n "Stopping $DESC: "
+    # --exec is needed when no PID/pidfile is given
+    /sbin/start-stop-daemon --stop --verbose \
+    --pidfile $PID --exec $REALDAEMON || echo -n "<Failed> "
+    echo -n "$NAME"
+    rm -f $PID
+    if [ "$UID" -eq 0 ]; then
+        # restore ftp service
+        echo -e "\nRestoring ftp service"
+        #$FTPSHUT -R
+        rm -f /etc/shutmsg
+    fi
+    ;;
     restart)
-        echo -n "Restarting $DESC: "
-        $0 stop
-        sleep 5
-        $0 start
-        ;;
+    echo -n "Restarting $DESC: "
+    $0 stop
+    sleep 5
+    $0 start
+    ;;
     status)
-        if test -f $PID; then
-            ps ax | grep -v grep | grep -i $NAME
-        else
-            echo "$DESC is not running."
+    if test -f $PID; then
+        ps ax | grep -v grep | grep -i $NAME
+    else
+        echo "$DESC is not running."
 
-        fi
-        ;;
+    fi
+    ;;
 
-  *)
-	echo "Usage: $0 {start|stop|restart}" >&2
-	exit 1
-	;;
+    *)
+    echo "Usage: $0 {start|stop|restart}" >&2
+    exit 1
+    ;;
 esac
 
 if [ $? == 0 ]; then
-	echo .
-	exit 0
+    echo .
+    exit 0
 else
-	echo failed
-	exit 1
+    echo failed
+    exit 1
 fi

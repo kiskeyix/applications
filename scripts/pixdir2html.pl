@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.84 $
+# $Revision: 1.85 $
 # Luis Mondesi  <lemsx1@hotmail.com>
 # 
 # REQUIRED: ImageMagick's Perl module and a dialog 
@@ -341,7 +341,7 @@ sub init_config {
     $config{"$ROOT"}{"menutype"}=( $MENU_TYPE ) ? $MENU_TYPE : "classic";
     $config{"$ROOT"}{"menuname"}=( $MENU_NAME ) ? $MENU_NAME : "menu";
     $config{"$ROOT"}{"menutd"}=( $menu_td ) ? $menu_td : 10;
-    $config{"$ROOT"}{"td"}=( $TD ) ? $TD : 4 ;
+    $config{"$ROOT"}{"ntd"}=( $TD ) ? $TD : 4 ;
     $config{"$ROOT"}{"strlimit"}=( $STR_LIMIT ) ? $STR_LIMIT : 32;
     $config{"$ROOT"}{"cutdirs"}=( $CUT_DIRS ) ? $CUT_DIRS : 0 ;
 
@@ -369,23 +369,21 @@ sub init_config {
     if ( $config{"$ROOT"}{"header"} =~ /^\s*$/ ) 
     {
         print $LOGFILE (": Blank header. Generating my own [$ROOT] ... \n");
-        $config{"$ROOT"}{"header"}="<html>
-        <head>
-        ".$config{"$ROOT"}{"meta"}."
-        <title>".$config{"$ROOT"}{"title"}."</title>
-        <link rel='stylesheet' href='".
+        $config{"$ROOT"}{"header"}="<html><head>".
+        $config{"$ROOT"}{"meta"}.
+        "<title>".
+        $config{"$ROOT"}{"title"}.
+        "</title><link rel='stylesheet' href='".
         $config{"$ROOT"}{"stylesheet"}.
-        "' type='text/css'>
-        </head>\n".
-        $config{"$ROOT"}{"body"}."
-        \n<center>\n".
-        $config{"$ROOT"}{"html_msg"}."\n";
+        "' type='text/css'></head>".
+        $config{"$ROOT"}{"body"}."<center>".
+        $config{"$ROOT"}{"html_msg"};
     }
     #construct a footer if it doesn't yet exist:
     if ( $config{"$ROOT"}{"footer"} =~ /^\s*$/ )
     {
         print $LOGFILE (": Blank footer. Generating my own [$ROOT] ... \n");
-        $config{"$ROOT"}{"footer"}="</center>\n</body></html>";
+        $config{"$ROOT"}{"footer"}="</center></body></html>";
     }
     # write or warn about configuration if one doesn't exists
     if (!-f "$ROOT/$CONFIG_FILE" ) {
@@ -1063,7 +1061,7 @@ sub menu_file {
                     } else {
                         print FILE ($config{"$ROOT_DIRECTORY"}{"tr"}."\n");
                     }
-                    for ($y=1;$y<=$config{"$ROOT_DIRECTORY"}{"menu_td"};$y++){
+                    for ($y=1;$y<=$config{"$ROOT_DIRECTORY"}{"menutd"};$y++){
                         # close the TD tags
                         if ($y > 1) { 
                             print FILE ("\t </td> \n"); 

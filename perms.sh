@@ -1,6 +1,6 @@
 #!bash
-# $Id: perms.sh,v 1.4 2002-11-01 16:23:12 luigi Exp $
-# $V: $
+# $Id: perms.sh,v 1.5 2002-11-01 16:23:26 luigi Exp $
+# $v: $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2002-Nov-01
 #

@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.78 $
+# $Revision: 1.79 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -3448,33 +3448,34 @@ sub ripdvd
     my ($angle,$angles,$chapter,$chapters)=1;
     my (@titleSet,@titleLen,$sys,$vob,$sec,$hour,$min,$dvd)="";
     $VOBPATH= $ARGV[0];
-    ( -e $VOBPATH ) or mydie "Directory \"$VOBPATH\" does not exist \n Sorry";
-    print " On which device is your DVD [default: /dev/dvd]? " ;
-    $dvd=<STDIN>;
-    chomp($dvd);
-    $dvd="/dev/dvd" if ( $dvd eq "" ); 
+    ( -e $VOBPATH ) 
+        or mydie("Directory \"$VOBPATH\" does not exist \n Sorry");
+    $dvd = "/dev/dvd"; # default
+    DVDDEV:
+        print " On which device is your DVD [default: /dev/dvd]? " ;
+        $dvd=<STDIN>;
+        chomp($dvd);
+    goto DVDDEV if ( ! -b "$dvd" );  # $dvd is not a blockdevice...
     if ( $DVDTITLE ne "" )
     { 
-        $TITLE=`$DVDTITLE $dvd 2> /dev/null` or die "Problem when running \'dvdtitle $dvd\'";
+        $TITLE=qx($DVDTITLE $dvd 2> /dev/null)
+            or mydie("Problem when running '$DVDTITLE $dvd'");
         chomp($TITLE);
     } else {  	
-        print " V2divx does'nt find dvdtitle, please enter this DVD Movie Title: ";
-        $TITLE=<STDIN>;
+        $TITLE=prompt(" V2divx doesn't find dvdtitle, please enter this DVD Movie Title: ");
         $TITLE =~ s/ /_/g;
-        chomp($TITLE);
         $TITLE ="VT" if ( $TITLE eq "" );
     }
-    print $RED;
-    print "******* WARNING *********\n";
-    print "All files in $VOBPATH will be deleted !!!\n";
-    print "Press Enter to continue or <Ctrl-C> to Abort\n";
-    print $NORM;
-    my $junk=<STDIN>;
-    my $probe = `tcprobe -i \"$dvd\" 2>&1` or die "Problem when running \'tcprobe -i $dvd\'";
-    ($probe =~ m,DVD title \d+/(\d+),) or die "Probing DVD failed! - No DVD?";
+    pwarn("******* WARNING *********\n".
+    "All files in $VOBPATH will be deleted !!!\n".
+    "Press Enter to continue or <Ctrl-C> to Abort\n");
+    my $junk=<STDIN>; # pause for key input
+    my $probe = qx(tcprobe -i \"$dvd\" 2>&1)
+        or mydie("Problem when running 'tcprobe -i $dvd'");
+    ($probe =~ m,DVD title \d+/(\d+),) 
+        or mydie("Probing DVD failed! - No DVD?");
     my $totalTitles = $1;
-    print " titles: total=$totalTitles\n";
-
+    pinfo(" titles: total=$totalTitles\n");
     my @checkTitles = 1 .. $totalTitles;
     # now probe each title and find longest
     my $longestLen   = 0;
@@ -3482,18 +3483,23 @@ sub ripdvd
     for(@checkTitles) 
     {
         # call tcprobe for info
-        $probe = `tcprobe -i \"$dvd\" 2>&1 -T $_` or die "Problem when running \'tcprobe -i $dvd\'";
+        $probe = qx(tcprobe -i \"$dvd\" 2>&1 -T $_) 
+            or mydie("Problem when running 'tcprobe -i $dvd'");
         # extract title playback time -> titlelen
-        ($probe =~ m,title playback time: .* (\d+) sec,) or die "No time found in tcprobe for title $_ !";
+        ($probe =~ m,title playback time: .* (\d+) sec,) 
+            or mydie("No time found in tcprobe for title $_ !");
         $titleLen[$_] = $1;
         # extract title set (VTS file) -> titleset
-        ($probe =~ m,title set (\d+),) or die "No title set found in tcprobe for title $_! ";
+        ($probe =~ m,title set (\d+),) 
+            or mydie("No title set found in tcprobe for title $_! ");
         $titleSet[$_] = $1;
         # extract angles
-        ($probe =~ m,(\d+) angle\(s\),) or die "No angle found in tcprobe for title $_ !";
+        ($probe =~ m,(\d+) angle\(s\),) 
+            or mydie("No angle found in tcprobe for title $_ !");
         $angles = $1;
         # extract chapters
-        ($probe =~ m,(\d+) chapter\(s\),) or die "No chapter found in tcprobe for title $_ !";
+        ($probe =~ m,(\d+) chapter\(s\),) 
+            or mydie("No chapter found in tcprobe for title $_ !");
         $chapters = $1;
 
         # calc hour, minute of title len
@@ -3502,11 +3508,9 @@ sub ripdvd
         $sec -= $hour * 3600;
         $min  = int($sec / 60);
         $sec -= $min * 60;
-
         # verbose
         printf("%02d: len=%02d:%02d:%02d titleset=%02d angles=%02d ".
             "chapters=%02d\n", $_,$hour,$min,$sec,$titleSet[$_],$angles,$chapters);
-
         #  find largest title
         if($titleLen[$_] > $longestLen) 
         {
@@ -3514,51 +3518,44 @@ sub ripdvd
             $longestTitle = $_;
         }
     }
-    print " The Main Title seems to be the Title No : $longestTitle, OK ? (y/n) :";
-    my $rep=<STDIN>;
-    chomp($rep);
+    my $rep= prompt(" The Main Title seems to be the Title No : $longestTitle, OK ? (y/n) :");
     if ( $rep ne "o" &&  $rep ne "O" && $rep ne "y" && $rep ne "Y" ) 
     { 	
-        print "Ups... Enter the Title number please : ";
-        $longestTitle=<STDIN>;
-        chomp($longestTitle);
+        $longestTitle=prompt("Ups... Enter the Title number please : ");
     }
     #  Check if this title is multiangle ....
-    $probe = `tcprobe -i \"$dvd\" 2>&1 -T $longestTitle` or die "Problem when running \'tcprobe -i $dvd\'";
-    ($probe =~ m,(\d+) angle\(s\),) or die "No angle found in tcprobe for title $longestTitle !";
+    $probe = qx(tcprobe -i \"$dvd\" 2>&1 -T $longestTitle) 
+        or mydie("Problem when running 'tcprobe -i $dvd'");
+    ($probe =~ m,(\d+) angle\(s\),) 
+        or mydie("No angle found in tcprobe for title $longestTitle !");
     $angles = $1;
     if ( $angles > 1 )
     { 	
         pwarn("***************** WARNING!!!! *********************\n".
             "\t This is a multi angles video stream. \n");
-        print " Do you know which angle number you want to rip (y|N)? ";
-        $rep=<STDIN>;
-        chomp($rep);
-        die "OK ... Have a look on your DVD to find which angle you like\n Bye" 
+        $rep = prompt(" Do you know which angle number you want to rip (y|N)? ");
+        mydie("OK ... Have a look on your DVD to find which angle you like\n Bye")
             if ( $rep ne "o" &&  $rep ne "O" && $rep ne "y" && $rep ne "Y" );
-        print " OK ... we continue ...\n";
-        print " There is $angles which one do you want? ";
-        print $NORM;
-        $angle=<STDIN>;
-        chomp($angle);
+        pinfo(" OK ... we continue ...\n");
+        $angle = prompt(" There is $angles angles which one do you want? ");
     }
     #  Check if this title is multichapter
-    ($probe =~ m,(\d+) chapter\(s\),) or die "No chapter found in tcprobe for title $longestTitle !";
+    ($probe =~ m,(\d+) chapter\(s\),) 
+        or mydie("No chapter found in tcprobe for title $longestTitle !");
     $chapter=$1;
     if ( $chapter > 1 )
     { 	
-        print " Do you want to rip this title chapter by chapter (y|N)? ";
-        $rep=<STDIN>;
-        chomp($rep);
+        $rep="N";
+        $rep=prompt(" Do you want to rip this title chapter by chapter (y|N)? ");
     }
-
-    system("/bin/rm -rf $VOBPATH/*  2> /dev/null");
+    my @files = glob("$VOBPATH/*"); # no /bin/rm anymore
+    unlink(@files);
     open (H_TITLE,">$VOBPATH/dvdtitle");
     print H_TITLE $TITLE;
     close(H_TITLE);
     opendir(VOB,$VOBPATH);
     chdir($VOBPATH) 
-        or die "Unable to chdir to $VOBPATH.. please DO NOT USE the ~ character in the /path/to/vob";
+        or mydie("Unable to chdir to $VOBPATH.. please DO NOT USE the ~ character in the /path/to/vob");
     $sys="tcprobe -i $dvd -T $longestTitle >> probe.rip 2>&1 ";
     system ("nice -$nice $sys");
     if ( $rep eq "y" || $rep eq "Y" || $rep eq "o" || $rep eq "0")
@@ -3568,13 +3565,13 @@ sub ripdvd
         {
             $sys="tccat -i $dvd -T $longestTitle,$i,$angle ".
                 "| split -b 1024m - ${TITLE}_T${longestTitle}_C${i}_" ;
-            print "$sys \n" if ( $INFO );
+            pinfo("$sys \n") if ( $INFO );
             system("nice -$nice $sys");
         }
     } else {
         $sys="tccat -i $dvd -T $longestTitle,-1,$angle ".
             "| split -b 1024m - ${TITLE}_T${longestTitle}_" ;
-        print "$sys \n" if ( $INFO);
+        pinfo("$sys \n") if ( $INFO);
         system("nice -$nice $sys");
     }
     # Check if $TITLE is well in the vob file name AND 
@@ -3593,7 +3590,7 @@ sub ripdvd
     print PROBE "Number of vob files:$i" ;
     close(PROBE);
     pinfo("$v2d\t Video files are in:\t\t   | $VOBPATH\n");
-    print " You may now run V2divx with yours arguments to encode the vob file(s)\n\n";
+    pinfo(" You may now run V2divx with yours arguments to encode the vob file(s)\n\n");
     exit(0);
 } # END ripidvd
 

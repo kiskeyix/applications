@@ -19,14 +19,15 @@
 
 <?php
 /*
- * $Revision: 1.1 $
+ * $Revision: 1.2 $
  *
- * Last modified: 2003-Oct-24
+ * Last modified: 2003-Nov-21
  */
 
 $DEBUG = true;
 
-$file_type="\.gif$|\.png$|\.j[e]*pg";
+//$file_mode="0664"; // rw-rw-r -> 0664; rw-r-r -> 0644
+$file_type="\.gif$|\.png$|\.j[e]{0,1}pg";
 $path="tmp/";
 
 $binary_tmpname = $_FILES['photo_upload']['tmp_name'];
@@ -44,6 +45,9 @@ if ( $send == "Send" && preg_match("/$file_type/i",$_FILES['photo_upload']['name
 
     if ( move_uploaded_file($binary_tmpname,$binary_filename) ) 
     {
+        // do not complaint if this is not possible
+        //@chmod("$binary_filename","$file_mode");
+
         echo "<font color='green'>File $binary_basename ".
             "($binary_filesize) uploaded sucessfully</font><br>";
         echo "To use this image refer to it as:<br>".
@@ -75,10 +79,8 @@ if ( $send == "Send" && preg_match("/$file_type/i",$_FILES['photo_upload']['name
         "<br><b> Example of a good filename: my_vacation.jpg</b>".
         "<br><br>Please rename your file and try again <br>";
     }
-    
     echo "Please choose file to upload<br>";
 }
-
 ?>
 <br>
 <form name="file_upload" action="upload.php" enctype="multipart/form-data" method="post">
@@ -87,7 +89,5 @@ File to upload (*.jpg, *.gif, *.png only):<br>
 <input type="file" name="photo_upload" size="32" maxlength="255">
 <input type="submit" name="send" value="Send">
 </form>
-
 </BODY>
 </HTML>
-

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.46 $
+# $Revision: 1.47 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -530,6 +530,7 @@ sub mkindex {
     my @files = ();
 
     # TODO see why this doesn't work as expected
+    # there is no need to sort this now... more testing needed
     foreach $this_base ( sort keys %$hashref ) {
         my ($my_bgcolor,$file_name) = ""; 
         $i = 0;
@@ -559,17 +560,6 @@ sub mkindex {
         }
        
         my @files = @{$$hashref{$this_base}};
-
-        # TODO make this into a function and re-use it...
-        # sort alphabetically:
-        # sort files alphabetically (dictionary order):
-        my $da;
-        my $db;
-        @files = sort { 
-            ($da = lc $a) =~ s/[\W_]+//g;
-            ($db = lc $b) =~ s/[\W_]+//g;
-            $da cmp $db;
-        } @files;
 
         # FILE_NAME is a global
         open(FILE, "> ".$this_base."/".$FILE_NAME.".".$config{$this_base}{"ext"}) || 
@@ -656,10 +646,22 @@ sub mkthumb {
     print $LOGFILE ("= Making thumbnails in $ROOT \n");
     #construct array of all image files
     my @ary = do_file_ary("$ROOT");
-
+ 
     # remove duplicates:
     my %seen = ();
     my @uniq = grep(!$seen{$_}++,@ary);
+
+    # TODO make this into a function and re-use it...
+    # sort files alphabetically (dictionary order):
+    # maybe we should've sorted before we got here...
+    my $da;
+    my $db;
+    @uniq = sort { 
+        ($da = lc $a) =~ s/[\W_]+//g;
+        ($db = lc $b) =~ s/[\W_]+//g;
+        $da cmp $db;
+    } @uniq;
+
 
     # parse array of images
     foreach (@uniq){

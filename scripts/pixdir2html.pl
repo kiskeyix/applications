@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.42 $
+# $Revision: 1.43 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -68,6 +68,9 @@
 # TODO:
 #   
 #   * read TODO scatter thru the script...
+#
+#   * do html_msg per photo in a .pixdir2htmlrc file:
+#       pix_"filename" = message for this file
 #
 #   * clean() function to cleanup all files created by this script
 #     HINT: 

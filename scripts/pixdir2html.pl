@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.81 $
+# $Revision: 1.82 $
 # Luis Mondesi  <lemsx1@hotmail.com>
 # 
 # REQUIRED: ImageMagick's Perl module and a dialog 
@@ -12,7 +12,7 @@ use Getopt::Long;
 Getopt::Long::Configure('bundling');
 use File::Copy;
 use File::Find;     # find();
-use File::Basename; # basename();
+use File::Basename; # basename() && dirname()
 use FileHandle;     # for progressbar
 use Cwd;            # same as: qx/pwd/
 
@@ -219,38 +219,29 @@ sub main {
     # which progressbar are we using?
     print $LOGFILE ("Mode $MODE\n");
     print $LOGFILE "= Start directory $ROOT_DIRECTORY \n";
-
-    # we need to create thumbnails first... 
-    # TODO separate index creation from mkthumb()
-    if ( $THUMBSONLY > 0 || $MENUONLY == 0  ) {
-        # make all thumbnails and indices
-        mkthumb($ROOT_DIRECTORY,$menu_str);
-        if ( $THUMBSONLY > 0 ) {
-            return 0;
-        }
-    }
-     
     if ( ! -f "$ROOT_DIRECTORY/$CONFIG_FILE" )
     {
         print $LOGFILE 
         ( "! Missing main $CONFIG_FILE. Creating one for you at '$ROOT_DIRECTORY'\n");
         init_config($ROOT_DIRECTORY,"true");
-    }	
-    # are we creating a menu file only?
-    if ( 
-        $MENUONLY > 0 
-        || $config{"$ROOT_DIRECTORY"}{"menutype"} eq "modern"
-    ) {
-        print $LOGFILE ("= Creating menu file\n");
-        menu_file();
-        return 0;
     }
     # get menu string
-    unless ( $NOMENU == 1 ) {
+    if ( $THUMBSONLY == 0 && ( $NOMENU != 1 || $config{"$ROOT_DIRECTORY"}{"menutype"} eq "modern" ) ) 
+    {
         print $LOGFILE ("= Creating menu string\n");
         $menu_str = menu_file();
+        if ( $MENUONLY > 0 ) 
+        {
+            exit (0);
+        }
     }
-
+    # we need to create thumbnails first... 
+    # TODO separate index creation from mkthumb()
+    # make all thumbnails and indices
+    mkthumb($ROOT_DIRECTORY,$menu_str);
+    if ( $THUMBSONLY > 0 ) {
+        exit (0);
+    }
     # make all supporting HTML files
     thumb_html_files($ROOT_DIRECTORY);
     # close progressbar
@@ -317,7 +308,6 @@ sub init_config {
     # ROOT/dir_a/dir_a1/dir_a2
     # ROOT/dir_b ...
     # for which case you will need a full path
-    #print $LOGFILE "++ init_config root '$ROOT'";
     # Some default values:
     $config{"$ROOT"}{"uri"}=".."; # might need modifications
     $config{"$ROOT"}{"percent"}=( $PERCENT ) ? $PERCENT : "20%";
@@ -404,13 +394,14 @@ sub mkindex {
     # mkindex is a private function called by
     # mkthumb()
     # @param 0 hash :=
-    # takes a two-dimensional array in the form:
-    # $name{base}->[0] = 'path/file'
-    # and does a index file for e/a 'base' of
-    # all files referenced 
-    my $hashref = $_[0]; # saves the name of the var passed
-    # e/a key holds a full array of files
+    #   takes a two-dimensional array in the form:
+    #   $name{base}->[0] = 'path/file'
+    #   and does a index file for e/a 'base' of
+    #   all files referenced 
     # @param 1 string := menu to use for e/a file
+
+    my $hashref = $_[0];    # saves the name of the var passed
+                            # e/a key holds a full array of files
     my $MENU_STR = $_[1]; 
     my $i = 0;
     my ( $this_file, $this_base ) = "";     # holds keys for hash
@@ -475,8 +466,8 @@ sub mkindex {
             ($file_name = $this_file) =~ s/$EXT_INCL_EXPR//gi;
             ($file_name = $file_name) =~ s/^$THUMB_PREFIX//; # removes prefix
             # EXT is a global and so is THUMBNAIL
-            print FILE ("<a class='pdlink' href='$HTMLDIR/$file_name.".$config{"$this_base"}{"ext"}."'>".
-                "<img class='pdimage' src='$THUMBNAIL/"."$this_file' border=0 alt='$file_name'></a>\n");
+            print FILE ("\t\t<a class='pdlink' href='$HTMLDIR/$file_name.".$config{"$this_base"}{"ext"}."'>".
+                "\t\t<img class='pdimage' src='$THUMBNAIL/"."$this_file' border=0 alt='$file_name'></a>\n");
             print FILE ("\t</td>\n");
             if ($i<($TD-1)) {
                 $i++;
@@ -528,22 +519,31 @@ sub mkthumb {
 
     print $LOGFILE ("= Making thumbnails in $ROOT \n");
     #construct array of all image files
-    my @ary = do_file_ary("$ROOT");
+    my @ary = ();
+    if ( 
+        defined $pixfile[0] 
+        && -f $pixfile[0]
+        ) 
+    {
+        # copy that array instead:
+        @ary = @pixfile;
+    } else {
+        # construct array of all files
+        @ary = do_file_ary("$ROOT");
+    }
  
     # remove duplicates:
     my %seen = ();
     my @uniq = grep(!$seen{$_}++,@ary);
 
     # parse array of images
-    foreach (@uniq){
+    foreach (@uniq) {
         $thisFile = basename($_);
         next if ($thisFile =~ m/$EXCEPTION_LIST/);
         next if ($_ =~ m/\b$THUMBNAIL\b/i);
         next if ($thisFile !~ m/$EXT_INCL_EXPR$/i);
         push @ls,$_;
-        #$TOTAL++;
     } #end images array creation
-
     dict_sort(\@ls);
 
     # progressbar stuff
@@ -560,13 +560,16 @@ sub mkthumb {
         progressbar_msg($MESSAGE);
     }
     print $LOGFILE ("= $TOTAL pictures \n");
-    foreach(@ls) 
+    #foreach(@ls) 
+    my $i = 0;
+    for ( $i=0; $i < $TOTAL; $i++) 
     {
-        $pix_name = basename($_);
+        $PROGRESS++;
+        $pix_name = basename($ls[$i]);
         # strip extension from file name
         ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR$//gi;
         # get base directory
-        ( $BASE = $_ ) =~ s/(.*)\/$pix_name$/$1/g;
+        $BASE = dirname($ls[$i]);
         # BASE is blank if we are already inside the directory
         # for which to do thumbnails, thus:
         if ( $BASE eq "" 
@@ -574,9 +577,8 @@ sub mkthumb {
         { 
             $BASE = "."; 
         }
-        next if ($BASE eq $THUMBNAIL);
-        #print STDOUT $BASE."\n";
-
+        #print $LOGFILE "== $PROGRESS $BASE\n";
+        next if ($BASE eq $THUMBNAIL); 
         # this is just to clear up all 
         # warnings from Perl.. 
         if ( $BASE gt "" 
@@ -613,7 +615,8 @@ sub mkthumb {
             } # end if missing $CONFIG_FILE
 
             # read specific config file for this directory
-            if (! -f "$BASE/.nopixdir2htmlrc" && ! exists $config{"$BASE"} ) 
+            if (! -f "$BASE/.nopixdir2htmlrc" 
+                && ! exists $config{"$BASE"} ) 
             {
                 # change of base, reset two-dimensional array counter
                 print $LOGFILE "+ Reading config for '$BASE'\n";
@@ -664,9 +667,7 @@ sub mkthumb {
         } else {
             progressbar($PROGRESS,$TOTAL);
         }
-        $PROGRESS++;
-    } #end foreach @ls
-    print $LOGFILE "++ mkthumb '($PROGRESS/$TOTAL)*100=".(($PROGRESS/$TOTAL)*100)."\%'\n"; 
+    } #end for @ls
     if ( $NOINDEX == 0 || $THUMBSONLY == 0 ) {
         mkindex(\%pixfiles,$MENU_STR);  # pass hash reference
                                         # and a menu string
@@ -746,6 +747,7 @@ sub thumb_html_files {
     #print all picts now
     # $#VAR gets number of elements of an array variable
     for ( $i=0; $i < $TOTAL; $i++) {
+        $PROGRESS++;
         $pix_name = basename($ls[$i]);
         # strip extension from file name
         ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR$//gi;
@@ -806,33 +808,34 @@ sub thumb_html_files {
              $config{"$BASE"}{"menutype"} eq "modern" 
          )
          {
-            print FILE ("<a class='pdlink' href='".$config{"$BASE"}{"uri"}."/".$MENU_NAME.".".$config{"$BASE"}{"ext"}."'>&lt;&lt;</a>\n");
+            print FILE ("\t\t<a class='pdlink' href='".$config{"$BASE"}{"uri"}."/".$MENU_NAME.".".$config{"$BASE"}{"ext"}."'>&lt;&lt;</a>\n");
         }
         # backward link here
         if ( $last_html_file ne "this_is/dummy\string" 
             && -f $last_html_file 
             && ($BASE eq $LAST_BASE) ) 
         {
-            print FILE ("<a class='pdlink' href='$last_link'>&lt;==</a>\n"); 
+            print FILE ("\t\t<a class='pdlink' href='$last_link'>&lt;==</a>\n"); 
         } else {
             print FILE ("&lt;==");
         }
         # home link here
-        print FILE (" | <a class='pdlink' href='../$FILE_NAME.".$config{"$BASE"}{"ext"}."'>HOME</a> | \n");
+        print FILE ("\t\t | <a class='pdlink' href='../$FILE_NAME.".$config{"$BASE"}{"ext"}."'>HOME</a> | \n");
 
         if ( -f $ls[$i+1] ) {
             $next_pix_name = "....";
             # calculate next base
             $next_pix_name = basename($ls[$i+1]);
             # get next base directory
-            ( $NEXT_BASE = $ls[$i+1] ) =~ s/(.*)\/$next_pix_name$/$1/g;
+            $NEXT_BASE = dirname($ls[$i+1]);
+            #) =~ s/(.*)\/$next_pix_name$/$1/g;
         }
         # forward link here
         if ( -f $ls[$i+1] && ($BASE eq $NEXT_BASE) ) {
             $next_file_name = "";
             ($next_file_name = $next_pix_name) =~ s/$EXT_INCL_EXPR$//gi;
             #print FILE ("==&gt;");
-            print FILE ("<a class='pdlink' href='$next_file_name.".$config{"$BASE"}{"ext"}."'>==&gt;</a> \n");
+            print FILE ("\t\t<a class='pdlink' href='$next_file_name.".$config{"$BASE"}{"ext"}."'>==&gt;</a> \n");
         } else {
             print FILE ("==&gt;");
             # TODO would be nice to jump to next directory in the
@@ -863,12 +866,8 @@ sub thumb_html_files {
             $GAUGE->update($PROGRESS);
         } else {
             progressbar($PROGRESS,$TOTAL);
-        }
-        $PROGRESS++;
+        } 
     } #end foreach $i
-
-    print $LOGFILE "++ thumb_html_files '($PROGRESS/$TOTAL)*100=".(($PROGRESS/$TOTAL)*100)."\%'\n"; 
-
 } # end thumb_html_files
 
 sub menu_file {
@@ -895,7 +894,6 @@ sub menu_file {
     my $IMG = ""; 
     my $line = "";
     #my $thisFile= "";
-    my $x=0;    # counts number of links
     my $y=0;    # counts number of td's
     my $i=0;    # general purpose counter
     my $j=0;    # count number of TR's
@@ -917,27 +915,24 @@ sub menu_file {
     # a index.$EXT file and add it to the menu. 
     foreach my $directory (@uniq){
         next if (-f "$directory/.nopixdir2htmlrc");
-        if (
-            !-f "$directory/.nopixdir2htmlrc"
-        ) {
-            # remove ./ from begining of names
-            ($directory = $directory) =~ s/^\.\/*//g;
-            # note that @ls holds the HTML links...
-            # thus, paths are relative and not absolute here:
-            $ls[$x] = "$directory/$FILE_NAME.".$config{"$ROOT_DIRECTORY"}{"ext"}; # why not push()? just to keep count I guess...
-            $x++; 
-        }
+        # remove ./ from begining of names
+        ($directory = $directory) =~ s/^\.\/*//g;
+        # note that @ls holds the HTML links...
+        # thus, paths are relative and not absolute here:
+        push(@ls,"$directory/$FILE_NAME.".$config{"$ROOT_DIRECTORY"}{"ext"});
     }   
-    $total_links = $x;
-    dict_sort(\@ls); 
+    dict_sort(\@ls); # sort in dictionary order
+    $total_links = $#ls;
     # set menu-name now (from command-line or config file)
     if ( $NEW_MENU_NAME gt "" ) 
     {
         $MENU_NAME=$NEW_MENU_NAME;
     } elsif ( defined($config{"$ROOT_DIRECTORY"}{"menuname"}) 
-    && $config{"$ROOT_DIRECTORY"}{"menuname"} gt "" ) {
+            && $config{"$ROOT_DIRECTORY"}{"menuname"} gt "" )
+    {
         $MENU_NAME=$config{"$ROOT_DIRECTORY"}{"menuname"};
     } # else MENU_NAME keeps the default name
+
     if ( 
         $config{"$ROOT_DIRECTORY"}{"menutype"} eq "modern" 
     )
@@ -950,7 +945,8 @@ sub menu_file {
         print FILE ($config{"$ROOT_DIRECTORY"}{"table"}."\n");
         # loop
         my $tmp_tr = ""; # used to color the rows
-        while($x>0){
+        foreach (@ls)
+        {
             # temporarily turn off warnings
             no warnings;
             if ($config{"$ROOT_DIRECTORY"}{"tr"}=~m/\%+bgcolor\%+/i){
@@ -972,14 +968,17 @@ sub menu_file {
             }
             if ( $ls[$i] ne "" ) {
                 # if link exists, otherwise leave it blank
-                # TODO there is a better way to do this... find it...
-                ($ts = $ls[$i]) =~ 
-                s#(.*)/$FILE_NAME.$config{"$ROOT_DIRECTORY"}{"ext"}#$1#gi;
+                $ts = dirname($ls[$i]);
+                #) =~ 
+                #s#(.*)/$FILE_NAME.$config{"$ROOT_DIRECTORY"}{"ext"}#$1#gi;
                 if ( $nautilus_root gt "" ) {
-                    ( $ls[$i] = $ls[$i] ) =~ s,$nautilus_root/,,g;
-                    ( $ts = $ts ) =~ s,$nautilus_root/*,,g;
+                    $ls[$i] =~ s,$nautilus_root/,,g;
+                    $ts =~ s,$nautilus_root/*,,g;
                 }
-                $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='".$config{"$ROOT_DIRECTORY"}{"new"}."' alt='new'>" : ""; # if .new file
+                $IMG = (-f "$ts/.new") ? 
+                    "<img valign='middle' border=0 src='".
+                    $config{"$ROOT_DIRECTORY"}{"new"}.
+                    "' alt='new'>" : "";
                 my $tmp_ts = basename("$ts");
                 $tmp_ts = str_truncate($tmp_ts); # truncate up to $STR_LIMIT
                 $tmp_ts = ucfirst($tmp_ts); # uppercase first letter
@@ -991,7 +990,11 @@ sub menu_file {
                     chdir("$ts/$THUMBNAIL") 
                         or mydie("Could not change to dir $ts/$THUMBNAIL. $!\n","menu_file 2");
                     my @glob_ary = glob("t*.???"); # get all files starting with 't' and ending in .??? (3 characters); they might or might not be picture files, but... we are trusting they are for now
-                    chdir($pwd) or mydie("Could not go back to $pwd. $!\n","menu_file 3"); # go back to our original directory
+
+                    # go back to our original directory
+                    chdir($pwd) 
+                        or mydie("Could not go back to $pwd. $!\n",
+                            "menu_file 3"); 
                     my $attempts = 3; # number of tries to get an image
                     IMAGE:
                     $image = $glob_ary[rand(@glob_ary)];
@@ -1015,8 +1018,7 @@ sub menu_file {
                 }
                 print FILE ("\t\t<a class='pdlink' href='$ls[$i]' target='_top'>\n\t\t$tmp_image</a></td>\n\t".$config{"$ROOT_DIRECTORY"}{"td"}."\n\t\t<a class='pdlink' href='$ls[$i]' target='_top'>$IMG $tmp_ts</a>\n");
                 print FILE ("\t</td>\n</tr>\n");
-                $i++;
-                $x--;
+                $i++; # incr file counter
             } 
             $j++; # incr TR counter
         } # end while loop
@@ -1027,20 +1029,29 @@ sub menu_file {
 
         # return a menu that contains a link back to menu.$EXT
         # Note that we use the URI here and not try to guess the relative path...
-        $MENU_STR .= $config{"$ROOT_DIRECTORY"}{"table"}."\n<tr>\n\t<td align='center'>\n<div align='center'>\n";
-        $MENU_STR .= "<a class='pdlink' href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/".$MENU_NAME.".".$config{"$ROOT_DIRECTORY"}{"ext"}."'>Back to Menu</a>\n</div>\n";
+        $MENU_STR .= $config{"$ROOT_DIRECTORY"}{"table"}.
+            "\n<tr>\n\t<td align='center'>\n<div align='center'>\n";
+        $MENU_STR .= "\t\t<a class='pdlink' href='".
+            $config{"$ROOT_DIRECTORY"}{"uri"}."/".$MENU_NAME.".".
+            $config{"$ROOT_DIRECTORY"}{"ext"}.
+            "'>Back to Menu</a>\n</div>\n";
         $MENU_STR .= "\t</td>\n</tr>\n</table>\n";
     } else {
         # classic is default menu type
         if ( $MENUONLY > 0 ) {
-            open(FILE, "> ".$ROOT_DIRECTORY."/".$MENU_NAME.".".$config{"$ROOT_DIRECTORY"}{"ext"}) 
-                or mydie("Couldn't write file $MENU_NAME.".$config{"$ROOT_DIRECTORY"}{"ext"}." to $ROOT_DIRECTORY","menu_file 4");
+            open(FILE, "> ".$ROOT_DIRECTORY."/".$MENU_NAME.".".
+                $config{"$ROOT_DIRECTORY"}{"ext"}) 
+                or mydie("Couldn't write file $MENU_NAME.".
+                    $config{"$ROOT_DIRECTORY"}{"ext"}.
+                    " to $ROOT_DIRECTORY","menu_file 4");
         }
 
         # menus are now part of the index.EXT...
         # print header only if menuonly is set and we want to show
         # the header/footer set in .pixdir2htmlrc
-        if ( $MENUONLY > 0 && $config{"$ROOT_DIRECTORY"}{"menuheader_footer"} > 0 ) {
+        if ( $MENUONLY > 0 
+            && $config{"$ROOT_DIRECTORY"}{"menuheader_footer"} > 0 )
+        {
             print FILE ($config{"$ROOT_DIRECTORY"}{"header"}."\n");
         }
         # generate menu
@@ -1053,7 +1064,8 @@ sub menu_file {
             $MENU_STR .= $config{"$ROOT_DIRECTORY"}{"table"}."\n";
             # print all links now
             my $tmp_tr = ""; # used to color the rows
-            while($x>0){
+            foreach (@ls)
+            {
                 # temporarily turn off warnings
                 no warnings;
                 # TODO
@@ -1080,18 +1092,16 @@ sub menu_file {
 
                         if ( $ls[$i] ne "" ) {
                             # if link exists, otherwise leave it blank
-                            # TODO there is a better way to do this... find it...
-                            ($ts = $ls[$i]) =~ s#(.*)/$FILE_NAME.$config{"$ROOT_DIRECTORY"}{"ext"}#$1#gi;
+                            $ts = dirname($ls[$i]);
                             # from nautilus one cannot pass arguments
                             # "--menuonly" but... just to keep things
                             # consistent...
                             # if number of characters is greater than $STR_LIMIT
                             # truncate $ts to a few characters.
                             if ( $nautilus_root gt "" ) {
-                                ( $ls[$i] = $ls[$i] ) =~ s,$nautilus_root/,,g;
-                                ( $ts = $ts ) =~ s,$nautilus_root/*,,g;
+                                $ls[$i] =~ s,$nautilus_root/,,g;
+                                $ts =~ s,$nautilus_root/*,,g;
                             }
-
                             # remove CUT_DIRS number of directories from ts
                             if ( $CUT_DIRS > 0 ) 
                             {
@@ -1102,12 +1112,11 @@ sub menu_file {
 
                             $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='".$config{"$ROOT_DIRECTORY"}{"new"}."' alt='new'>":""; # if .new file
                             $ts = ucfirst($tmp_ts);
-                            print FILE ("<a href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/$ls[$i]' target='_top'>$IMG $ts</a>\n");
+                            print FILE ("\t\t<a href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/$ls[$i]' target='_top'>$IMG $ts</a>\n");
                         } else {
                             print FILE ("&nbsp;");
                         }
                         $i++;
-                        $x--;
                     } # end for $y
                     print FILE ("</tr>\n");
                     $j++; # incr TR counter
@@ -1133,32 +1142,30 @@ sub menu_file {
                         # menu entries
                         if ( $ls[$i] ne "" ) {
                             # if link exists, otherwise leave it blank
-                            # TODO there is a better way to do this... find it...
-                            ( $ts = $ls[$i]) =~ s,(.*)/$FILE_NAME.$config{"$ROOT_DIRECTORY"}{"ext"},$1,gi;
+                            $ts = dirname ($ls[$i]);
                             $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='".$config{"$ROOT_DIRECTORY"}{"new"}."' alt='new'>":""; # if .new file
                             # if number of characters is greater than $STR_LIMIT
                             # truncate $ts to a few characters.
                             if ( $nautilus_root gt "" ) {
-                                ( $ls[$i] = $ls[$i] ) =~ s,$nautilus_root/,,g;
-                                ( $ts = $ts ) =~ s,$nautilus_root/*,,g;
+                                $ls[$i] =~ s,$nautilus_root/,,g;
+                                $ts =~ s,$nautilus_root/*,,g;
                             }
-
                             # remove CUT_DIRS number of directories from ts
                             if ( $CUT_DIRS > 0 ) 
                             {
                                 $ts = cut_dirs($ts,$CUT_DIRS);
                             }
-
                             my $tmp_ts = str_truncate($ts);
                             $ts = ucfirst($tmp_ts);
                             # $ls tends to hold the whole filename path+filename
                             # we don't care about the whole path here...
-                            $MENU_STR .= "<a href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/$ls[$i]' target='_top'>$IMG $ts</a>\n";
+                            $MENU_STR .= "\t\t<a href='".
+                                $config{"$ROOT_DIRECTORY"}{"uri"}.
+                                "/$ls[$i]' target='_top'>$IMG $ts</a>\n";
                         } else {
                             $MENU_STR .= "&nbsp;";
                         }
                         $i++;
-                        $x--;
                     } # end for $y
                     $MENU_STR .= "</tr>\n";
                     $j++; # incr TR counter
@@ -1168,13 +1175,14 @@ sub menu_file {
                 print FILE ("</table>\n");
             }
             $MENU_STR .= "</table>\n";
-        } # end if total_links
-        else 
-        {
+        # end if total_links
+        } else {
             print $LOGFILE (": Not a single link found\n");
         }
         # see previous notes on header
-        if ( $MENUONLY > 0 && $config{"$ROOT_DIRECTORY"}{"menuheader_footer"} > 0) {
+        if ( $MENUONLY > 0 
+            && $config{"$ROOT_DIRECTORY"}{"menuheader_footer"} > 0)
+        {
             print FILE ($config{"$ROOT_DIRECTORY"}{"footer"}."\n");
         } 
         if ( $MENUONLY > 0 ) {
@@ -1253,7 +1261,7 @@ sub do_dir_ary {
 } # end do_dir_ary
 
 sub process_dir {
-    my $base_name = basename($_);
+    my $base_name = basename ($_);
     if  ( 
         -d $_ 
         && $base_name !~ m/^($EXCEPTION_LIST)$/
@@ -1262,9 +1270,7 @@ sub process_dir {
         && $base_name !~ m/^\.[a-zA-Z0-9]+$/ 
         ) 
     {
-        #s/^\.\/*//g;
         push @pixdir,$_;
-        #print $_ . "\n";
     }
 } # end process_dir
 
@@ -1289,16 +1295,19 @@ sub do_file_ary {
     my %opt = (wanted => \&process_file, no_chdir=>1);
     find(\%opt,$ROOT);
     return @pixfile;
-} # iend do_file_ary
+} # end do_file_ary
 
 sub process_file {
     my $base_name = basename($_);
+    my $dir_name = dirname ($_);
     if  ( 
-        -f $_ 
+        -f $_
+        && ! -f $dir_name."/.nopixdir2htmlrc"
+        && $base_name =~ m/$EXT_INCL_EXPR$/ # only pictures please
         && $base_name !~ m/^($EXCEPTION_LIST)$/
         && $base_name !~ m/\b$THUMBNAIL\b/
         && $base_name !~ m/\b$HTMLDIR\b/
-        && $base_name !~ m/^\.[a-zA-Z0-9]+$/ 
+        && $base_name !~ m/^\.[a-zA-Z0-9]+$/ # skip dot files
         ) 
     {
         s/^\.\/*//g;

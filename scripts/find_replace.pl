@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.11 $
+# $Revision: 1.12 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jul-19
+# Last modified: 2003-Aug-18
 #
 # BUGS: if replacement string contains invalid characters
 #       nothing gets done. Have to find a way to escape
@@ -53,8 +53,11 @@ if (!$ARGV[2]) {
 
 print "s: '$this_string' s: '$that_string' f: '$f_pattern'\n" if ($DEBUG != 0);
 
-if ($this_string =~ /\w/ 
-    && $that_string =~ /\w/ 
+if (
+    $this_string gt ""
+    && $that_string gt ""
+    #$this_string =~ /\w/ 
+    #&& $that_string =~ /\w/ 
     ) {
 
     my $i =0;

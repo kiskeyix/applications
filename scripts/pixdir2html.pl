@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.39 $
+# $Revision: 1.40 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -360,7 +360,27 @@ sub init_config {
     my $line="";
 
     # some defaults:
-
+    #
+    # it's very important to set this to a 
+    # full URI:
+    # file:///path/to/root/directory
+    # http://www.server.tld/path/to/root/directory
+    # where "root directory" is the main dir
+    # where all other directories reside (and not
+    # the / root filesystem of UNIX/Linux/...).
+    # For now, ".." do the trick for a simple
+    # tree of directories:
+    # ROOT/
+    # ROOT/dir_a
+    # ROOT/dir_b
+    # ROOT/dir_c
+    #
+    # and not
+    # ROOT/
+    # ROOT/dir_a/dir_a1/dir_a2
+    # ROOT/dir_b ...
+    # for which case you will need a full path
+    $config_tmp{"uri"}="..";
     $config_tmp{"percent"}=$PERCENT;
     $config_tmp{"title"}="Images";
     $config_tmp{"meta"}="<meta http-equiv='content-type' content='text/html;charset=iso-8859-1'>";

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.38 $
+# $Revision: 1.39 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -332,6 +332,27 @@ This will ask all what it need to make the movie you want ;-)
 (where /path/to/moviefiles is a directory where V2divx will keep the temporaries movies files.
 
 ------------\n
+V2divx options (override ~/.V2divxrc variables)
+\t -h|--help          show this Help
+\t -v|--version       show version
+\t --tv               start TV recorder mode (see above)
+\t -d|--debug         debug mode
+\t -i|--info          info mode ( show transcode commands )
+\t -c|--with-cluster  run in cluster mode (V2divx ask for this without this opt)
+\t -x|--x-video 'codec'                 encode with this codec
+\t -F|--x-video_opts '-F options'       options for the video codec
+\t -V|--video_player 'command'          use 'command' to show the input Video  
+\t -A|--avi_player 'command'            use 'command' to show avi samples 
+\t -I|--image_viewer 'command'          use 'command' to show images samples 
+\t -C|--cluster_config 'file'           use 'file' as cluster config file
+\t -r|--remote_cmd  'command'           use 'command' as remote commande
+\t -n|--nice 'value'                    use 'value' as nice value 
+\t -L|--logo 'file'                     use 'file' as logo image file 
+\t -l|--lang 'lg'                       use 'lg' as language  (fr,de,es,...)
+\t -S|--sub_title_opts 'value'          use 'value' as extsub transcode filter option
+\t -a|--default_audio_channel 'int'     use 'int' as default audiochannel
+
+
 You can interrupt the program anytime. To continue encoding, just run the script
 without parameters in the same directory.\n$RED\t You MUST NOT run V2divx from the /path/to/vobs directory.\n$NORM
 V2divx v$release

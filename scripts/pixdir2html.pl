@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.70 $
+# $Revision: 1.71 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -185,8 +185,6 @@ if ($@)
 # users would have to install... nice work though
 
 # end of loading needed modules
-
-my $VERSION="1.65";
 
 $|++; # disable buffer (autoflush)
 
@@ -423,7 +421,7 @@ my $THUMBNAILSDIR="$ROOT_DIRECTORY/$THUMBNAIL";
 my $HTMLSDIR="$ROOT_DIRECTORY/$HTMLDIR";
 
 warn << "__EOF__";
-Perl pixdir2html v$VERSION 
+Perl pixdir2html v$Revision: 1.71 $
 (Luis Mondesi <lemsx1\@hotmail.com> / LatinoMixed.com) 
 (running with Perl $] on $Config{'archname'}) \n \n
 __EOF__

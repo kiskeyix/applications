@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 # vi: wm=79:tw=79 :
-# 2004-09-22 21:57 EDT $Revision: 1.3 $ 
+# 2004-09-22 21:57 EDT $Revision: 1.4 $ 
 # Luis Mondesi <lemsx1@hotmail.com> 
 # Converts a bookmarks.html(firefox/mozilla/netscape) file 
 # to bookmarks.rss (1.0)
@@ -13,7 +13,7 @@
 # or 
 #
 # bookmarks2rss.pl  # which assumes firefox's bookmarks are in: 
-#                   # ~/.mozilla/firefox/default.*/bookmarks.html. Will output
+#                   # ~/.mozilla/firefox/*default*/bookmarks.html. Will output
 #                   # to STDOUT
 #
 # The resulting output will be printed to STDOUT unless --output= is given
@@ -123,7 +123,7 @@ sub find_bookmarks
         push(@out,$file);
         return @out;
     } else {
-       @out = glob ($ENV{HOME}."/.mozilla/firefox/default.*/bookmarks.html"); 
+       @out = glob ($ENV{HOME}."/.mozilla/firefox/*default*/bookmarks.html"); 
        return @out;
     }
     return undef; # failed?

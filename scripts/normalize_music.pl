@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2004-Dec-07
 #
@@ -90,6 +90,7 @@ sub _mkdir
     my $last = "";
     foreach (@dirs)
     {
+        next if ( $_ =~ m/^\s*$/ );
         $last = catdir($last,$_);
         mkdir ($last) if ( ! -d $last);
     }

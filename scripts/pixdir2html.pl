@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.67 $
+# $Revision: 1.68 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -450,8 +450,8 @@ sub main {
     } else {
         if ( $DIA =~ /zenity/ )
         {
-            # zenity uses --progress
-            $GAUGE->open("| $DIA $ARGS --title 'Picture Progress' --progress 'Thumbnails Creation' 8 70 0 2>&1");
+            # zenity uses --progress # 'Thumbnails Creation'
+            $GAUGE->open("| $DIA $ARGS --title='Picture Directory to HTML' --progress  8 70 0 2>&1");
         } else {
             $GAUGE->open("| $DIA $ARGS --title 'Picture Progress' --gauge 'Thumbnails Creation' 8 70 0 2>&1");
         }
@@ -653,28 +653,25 @@ sub init_config {
 sub mkindex {
     # mkindex is a private function called by
     # mkthumb()
-
+    # @param 0 hash :=
     # takes a two-dimensional array in the form:
     # $name{base}->[0] = 'path/file'
     # and does a index file for e/a 'base' of
     # all files referenced 
     my $hashref = $_[0]; # saves the name of the var passed
     # e/a key holds a full array of files
-    my $MENU_STR = $_[1]; # a str to be included in e/a file
+    # @param 1 string := menu to use for e/a file
+    my $MENU_STR = $_[1]; 
     my $i = 0;
-    my (
-        $this_file,
-        $this_base
-    ) = "";     # holds keys for hash
+    my ( $this_file, $this_base ) = "";     # holds keys for hash
     my @files = ();
 
-    # TODO see why this doesn't work as expected
-    # there is no need to sort this now... more testing needed
     foreach $this_base ( sort keys %$hashref ) {
         my ($my_bgcolor,$file_name) = ""; 
         $i = 0;
         # read specific config file for this directory
-        if ( -f "$this_base/$CONFIG_FILE" && ! -f "$this_base/.nopixdir2htmlrc" ) {
+        if ( -f "$this_base/$CONFIG_FILE" 
+            && ! -f "$this_base/.nopixdir2htmlrc" ) {
             if ( ! exists $config{"$this_base"} )
             {
                 init_config("$this_base");
@@ -875,7 +872,7 @@ sub mkthumb {
             $total_directories++;
         }  # end if base not equal tmp_base
         
-        # update flag
+        # update flag. a bit hackish, but...
         $tmp_BASE = $BASE;
         next if ( -f "$BASE/.nopixdir2htmlrc" );
 
@@ -928,7 +925,8 @@ sub mkthumb {
 } # end mkthumb
 
 sub thumb_html_files {
-    # creates an HTML page for a thumbnail
+    # creates an HTML file for e/a thumbnail 
+    # @param 0 string := path to directory to generate html files for
     my $ROOT = $_[0];
     # locals
     my @ls = ();
@@ -1059,24 +1057,24 @@ sub thumb_html_files {
             && $config{"$ROOT_DIRECTORY"}{"menuname"} gt "" ) {
             $MENU_NAME=$config{"$ROOT_DIRECTORY"}{"menuname"};
         } # else MENU_NAME keeps the default name
-        if ( 
-            $MENU_TYPE eq "modern" 
-            || $config{"$BASE"}{"menutype"} eq "modern" 
-        )
-        {
-            print FILE ("<a href='".$config{"$BASE"}{"uri"}."/".$MENU_NAME.".".$config{"$BASE"}{"ext"}."'>&lt;&lt;</a>\n");
+         if ( 
+             $MENU_TYPE eq "modern" 
+             || $config{"$BASE"}{"menutype"} eq "modern" 
+         )
+         {
+            print FILE ("<a class='pdlink' href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/".$MENU_NAME.".".$config{"$BASE"}{"ext"}."'>&lt;&lt;</a>\n");
         }
         # backward link here
         if ( $last_html_file ne "this_is/dummy\string" 
             && -f $last_html_file 
             && ($BASE eq $LAST_BASE) ) 
         {
-            print FILE ("<a href='$last_link'>&lt;==</a>\n"); 
+            print FILE ("<a class='pdlink' href='$last_link'>&lt;==</a>\n"); 
         } else {
             print FILE ("&lt;==");
         }
         # home link here
-        print FILE (" | <a href='../$FILE_NAME.".$config{"$BASE"}{"ext"}."'>HOME</a> | \n");
+        print FILE (" | <a class='pdlink' href='../$FILE_NAME.".$config{"$BASE"}{"ext"}."'>HOME</a> | \n");
 
         if ( -f $ls[$i+1] ) {
             $next_pix_name = "....";
@@ -1090,12 +1088,12 @@ sub thumb_html_files {
             $next_file_name = "";
             ($next_file_name = $next_pix_name) =~ s/$EXT_INCL_EXPR//gi;
             #print FILE ("==&gt;");
-            print FILE ("<a href='$next_file_name.".$config{"$BASE"}{"ext"}."'>==&gt;</a>\n");
+            print FILE ("<a class='pdlink' href='$next_file_name.".$config{"$BASE"}{"ext"}."'>==&gt;</a> \n");
         } else {
             print FILE ("==&gt;");
             # TODO would be nice to jump to next directory in the
             #       array... 
-            #print FILE (" <a href='../$next_file_name.$EXT'> |=&gt;&gt;</a> \n");
+            #print FILE (" <a href='../$next_file_name.$EXT'>&gt;&gt;</a> \n");
         }
 
         print FILE ("</div></td></tr>\n");
@@ -1262,7 +1260,7 @@ sub menu_file {
                 } else {
                     print LOGFILE "$ts has no thumbnail [$THUMBNAIL] directory. Have you executed $0 without --menu-only or --menu-type='modern' yet?";
                 }
-                print FILE ("<a href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/$ls[$i]' target='_top'><img src='$ts/$THUMBNAIL/$image' border=0 alt='$tmp_ts album'></a></td>\n\t".$config{"$ROOT_DIRECTORY"}{"td"}."<a href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/".$ls[$i]."' target='_top'>$IMG $tmp_ts</a>\n");
+                print FILE ("\t\t<a class='pdlink' href='$ls[$i]' target='_top'>\n\t\t<img src='$ts/$THUMBNAIL/$image' border=0 alt='$tmp_ts album'></a></td>\n\t".$config{"$ROOT_DIRECTORY"}{"td"}."\n\t\t<a class='pdlink' href='$ls[$i]' target='_top'>$IMG $tmp_ts</a>\n");
                 print FILE ("\t</td>\n</tr>\n");
                 $i++;
                 $x--;
@@ -1277,7 +1275,7 @@ sub menu_file {
         # return a menu that contains a link back to menu.$EXT
         # Note that we use the URI here and not try to guess the relative path...
         $MENU_STR .= $config{"$ROOT_DIRECTORY"}{"table"}."\n<tr>\n\t<td align='center'>\n<div align='center'>\n";
-        $MENU_STR .= "<a href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/".$MENU_NAME.".".$config{"$ROOT_DIRECTORY"}{"ext"}."'>Back to Menu</a>\n</div>\n";
+        $MENU_STR .= "<a class='pdlink' href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/".$MENU_NAME.".".$config{"$ROOT_DIRECTORY"}{"ext"}."'>Back to Menu</a>\n</div>\n";
         $MENU_STR .= "\t</td>\n</tr>\n</table>\n";
     } elsif ( $MENU_TYPE eq "classic" ) {
 

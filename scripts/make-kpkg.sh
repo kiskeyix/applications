@@ -1,7 +1,7 @@
 #!/bin/bash
-# $Revision: 1.18 $
+# $Revision: 1.19 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Sep-28
+# Last modified: 2003-Nov-03
 #
 # DESCRIPTION:  an interactive wrapper to Debian's "make-kpkg"
 #               to build a custom kernel package.
@@ -35,15 +35,16 @@
 # we can use both ccache and distcc
 
 export MAKEFLAGS="CCACHE_PREFIX=distcc";
-export CCACHE_PREFIX=distcc 
+export CCACHE_PREFIX="distcc"
 
-if [ -f $HOME/.distcc/hosts ]; then
-    export DISTCC_HOSTS=`cat $HOME/.distcc/hosts`
+if [ -f "$HOME/.distcc/hosts" ];then
+    echo "Reading $HOME/.distcc/hosts"
+    export DISTCC_HOSTS="`cat \"$HOME/.distcc/hosts\"`"
 else
-    export DISTCC_HOSTS=localhost www2
+    export DISTCC_HOSTS="localhost www2"
 fi 
 
-FAKEROOT=fakeroot
+FAKEROOT="fakeroot"
 
 MODULE_LOC="../modules/"            # modules are located in the 
                                     # directory prior to this
@@ -58,6 +59,8 @@ ALL_PATCH_DIR="../kernel-patches/"  # patches are located before
                                      
 IMAGE_TOP="../"                     # where to save the resulting 
                                     # .deb files
+
+INITRD_OK="YES"
 
 export IMAGE_TOP ALL_PATCH_DIR PATCH_THE_KERNEL 
 export MODULE_LOC NO_UNPATCH_BY_DEFAULT INITRD
@@ -85,7 +88,7 @@ if [ $1 -a $1 != "--help" ]; then
     yesno="No"
     KERNEL_HEADERS=""
 
-    read -p "Do you want to make the Headers pkg for this Kernel? [y/N] " yesno
+    read -p "...Headers package for this Kernel? [y/N] " yesno
     case $yesno in
         y* | Y*)
         KERNEL_HEADERS="kernel_headers"
@@ -93,7 +96,7 @@ if [ $1 -a $1 != "--help" ]; then
     esac
 
 
-    if [ $makeit == 1 ]; then
+    if [ $makeit -eq 1 ]; then
         echo -e "Building kernel \n"
         make-kpkg clean
         make-kpkg   --rootcmd $FAKEROOT \
@@ -106,7 +109,7 @@ if [ $1 -a $1 != "--help" ]; then
 
     # Sometimes we just want to make the headers indepentently
     
-    if [ x$KERNEL_HEADERS != "x" -a $makeit == 0  ]; then
+    if [ x$KERNEL_HEADERS != "x" -a $makeit -eq 0  ]; then
         echo -e "Building kernel headers only \n"
         make-kpkg   --rootcmd $FAKEROOT \
         --initrd \
@@ -138,5 +141,8 @@ if [ $1 -a $1 != "--help" ]; then
         modules_image
     fi
 else
-    echo -e "Usage: $0 ## \n \t Where ## is an interger or string to append to the kernel name"
+    echo -e "Usage: $0 ## \n \t Where ## \
+    is an interger or string to append to the kernel name"
 fi
+
+#eof

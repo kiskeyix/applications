@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Mar-07
+# Last modified: 2004-Mar-08
 #
 # DESCRIPTION: creates a .torrent file in the local directory
 #               which will be used to link with an announcer (tracker)
@@ -54,22 +54,24 @@ if ( -e $ARGV[0] )
     } else {
         print "Assuming tracker running at $TRACKER_URL \n";
     }
-    # could be a file or a whole directory
-    $BTMAKEMETAFILE .= " $ARGV[0] $TRACKER_URL ";
-    print STDERR "Executing:\n $BTMAKEMETAFILE\n" if $DEBUG;
-    system("$BTMAKEMETAFILE");
     my $BASENAME = basename($ARGV[0].".torrent");
-    # move file to current directory
-    if ( -f "$ARGV[0].torrent" )  
+    if ( !-f $BASENAME )
     {
+        # could not find the given .torrent file.. so create one
+        $BTMAKEMETAFILE .= " $ARGV[0] $TRACKER_URL ";
+        print STDERR "Executing:\n $BTMAKEMETAFILE\n" if $DEBUG;
+        system("$BTMAKEMETAFILE");
+        # move file to current directory
         move($ARGV[0].".torrent","$BASENAME")
             or die("Could not move $ARGV[0].torrent to ./$BASENAME");
+    }
+    if ( -f "$BASENAME" )  
+    {
         my $BT = "$BTDOWNLOAD $BTUPLOAD_LIMIT --url $URL\:$URL_HTTP_PORT/$BASENAME --saveas $ARGV[0]";
         print STDERR "Executing:\n$BT >> $CLIENT_LOG 2>&1 &\n" 
             if $DEBUG;
         system("$BT >> $CLIENT_LOG 2>&1 &")
             and print STDOUT "check file $CLIENT_LOG for client progress\n";
-;
         #or die("Could not run '$BT', make sure that ./$BASENAME exists or copy .torrent file from $ARGV[0] to the current directory. $!\n");
         print STDOUT "Your public URL is: $URL\:$URL_HTTP_PORT/$BASENAME\n";
     } else {

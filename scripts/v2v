@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.49 $
+# $Revision: 1.50 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -497,7 +497,8 @@ sub get_fps {
     $info=`transcode -i $VOBPATH -c 1-2 2> /dev/null` 
         or mydie "Problem when running \'transcode -i $VOBPATH \'";
     $info =~ m,V:\s+encoding\s+fps.*\|\s+(\d+\.\d+),;
-    $FPS = chomp($1);
+    $FPS = $1;
+    chomp( $FPS ); # just in case...
     return $FPS;
 }
 

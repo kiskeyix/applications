@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.58 $
+# $Revision: 1.59 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -217,7 +217,7 @@ directory- use this directory instead of default (current)
 menu-td  - How many cells in menu?
 td       - How many cells in e/a file
 front-end - dialog to use to display progress. Must be compatible with Xdialog.
-            or you can also choose 'console' if you have Term::Progressbar 
+            or you can also choose 'console' if you have Term::ProgressBar 
             installed
 str-limit- What's the size of the longest string allowed in menus?
 help     - prints this help and exit\n
@@ -296,8 +296,6 @@ my $MODE = "text";
 my $DIA = "";
 my $use_console_progressbar = 0; # a simple flag
 
-
-
 # get options
 GetOptions(
     # flags
@@ -333,14 +331,14 @@ my @binaries = ("dialog","whiptail","cdialog");
 my $FOUND = 0; # flag
 
 if ( $DIA eq "console" ) {
-    print STDERR ("Trying Term::Progressbar\n");
+    print STDERR ("Trying Term::ProgressBar\n");
     eval "use Term::ProgressBar";
     if ( ! $@ ) { 
         $use_console_progressbar = 1; # update flag
     } else {
         # no hope at this point... 
         print STDERR ("Run without --front-end='console' to autodetect dialog\n");
-        print STDERR ("Term::Progressbar is not installed. Exiting\n");
+        print STDERR ("Term::ProgressBar is not installed. Exiting\n");
         exit 1;
     }
 } elsif ( $DIA eq "" ) {
@@ -386,6 +384,18 @@ if ( $DIA eq "console" ) {
             print STDERR ("Console Dialog was not found.\n");
             print STDERR ("Please install any of these programs:\n");
             print STDERR join(" ",@binaries)."\n";
+            # fallback to console...
+            print STDERR ("Trying Term::ProgressBar\n");
+            eval "use Term::ProgressBar";
+            if ( ! $@ ) { 
+                print STDERR ("Using Term::Progressbar\n");
+                $use_console_progressbar = 1; # update flag
+            } else {
+                # yikes! no hope at this point... 
+                print STDERR ("Term::ProgressBar is not installed. Exiting\n");
+                exit 1;
+            }
+            # we should never reach this...
             exit 1;         
         } # end if DIA eq console
     } # end if MODE
@@ -424,7 +434,7 @@ sub main {
     
     if ( $use_console_progressbar == 1 ) 
     {
-        $GAUGE = Term::ProgressBar;
+        $GAUGE = Term::ProgressBar->new(100); # will be setup later...
     } else {
         $GAUGE->open("| $DIA $ARGS --backtitle 'Picture Directory to HTML' --title 'Picture Progress' --gauge 'Thumbnails Creation' 8 70 0 2>&1");
         $GAUGE->autoflush(1);
@@ -894,7 +904,7 @@ sub mkthumb {
         # update flags
         $LAST_BASE = $BASE;
         # update progressbar
-        if ( $use_console_progress == 1 ) 
+        if ( $use_console_progressbar == 1 ) 
         {
             $GAUGE->update($PROGRESS);
         } else {
@@ -1489,8 +1499,3 @@ sub cut_dirs {
     return $tmp_str;
 } # end cut_dirs
 
-# Gui 
-sub front_end
-{
-    $gui->update(shift);
-} # end front_end

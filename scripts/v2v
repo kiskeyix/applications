@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.76 $
+# $Revision: 1.77 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -262,23 +262,6 @@ my $f_start_time = "";
 
 # === Helper Functions === #
 
-sub mydie
-{
-    print $RED.$_[0]."\n".$NORM;
-    if ( ! $RUNCLUST  && ! $SRTSUBRIP )
-    {
-        system("mv tmp/dvdtitle $VOBPATH/dvdtitle") if ( -e "tmp/dvdtitle" );
-        system("mv tmp/probe.rip $VOBPATH/probe.rip") if ( -e "tmp/probe.rip" );
-    } else { 
-        system("/bin/rm tmp/$TITLE*.pgm tmp/$TITLE.srtx 2> /dev/null");
-        sleep(3);
-    }
-    unlink("tmp/PB");
-    exit(1);
-}
-
-use sigtrap qw(handler mydie normal-signals error-signals) ;
-
 sub prompt
 {
     #@param 0 string := question to prompt
@@ -288,6 +271,128 @@ sub prompt
     chomp($rep);
     return $rep;
 }
+
+sub which 
+{
+    # @param 0 string := binary to find in $ENV{PATH}
+    # returns binary plus path found
+    my $binary = shift;
+    my $path = "-1"; # string to return when found
+    foreach my $binary_path ( split(/:/,$ENV{"PATH"}) )
+    {
+        next if ( -x "$path" ); # a quick way out. after finding
+                                # first binary in $ENV{PATH}
+        if ( -x "$binary_path"."/$binary")
+        {
+            $path = "$binary_path"."/$binary";
+        }
+    }
+    return $path; # -1 means not found
+}
+
+sub do_file_ary {
+    # @param 0 string := directory to start search
+    # uses find() to recur thru directories
+    # returns an array of files
+    # i.e. in directory "a" with the files:
+    # /a/file.txt
+    # /a/b/file-b.txt
+    # /a/b/c/file-c.txt
+    # /a/b2/c2/file-c2.txt
+    # 
+    # my @ary = &do_file_ary(".");
+    # 
+    # will yield:
+    # a/file.txt
+    # a/b/file-b.txt
+    # a/b/c/file-c.txt
+    # a/b2/c2/file-c2.txt
+    # 
+    my $ROOT = shift;
+    my %opt = (wanted => \&process_file, no_chdir=>1);
+    @ary_files = (); # reset array
+    find(\%opt,$ROOT);
+    return @ary_files;
+} # iend do_file_ary
+
+sub process_file {
+    # @param 0 string := filename
+    # checks whether filename passes some tests:
+    my $base_name = basename($_);
+    # TODO find a way to pass exceptions to this file. for now,
+    # they are hardcoded
+    if  ( 
+        -f $_ 
+        && $base_name !~ m/^\.[a-zA-Z0-9]+$/  # skip dot files
+        && $base_name =~ m/\.(vob|mpe{0,1}g)$/i # skip non-movie files
+        ) 
+    {
+        s/^\.\/*//g; # if dir is . (current), remove starting ./
+        push @ary_files,$_;
+    }
+} #end process_file
+
+sub do_dir_ary {
+    # @param 0 string := directory to start search
+    # uses find() to recur thru directories
+    # returns an array of files
+    # i.e. in directory "a" with the files:
+    # /a/, /a/b/, /a/b/c/, /a/b2/c2/
+    # 
+    # my @ary = &do_dir_ary(".");
+    # will yield:
+    # a/, a/b/, a/b/c/, a/b2/c2/
+    my $ROOT = shift;
+    my %opt = (wanted => \&process_dir, no_chdir=>1);
+    @ary_files = (); # reset array
+    find(\%opt,$ROOT);
+    return @ary_files;
+} # iend do_file_ary
+
+sub process_dir {
+    # @param 0 string := filename
+    # checks whether filename passes some tests:
+    my $base_name = basename($_);
+    # TODO find a way to pass exceptions to this file. for now,
+    # they are hardcoded
+    if  ( 
+        -d $_ 
+        && $base_name !~ m/^\.[a-zA-Z0-9]+$/  # skip dot files
+        ) 
+    {
+        s/^\.\/*//g; # if dir is . (current), remove starting ./
+        push @ary_files,$_;
+    }
+} #end process_file
+
+sub cleanup_tmp
+{
+    my @files = do_file_ary("tmp");
+    my @dirs = do_dir_ary("tmp");
+    system("find 'tmp' -type d -exec chmod 0775 {} \\; ");
+    #system("/bin/rm -fr 'tmp'");
+    unlink(@files);
+    rmdir(@dirs);
+}
+
+sub mydie
+{
+    print STDERR "$RED @_ $NORM\n";
+    if ( ! $RUNCLUST  && ! $SRTSUBRIP )
+    {
+        system("mv tmp/dvdtitle $VOBPATH/dvdtitle") if ( -e "tmp/dvdtitle" );
+        system("mv tmp/probe.rip $VOBPATH/probe.rip") if ( -e "tmp/probe.rip" );
+    } else { 
+        system("/bin/rm tmp/$TITLE*.pgm tmp/$TITLE.srtx 2> /dev/null");
+        sleep(3);
+    }
+    unlink("tmp/PB");
+    my $rep = prompt("Cleanup tmp directory? [y/N] ");
+    cleanup_tmp() if ( $rep =~ /^[yY]/ );
+    exit(1);
+}
+
+use sigtrap qw(handler mydie normal-signals error-signals) ;
 
 sub pinfo
 {
@@ -433,7 +538,8 @@ sub chk_wdir
         $i++;
         print "File $i: $file\n" if ( $INFO );
     }
-    mydie ("Only ONE AVI, DV  or QT file is allowed to transcode at a time.\n Please merge those $i avi (dv or qt ) files\n")  if (( $in_video_codec eq "avi" || 
+    mydie ("Only ONE AVI, DV  or QT file is allowed to transcode at a time.\n Please merge those $i avi (dv or qt ) files\n")  
+    if (( $in_video_codec eq "avi" || 
     $in_video_magic eq "mov" || 
     $in_video_magic eq "mpeg2"  || 
     $in_video_magic eq "dv"  ) && 
@@ -557,66 +663,6 @@ sub say_end
     }
 
 } # end say_end()
-
-sub which 
-{
-    # @param 0 string := binary to find in $ENV{PATH}
-    # returns binary plus path found
-    my $binary = shift;
-    my $path = "-1"; # string to return when found
-    foreach my $binary_path ( split(/:/,$ENV{"PATH"}) )
-    {
-        next if ( -x "$path" ); # a quick way out. after finding
-                                # first binary in $ENV{PATH}
-        if ( -x "$binary_path"."/$binary")
-        {
-            $path = "$binary_path"."/$binary";
-        }
-    }
-    return $path; # -1 means not found
-}
-
-sub do_file_ary {
-    # @param 0 string := directory to start search
-    # uses find() to recur thru directories
-    # returns an array of files
-    # i.e. in directory "a" with the files:
-    # /a/file.txt
-    # /a/b/file-b.txt
-    # /a/b/c/file-c.txt
-    # /a/b2/c2/file-c2.txt
-    # 
-    # my @ary = &do_file_ary(".");
-    # 
-    # will yield:
-    # a/file.txt
-    # a/b/file-b.txt
-    # a/b/c/file-c.txt
-    # a/b2/c2/file-c2.txt
-    # 
-    my $ROOT = shift;
-    my %opt = (wanted => \&process_file, no_chdir=>1);
-    @ary_files = (); # reset array
-    find(\%opt,$ROOT);
-    return @ary_files;
-} # iend do_file_ary
-
-sub process_file {
-    # @param 0 string := filename
-    # checks whether filename passes some tests:
-    my $base_name = basename($_);
-    # TODO find a way to pass exceptions to this file. for now,
-    # they are hardcoded
-    if  ( 
-        -f $_ 
-        && $base_name !~ m/^\.[a-zA-Z0-9]+$/  # skip dot files
-        && $base_name =~ m/\.(vob|mpe{0,1}g)$/i # skip non-movie files
-        ) 
-    {
-        s/^\.\/*//g; # if dir is . (current), remove starting ./
-        push @ary_files,$_;
-    }
-} #end process_file
 
 # === Routines === #
 
@@ -838,7 +884,7 @@ sub create_extract
                 my $tmp_channels=($3 > 2) ? 2 : $3;
                 $audio_rate="$1,$bits,$tmp_channels";
             }
-            pdebug ("\nAudio rate = $audio_rate");
+            pdebug("\nAudio rate = $audio_rate");
             if ( $audio_format eq 'pcm' ) # Do not need to decode audio
             { 
                 if (  $in_video_magic eq 'avi' )
@@ -863,7 +909,7 @@ sub create_extract
                     ."| nice -$nice tcdecode -x $audio_format | nice -$nice tcscan -b $AUDIO_BITRATE"
                     ." -x pcm -e $audio_rate -f $FPS 2>> tmp/extract.text  >> tmp/extract.text";
             }
-            print "$sys \n" if ( $INFO);
+            pinfo("$sys \n") if ( $INFO );
             pdebug ("+ Working directory ".`pwd`);
             system ("nice -$nice $sys") == 0  
                 or ( 
@@ -942,6 +988,7 @@ sub calculate_bitrate
     if ( $NOAUDIO != 1 )
     {
         ( $info =~ m, A: (\d+\.*\d*) MB @ ,) or mydie "Unable to find Audio Size in $log";
+        ( $fulltime > 0 ) or mydie("$v2d Cannot find fulltime [$fulltime]");
         $AUDIO_SIZE = $1*$RUNTIME/$fulltime;
         ( $info =~ m, A: .* MB @ (\d+) kbps,) or mydie "Unable to find audio bitrate in $log";
         $AUDIO_SIZE = $AUDIO_SIZE*$AUDIO_BITRATE/$1;
@@ -3455,7 +3502,7 @@ sub ripdvd
     $dvd="/dev/dvd" if ( $dvd eq "" ); 
     if ( $DVDTITLE ne "" )
     { 
-        $TITLE=`$DVDTITLE $dvd 2> /dev/null` or die "Problem when running \'dvdtitle $dvd\'";
+        $TITLE=`$DVDTITLE $dvd 2> /dev/null` or mydie("Problem when running \'dvdtitle $dvd\'");
         chomp($TITLE);
     } else {  	
         print " V2divx does'nt find dvdtitle, please enter this DVD Movie Title: ";
@@ -3470,8 +3517,8 @@ sub ripdvd
     print "Press Enter to continue or <Ctrl-C> to Abort\n";
     print $NORM;
     my $junk=<STDIN>;
-    my $probe = `tcprobe -i \"$dvd\" 2>&1` or die "Problem when running \'tcprobe -i $dvd\'";
-    ($probe =~ m,DVD title \d+/(\d+),) or die "Probing DVD failed! - No DVD?";
+    my $probe = `tcprobe -i \"$dvd\" 2>&1` or mydie("Problem when running \'tcprobe -i $dvd\'. $!");
+    ($probe =~ m,DVD title \d+/(\d+),) or mydie("Probing DVD failed! - No DVD? $! ");
     my $totalTitles = $1;
     print " titles: total=$totalTitles\n";
 
@@ -3482,18 +3529,18 @@ sub ripdvd
     for(@checkTitles) 
     {
         # call tcprobe for info
-        $probe = `tcprobe -i \"$dvd\" 2>&1 -T $_` or die "Problem when running \'tcprobe -i $dvd\'";
+        $probe = `tcprobe -i \"$dvd\" 2>&1 -T $_` or mydie("Problem when running \'tcprobe -i $dvd\'. $!");
         # extract title playback time -> titlelen
-        ($probe =~ m,title playback time: .* (\d+) sec,) or die "No time found in tcprobe for title $_ !";
+        ($probe =~ m,title playback time: .* (\d+) sec,) or mydie("No time found in tcprobe for title $_ !. $!");
         $titleLen[$_] = $1;
         # extract title set (VTS file) -> titleset
-        ($probe =~ m,title set (\d+),) or die "No title set found in tcprobe for title $_! ";
+        ($probe =~ m,title set (\d+),) or mydie "No title set found in tcprobe for title $_! ";
         $titleSet[$_] = $1;
         # extract angles
-        ($probe =~ m,(\d+) angle\(s\),) or die "No angle found in tcprobe for title $_ !";
+        ($probe =~ m,(\d+) angle\(s\),) or mydie "No angle found in tcprobe for title $_ !";
         $angles = $1;
         # extract chapters
-        ($probe =~ m,(\d+) chapter\(s\),) or die "No chapter found in tcprobe for title $_ !";
+        ($probe =~ m,(\d+) chapter\(s\),) or mydie "No chapter found in tcprobe for title $_ !";
         $chapters = $1;
 
         # calc hour, minute of title len
@@ -3524,8 +3571,8 @@ sub ripdvd
         chomp($longestTitle);
     }
     #  Check if this title is multiangle ....
-    $probe = `tcprobe -i \"$dvd\" 2>&1 -T $longestTitle` or die "Problem when running \'tcprobe -i $dvd\'";
-    ($probe =~ m,(\d+) angle\(s\),) or die "No angle found in tcprobe for title $longestTitle !";
+    $probe = `tcprobe -i \"$dvd\" 2>&1 -T $longestTitle` or mydie "Problem when running \'tcprobe -i $dvd\'";
+    ($probe =~ m,(\d+) angle\(s\),) or mydie "No angle found in tcprobe for title $longestTitle !";
     $angles = $1;
     if ( $angles > 1 )
     { 	
@@ -3543,7 +3590,7 @@ sub ripdvd
         chomp($angle);
     }
     #  Check if this title is multichapter
-    ($probe =~ m,(\d+) chapter\(s\),) or die "No chapter found in tcprobe for title $longestTitle !";
+    ($probe =~ m,(\d+) chapter\(s\),) or mydie "No chapter found in tcprobe for title $longestTitle !";
     $chapter=$1;
     if ( $chapter > 1 )
     { 	
@@ -3558,7 +3605,7 @@ sub ripdvd
     close(H_TITLE);
     opendir(VOB,$VOBPATH);
     chdir($VOBPATH) 
-        or die "Unable to chdir to $VOBPATH.. please DO NOT USE the ~ character in the /path/to/vob";
+        or mydie "Unable to chdir to $VOBPATH.. please DO NOT USE the ~ character in the /path/to/vob";
     $sys="tcprobe -i $dvd -T $longestTitle >> probe.rip 2>&1 ";
     system ("nice -$nice $sys");
     if ( $rep eq "y" || $rep eq "Y" || $rep eq "o" || $rep eq "0")
@@ -3623,7 +3670,7 @@ sub dvd9to5
     {
         $UNLINK_CONFIG=1;
         # profile:
-        open(PROFILE,">$multiplex_config") or die("Could not open file. $!");
+        open(PROFILE,">$multiplex_config") or mydie("Could not open file. $!");
         print PROFILE "maxFileSize = 4400"; # 4.4GB
         close(PROFILE);
     }
@@ -3744,7 +3791,7 @@ sub avitovcd
     {
         $UNLINK_CONFIG=1;
         # profile:
-        open(PROFILE,">$multiplex_config") or die("Could not open file. $!");
+        open(PROFILE,">$multiplex_config") or mydie("Could not open file. $!");
         print PROFILE "maxFileSize = 895"; # 700MB media as VCD
         close(PROFILE);
     }
@@ -3828,7 +3875,7 @@ sub make_dvd
     
     # mk tmp directory
     mkdir("tmp",oct(1777)) 
-        or die ("Could not create tmp directory. $!");
+        or mydie ("Could not create tmp directory. $!");
     pinfo("$v2d DVD name : $name");
 
     # make DVD
@@ -3847,7 +3894,7 @@ sub make_dvd
     ($DVDAUTHOR = $DVDAUTHOR) =~ s/XXXFILEXXX/$files/g;
 
     open(XML,">tmp/dvdauthor.xml") 
-        or die ("Could not create file tmp/dvdauthor.xml. $!");
+        or mydie ("Could not create file tmp/dvdauthor.xml. $!");
     $UNLINK_CONFIG=1; # will be useful when users pass their .xml files
     print XML "$DVDAUTHOR"; 
     close(XML);
@@ -3865,7 +3912,7 @@ sub make_dvd
     my $sys = "$dvdauthor -o 'tmp/$name' -x 'tmp/dvdauthor.xml' $mfiles $args";
     pdebug($sys);
     system("$sys") 
-        or die("Could not create DVD directory at tmp. $!\n");
+        or mydie("Could not create DVD directory at tmp. $!\n");
 
     # remove XML file
     unlink("tmp/dvdauthor.xml") if ( $UNLINK_CONFIG );
@@ -3893,8 +3940,7 @@ sub make_dvd
     my $rep = prompt("Cleanup tmp directory? [y/N] ");
     if ( $rep =~ /^[yY]/ )
     {
-        system("find 'tmp' -type d -exec chmod 0775 {} \\; ");
-        system("rm -fr 'tmp'");
+        cleanup_tmp();
     }
 } # end make_dvd()
 

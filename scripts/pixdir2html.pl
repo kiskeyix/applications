@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.90 $
+# $Revision: 1.91 $
 # Luis Mondesi  <lemsx1@hotmail.com>
 # 
 # REQUIRED: ImageMagick's Perl module and a dialog 
@@ -126,7 +126,14 @@ GetOptions(
     'str-limit=i'       =>  \$STR_LIMIT,
     'c|cut-dirs=i'      =>  \$CUT_DIRS
 );
-if ( $HELP ) { system("pod2text $0 | more"); exit 0; }
+if ( $HELP ) { 
+    use Pod::Text;
+    my $parser = Pod::Text->new (sentence => 0, width => 78);
+    $parser->parse_from_file(File::Spec->catfile("$0"),
+			   \*STDOUT);
+    exit 0;
+}
+
 if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
 # Xdialog is a better implementation than gdialog. 
 # Zenity is better than all so far... 
@@ -1626,7 +1633,7 @@ Luis Mondesi <lemsx1@hotmail.com>
 
 =head1 SEE ALSO
 
-perl(1), pod2text(1), pod2man(1), Image::Magick(3), Term::Progressbar(3)
+perl(1), pod2man(1), Image::Magick(3), Term::Progressbar(3)
 
 =cut
 

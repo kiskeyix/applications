@@ -1,7 +1,7 @@
 #!/bin/sh
-# $Id: vnctunnel.sh,v 1.3 2003-08-24 02:53:07 luigi Exp $
+# $Id: vnctunnel.sh,v 1.4 2003-08-30 00:34:13 luigi Exp $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Aug-18
+# Last modified: 2003-Aug-29
 #
 # DESCRIPTION:
 
@@ -11,7 +11,7 @@ VNCVIEWER=vncviewer
 # ssh arguments
 ARG=" -X "
 
-if [ $3 -ge 5900 ]; then
+if [ $3 -a $3 -ge 5900 ]; then
     echo "Connect using the command '$VNCVIEWER localhost:$3'"
 else
     echo "Connect using the command '$VNCVIEWER localhost:5900'"

@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.82 $
+# $Revision: 1.83 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -51,7 +51,8 @@ my $RUNCLUST=0;
 my $SRTSUBRIP=0;
 my $OKCLUSTER=0;
 my $TEST = 0;
-my $DVD9TO5 = 0; 
+my $DVD9TO5 = 0;
+my $DVDBACKUP = 0;
 my $AVITOVCD = 0;
 my $Res_DIVX_OPT = 0;
 my $DEBUG = 0;
@@ -59,7 +60,7 @@ my $INFO = 0;
 my $VERSION = 0;
 my $TVREC = 0;
 # numbers
-my $TITLESET=1; # default titleset when doing dvd9todvd5. 
+my $TITLESET=1; # default titleset when doing dvd9todvd5 or dvdbackup. 
                 # override from command line with --titleset=N
 
 # strings
@@ -228,6 +229,7 @@ my $usage="
     '-c|--with-cluster'             Run in Cluster mode
     '-t|--test'                     Do a minor test with movie
     '-dvd9-to-dvd5'                 Convert from DVD-9 to DVD-5
+    '--dvdbackup'                   Backup a DVD using dvdbackup (interactive)
     '--avi-to-vcd'                  Create VCD Image from AVI
     # strings
     '-D|--directory=s'              Use this directory as WORK DIR
@@ -3693,8 +3695,7 @@ sub dvd9to5
             } else {
                 pwarn("tcmplex not found");
             } # end if tcmplex
-        } elsif ( basename("$MULTIPLEXER") eq "mplex" || !-x $TCMPLEX )
-        {
+        } elsif ( basename("$MULTIPLEXER") eq "mplex" || !-x $TCMPLEX ) {
             if ( -x $MPLEX )
             {
                 # -S 4400 # split at 4.4GB
@@ -3909,6 +3910,69 @@ sub make_dvd
     }
 } # end make_dvd()
 
+sub dvdbackup
+{
+    # Uses dvdbackup to quickly backup a DVD title
+    # similar to --rip. Choose whichever you prefer.
+    # @param 0 directory := string path to directory that will hold the VOBs, or current directory if no argument passed
+    # @param 1 integer := title to rip from DVD. Defaults to 1
+    my $dir = shift;
+    my $title = shift;
+
+    # sanity checks
+    $dir = ( $dir and -d $dir ) ? $dir : "." ;
+    $title = ($title =~ /\d+/) ? $title : 1;
+   
+    # some paths
+    my $dvdbackup = which("dvdbackup"); 
+    my $mkisofs = which("mkisofs");
+
+    my $dvd_block = "/dev/dvd";
+    
+    my $sys = "$dvdbackup ";
+
+    if ( -b  $dvd_block ) 
+    {
+        $sys = " $sys -i $dvd_block ";
+    } else {
+        my $count = 0;
+        # asks 3 times for the dvdblock
+        DVD:
+        $dvd_block = prompt("Please enter the path of your DVD device [/dev/dvd]: ");
+        if ( ! -b $dvd_block or $count > 3 )
+        {
+            pwarn("Wrong block device\n");
+            $count ++;
+            goto DVD;
+        } elsif ( $count > 3 ) {
+           perror ("You need a valid DVD block device before we can continue");
+           exit 1;
+        }
+        $sys = "$sys -i $dvd_block ";
+    }
+    
+    if ( $title > 0 )
+    {
+        # --title=##
+        # rip $TITLE only
+        $sys = "$sys -T $title";
+    } else {
+        # rip the whole DVD
+        $sys = "$sys -M ";
+    }
+
+    if ( -d $dir )
+    {
+        $sys = "$sys -o $dir";
+    } else {
+        $sys = "$sys -o ."
+    }
+    
+    # system
+    pinfo ("Executing: $sys");
+    system ( "$sys" );
+}
+
 # ************ End of Functions Declarations *********** #
 
 # ********************* MAIN () ************************ #
@@ -3943,6 +4007,7 @@ GetOptions(
     'c|with-cluster'            =>  \$OKCLUSTER,
     't|test'                    =>  \$TEST,
     'dvd9-to-dvd5'              =>  \$DVD9TO5,
+    'dvdbackup'                 =>  \$DVDBACKUP,
     'avi-to-vcd'                =>  \$AVITOVCD,
     # strings
     'D|directory=s'             => \$ROOT_DIRECTORY,
@@ -4064,6 +4129,13 @@ if ( $SRTSUBRIP )
 if ($DVD9TO5 > 0)
 {
     dvd9to5($ARGV[0],$TITLESET); # calls make_dvd()
+    exit(0);
+}
+
+# rip dvd using dvdbackup
+if ($DVDBACKUP > 0)
+{
+    dvdbackup($ARGV[0],$TITLESET); # 
     exit(0);
 }
 

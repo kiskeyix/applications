@@ -1441,6 +1441,11 @@ $i++;
                 my $end_time = time - $start_time;
                 my $f_end_time = format_date($end_time,"hours");
                 print "Number of Hours: $f_end_time \n";
+                if ( -x "/usr/bin/flite" )
+                {
+                    # say it outloud using "flite" speech synthetizer
+                    system("/usr/bin/flite -t 'Number of hours $f_end_time'");
+                }
 
                 print " Now take a look at the end of $dvdtitle.avi\n\t If for some reason the divx file does'nt reach the end credits, just edit tmp/vob2divx.conf, decrease the last_sec value, remove the tmp/finish file and then run V2divx without parameters.";
                 print " Is you divx file OK? (y/N): ";

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.59 $
+# $Revision: 1.60 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -1182,7 +1182,6 @@ sub readuserconf
         close(USERCONF);
     }
 
-    # BUG: this keeps printing AO=mp3 to the $userconfigfile ??
     if ( ! defined ( $AO ))
     {
         $AO="mp3";

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.27 $
+# $Revision: 1.28 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -116,7 +116,7 @@ if ( $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} =~ m#^file:///# ) {
     ($nautilus_root = $nautilus_root ) =~ s#^file://##g;
 }
 
-my $ROOT_DIRECTORY= ( -d $nautilus_root ) ? $nautilus_root : $ENV{PWD};
+my $ROOT_DIRECTORY= ( -d $nautilus_root ) ? $nautilus_root : ".";
 
 my $LOG="$ROOT_DIRECTORY/pixdir2html.log";
 
@@ -392,7 +392,7 @@ sub mkindex {
         } else {
             print FILE ($myconfig{footer});
         }
-
+        print FILE ("\n");
         close(FILE);
     } # end for e/a this_base
 } # end mkindex
@@ -884,7 +884,7 @@ sub menu_file {
                 if ( $ls[$i] ne "" ) {
                     # if link exists, otherwise leave it blank
                     # TODO there is a better way to do this... find it...
-                    ($ts = $ls[$i]) =~ s/(.*)\/$FILE_NAME/$1/gi;
+                    ($ts = $ls[$i]) =~ s#(.*)/$FILE_NAME#$1#gi;
                     $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='$myconfig{new}' alt='new'>":""; # if .new file
                     $ts = ucfirst($ts);
                     print FILE ("<a href='$myconfig{uri}/$ls[$i]' target='_top'>$IMG $ts</a>\n");

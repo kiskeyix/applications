@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Jan-20
 #
@@ -63,8 +63,13 @@ foreach my $h ( @hosts )
     #print "\e[H"; # return the cursor to the normal position
 
     # we only care about IPs here:
-    if ( !$DEBUG && $h =~ /(\d+.\d+.\d+.\d+)/ && is_alive($h) )
+    if ( !$DEBUG && $h =~ /(\d+.\d+.\d+.\d+)/ )
     {
+        if ( ! is_alive($h) )
+        {
+            print STDOUT ("$h is dead\n");
+            next;
+        }
         $j=0;
         # make sure the .backup and $TMP dir exists
         system("ssh $h mkdir -p $TMP .backup ".$silent);
@@ -88,7 +93,7 @@ foreach my $h ( @hosts )
         print STDOUT "\n";
     } else {
         # debugging 
-        print "*** ".$h."\n" if ( $DEBUG );
+        print "*** SKIPPED $h\n" if ( $DEBUG );
     }
 }
 print "\n";

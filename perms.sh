@@ -1,7 +1,8 @@
-#!/usr/local/bin/bash
-# $Id: perms.sh,v 1.1 2002-10-31 14:40:42 luigi Exp $
+#!bash
+# $Id: perms.sh,v 1.2 2002-11-01 16:22:32 luigi Exp $
+# $r: $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2002-Oct-31
+# Last modified: 2002-Nov-01
 #
 # DESCRIPTION: My Solaris permissions
 # USAGE:

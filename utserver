@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jan-05
 #
@@ -10,7 +10,7 @@
 MAP="CTF-Adobie.unr" # startup map
 
 USER=ucc            # userid which owns this process
-PID=$HOME/ucc.pid   # Process ID of current server
+PID=/home/ucc/ucc.pid   # Process ID of current server
 PATH=/usr/local/games/ut:/bin:/usr/bin  # path to search for commands
 DAEMON=/usr/local/games/ut/ucc
 REALDAEMON=/usr/local/games/ut/System/ucc-bin   # used when stopping

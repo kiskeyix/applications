@@ -1,7 +1,15 @@
 #!/bin/bash
+# Luis Mondesi <lemsx1@hotmail.com>
+# Use this to add a file or series of files to
+# CVS in one shot!
+# Usage: cvsadd.sh filename
 
-FILES=`find . -name "$1"`;
-
-for i in $FILES; do
-    cvs add $i;
-done
+if [ -f $1 ]; then
+    for file in $*; do
+        echo "Adding ${file} to current CVS tree";
+        cvs add $i;
+        cvs commit -m "first commit" ${file};
+    done
+else 
+    echo "Usage: cvsadd.sh filename [filename2]";
+fi

@@ -11,5 +11,5 @@ if [ -f $1 ]; then
         cvs commit -m "file deleted from current tree" ${file};
     done
 else
-    echo "Usage: cvsdelete.sh filename"
+    echo "Usage: cvsdelete.sh filename [filename2]"
 fi

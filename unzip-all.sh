@@ -1,5 +1,5 @@
 #!/bin/bash
-# Last modified: 2002-Jul-30
+# Last modified: 2002-Sep-19
 # Luis Mondesi < lemsx1@hotmail.com >
 # 
 # DESCRIPTION: use this script to unzip
@@ -11,15 +11,23 @@
 # the extension as a second argument: uall.sh DIR EXT
 #
 
-echo -e "unzipping .zip \n";
+if [ -d "$1" ]; then
 
-if [ -z "$1" ]; then
-    DIR=$1;
-else
-    DIR=.
+    if [ "$2" ]; then
+        for i in `/bin/ls $1/*.$2`; do
+            if [ $2 -eq "zip" ];then
+                unzip $1/$i;
+            elif [ $2 -eq "gz" ]; then
+                gunzip $1/$i;
+            elif [ $2 -eq "bz2" ]; then
+                bunzip2 $1/$i;
+            fi
+        done
+    else
+        for i in `/bin/ls $1/*.zip`; do
+            #echo -e "$i \n";
+            unzip $i;
+        done
+    fi
+
 fi
-for i in `ls $1/*.zip`; do
-    #echo -e "$i \n";
-        unzip $DIR/$i.zip;
-done
-

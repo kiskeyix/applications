@@ -1,7 +1,7 @@
-#!/bin/sh
-# $Revision: 1.12 $
+#!/bin/bash
+# $Revision: 1.13 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jul-24
+# Last modified: 2003-Jul-27
 #
 # DESCRIPTION:  an interactive wrapper to Debian's "make-kpkg"
 #               to build a custom kernel package.
@@ -53,20 +53,19 @@ if [ $1 -a $1 != "--help" ]; then
 
     # ask whether to create a kernel image
     makeit=0
-    yesno="n"
+    yesno="No"
 
-    echo "Do you want to make the Kernel? [y/N] "
-    read yesno
+    read -p "Do you want to make the Kernel? [y/N] " yesno
     case $yesno in
-        [ ]*y* | [ ]*Y*)
+        y* | Y*)
             makeit=1
         ;;
-        [ ]*n* | [ ]*N*)
+        n* | N*)
             makeit=0
         ;;
     esac
 
-    if [ $makeit ]; then
+    if [ $makeit == 1 ]; then
         echo -e "Building kernel \n"
         make-kpkg   --rootcmd $FAKEROOT \
         --initrd \
@@ -79,21 +78,20 @@ if [ $1 -a $1 != "--help" ]; then
     # ask whether to create all kernel module images
     # from ../modules (or /usr/src/modules)
     
-    makeit=0
-    yesno="n"
+    mmakeit=0
+    myesno="No"
 
-    echo "Do you want to make the Kernel Modules? [y/N] "
-    read yesno
-    case $yesno in
-        [ ]*y* | [ ]*Y*)
-            makeit=1
+    read -p "Do you want to make the Kernel Modules? [y/N] " myesno
+    case $myesno in
+        y* | Y*)
+            mmakeit=1
         ;;
-        [ ]*n* | [ ]*N*)
-            makeit=0
+        n* | N*)
+            mmakeit=0
         ;;
     esac
     
-    if [ $makeit ]; then
+    if [ $mmakeit == 1 ]; then
         make-kpkg   --rootcmd $FAKEROOT \
         --config oldconfig \
         --append-to-version -custom.$1 \

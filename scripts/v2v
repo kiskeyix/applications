@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.33 $
+# $Revision: 1.34 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -1258,7 +1258,7 @@ sub cluster
     
     my $s_file = new File::Temp(
                                 "TEMPLATE"  => "XXXXX",
-                                "DIR"       => "/tmp",
+                                "DIR"       => "tmp", # NFS
                                 "SUFFIX"    => ".txt"
                             );
 
@@ -1346,6 +1346,9 @@ sub cluster
 
         # closing the file deletes it...
         #close(GOODNODE); 
+        # FIXME
+        print $DEBUG "\n++++++> Sleeping ... \n";
+        sleep(10);
     } else {
         # we don't need cluster-mode?
         print $DEBUG "\n+++++> Unlinking file $s_file";
@@ -1358,7 +1361,9 @@ sub cluster
     # percentages of frames that each nodes
     # need to encode more
     # So we run V2divx on nodes ...
-
+        # FIXME
+        print $DEBUG "\n++++++> Sleeping ... \n";
+        sleep(10);
     if ( -f "$s_file" )
     {	
         # tabpower is just a table to know when nodes 

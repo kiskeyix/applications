@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.19 $
+# $Revision: 1.20 $
 # Luis Mondesi || lemsx1 at gmail !! com 
 # LICENSE: GPL (http://gnu.org/licenses/gpl.txt)
 # 
@@ -119,6 +119,11 @@ no warnings; # turn of warnings for now
 chomp($folder); # remove end-line
 die($USAGE) if ( ! -d "$folder" );
 } # warnings are restored
+# if we are running under Nautilus, we are automatically NON-INTERACTIVE
+if (  exists $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} )
+{
+    $INTERACTIVE=0;
+}
 
 # 1. cleanup dir name:
 $folder =~ s#/+$##; # remove trailing slash(es)

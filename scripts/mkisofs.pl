@@ -33,10 +33,12 @@ my $folder = $ARGV[0];
 
 if ( $ARGV[1] eq "dvd" ) 
 {
+    die("Directory is not valid DVD tree. Missing $folder/VIDEO_TS") if ( !-d "$folder/VIDEO_TS");
+    mkdir("$folder/AUDIO_TS"); # we can afford to try this
     # fix permissions
-    system("chmod 0500 '$folder'");
-    system("find '$folder' -type d -exec chmod 0500 {} \\; ");
-    system("find '$folder' -type f -exec chmod 0400 {} \\; ");
+    system("chmod 0555 '$folder'");
+    system("find '$folder' -type d -exec chmod 0555 {} \\; ");
+    system("find '$folder' -type f -exec chmod 0444 {} \\; ");
     # make iso
     system("mkisofs -dvd-video -udf -o '$name' -V '$volumeid' '$folder'");
 } else {

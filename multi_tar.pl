@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Feb-12
-# $Revision: 1.1 $
+# Last modified: 2003-Apr-08
+# $Revision: 1.2 $
 #
 # DESC: Creates multiple tar files of XX size and then
 #       compresses them using a given command
@@ -10,13 +10,13 @@
 # tar files will be created passing the directories which
 # will be included in the tar:
 #   i.e.
-#   multi_tar.sh DIRECTORY
+#   multi_tar.pl --dir='DIRECTORY'
 #   
 #   This will start a tar archive using:
 #
 #   tar cvf test.tar --multi-volume \
 #       --volno-file file_number  -L 1024 \
-#       --info-script=./change_tape.sh  usr/
+#       --info-script=./change_tape.sh  DIRECTORY
 
 use strict;
 $|++;
@@ -24,12 +24,12 @@ $|++;
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
 
-my $usage="Usage: multi_tar [-v] [-c bzip2] [-n name] [-s size] [-t file_number_name_for_tar] filenames\n
+my $usage="Usage: multi_tar [-v|--verbose] [-c bzip2| --compress='bzip2'] [-n name| --name='name'] [-s size | --size='size'] [-t file_number_name_for_tar] --dir='dirname'\n
 \nUSAGE: call this script from the directory where the
 tar files will be created passing the directories which
 will be included in the tar:
   i.e.
-  multi_tar.sh DIRECTORY
+  multi_tar.pl DIRECTORY
   
   This will start a tar archive using:
 
@@ -39,10 +39,12 @@ will be included in the tar:
 
 my $verbose="0";
 my $COMPRESS="bzip2"; # compress command
-my $NAME="test.tar";
+my $NAME="temp-name.tar";
 my $FILE_SIZE="102400"; # KB before compressing. 100*1024*1024B = 100MB 
-my $FILE_NUMBER="./file_number";
-my $NUMBER=`cat $FILE_NUMBER`;
+my $FILE_NUMBER="/tmp/file_number";
+my $NUMBER="";
+my $DIR="";
+
 #my $SCRIPT="./$0" # call yourself without arguments!
 
 die "$usage"
@@ -51,7 +53,8 @@ unless GetOptions(
     'c|compress'   => \$COMPRESS,
     'n|name'    => \$NAME,          
     's|size'    => \$FILE_SIZE,
-    't|filenumber'  => \$FILE_NUMBER
+    't|filenumber'  => \$FILE_NUMBER,
+    'dir' => \$DIR
 );
 
 
@@ -64,12 +67,19 @@ if (!$ARGV[0]) {
 # when directories or files are passed, we start tarring them
 # else we act as part two, which takes the resulting filename and
 # renames it and then compresses it
-if ( ) { 
-    rm -f $FILE_NUMBER
-    tar -cvf $NAME --multi-volume --volno-file $FILE_NUMBER -L $FILE_SIZE --info-script=$SCRIPT $@
+if ( -d $DIR ) { 
+    unlink $FILE_NUMBER;
+    #tar -cvf $NAME --multi-volume --volno-file $FILE_NUMBER -L $FILE_SIZE --info-script=$SCRIPT $@
+    system("tar -cvf $NAME \
+    --multi-volume --volno-file $FILE_NUMBER \
+    -L $FILE_SIZE \
+    --info-script=$SCRIPT $DIR");
+    die "Tar failed\n" if ( $? != 0 );
+        
 }
-if () {
-    mv test.tar test.$NUMBER.tar
-    $COMPRESS test.$NUMBER.tar
+if ( $COMPRESS =~ /\w+/ ) {
+    rename  $NAME "$NAME.$NUMBER.tar"
+    system("$COMPRESS $NAME.$NUMBER.tar");
+    die "Compressing $NAME.$NUMBER.tar failed" if ($? != 0);
 }
 

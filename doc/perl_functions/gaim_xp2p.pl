@@ -1,4 +1,4 @@
-# $Id: gaim_xp2p.pl,v 1.1 2002-10-10 03:39:17 luigi Exp $
+# $Id: gaim_xp2p.pl,v 1.2 2002-10-10 03:45:26 luigi Exp $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2002-Oct-09
 #
@@ -175,7 +175,7 @@ sub xtext_user {
             for ($i=0;$i<$limit;$i++){
                 if ( $j % 8 < 4 ) {
                     $wspace .= "   "; # add 3 spaces to text
-                }else {
+                } else {
                     $wspace =~ s/[\s]{3}//o; # remove 3 spaces from text
                 }
                 $j++;

@@ -1,6 +1,6 @@
-# $Id: gaim_xp2p.pl,v 1.2 2002-10-10 03:45:26 luigi Exp $
+# $Id: gaim_xp2p.pl,v 1.3 2002-12-21 22:09:59 luigi Exp $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2002-Oct-09
+# Last modified: 2002-Dec-21
 #
 # Xtended Peer 2 Peer
 #
@@ -42,7 +42,7 @@
 
 
 # usefull variables:
-$VERSION = "0.0.6";
+$VERSION = "0.0.7";
 
 $LIMIT = 10; # default limit for all text sent
 
@@ -62,6 +62,28 @@ $LIMIT = 10; # default limit for all text sent
 
 # list of characters
 @chars = qw/1 2 3 4 5 6 7 8 9 0 ! @ # $ % ^ & * ( ) _ + = ` ~ a b c d e f g h i j k l m n o p q r s t u v w x y z , < > ? [ ] { } " ' : ; | /;
+
+sub description {
+    my($a, $b, $c, $d, $e, $f) = @_;
+    ("gaim_xp2p", "$VERSION", "The main purpose of this script is to bother people
+if you don't want to bother them, then don't use this....\n
+\n\t- _r ## or _rand ## or _are ##
+        , sends random number of characters from global LIMIT/2 up to ##
+        NOTE: added _are because r gets substituted by 'are' by default
+
+\n\t- _s ## or _xs ##
+        , _s sends random smilies up to ## 
+            and _xs is the extended version of this... more smiles
+        mostly MSN specific though
+
+\n\t- _x message,## 
+        , where message is a string that will be repeated ## times
+
+\n\t- _z text,##
+        , zig zags text ## number of times", 
+        "Luis Mondesi &lt;lemsx1\@hotmail.com&gt;", "http://www.latinomixed.com/lems1", 
+        "/dev/null");
+}
 
 GAIM::register("gaim_xp2p", $VERSION, "goodbye", "");
 
@@ -175,7 +197,7 @@ sub xtext_user {
             for ($i=0;$i<$limit;$i++){
                 if ( $j % 8 < 4 ) {
                     $wspace .= "   "; # add 3 spaces to text
-                } else {
+                }else {
                     $wspace =~ s/[\s]{3}//o; # remove 3 spaces from text
                 }
                 $j++;

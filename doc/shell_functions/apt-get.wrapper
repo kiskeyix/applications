@@ -1,0 +1,35 @@
+#!/bin/sh
+# Luis Mondesi <lemsx1@gmail.com> 
+#
+# Inspired by:
+# http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=134694
+#
+# Log all output of apt-get 
+#
+# Remember to rotate this logfile (copy & paste in a terminal):
+# cat <<ROTATE > /etc/logrotate.d/apt
+# > /var/log/apt.log {
+# >  rotate 6
+# >  monthly
+# >  compress
+# >  missingok
+# >  notifempty
+# > }
+# >ROTATE
+#
+# Finally, set aptitude's logfile to /var/log/apt.log 
+# and if you use synaptic, then you don't need to do anything else :-)
+# Synaptic does all the logging for you ( version 0.55+cvs200411 )
+#
+# BUG
+#   if you change LOG_FILE variable below, you will need to fix the
+#   logrotate path also.
+#
+export LOG_FILE="/var/log/apt.log"
+
+echo "Logging Wrapper for apt-get [`hostname`]"
+echo "Output is logged to $LOG_FILE"
+
+(echo ; date ; echo $0 $* ; echo ) >> $LOG_FILE
+
+/usr/bin/apt-get $* | tee -a $LOG_FILE

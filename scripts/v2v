@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.43 $
+# $Revision: 1.44 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -1431,34 +1431,16 @@ sub cluster
                 $i++;
                 $sumpow= $sumpow + $pow;
                 # we have to be SURE that V2divx has started on the remote node 
-                # before continue ( we wait for 15 secondes max)
-                # FIXME
-                # Luis: 15 seconds is not enough taking into account 
-                # that the cluster node will have to run zooming, 
-                # which in turn runs calculate_bitrate and others... 
-                # This almost always 
-                # times out.
-                # > my nodes start in 3 / 4 seconds ??!
-                #  We should find a better way to know 
-                # if the cluster is running.
-                # As a test, I'll add a "touch tmp/node_started"
-                # as soon as the first --runclust is found
-                # before it reads the configuration or anything else.
-                #
-                #   NO !!!! an important file is tmp/cluster.args 
-                #   each node MUST have read this file before
-                #   to start another 
-                #   that's why the touch tmp/node_started is made
-                #   just after read this file (tmp/cluster.args)
+                # before continue ( we wait for 25 seconds max)
                 my $j=0;
-                while ( ! -f "tmp/node_started" && $j < 15 )
+                while ( ! -f "tmp/node_started" && $j < 25 )
                 {
                     sleep(1);
                     $j++;
                 }
                 pinfo("V2divx on node $rhost is well started\n");
                 unlink("tmp/node_started" );
-                mydie("Seems that there is a problem on node $rhost\n $0 has not started correctly\n Unable to continue.\n") if ( $j == 15 );
+                mydie("Seems that there is a problem on node $rhost\n $0 has not started correctly\n Unable to continue.\n") if ( $j > 24 );
             }
         }
         # If percentage of frames < 100%
@@ -3172,8 +3154,6 @@ if ( $RUNCLUST )
         readconf;
         chk_wdir; # is needed to know input video format
         # And now we can aviencode
-        # touch tmp/node_started more later :-(
-        # cause we have to be sure to have read tmp/cluster.args
         zooming;
         aviencode;
         exit(0);

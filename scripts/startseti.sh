@@ -117,12 +117,17 @@ function killold ()
     for i in $MPID; do
         if [ x$OLD_PID = x$i ]; then
             # kill startseti.sh old PID
-            echo "Killing $0 with PID number $i at $HOSTNAME"
+            if [ $DEBUG -ne 0 ]; then
+                echo "Killing $0 with PID number $i at $HOSTNAME"
+            fi
             kill -9 $i
             rm -f $PIDF
             SUCCESS=1
         elif [ x$CPID != x$i ]; then
-            echo "Murdering $0 number $i at $HOSTNAME"
+            # cleanup lost children (whose PIDF don't exist)
+            if [ $DEBUG -ne 0 ]; then
+                echo "Murdering $0 number $i at $HOSTNAME"
+            fi
             kill -9 $i
             SUCCESS=1
         elif [ $DEBUG -ne 0 ]; then

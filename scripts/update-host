@@ -1,0 +1,107 @@
+#!/usr/bin/perl -w
+# $Revision: 1.1 $
+# Luis Mondesi < lemsx1@hotmail.com >
+# Last modified: 2005-Jan-05
+#
+# DESCRIPTION: A simple script to update my settings in $HOME
+# USAGE: $0 [--remove|--verbose]
+#
+# If remove is passed, the FILES will be deleted after downloading them
+#
+use strict;
+$|++;
+
+use Getopt::Long;
+Getopt::Long::Configure('bundling');
+
+my $REMOTE_HOSTS_FILE = "$ENV{'HOME'}/.remote-hosts";
+# path to temporary directory
+my $TMP="tmp";
+
+# ary of systems to be excluded from updating
+# separate by |. i.e.: 127.0.0.1|192.168.1.2|10.1.1.1
+my $EXCLUDE= "172.16.1.250|as400";
+# files we will be updating
+my @FILES=("bashrc.tar.bz2", "vimrc.tar.bz2", "muttrc.tar.bz2", "Applications.tar.bz2");
+ 
+############## NO NEED TO MODIFY THESE #################
+my @hosts; # global variable to hold hosts
+my $VERBOSE=0;
+my $DEBUG=0;
+my $REMOVE_FILES=0;
+
+my $VERBOSE_ARGS="";
+my $WGET_ARGS="";
+
+## GET OPTIONS ##
+GetOptions(
+    # flags
+    'debug'         =>  \$DEBUG,
+    'remove'        =>  \$REMOVE_FILES,
+    'verbose'       =>  \$VERBOSE
+);
+## START SCRIPT ##
+if ( $VERBOSE )
+{
+    $VERBOSE_ARGS="v";
+} else {
+    $WGET_ARGS="-nv ${WGET_ARGS}";
+}
+
+## main ##
+slurp_hosts($REMOTE_HOSTS_FILE);
+my $j =0;
+
+my $n_files = $#FILES+1;
+my $silent = ( ! $VERBOSE ) ? " > /dev/null 2>&1" : "";
+
+#print "\e[H\e[J"; # clear the screen
+
+foreach my $h ( @hosts )
+{
+    next if ( grep(/$EXCLUDE/,$h) );
+    #print "\e[H"; # return the cursor to the normal position
+
+    # we only care about IPs here:
+    if ( !$DEBUG && $h =~ /(\d+.\d+.\d+.\d+)/ )
+    {
+        $j=0;
+        # make sure the .backup and $TMP dir exists
+        system("ssh $h mkdir -p $TMP .backup ".$silent);
+        # make sure this signature file exists:
+        system("ssh $h touch .signaturerc ".$silent);
+        # copy and unpack files:
+        foreach my $i ( @FILES )
+        {
+            $j++;
+            print STDOUT "\r";
+            printf STDOUT ("%20s",$h); # host padded
+            printf STDOUT ("|%-".$n_files."s|", "#" x $j); # progress
+            system("scp ~/Shared/software/settings/$i $h:$TMP/ ".$silent); 
+            my $cmd = "ssh $h command tar x".$VERBOSE_ARGS."jf '$TMP/$i'";
+            system($cmd.$silent);
+            if ( $REMOVE_FILES )
+            {
+                system("ssh $h command rm -f '$TMP/$i' ".$silent);
+            }
+        }
+    } else {
+        # debugging 
+        print "*** ".$h."\n" if ( $DEBUG );
+    }
+}
+print "\n";
+
+sub slurp_hosts
+{
+    my $file = shift;
+    open(FILE,$file) || die ("Could not open $file: $!\n");
+    while (<FILE>)
+    {
+        chomp($_);
+        if ( $_ gt "" && $_ !~ /^\s*#/ )
+        {
+            push @hosts, split(/\s+/,$_);
+        }
+    }
+}

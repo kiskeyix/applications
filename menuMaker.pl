@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# Last modified: 2002-Dec-27
+# Last modified: 2003-Jan-09
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # Use this script in Nautilus to create menu HTML files
 # This is part of pictDir2html.pl script, but it can be used
@@ -33,7 +33,7 @@ my $INDEX_HTML="index.php";
 
 my $CONFIG_FILE=".pictDir2htmlrc";
 # this is used for the 'new' gif
-my $GIF = "http://www.latinomixed.com/sex/images/new.gif";
+my $GIF = "http://www.latinomixed.com/sex/images/new.png";
 
 # URI is used for creating the link. Everything
 # is relative to this. Will put this in the .pictDir2htmlrc file
@@ -79,6 +79,7 @@ opendir (DIR,"$HTML_DIRECTORY") || die "Couldn't open dir $HTML_DIRECTORY";
 #construct array of all HTML files
 while (defined($thisFile = readdir(DIR))) {
     next if ($thisFile !~ /\w/);
+    next if (-f "$HTML_DIRECTORY/$thisFile/.nopictDir2htmlrc");
     next if (!-f "$HTML_DIRECTORY/$thisFile/$INDEX_HTML");
 	$ls[$x] = "$thisFile/$INDEX_HTML"; # link
 	$x+=1;
@@ -173,7 +174,7 @@ while($x>0){
 	if ( $ls[$i] ne "" ) {
 	    # if link exists, otherwise leave it blank
             ($ts = $ls[$i]) =~ s/(.*)\/$INDEX_HTML/$1/gi;
-            $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='$GIF'>":""; # if .new file
+            $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='$myconfig{new}'>":""; # if .new file
             $ts = ucfirst($ts);
             
 	    print FILE ("<a href='$URI/$ls[$i]' target='_top'>$IMG $ts</a>\n");

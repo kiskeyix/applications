@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2002-Sep-20
-# $Id: etodo.pl,v 1.3 2002-09-20 17:17:58 luigi Exp $
+# Last modified: 2002-Sep-23
+# $Id: etodo.pl,v 1.4 2002-09-23 15:31:09 luigi Exp $
 #
 # DESC:
 #   This script takes your tasks.ics file from Evolution
@@ -41,6 +41,8 @@
 #     would be no need to run it from a cron job
 #   * add a switch for displaying the help ( --help or -h )
 #
+#   * add -o for output .html file
+#
 # CHANGELOG:
 #   - initial relase
 #  
@@ -59,7 +61,7 @@ my $debugging = 0;
 
 my $vtask = $ENV{'HOME'}."/evolution/local/Tasks/tasks.ics";
 # output to this HTML file
-my $ohtml = "/var/www/html/tasks.html";
+my $ohtml = "/home/ftp/www/html/tasks.html";
 
 # End configuration... no need to edit below this comment
 #************************************************************
@@ -81,15 +83,16 @@ while ( $_ = ( $ARGV[0] ) ? $ARGV[0] : "" , /^-/) {
 #   * add a switch for displaying the help ( --help or -h )
 #
     if (/^-+hc/) { $HIDE_COMPLETED = 1; } 
-    elsif (/^-+t/) { $SHOW_TIME = 1;}
-    elsif (/^-+user\s*=\s*(\w+)|^-+u\s*(\w+)/){ $user_name=$1;}
-    elsif (/^-+d[aemon]*(=| )([0-9]+)/) { $SECONDS_TO_RUN=$2;}
+    elsif (/^-+t/) { $SHOW_TIME = 1; }
+    elsif (/^-+u[ser]*[=]*(.+)/) { $user_name = $1; }
+    elsif (/^-+d[aemon]*(=| )([0-9]+)/) { $SECONDS_TO_RUN=$2; }
     elsif (/^-+h|^-+help/) { 
-        print "USAGE: etodo.pl [options] \n 
-        \t -u \"USER\",--user=\"user\" \t use this name for the title 
-        \n \t -u,-update \t updates config 
-        \n \t -d,-daemon \t non interactive (no /dev/tty)
-        \n \t -example \t creates an example config file that can be edited by hand (for the impatient \n\n";
+        print  STDOUT  "USAGE: etodo.pl [options] \n 
+        -u\"USER\",--user=\"user\" \t display this for the title 
+        \n \t -t \t show time (title)
+        \n \t -d,--daemon \t non interactive 
+        \n \t -hc \t hide completed tasks 
+        \n \t -o,--output= \t output file to output to\n";
     exit(0); 
     }
 }

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2002-Sep-23
-# $Id: etodo.pl,v 1.4 2002-09-23 15:31:09 luigi Exp $
+# Last modified: 2002-Sep-25
+# $Id: etodo.pl,v 1.5 2002-09-25 16:52:45 luigi Exp $
 #
 # DESC:
 #   This script takes your tasks.ics file from Evolution
@@ -189,10 +189,19 @@ sub print_fields {
 
     open (OFILE,"> $ohtml") || die ("Could not open output file");
 
-    print OFILE start_html("Evolution Tasks [$user_name]",
-        "$user_name","","","","","","","","","html",
-        "en_US",
-        "iso-8859-1"
+    print OFILE start_html( 
+        -title=>"Evolution Tasks [$user_name]",
+        -author=>"$user_name",
+        -dtd=>"html",
+        -lang=>"en_US",
+        -encoding=>"iso-8859-1",
+        -head=>[
+            meta({-http_equiv => 'Cache-Control',-content    => 'no-cache'}),
+            meta({-http_equiv => 'Expires',-content    => '0'}),
+            meta({-http_equiv => 'Pragma',-content    => 'no-cache'}),
+            meta({-http_equiv => 'refresh',-content    => '300;URL=tasks.html'})
+        ],
+        -BGCOLOR=>'white'
     );
 
     print OFILE "<table width='100%'>\n";

@@ -1,10 +1,11 @@
 #!/bin/sh
-# $Id: backup.sh,v 1.2 2002-09-15 05:36:40 luigi Exp $
-# Last modified: 2002-Jul-30
+# Last modified: 2002-Sep-20
 # Luis Mondesi < lemsx1@hotmail.com >
 # backup a site every night
 # 
-# Keep the 7th backup
+# Out of daily backups keep the 7th backup
+# for e/a week. At the end of the month
+# delete all previous backups for that month.
 
 NAME="mri-nyc"; # name of the file
 BAK="/var/www/mri-backup";
@@ -15,54 +16,43 @@ EXCLUDES="--exclude=*.soc --exclude=*.sock --exclude=mri-backup";
 
 DIRS="/etc /var/www /var/lib/mysql /var/ftp /var/mail /var/spool /usr/local/lib/webstats /var/lib/tripwire /home";
 
-
 ######## NO NEED TO MODIFY #################
 
-TAR="tar $EXCLUDES -cjvf ";  # j for bz2 ... do not modify this!!
-DAY=`date +%w` # 0-6
-FDATE=`date -I` # iso format
-WEEK=`date +%U` # week only 0-53
+TAR="tar $EXCLUDES -cjf ";  # j for bz2 ... do not modify this!!
+WDAY=`date +%w`     # 0-6 day of the week
+MDAY=`date +%d`     # 1-32 day of the month
+FDATE=`date -I`     # iso format. full date. for informational purposes only
+WEEK=`date +%U`     # week only 0-53
 
 cd $BAK;
 
-if [ -f 4 ]; then
-    # this is the fourth week of the month
-    # time to reset
-    rm -f 4
-    touch 1
-    # delete all files and keep only the nightly backup
-    rm -f $NAME*[0-6].tar.bz2
-fi
-
-# k, I don't want to do a while look to find up to
+# k, I don't want to do a while loop to find up to
 # what week number we are... (lazy?) we only have
 # 4 weeks, so...
-if [ $DAY -eq 6 ]; then
-        #increase week number by one
-        # lazy code:
-        if [ -f 1 ]; then
-            rm -f 1
-            touch 2
-        fi
-        if [ -f 2 ]; then
-            rm -f 2
-            touch 3
-        fi
-        if [ -f 3 ]; then
-            rm -f 3
-            touch 4
-        fi
-        # that was not that painful... no while loop needed! :-)
-        rm -f $NAME-$FDATE-$WEEK-[0-5].tar.bz2;
-        $TAR $NAME-$FDATE-$WEEK-$DAY.tar.bz2 $DIRS 2>&1 > /dev/null;
+if [ $WDAY -eq 6 ]; then
+        # on the sixth day, remove from Sun to Fri files
+        rm -f $NAME*$WEEK-[0-5].tar.bz2;
+        # then create one for the 6th
+        $TAR $NAME-$FDATE-$MDAY-$WEEK-$WDAY.tar.bz2 $DIRS  > /dev/null 2>&1;
+fi
+
+# if Saturday happens to be 30th or 31th, then we will be double working
+# ... will deal with this somehow later...
+if [ $MDAY -eq 30 -o $MDAY -eq 31 ]; then
+    # keep only the nightly
+    rm -f $NAME*[0-31]*6*
 fi
 
 # in every other case do:
-if [ $DAY -ne 6 ]; then
+if [ $WDAY -ne 6 ]; then
         # now move the nightly backup to yesterday week/day pair
         # and then do a new nightly for today
         # 
-        DAY=$(($DAY-1))
-        mv -f $NAME-nightly.tar.bz2 $NAME-$FDATE-$WEEK-$DAY.tar.bz2
-        $TAR $NAME-nightly.tar.bz2 $DIRS 2>&1 > /dev/null;
+        WDAY=$(expr $WDAY - 1)
+        MDAY=$(expr $MDAY - 1)
+        
+        if [ -f $NAME-nightly.tar.bz2 ]; then
+            mv -f $NAME-nightly.tar.bz2 $NAME-$FDATE-$MDAY-$WEEK-$WDAY.tar.bz2
+        fi
+        $TAR $NAME-nightly.tar.bz2 $DIRS > /dev/null 2>&1;
 fi

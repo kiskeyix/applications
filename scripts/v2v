@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.44 $
+# $Revision: 1.45 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -19,7 +19,8 @@
 #   SEE TODO FILE
 #   
 #  HACKING: Warning
-#   Du to TELECINE $deintl MUST Stay the first transcode filter ( -J opt)
+#   Due to TELECINE $deintl MUST Stay the first transcode 
+#   filter ( -J opt)
 #   Added new filter with the form
 #   $new_filter=" thefilter=options,";  ( with the comma at the end )
 
@@ -70,11 +71,12 @@ GetOptions(
     # numbers
     'a|default_audio_channel=i' => \$DEF_AUDIOCHANNEL 
 );
-    # reset DIVX_OPT if DIVX is pass as parameter and not DIVX_OPT
-    $DIVX_OPT="" if ( defined $DIVX && ! defined $DIVX_OPT);
-    # set debugging or info mode
-    $DEBUG=STDOUT if ( $DEBUG );
-    $INFO=STDOUT if ( $INFO);
+
+# reset DIVX_OPT if DIVX is pass as parameter and not DIVX_OPT
+$DIVX_OPT="" if ( defined $DIVX && ! defined $DIVX_OPT);
+# set debugging or info mode
+$DEBUG=STDOUT if ( $DEBUG );
+$INFO=STDOUT if ( $INFO );
 
 $userconfigfile="$HOME/.V2divxrc";
 
@@ -202,21 +204,18 @@ sub tv_recorder;
 
 system("clear");
 
-    # Domi Caron
-    # Luis, Is'nt it better to start time just
-    # when the encoding start ?
 my $start_time = time;
 my $f_start_time = format_date($start_time);
 pinfo("Start Time: $f_start_time \n");
 
 # Read or create the user configuration file
 # we kept .vob2divxrc for backward compatibility
-if ( -e $HOME."/.vob2divxrc" )  
+if ( -f $HOME."/.vob2divxrc" )  
 {
     rename($HOME."/.vob2divxrc",$userconfigfile);
 }
 
-if ( -e $userconfigfile )
+if ( -f $userconfigfile )
 {   
     readuserconf;
 } else {
@@ -229,7 +228,10 @@ if ( -e $userconfigfile )
 #    Find the transcode release 
 $tr_vers=`transcode -v 2>&1 | awk '{print \$2}'| sed s/^v// `;
 @Vers = split /\./,$tr_vers;
-if (  $Vers[0] < $MAJOR  || ( $Vers[0] == $MAJOR && $Vers[1] < $MINOR ) )
+if (  $Vers[0] < $MAJOR  
+    || ( $Vers[0] == $MAJOR 
+        && $Vers[1] < $MINOR ) 
+)
 {	 
     pwarn("This V2divx perl script does not support".
     " your transcode release\n Please upgrade to the latest".
@@ -264,7 +266,7 @@ if  ( ! $RUNCLUST )
     }
 }
 
-$PGMFINDCLIP=OK if (! system("which $PGMFINDCLIP >/dev/null 2>&1 "));
+$PGMFINDCLIP="OK" if (! system("which $PGMFINDCLIP >/dev/null 2>&1 "));
 
 $SUBRIP=system("which subtitle2pgm >/dev/null 2>&1 ");
 $SUBRIP=system("which pgm2txt >/dev/null 2>&1 ") if ( $SUBRIP == 0 );
@@ -448,7 +450,7 @@ sub tv_recorder
     $deintl="yuvdenoise" if ( $qual==1 );
     $heures=int($runtime/60);
     $minutes=$runtime- $heures * 60;
-#    $bitrate=int((136.53 * $filesize)/$runtime- $audio_bitrate);
+    #$bitrate=int((136.53 * $filesize)/$runtime- $audio_bitrate);
     $bitrate=int((139.5 * $filesize)/$runtime - $audio_bitrate);
     $NXaxis=512;
     $NXaxis=384 if ( $qual==1);
@@ -470,7 +472,7 @@ sub tv_recorder
     if ( $qual==1 )
     {
         $sys=sprintf("transcode -c 0-%02d:%02d:00  -V -i /dev/video0 -x nvrec=\"-N 32\",null  -y yuv4mpeg,null -g ${NXaxis}x${NYaxis} -u 100 -o $VOBPATH/only_video.mpeg -m $VOBPATH/only_audio.avi -p /dev/dsp -H0 -f %d ",$heures,$minutes,$FPS);
-    }else{
+    } else {
         $sys=sprintf("transcode -c 0-%02d:%02d:00  -V -i /dev/video0 -x nvrec=\"-N 32 -deint bob -ddint \",null  -J dilyuvmmx -y $DIVX,null $DIVX_OPT -g ${NXaxis}x${NYaxis} -w %d,250 -u 100 -o $VOBPATH/only_video.avi -m $VOBPATH/only_audio.avi -p /dev/dsp -H0",$heures,$minutes,$bitrate);
     }
 
@@ -481,19 +483,20 @@ sub tv_recorder
         unlink("tmp/pass2_done") if ( -e "tmp/pass2_done");
         system("$sys"); 
         system("touch tmp/Record_done");
-    }else{
+    } else {
         pwarn("\t Recording already done, remove \"tmp/Record_done\" to record again \n");
         sleep(2);
     }
-        
+
     if ( $qual==1 )
     {
         $sys=sprintf("transcode -i $VOBPATH/only_video.mpeg -p $VOBPATH/only_audio.avi -x yuv4mpeg,mp3 -R 1,tmp/Video.log  -y $DIVX $DIVX_OPT -w %d,250 -o /dev/null -u 100 -J $deintl,32detect=force_mode=3,dnr",$bitrate);
         pinfo("\t\tEncoding  Pass One \n");
         print $DEBUG "+ $sys\n";
         if ( -e "tmp/pass1_done" )
-        {   pwarn("\tHigh Quality Pass One already encoded, remove \"tmp/pass1_done\" to reencode \n");
-        }else{
+        {   
+            pwarn("\tHigh Quality Pass One already encoded, remove \"tmp/pass1_done\" to reencode \n");
+        } else {
             unlink("tmp/pass2_done") if ( -e "tmp/pass2_done");
             system("nice -$nice $sys")==0 or mydie "Problem to Encode Pass 1";
             system ("touch tmp/pass1_done");
@@ -501,21 +504,22 @@ sub tv_recorder
         $sys=sprintf("transcode -i $VOBPATH/only_video.mpeg -p $VOBPATH/only_audio.avi -b $audio_bitrate,0 -x yuv4mpeg,mp3 -R 2,tmp/Video.log  -y $DIVX $DIVX_OPT -w %d,250 -o movie.avi -u 100 -J dnr,yuvdenoise,32detect=force_mode=3",$bitrate);
         pinfo("\t\t Pass Two \n");
         print $DEBUG "+ $sys\n";
-    }else{
+    } else {
         $sys="transcode -i $VOBPATH/only_video.avi -p $VOBPATH/only_audio.avi -P 1 -b $audio_bitrate,0 -o movie.avi -y raw";
         pinfo("\t\t Merging Audio+Video\n");
         print $DEBUG "+ $sys\n";
     }
     if ( -e "tmp/pass2_done" )
-    {   pwarn(" Pass Two already encoded, remove \"tmp/pass2_done\" to reencode \n");
-    }else{
-        system("nice -$nice $sys")==0 or mydie "Problem to merge audio and Video Pass 2";
+    {   
+        pwarn(" Pass Two already encoded, remove \"tmp/pass2_done\" to reencode \n");
+    } else {
+        system("nice -$nice $sys")==0 
+            or mydie "Problem to merge audio and Video Pass 2";
         system ("touch tmp/pass2_done");
     }
     print $DEBUG "<--- TV Recorder\n";
     exit(0);
-}
-    
+} # end tv_recorder
 
 sub format_date 
 {
@@ -533,7 +537,8 @@ sub format_date
 
     # take a UNIX timestamp and returns a nicely formatted string
     my ($sec,$min,$hour,$mday,$mon,$year) = localtime(shift);
-    my $ADATE=sprintf("%04d-%02d-%02d %02d:%02d:%02d",($year+=1900),$mon,$mday,$hour,$min,$sec);
+    my $ADATE=sprintf("%04d-%02d-%02d %02d:%02d:%02d",
+        ($year+=1900),$mon,$mday,$hour,$min,$sec);
     return $ADATE;
 } # end format date
 
@@ -546,7 +551,7 @@ sub sec_to_hour {
 
     if ( $seconds > 86400) 
     {
-        print STDERR "ERROR: sec_to_hour: This value is higher than a day\n";
+        print $DEBUG "ERROR: sec_to_hour: This value is higher than a day\n";
         return "00:00:00";
     }
 
@@ -1029,7 +1034,7 @@ sub printinfo
         print "High" if ( $qual==1);
         print "Normal"  if ( $qual==2);
         print $NORM."\n";
-    }else{
+    } else {
         print $v2d."   V:\tVideo input Format:\t   | $VFORMAT\n";
     }
     print $v2d."   V:\tVideo Output format:\t(1)| $DIVX\n";
@@ -1156,7 +1161,7 @@ sub interlaced
 
 sub findclip
 {
-    if ( $PGMFINDCLIP eq OK )
+    if ( $PGMFINDCLIP eq "OK" )
     {
         pinfo("$v2d\t Trying to detect best Clipping:\t   | ");
         opendir(VOB,$VOBPATH);
@@ -1275,7 +1280,7 @@ sub cluster
     # and pass it to the cluster nodes (to find tmp/*)
     $wdir=`pwd`;
     chomp($wdir);
-    ( -e $CLUSTER_CONFIG ) or mydie $warnclust;
+    ( -f $CLUSTER_CONFIG ) or mydie $warnclust;
 
     # Open a secure temporary file in /tmp/ to 
     # rebuild cluster config file
@@ -1461,7 +1466,9 @@ sub cluster
 
         foreach $endnode ( @tabpower )
         {
-            while ( ! -e "tmp/2-$dvdtitle${endnode}_0.finish" && ! -e "tmp/2-$dvdtitle${endnode}.PB" && ! -e "tmp/1-$dvdtitle${endnode}.PB")
+            while ( ! -e "tmp/2-$dvdtitle${endnode}_0.finish" 
+                && ! -e "tmp/2-$dvdtitle${endnode}.PB" 
+                && ! -e "tmp/1-$dvdtitle${endnode}.PB")
             {
                 print "\r|"; 
                 sleep(1); 
@@ -1491,7 +1498,6 @@ sub cluster
     exit(0);
     # End cluster Sub routine
 }
-
 
 #  ***************** Create Nav File (For cluster) *****************
 
@@ -1734,11 +1740,11 @@ sub aviencode
     $params .=" -$Zoom_mode ${NXaxis}x$NYaxis" if ($Zoom_mode eq Z);
     $params .=" -$Zoom_mode $zH,$zW,$row" if ($Zoom_mode eq B);
 
-    printinfo if ( ! -e "tmp/cluster.args");
+    printinfo if ( ! -f "tmp/cluster.args");
     # We are in Cluster Mode and there is no cluster args file ???
     # It means that we are in cluster mode on the master 
     # We call the cluster subroutine and will never return here
-    cluster if ( $CLUSTER ne "NO" && ! -e "tmp/cluster.args");
+    cluster if ( $CLUSTER ne "NO" && ! -f "tmp/cluster.args");
 
     if (  $CLUSTER ne "NO" )	
     {
@@ -1762,126 +1768,127 @@ sub aviencode
         {  
             $from_frames=0;
         } else {
-            $from_frames=$deb_sec*$FPS}
+            $from_frames=$deb_sec*$FPS
+        }
         if ( $last_sec < 600 )
         { 
             $to_frames=$tot_frames; 
-            } else { 
-                $to_frames=$tot_frames-$last_sec*$FPS 
-            }
-            $fparams="$params -c $from_frames-$to_frames";
+        } else { 
+            $to_frames=$tot_frames-$last_sec*$FPS 
         }
+        $fparams="$params -c $from_frames-$to_frames";
+    }
 
-        system("rm tmp/*.done  2> /dev/null");
+    system("rm tmp/*.done  2> /dev/null");
 
-        $start_frames_logo=floor(($deb_sec+$beginlogo)*$FPS);
-        $end_frames_logo=floor($addlogo*$FPS+$start_frames_logo);
+    $start_frames_logo=floor(($deb_sec+$beginlogo)*$FPS);
+    $end_frames_logo=floor($addlogo*$FPS+$start_frames_logo);
 
     # In cluster mode we MUST encode each sequence unit separatly 
     # In normal mode $stream_unit==0
 
-        for ( $i=$stream_unit ; $i >= 0 ; $i--  )
-        {      
-            print("*** SEQ UNIT = $i ********\n***  Cluster NODE number : $node ******* \n")  if (  $CLUSTER ne "NO" );
-            if ( $addlogo && $i == 0 && $CLUSTER eq "NO" )
-            {
-                $add_logo="logo=file=$LOGO:posdef=$poslogo:rgbswap=$RGBSWAP:range=$start_frames_logo-$end_frames_logo,";
-            } else {
-                $add_logo="";
-            }
-            $subtitle=$sub_title if ( $sub_title =~ m,extsub,);  # Bug 
-            $filter=$deintl.$add_logo.$subtitle.",hqdn3d";# Use now hqdn3d filter                        
-            # WE NEED the next 4 lines  because in non cluster mode we do not need $stream_unit value, 
-            # And WE want encode all the sequences unit (so, no -S option) .
-            if ( $stream_unit != 0 )
-            {	
-                $stream_opt="-S $i,all";
-            } else {       
-                $stream_opt="";
-            }
+    for ( $i=$stream_unit ; $i >= 0 ; $i--  )
+    {      
+        print("*** SEQ UNIT = $i ********\n***  Cluster NODE number : $node ******* \n")  if (  $CLUSTER ne "NO" );
+        if ( $addlogo && $i == 0 && $CLUSTER eq "NO" )
+        {
+            $add_logo="logo=file=$LOGO:posdef=$poslogo:rgbswap=$RGBSWAP:range=$start_frames_logo-$end_frames_logo,";
+        } else {
+            $add_logo="";
+        }
+        $subtitle=$sub_title if ( $sub_title =~ m,extsub,);  # Bug 
+        $filter=$deintl.$add_logo.$subtitle.",hqdn3d";# Use now hqdn3d filter                        
+        # WE NEED the next 4 lines  because in non cluster mode we do not need $stream_unit value, 
+        # And WE want encode all the sequences unit (so, no -S option) .
+        if ( $stream_unit != 0 )
+        {	
+            $stream_opt="-S $i,all";
+        } else {       
+            $stream_opt="";
+        }
 
-            $params =~ m/-a (\d) .*/;
-            $audio_params="-a $1";
-            $audio_format=audioformat("$audio_params") if ( ! defined($audio_format));
-            # Only ONE FILE allowed if input Video type is AVI, QT, DV , MPEG2
-            $VOBPATH="$VOBPATH/$sample" if ( $in_video_magic eq divx || 
+        $params =~ m/-a (\d) .*/;
+        $audio_params="-a $1";
+        $audio_format=audioformat("$audio_params") if ( ! defined($audio_format));
+        # Only ONE FILE allowed if input Video type is AVI, QT, DV , MPEG2
+        $VOBPATH="$VOBPATH/$sample" if ( $in_video_magic eq divx || 
             $in_video_magic eq mov || 
             $in_video_magic eq 'mpeg2'  || 
             $in_video_magic eq dv  );
-            # Let transcode find it, if input audio type is "declared" as PCM
-            $audio_format="" if ( $audio_format eq pcm );
-            $audio_format="vob" if ( $in_video_codec eq vob );
+        # Let transcode find it, if input audio type is "declared" as PCM
+        $audio_format="" if ( $audio_format eq pcm );
+        $audio_format="vob" if ( $in_video_codec eq vob );
 
-            # Add NTSC demuxer opts
-            $fparams =$fparams." -M 2 " if ( $VFORMAT eq "NTSC" && ! ($deintl =~ m,ivtc,));
-            $fparams =$fparams." -M 0 -f 23.976" if ( $deintl =~ m,ivtc,);
+        # Add NTSC demuxer opts
+        $fparams =$fparams." -M 2 " if ( $VFORMAT eq "NTSC" && ! ($deintl =~ m,ivtc,));
+        $fparams =$fparams." -M 0 -f 23.976" if ( $deintl =~ m,ivtc,);
 #            $fparams =$fparams." --psu_mode --nav_seek tmp/file.nav --no_split " if ( $CLUSTER eq "NO" && $VFORMAT eq "NTSC" );
-            $clust_percent=" --a52_dolby_off " if ( $VFORMAT eq "NTSC" && $CLUSTER eq "NO" );
+        $clust_percent=" --a52_dolby_off " if ( $VFORMAT eq "NTSC" && $CLUSTER eq "NO" );
 
-            # And Now ... Let the Rolling Stones
+        # And Now ... Let the Rolling Stones
 
-            if (! -e "tmp/1-${dvdtitle}${node}_${i}.finish")
+        if (! -e "tmp/1-${dvdtitle}${node}_${i}.finish")
+        {
+            unlink("tmp/2-${dvdtitle}${node}_${i}.finish");
+            unlink ("tmp/1-${dvdtitle}${node}.PB");
+            pinfo("$v2d\t Encode: $VOBPATH Pass One ....\n");
+            $sys = "transcode -i $VOBPATH $stream_opt $clust_percent $fparams -w $bitrate,$keyframes -J ${filter},astat=\"tmp/astat\" -y $DIVX,null $DIVX_OPT -x $in_video_codec,$audio_format $VID_OPT -R 1,tmp/$DIVX.${dvdtitle}${node}_${i}.log -o /dev/null"; 
+            print $INFO "$sys\n";
+            my $pid = fork();
+            mydie "couldn't fork" unless defined $pid;
+            if ($pid)
             {
-                unlink("tmp/2-${dvdtitle}${node}_${i}.finish");
-                unlink ("tmp/1-${dvdtitle}${node}.PB");
-                pinfo("$v2d\t Encode: $VOBPATH Pass One ....\n");
-                $sys = "transcode -i $VOBPATH $stream_opt $clust_percent $fparams -w $bitrate,$keyframes -J ${filter},astat=\"tmp/astat\" -y $DIVX,null $DIVX_OPT -x $in_video_codec,$audio_format $VID_OPT -R 1,tmp/$DIVX.${dvdtitle}${node}_${i}.log -o /dev/null"; 
-                print $INFO "$sys\n";
-                my $pid = fork();
-                mydie "couldn't fork" unless defined $pid;
-                if ($pid)
-                {
-                    wait;
-                    if ( -f "tmp/1-${dvdtitle}${node}.PB")
-                    {    
-                        mydie("\t\t**** Pass One failed on node(${node}),seq(${i}) ****.\n\tFailed to execute:\n $sys")
-                    }
-                    system("touch tmp/1-${dvdtitle}${node}_${i}.finish");
-                } else {
-                    system("nice -$nice $sys")==0 or system("touch tmp/1-${dvdtitle}${node}.PB");
-                    print "\n";
-                    exit(0);
-                }
-            } else {
-                pwarn("${dvdtitle}${node}_${i} already encoded, remove \"tmp/1-${dvdtitle}${node}_${i}.finish\" to reencode \n");
-            }
-            audiorescale;
-            if (! -e "tmp/2-${dvdtitle}${node}_${i}.finish")
-            {
-                unlink ("tmp/2-${dvdtitle}${node}.PB");
-                $filter="$filter,dnr,normalize";	
-                $filter="-J $filter" if ( $filter ne "" );
-                unlink("tmp/merge.finish");	
-                unlink("tmp/finish");
-                pinfo("$v2d\t Encode: $VOBPATH Pass Two ....\n");
-                $sys = "transcode -i $VOBPATH $stream_opt $clust_percent $fparams -s $audio_rescale -w $bitrate,$keyframes -b $audio_bitrate,0 -y $DIVX  $DIVX_OPT -x $in_video_codec,$audio_format $VID_OPT $filter -R 2,tmp/$DIVX.${dvdtitle}${node}_${i}.log -o tmp/2-${dvdtitle}${node}_${i}.avi";
-                print $INFO "$sys\n";
-                my $pid = fork();
-                mydie "couldn't fork" unless defined $pid;
-                if ($pid)
+                wait;
+                if ( -f "tmp/1-${dvdtitle}${node}.PB")
                 {    
-                    wait;
-                    if ( -f "tmp/2-${dvdtitle}${node}.PB") 
-                    { 
-                        mydie("\t\t**** Pass Two failed on node(${node}),seq(${i}) ****.\n\tFailed to execute:\n $sys"); 
-                    }        
-                    system("touch tmp/2-${dvdtitle}${node}_${i}.finish");
-                } else {	
-                    system("nice -$nice $sys")==0 or system("touch tmp/2-${dvdtitle}${node}.PB");
-                    print"\n";
-                    exit(0);
+                    mydie("\t\t**** Pass One failed on node(${node}),seq(${i}) ****.\n\tFailed to execute:\n $sys")
                 }
-            } else {	
-                pwarn("${dvdtitle}${node}_${i} already encoded, remove \"tmp/2-${dvdtitle}${node}_${i}.finish\" to reencode \n");
+                system("touch tmp/1-${dvdtitle}${node}_${i}.finish");
+            } else {
+                system("nice -$nice $sys")==0 or system("touch tmp/1-${dvdtitle}${node}.PB");
+                print "\n";
+                exit(0);
             }
-        } # end boucle for
-        if ( $CLUSTER ne "NO")
-        {       
-            print ("Finish ... Wait \n ");
-            sleep(3);
+        } else {
+            pwarn("${dvdtitle}${node}_${i} already encoded, remove \"tmp/1-${dvdtitle}${node}_${i}.finish\" to reencode \n");
         }
-        print $DEBUG "<--- aviencode\n";
-    } # END Aviencode
+        audiorescale;
+        if (! -e "tmp/2-${dvdtitle}${node}_${i}.finish")
+        {
+            unlink ("tmp/2-${dvdtitle}${node}.PB");
+            $filter="$filter,dnr,normalize";	
+            $filter="-J $filter" if ( $filter ne "" );
+            unlink("tmp/merge.finish");	
+            unlink("tmp/finish");
+            pinfo("$v2d\t Encode: $VOBPATH Pass Two ....\n");
+            $sys = "transcode -i $VOBPATH $stream_opt $clust_percent $fparams -s $audio_rescale -w $bitrate,$keyframes -b $audio_bitrate,0 -y $DIVX  $DIVX_OPT -x $in_video_codec,$audio_format $VID_OPT $filter -R 2,tmp/$DIVX.${dvdtitle}${node}_${i}.log -o tmp/2-${dvdtitle}${node}_${i}.avi";
+            print $INFO "$sys\n";
+            my $pid = fork();
+            mydie "couldn't fork" unless defined $pid;
+            if ($pid)
+            {    
+                wait;
+                if ( -f "tmp/2-${dvdtitle}${node}.PB") 
+                { 
+                    mydie("\t\t**** Pass Two failed on node(${node}),seq(${i}) ****.\n\tFailed to execute:\n $sys"); 
+                }        
+                system("touch tmp/2-${dvdtitle}${node}_${i}.finish");
+            } else {	
+                system("nice -$nice $sys")==0 or system("touch tmp/2-${dvdtitle}${node}.PB");
+                print"\n";
+                exit(0);
+            }
+        } else {	
+            pwarn("${dvdtitle}${node}_${i} already encoded, remove \"tmp/2-${dvdtitle}${node}_${i}.finish\" to reencode \n");
+        }
+    } # end boucle for
+    if ( $CLUSTER ne "NO")
+    {       
+        print ("Finish ... Wait \n ");
+        sleep(3);
+    }
+    print $DEBUG "<--- aviencode\n";
+} # END Aviencode
 
 # ********* MERGING ( and syncing )Function **************#
 
@@ -2568,10 +2575,10 @@ sub zooming
         && ($Yaxis - 2*$tb)/16 == floor (($Yaxis - 2*$tb)/16) 
     )
     {
-        pinfo("$v2d\t Slow Zooming is necessary:\t\t   | NO\n") if ( ! -e "tmp/cluster.args");
+        pinfo("$v2d\t Slow Zooming is necessary:\t\t   | NO\n") if ( ! -f "tmp/cluster.args");
         $Zoom_mode="B";
     } else {
-        pinfo("$v2d\t Slow Zooming is necessary:\t\t   |$RED YES\n") if ( ! -e "tmp/cluster.args");
+        pinfo("$v2d\t Slow Zooming is necessary:\t\t   |$RED YES\n") if ( ! -f "tmp/cluster.args");
         $Zoom_mode="Z";
     }
     sleep(1);
@@ -3207,7 +3214,10 @@ if (
 }
 
 
-if ($ARGV[1] eq "continue" || $ARGV[0] eq "continue" || ! defined($ARGV[0]))
+if ( $ARGV[1] eq "continue" 
+    || $ARGV[0] eq "continue" 
+    || ! defined($ARGV[0])
+)
 {	
     unlink("tmp/cluster.args");
     # We CONTINUE ....

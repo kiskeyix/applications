@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.82 $
+# $Revision: 1.83 $
 # Luis Mondesi  <lemsx1@hotmail.com>
 # 
 # REQUIRED: ImageMagick's Perl module and a dialog 
@@ -57,7 +57,6 @@ my $SAVELOG = "/usr/bin/savelog";
 my @pixdir = ();    # for menu
 my @pixfile = ();   # for thumbfiles/pictures
 my %config = ();    # hash of hashes to hold config per directories
-my $total_directories=0;
 my $total_links=0;
 my $FORCE=0; 
 my $NOMENU=0; 
@@ -251,7 +250,6 @@ sub main {
     }
     undef($GAUGE); # this also closes the gauge... but...
     # close log
-    print $LOGFILE ("$total_directories directories.\n\n");
     $LOGFILE->close();
     if ( -x $SAVELOG ) {
         system("$SAVELOG $LOG > /dev/null 2>&1");
@@ -516,6 +514,7 @@ sub mkthumb {
     # init to some strange string...
     my $BASE = ",\/trash";
     my $tmp_BASE = ",\/more_trash";
+    my $i = 0; # counter
 
     print $LOGFILE ("= Making thumbnails in $ROOT \n");
     #construct array of all image files
@@ -560,14 +559,10 @@ sub mkthumb {
         progressbar_msg($MESSAGE);
     }
     print $LOGFILE ("= $TOTAL pictures \n");
-    #foreach(@ls) 
-    my $i = 0;
+    #print $LOGFILE join(" ",@ls)."\n";
     for ( $i=0; $i < $TOTAL; $i++) 
     {
-        $PROGRESS++;
-        $pix_name = basename($ls[$i]);
-        # strip extension from file name
-        ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR$//gi;
+        $PROGRESS++; 
         # get base directory
         $BASE = dirname($ls[$i]);
         # BASE is blank if we are already inside the directory
@@ -577,59 +572,35 @@ sub mkthumb {
         { 
             $BASE = "."; 
         }
-        #print $LOGFILE "== $PROGRESS $BASE\n";
-        next if ($BASE eq $THUMBNAIL); 
-        # this is just to clear up all 
-        # warnings from Perl.. 
-        if ( $BASE gt "" 
-            && $tmp_BASE gt ""
-            && $BASE !~ m/$tmp_BASE/ ) 
-        {
-            if ( 
-                $FORCE > 0  && 
-                ! -f "$BASE/.nopixdir2htmlrc" 
-            ) 
-            {
-                if ( 
-                    copy("$ROOT_DIRECTORY/$CONFIG_FILE", 
-                        "$BASE/$CONFIG_FILE") 
-                ) 
-                {
-                    print $LOGFILE (": Force copy ".
-                        " $ROOT_DIRECTORY/$CONFIG_FILE ".
-                        "==> $BASE/$CONFIG_FILE \n");
-                } # end if copy
-            } # end if FORCE
-
-            if ( ! -f  "$BASE/$CONFIG_FILE" && ! -f "$BASE/.nopixdir2htmlrc" ) 
-            {
-                if ( 
-                    copy("$ROOT_DIRECTORY/$CONFIG_FILE", 
-                        "$BASE/$CONFIG_FILE") 
-                ) 
-                {
-                    print $LOGFILE (": Copied ".
-                        " $ROOT_DIRECTORY/$CONFIG_FILE ".
-                        "==> $BASE/$CONFIG_FILE \n");
-                } # end if copy
-            } # end if missing $CONFIG_FILE
-
-            # read specific config file for this directory
-            if (! -f "$BASE/.nopixdir2htmlrc" 
-                && ! exists $config{"$BASE"} ) 
-            {
-                # change of base, reset two-dimensional array counter
-                print $LOGFILE "+ Reading config for '$BASE'\n";
-                # also init $config{"$BASE"} for us...
-                init_config("$BASE");
-            } # end if not nopixdir2htmlrc
-            $total_directories++;
-        }  # end if base not equal tmp_base
-        
-        # update flag. a bit hackish, but...
-        $tmp_BASE = $BASE;
         next if ( -f "$BASE/.nopixdir2htmlrc" );
-
+        next if ($BASE eq $THUMBNAIL); 
+        if ( $BASE gt ""
+            && $BASE ne $tmp_BASE )
+        {
+            # Note that this tmp_BASE comparison is meant
+            # to avoid doing this for e/a directory:
+            if (  $FORCE > 0 || ! -f  "$BASE/$CONFIG_FILE" )
+            {
+                copy("$ROOT_DIRECTORY/$CONFIG_FILE", 
+                "$BASE/$CONFIG_FILE") 
+                    or die("Could not copy $ROOT_DIRECTORY/$CONFIG_FILE to $BASE/$CONFIG_FILE. $!");
+                print $LOGFILE (": Copied ".
+                " $ROOT_DIRECTORY/$CONFIG_FILE ".
+                "==> $BASE/$CONFIG_FILE \n");
+            } # end if missing $CONFIG_FILE
+            # read specific config file for this directory
+            if (! exists $config{"$BASE"})
+            {
+                print $LOGFILE "+ mkthumb Reading config for '$BASE'\n";
+                init_config("$BASE");
+            }
+        } # end if base not equal tmp_base
+        # update flag
+        $tmp_BASE = $BASE;
+                
+        $pix_name = basename($ls[$i]);
+        # strip extension from file name
+        ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR$//gi;
         # construct PATH for thumbnail directory
         $THUMBNAILSDIR="$BASE/$THUMBNAIL";
 
@@ -698,7 +669,6 @@ sub thumb_html_files {
     # TODO find a more elegant solution here
     # init to dummy string:
     my $BASE = "trash/\file";
-    my $tmp_BASE = "garbage\/file";
     my $last_html_file = "this_is/dummy\string";
 
     my @ary = ();
@@ -748,33 +718,27 @@ sub thumb_html_files {
     # $#VAR gets number of elements of an array variable
     for ( $i=0; $i < $TOTAL; $i++) {
         $PROGRESS++;
-        $pix_name = basename($ls[$i]);
-        # strip extension from file name
-        ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR$//gi;
         # get base directory
-        ( $BASE = $ls[$i] ) =~ s,(.*)/$pix_name$,$1,g;
+        $BASE = dirname( $ls[$i] );
         # BASE is blank if we are already inside the directory
         # for which to do thumbnails, thus:
         if ( ! -d $BASE ) { 
             print $LOGFILE "+ Thumb_HTML_Files changed based $BASE to .\n";
             $BASE = "."; 
         }
-        next if ($BASE eq $THUMBNAIL);
-        #print $LOGFILE "++ Thumb_Html_Files Base: '$BASE'.\n";
-        if ( $BASE gt ""
-            && $BASE ne $tmp_BASE ) 
-        {
-            # read specific config file for this directory
-            if (! -f "$BASE/.nopixdir2htmlrc" && ! exists $config{"$BASE"} ) 
-            {
-                print $LOGFILE "+ Thumb_Html_Files Reading config for '$BASE'\n";
-                init_config("$BASE");
-            }
-        }
-        # update flag
-        $tmp_BASE = $BASE;
         next if ( -f "$BASE/.nopixdir2htmlrc" );
-
+        next if ($BASE eq $THUMBNAIL);
+        $pix_name = basename($ls[$i]);
+        # strip extension from file name
+        ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR$//gi;
+        # if we have not already read this config file,
+        # do so now:
+        if ( ! exists $config{"$BASE"} ) 
+        {
+            print $LOGFILE "+ Thumb_Html_Files Reading config for '$BASE'\n";
+            init_config("$BASE");
+        }
+        
         # construct PATH for html directory
         $HTMLSDIR = "$BASE/$HTMLDIR";
         if (!-d "$HTMLSDIR") { 
@@ -851,7 +815,6 @@ sub thumb_html_files {
         print FILE ($config{"$BASE"}{"footer"}."\n");
         close(FILE);
         # end HTML
-        print $LOGFILE ("\n"); 
         # keep track of links
         $last_html_file = $current_html_file;
         $last_link = $current_link;
@@ -859,7 +822,6 @@ sub thumb_html_files {
         $LAST_BASE = $BASE;
         $NEXT_BASE = "";
         #$PRINT_NEXT_LINK = 0;
-
         # update progressbar
         if ( $use_console_progressbar == 1 )
         {
@@ -916,7 +878,7 @@ sub menu_file {
     foreach my $directory (@uniq){
         next if (-f "$directory/.nopixdir2htmlrc");
         # remove ./ from begining of names
-        ($directory = $directory) =~ s/^\.\/*//g;
+        $directory =~ s/^\.\/*//g;
         # note that @ls holds the HTML links...
         # thus, paths are relative and not absolute here:
         push(@ls,"$directory/$FILE_NAME.".$config{"$ROOT_DIRECTORY"}{"ext"});

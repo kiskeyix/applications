@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.16 $
+# $Revision: 1.17 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jul-06
 #
@@ -125,9 +125,9 @@ my @tmp_dirs = ();  # temp dirs
 
 my $COMMAND = "";   # init scalar for command
 my $TMP_COMMAND ="";# individual command line options
-my $SYSTEM_COMMAND=""# what's send to the system from past 2 commands
+my $SYSTEM_COMMAND="";  # what's send to the system from past 2 commands
 
-my $USE_TAR = 0;    # use a binary of tar instead of Perl module?
+my $USE_TAR = "0";      # use a binary of tar instead of Perl module?
 
 # merge two hashes and warn about dups... use the last defined key=>val
 my ($k, $v) = "";
@@ -164,7 +164,7 @@ if ( ! -f $TMP_LOCK ) {
 
     $year += 1900;
 
-    my $MIDDLE_STR = ( $ARGV[0] eq "daily" ) ? "daily" : $year."-$mon-$mday";
+    my $MIDDLE_STR = ( exists $ARGV[0] && $ARGV[0] eq "daily" ) ? "daily" : $year."-$mon-$mday";
 
     # write lock file:
     open(FILE,"> $TMP_LOCK") || die "could not open $TMP_LOCK. $! \n";
@@ -183,7 +183,7 @@ if ( ! -f $TMP_LOCK ) {
     }
 
     if ( exists $CONFIG{"COMPRESS_DO"} && 
-        $USER_TAR &&
+        $USE_TAR &&
         -x $CONFIG{"COMPRESS_DO"} ) {
         # reuse COMMAND from above and 
         # pipe it to compress utility
@@ -223,7 +223,7 @@ if ( ! -f $TMP_LOCK ) {
                 $TMP_FILE_NAME .= ( $CONFIG{"COMPRESS_DO"} =~ m/bzip2/ ) ? ".bz2" : "";
                 $TMP_FILE_NAME .= ( $CONFIG{"COMPRESS_DO"} =~ m/gzip/ ) ? ".gz" : "";
                 
-                my $TMP_FILE_LIST = join(' ',@file_list);
+                my $TMP_FILE_LIST = join(' ',@filelist);
                 # put files and tar file name in place holders
                 ( $TMP_COMMAND = $COMMAND) =~ s/xxFILESxx/$TMP_FILE_LIST/;
                 
@@ -264,7 +264,7 @@ if ( ! -f $TMP_LOCK ) {
 
     # DEBUG: print content of %user hash
     if ( $DEBUG != 0 ) { 
-        print STDOUT join(" ",%user)."\n"; 
+        print STDOUT join("\n",%user)."\n"; 
     }
 
     # foreach user, put the list of their files in this array
@@ -292,7 +292,7 @@ if ( ! -f $TMP_LOCK ) {
                 $TMP_FILE_NAME .= ( $CONFIG{"COMPRESS_DO"} =~ m/bzip2/ ) ? ".bz2" : "";
                 $TMP_FILE_NAME .= ( $CONFIG{"COMPRESS_DO"} =~ m/gzip/ ) ? ".gz" : "";
                 
-                my $TMP_FILE_LIST = join(' ',@file_list);
+                my $TMP_FILE_LIST = join(' ',@filelist);
                 # put files and tar file name in place holders
                 ( $TMP_COMMAND = $COMMAND) =~ s/xxFILESxx/$TMP_FILE_LIST/;
                 
@@ -341,7 +341,7 @@ if ( ! -f $TMP_LOCK ) {
                 $TMP_FILE_NAME .= ( $CONFIG{"COMPRESS_DO"} =~ m/bzip2/ ) ? ".bz2" : "";
                 $TMP_FILE_NAME .= ( $CONFIG{"COMPRESS_DO"} =~ m/gzip/ ) ? ".gz" : "";
 
-                my $TMP_FILE_LIST = join(' ',@file_list);
+                my $TMP_FILE_LIST = join(' ',@filelist);
                 # put files and tar file name in place holders
                 ( $TMP_COMMAND = $COMMAND) =~ s/xxFILESxx/$TMP_FILE_LIST/;
 

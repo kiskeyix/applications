@@ -1,34 +1,74 @@
 #!/usr/bin/perl
-#-Description-------------------------------------------
+#------------------------------------------------------------------------------
 # Launch update process for all config files found in a particular directory.
 # See COPYING.TXT file about AWStats GNU General Public License.
-#-------------------------------------------------------
-# $Revision: 1.2 $ - $Author: luigi $ - $Date: 2004-01-15 17:05:48 $
+#------------------------------------------------------------------------------
+# $Revision: 1.3 $ - $Author: luigi $ - $Date: 2004-03-07 01:30:38 $
 
 
-#-------------------------------------------------------
+#------------------------------------------------------------------------------
 # Defines
-#-------------------------------------------------------
-my $REVISION='$Revision: 1.2 $'; $REVISION =~ /\s(.*)\s/; $REVISION=$1;
+#------------------------------------------------------------------------------
+my $REVISION='$Revision: 1.3 $'; $REVISION =~ /\s(.*)\s/; $REVISION=$1;
 my $VERSION="1.0 (build $REVISION)";
 
-# Default value of DIRCONFIG and AWSTATSSCRIPT
+# Default value of DIRCONFIG
 my $DIRCONFIG = "/etc/awstats";
-my $AWSTATSSCRIPT = "/home/luigi/bin/awstats.pl";
+
+my $Debug=0;
+
+my $Awstats='awstats.pl';
+
+my $AwstatsDir='';
+my $AwstatsProg='';
 
 
 
+#------------------------------------------------------------------------------
+# Functions
+#------------------------------------------------------------------------------
 
-#-------------------------------------------------------
+#------------------------------------------------------------------------------
+# Function:		Write error message and exit
+# Parameters:	$message
+# Input:		None
+# Output:		None
+# Return:		None
+#------------------------------------------------------------------------------
+sub error {
+	print "Error: $_[0].\n";
+    exit 1;
+}
+
+
+#------------------------------------------------------------------------------
+# Function:     Write debug message and exit
+# Parameters:   $string $level
+# Input:        %HTMLOutput  $Debug=required level  $DEBUGFORCED=required level forced
+# Output:		None
+# Return:		None
+#------------------------------------------------------------------------------
+sub debug {
+	my $level = $_[1] || 1;
+	if ($Debug >= $level) {
+		my $debugstring = $_[0];
+		if ($ENV{"GATEWAY_INTERFACE"}) { $debugstring =~ s/^ /&nbsp&nbsp /; $debugstring .= "<br>"; }
+		print localtime(time)." - DEBUG $level - $debugstring\n";
+	}
+}
+
+
+#------------------------------------------------------------------------------
 # MAIN
-#-------------------------------------------------------
+#------------------------------------------------------------------------------
 
 # Change default value if options are used
 my $helpfound=0;my $nowfound=0;
 for (0..@ARGV-1) {
 	if ($ARGV[$_] =~ /^-*h/i)     		  	 { $helpfound=1; last; }
-	if ($ARGV[$_] =~ /^-*awstatsprog=(.*)/i) { $AWSTATSSCRIPT="$1"; next; }
-	if ($ARGV[$_] =~ /^-*confdir=(.*)/i)     { $DIRCONFIG="$1"; next; }
+	if ($ARGV[$_] =~ /^-*awstatsprog=(.*)/i) { $Awstats="$1"; next; }
+	if ($ARGV[$_] =~ /^-*configdir=(.*)/i)   { $DIRCONFIG="$1"; next; }
+	if ($ARGV[$_] =~ /^-*debug=(\d+)/i)  	 { $debug=$1; next; }
 	if ($ARGV[$_] =~ /^now/i)     		  	 { $nowfound=1; next; }
 }
 
@@ -45,24 +85,45 @@ if (!$nowfound || $helpfound || ! @ARGV) {
 	print "\n";
 	print "Where options are:\n";
 	print "  -awstatsprog=pathtoawstatspl\n";
-	print "  -confdir=directorytoscan\n";
+	print "  -configdir=directorytoscan\n";
 	print "\n";
 	exit 0;
 }
 
 # Scan directory $DIRCONFIG 
-opendir(DIR, $DIRCONFIG) || die "Can't scan directory $DIRCONFIG";
+opendir(DIR, $DIRCONFIG) || error("Can't scan directory $DIRCONFIG");
 my @files = grep { /^awstats\.(.*)conf$/ } sort readdir(DIR);
 closedir(DIR);
 
 # Run update process for each config file found
 if (@files) {
+	# Check if AWSTATS prog is found
+	my $AwstatsFound=0;
+	if (-s "$Awstats") { $AwstatsFound=1; }
+	elsif (-s "/usr/local/awstats/wwwroot/cgi-bin/awstats.pl") {
+		$Awstats="/usr/local/awstats/wwwroot/cgi-bin/awstats.pl";
+		$AwstatsFound=1;
+	}
+	if (! $AwstatsFound) {
+		error("Can't find AWStats program ('$Awstats').\nUse -awstatsprog option to solve this");
+		exit 1;
+	}
+	# Define AwstatsDir and AwstatsProg
+	($AwstatsDir=$Awstats) =~ s/([^\/\\]+)$//; $AwstatsProg=$1;
+	$AwstatsDir||='.'; $AwstatsDir =~ s/([^\/\\])[\\\/]+$/$1/;
+	debug("AwstatsDir=$AwstatsDir");
+	debug("AwstatsProg=$AwstatsProg");
+
 	foreach (@files) {
 		if ($_ =~ /^awstats\.(.*)conf$/) {
 			my $domain = $1||"default"; $domain =~ s/\.$//;
 			if ($domain eq 'model') { next; }
-			print "Running $AWSTATSSCRIPT to update config $domain\n";
-			my $output = `"$AWSTATSSCRIPT" -config=$domain -update 2>&1`;
+			# Define command line
+			my $command="\"$AwstatsDir/$AwstatsProg\" -update -config=$domain";
+			$command.=" -configdir=\"$DIRCONFIG\"";
+			# Run command line
+			print "Running '$command' to update config $domain\n";
+			my $output = `$command 2>&1`;
 			print "$output\n";
 		}
 	}

@@ -2,7 +2,7 @@
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2002-Nov-17
 # 
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # 
 # VERSION: 0.1
 #
@@ -397,7 +397,12 @@ sub item_factory_cb {
         create_help_window;
     } elsif ($action == 13) {
         do_exit;
+    } elsif ($action == 5) {
+        do_zau_sync();
+    } elsif ($action == 6) {
+        do_evo_sync();
     }
+
     # debug
     if ( $DBUG != 0 ) { 
         print "ItemFactory: activated ", $widget->item_factory_path(), " -> ", $action, "\n";
@@ -422,20 +427,14 @@ sub init_config_gui {
     my @item_factory_entries = (
         ["/_File",              undef,          0,      "<Branch>"],
         #["/File/tearoff1",      undef,          0,      "<Tearoff>"],
-#        ["/File/_New",          "<control>N",   1,      "<Item>"],
-#        ["/File/_Open",         "<control>O",   2,      "<Item>"],
-#        ["/File/_Save",         "<control>S",   3,      "<Item>"],
-#        ["/File/Save _As...",   undef,          4,      "<Item>"],
-#        ["/File/sep1",          undef,          0,      "<Separator>"],
-        ["/File/S_ync",         "<control>Y",   5,      "<Item>"],
-#        ["/File/sep1",          undef,          0,      "<Separator>"],
-        ["/File/S_ettings",     "<control>E",   6,      "<Item>"],
-#        ["/File/sep1",          undef,          0,      "<Separator>"],
+        ["/File/S_ync:Zau to Evo",         "<control>Z",   5,      "<Item>"],
+        ["/File/S_ync:Evo to Zau",         "<control>E",   6,      "<Item>"],
+        ["/File/sep1",          undef,          0,      "<Separator>"],
         ["/File/_Quit",        "<control>Q",   13,      "<Item>"],
-        ["/_Edit",              undef,          0,      "<Branch>"],
-        ["/Edit/_Copy",         "<control>C",   10,     "<Item>"],
-        ["/Edit/C_ut",          "<control>X",   11,     "<Item>"],
-        ["/Edit/_Paste",        "<control>V",   12,     "<Item>"],
+        #["/_Edit",              undef,          0,      "<Branch>"],
+        #["/Edit/_Copy",         "<control>C",   10,     "<Item>"],
+        #["/Edit/C_ut",          "<control>X",   11,     "<Item>"],
+        #["/Edit/_Paste",        "<control>V",   12,     "<Item>"],
         ["/_Help",              undef,          0,      "<LastBranch>"],
         ["/Help/_About",        undef,          30,     "<Item>"]
     );

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.19 $
+# $Revision: 1.20 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -774,6 +774,7 @@ sub readuserconf
         next unless length; #  If our line is empty, we ignore it
         s/^\$//;
         s/\;$//;
+        s/["']+//g;         # remove all quotes
         my ($var_name, $value) = split(/\s*=\s*/, $_);
         $$var_name = $value;
     }
@@ -1119,12 +1120,12 @@ sub cluster
                     # konsole, screen, etc... 
                     $this_arg="-n $rhost" if $XTERM =~ /xterm/i;
                     $this_cmd=sprintf("$XTERM $RMCMD $rhost $0 runclust $wdir &",$this_arg);
-                    print $DEBUG "+ excecuting $this_cmd\n";
+                    print $DEBUG "+ executing $this_cmd\n";
                     system ( $this_cmd );
                 } else {
                     $this_arg="-n $rhost" if $XTERM =~ /xterm/i;
                     $this_cmd=sprintf("$XTERM $0 runclust $wdir &",$this_arg);
-                    print $DEBUG "+ excecuting $this_cmd\n";
+                    print $DEBUG "+ executing $this_cmd\n";
                     system ( $this_cmd );
                 }
                 $tabpower[$i]=$sumpow;

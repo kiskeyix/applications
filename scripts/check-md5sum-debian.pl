@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Sep-25
 #
@@ -14,17 +14,16 @@
 #               Note that if you don't have read access to
 #               files/binaries then you might need to run
 #               this with a different user who has permission
-#               to read those binaries or files.
+#               to read those binaries or files. (root?)
 #
 # NOTE: later discovered "debsums" perl script which essentially
 #       does the same in a simpler and nicer way... use that instead.
+#       Unless you want a different type of report when seeing what got
+#       changed.
 # 
-# USAGE:    $0 [-b|--binary] [-l|--log] [-m|--md5sum]
-# CHANGELOG:
-#
 
-use File::Find;     # find();
-use File::Basename; # basename();
+use File::Find 'find';     # find();
+use File::Basename 'basename'; # basename();
 use FileHandle;
 
 use strict;
@@ -33,40 +32,15 @@ $|++;
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
 
-my $MD5SUM = ""; 
-eval "use Digest::md5sum";
-if ($@)
-{
-    print STDERR "\n ERROR: Digest::Md5sum was not found\n".
-    "           Trying to find a valid 'md5sum' binary\n\n";
-    
-    if ( -x "/sbin/md5sum" ) 
-    {
-        $MD5SUM = "/sbin/md5sum";
-    } elsif ( -x "/usr/sbin/md5sum" ) {
-        $MD5SUM = "/usr/sbin/md5sum";
-    } elsif ( -x "/usr/bin/md5sum" ) {
-        $MD5SUM = "/usr/bin/md5sum";
-    } elsif ( -x "/bin/md5sum" ) {
-        $MD5SUM = "/bin/md5sum";
-    } elsif ( -x "/usr/local/sbin/md5sum" ) {
-        $MD5SUM = "/usr/local/sbin/md5sum";
-    } elsif ( -x "/usr/local/bin/md5sum" ) {
-        $MD5SUM = "/usr/local/bin/md5sum";
-    }
-    
-    # sanity check
-    if ( $MD5SUM ne "" ) 
-    {
-        print STDERR "\n WARN: Using $MD5SUM\n";
-    } else {
-        print STDERR "\n ERROR: no suitable 'md5sum' found.";
-        exit(1);
-    }
-}
+# vars #
+
+my $DEBUG = 0;
+
+my $USAGE=" check-md5sum-debian.pl [-h|--help] [-b|--binary] [-l|--log] [-m|--md5sum] [-d|--debug]\n";
 
 # list of files we should not check for
 # note that only .md5sum files are checked anyway
+
 my $EXCEPTION_LIST = "\.txt\$|\.rtf\$";
 
 my $DEBIAN_INFO = "/var/lib/dpkg/info";
@@ -77,12 +51,77 @@ my $LOG = ""; # log file (command line)
 
 my ($tmp_md5sum, $tmp_file) = "";
 
+my $MD5SUM = ""; 
+
+my $HELP = 0;
+
+# end vars #
+
+# get opts #
+
 GetOptions(
     # flags
     'b|binary'      =>  \$BIN_FLAG,
     'm|md5sum=s'    =>  \$MD5SUM,
-    'l|log'         =>  \$LOG
+    'l|log'         =>  \$LOG,
+    'h|help'        =>  \$HELP,
+    'd|debug'       =>  \$DEBUG
 );
+
+# end get opts #
+
+# code #
+
+if ( $HELP > 0 )
+{
+    print $USAGE;
+    exit(0);
+}
+
+eval "use Digest::md5sum";
+if ($@)
+{
+    print STDERR "\n ERROR: Digest::Md5sum was not found\n".
+    "           Trying to find a valid 'md5sum' binary\n\n" if $DEBUG;
+    
+#    if ( -x "/sbin/md5sum" ) 
+#    {
+#        $MD5SUM = "/sbin/md5sum";
+#    } elsif ( -x "/usr/sbin/md5sum" ) {
+#        $MD5SUM = "/usr/sbin/md5sum";
+#    } elsif ( -x "/usr/bin/md5sum" ) {
+#        $MD5SUM = "/usr/bin/md5sum";
+#    } elsif ( -x "/bin/md5sum" ) {
+#        $MD5SUM = "/bin/md5sum";
+#    } elsif ( -x "/usr/local/sbin/md5sum" ) {
+#        $MD5SUM = "/usr/local/sbin/md5sum";
+#    } elsif ( -x "/usr/local/bin/md5sum" ) {
+#        $MD5SUM = "/usr/local/bin/md5sum";
+#    }
+
+    foreach my $md5bin ( split(/:/,$ENV{"PATH"}))
+    {
+        # FIXME
+        # assuming that a PATH var exists might lead to problems... but
+        # 
+        print STDERR "Checking PATH: ". $md5bin."\n" if $DEBUG;
+
+        if ( -x $md5bin."/md5sum" )
+        {
+            $md5bin =~ s,//+,/,g; # just in case
+                                  # removes extra /
+            $MD5SUM = "$md5bin/md5sum";
+        }
+    }
+    # sanity check
+    if ( $MD5SUM ne "" ) 
+    {
+        print STDERR "\n WARN: Using $MD5SUM\n" if $DEBUG;
+    } else {
+        print STDERR "\n ERROR: no suitable 'md5sum' found." if $DEBUG;
+        exit(1);
+    }
+}
 
 if ( $LOG gt "" )
 {
@@ -90,9 +129,6 @@ if ( $LOG gt "" )
     $OUTPUT->open("> $LOG");
     $OUTPUT->autoflush(1);
 }  
-#else {
-#    $OUTPUT->open("STDOUT");
-#}
 
 main();
 
@@ -152,7 +188,7 @@ sub main {
                 } #end if/else bin_flag
             } #end while
         } else {
-            print STDERR "\n ERROR: Could not open $file";
+            print STDERR "\n ERROR: Could not open $file" if $DEBUG;
         } #end if/else open
     } #end foreach
 }

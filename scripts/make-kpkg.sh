@@ -1,7 +1,7 @@
 #!/bin/sh
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Feb-20
+# Last modified: 2003-May-27
 #
 # DESCRIPTION: Use the wonderful "make-kpkg" from Debian
 #               to build a custom kernel.
@@ -26,13 +26,13 @@ ALL_PATCH_DIR="../kernel-patches/" # patches are located before this dir
 IMAGE_TOP="../" # where to save the resulting .deb files
 
 export IMAGE_TOP ALL_PATCH_DIR PATCH_THE_KERNEL MODULE_LOC
-if [ $1 ]; then
+if [ $1 -a $1 != "--help" ]; then
     if [ $2 ]; then
         REVISION="$2"
     else
         REVISION="1.0"
     fi
-    echo -e "Building kernel"
+    echo -e "Building kernel \n"
     make-kpkg clean
     make-kpkg --rootcmd $FAKEROOT  --initrd \
         --config oldconfig --append-to-version -custom.$1 \

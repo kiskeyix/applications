@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.89 $
+# $Revision: 1.90 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -36,6 +36,7 @@ use File::Temp qw/ tempfile  /;     # Perl 5.6.1:
                                     # used to get secured temp file
 use File::Basename; # basename();
 use File::Find; # find()
+use Cwd;  # getcwd() for `pwd`
 
 STDOUT->autoflush(1);
 
@@ -398,14 +399,14 @@ sub chk_wdir
     pdebug ("---> Enter chk_wdir");
     # We check if user is not working in /path/to/vobs
     chomp($VOBPATH);
-    my $wdir=`pwd`;
+    my $wdir=getcwd();
     #chdir($VOBPATH); #unecessary
     ( $VOBPATH ne $wdir ) 
         or mydie "You MUST NOT run V2divx from the ".
     " /path/to/vob directory ...\nPlease cd to another directory";
     chomp($wdir);
     #chdir($wdir);
-    pdebug ("Working directory ".`pwd`);
+    pdebug ("Working directory ".$wdir);
 
     # Move probe.rip and dvdtitle
     system ("mv $VOBPATH/dvdtitle tmp/dvdtitle") if ( -f "$VOBPATH/dvdtitle");
@@ -884,7 +885,7 @@ sub create_extract
                     ." -x pcm -e $audio_rate -f $FPS 2>> tmp/extract.text  >> tmp/extract.text";
             }
             print "$sys \n" if ( $INFO);
-            pdebug ("+ Working directory ".`pwd`);
+            pdebug ("+ Working directory ".getcwd());
             system ("nice -$nice $sys") == 0  
                 or ( 
                 system("touch tmp/extract.finish") == 0 
@@ -2158,7 +2159,7 @@ sub cluster
     pdebug ("--->  Enter cluster");
     # Need to know working directory 
     # and pass it to the cluster nodes (to find tmp/*)
-    my $wdir=`pwd`;
+    my $wdir=getcwd();
     chomp($wdir);
     ( -f $CLUSTER_CONFIG ) or mydie $warnclust;
 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-May-24
 #
@@ -86,8 +86,8 @@ foreach my $hashref ( \%MY_CONFIG, \%TMP_CONFIG ) {
 #die "the end \n";
 
 # change to backup directory
-if ( -d $CONFIG{BAK} ) {
-    chdir($CONFIG{BAK});
+if ( -d eval($CONFIG{BAK}) ) {
+    chdir(eval($CONFIG{BAK}));
 } else {
     die "could not change working dir to $CONFIG{BAK}. $!";
 }

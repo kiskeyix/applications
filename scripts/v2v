@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.94 $
+# $Revision: 1.95 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -3980,7 +3980,12 @@ sub mplayer_rip
     #
     my $dir = shift;
     my $title = shift;
-    # mplayer dvd://$title -dumpstream -dumpfile title$title.vob
+    # sanity check
+    $dir = "." if ( ! -d "$dir" ); # fall back to current directory
+    chdir($dir);
+    my $cmd = "mplayer dvd://$title -dumpstream -dumpfile title$title.vob";
+    pdebug($cmd);
+    system($cmd);
 }
 
 sub dvdbackup

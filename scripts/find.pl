@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jun-01
+# Last modified: 2003-Jun-02
 #
 # DESC: finds a string in a set of files
 #
@@ -37,7 +37,7 @@ if (!$ARGV[0]) {
 my ($this_string,$f_pattern) = @ARGV;
 
 if (!$ARGV[1]) {
-    print STDERR "All files chosen";
+    print STDERR "All files chosen\n";
     $f_pattern = ".*";
 }
 

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Oct-29
 #
@@ -58,8 +58,9 @@ lmount()
     # @arg2 loopdev
     # @arg3 path
     if [ -b $2 ];then
-        $SU -u $SUSER -t "Mount Loopback Filesystem" "$MOUNT -t $1 $2 $3"
-        if [ $? -eq 0 ]; then
+        $SU -u $SUSER -t "Mount Image" "$MOUNT -t $1 $2 $3"
+        if [ "`df | grep \"${3}\"`" ]; then
+            MOUNTED="yes"
             return 1
         else
             return 0
@@ -67,13 +68,17 @@ lmount()
     else
         # for convenience. $2 is not a block device, try to mount it
         # letting mount find a block device for us
-        $SU -u $SUSER -t "Mount Loopback Filesystem" "$MOUNT -o loop -t $1 $2 $3"
-        if [ $? -eq 0 ]; then
+        $SU -u $SUSER -t "Mount Image" "$MOUNT -o loop -t $1 $2 $3"
+        if [ "`df | grep \"${3}\"`" ]; then
+            MOUNTED="yes"
             return 1
         else
             return 0
         fi
     fi
+
+    # we should never reach this
+    return 0
 }
 
 unmount()
@@ -189,55 +194,30 @@ do
   
     # try mounting the filesystem with what we know so far
     MOUNTED="no"
-    if [ "`lmount $mtype $arg $USERMOUNTDIR`" ]; then
-        MOUNTED="yes"
-    fi
-
+    lmount $mtype $arg $USERMOUNTDIR
+    
     if [ $MOUNTED = "yes" ]; then 
         nautilus $USERMOUNTDIR
     else
-        exit 0
         # if mount failed, ask about encryption and filetype
-        unset_loop $LOOPDEV
-        echo "Second unset loop called"
-
         # TODO make utility function...
         if [ `$DIALOG --title="Encryption" --question --text="Is this an encrypted image?"`  ]; then
 
             echo "Encryption is used"
 
-            if [ $SETUPLOOP = "yes" ]; then
-                if [ "`unset_loop $DEVICELOOP`" ]; then
-                    SETUPLOOP="no"
-                else
-                    error "Could not unset loop"
-                fi
-            fi
-
             # choose encryption type
-            # Zenity might be the only dialog that does this...
-            if [ $DIALOG = "zenity" ]; then
-                echo "Asking about cypher"
-                DCYPHER=$($DIALOG --list \
-                --title="Select Cypher" \
-                --radiolist --editable \
-                --column="Selected" --column="Cypher" "$CYPHERS")
-            fi
+            echo "Asking about cypher"
+            DCYPHER=$($DIALOG --list \
+            --title="Select Cypher" \
+            --radiolist --editable \
+            --column="Selected" --column="Cypher" "$CYPHERS")
 
-            if [ $DIALOG = "zenity" ]; then
-                echo "Asking about filesystem type"
-                mtype=$($DIALOG --list \
-                --title="Select filesystem type" \
-                --radiolist --editable \
-                --column="Selected" --column="Filetype" $FORMATS)
-            else
-                echo "Asking about filesystem type"
-                # TODO this might need modification
-                mtype=$($DIALOG --list \
-                --title="Select filesystem type" \
-                --radiolist --editable \
-                --column="Selected" --column="Filetype" $FORMATS)
-            fi
+            # choose format type
+            echo "Asking about filesystem type"
+            mtype=$($DIALOG --list \
+            --title="Select filesystem type" \
+            --radiolist --editable \
+            --column="Selected" --column="Filetype" $FORMATS)
 
             # try to setup the encrypted loop
             if [ "`setup_enloop $DCYPHER $LOOPDEV ${arg}`" ]; then
@@ -248,7 +228,8 @@ do
 
             if [ $SETUPLOOP = "yes" ]; then
                 # loop device setup, now mount
-                if [ "`lmount $mtype $LOOPDEV $USERMOUNTDIR`" ]; then
+                lmount $mtype $LOOPDEV $USERMOUNTDIR
+                if [ $MOUNTED = "yes" ]; then
                     nautilus $USERMOUNTDIR
                 else
                     error "Could not mount $LOOPDEV in $USERMOUNTDIR"
@@ -257,7 +238,7 @@ do
                     rmdir $MOUNTDIR
                 fi
             else
-                error "Could not setup $LOOPDEV"
+                error "Could not setup encrypted block device $LOOPDEV"
                 rmdir $USERMOUNTDIR
                 rmdir $MOUNTDIR
             fi
@@ -266,10 +247,6 @@ do
             # and mount
 
             echo "Encryption is not used"
-
-            if [ "`setup_loop $LOOPDEV ${arg}`"  ]; then
-                LOOPSETUP="yes"
-            fi
 
             if [ $DIALOG = "zenity" ]; then
                 echo "Asking about filesystem type"
@@ -286,18 +263,13 @@ do
                 --column="Selected" --column="Filetype" $FORMATS)
             fi
 
-            if [ $LOOPSETUP = "yes"  ]; then
-                # loop device setup, now mount
-                if [ "`lmount $mtype $LOOPDEV $USERMOUNTDIR`"  ]; then
-                    nautilus $USERMOUNTDIR
-                else
-                    error "Could not mount $LOOPDEV in $USERMOUNTDIR"
-                    unset_loop $LOOPDEV
-                    rmdir $USERMOUNTDIR
-                    rmdir $MOUNTDIR
-                fi
+            MOUNTED="no"
+            lmount $mtype ${arg} $USERMOUNTDIR
+
+            if [ $MOUNTED = "yes"  ]; then
+                nautilus $USERMOUNTDIR
             else
-                error "Could not setup $LOOPDEV"
+                error "Could not mount ${arg} in $USERMOUNTDIR"
                 rmdir $USERMOUNTDIR
                 rmdir $MOUNTDIR
             fi

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.14 $
+# $Revision: 1.15 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Feb-28
 #
@@ -32,7 +32,9 @@ my $VERBOSE=0;
 my $DEBUG=0;
 my $REMOVE_FILES=0;
 my $MASTER=0; # update current host from $MASTER_HOST
-
+my $RED = "\033[1;31m";
+my $NORM = "\033[0;39m";
+my $GREEN = "\033[0;32m";
 my $VERBOSE_ARGS="";
 my $WGET_ARGS="--continue --timestamping";
 

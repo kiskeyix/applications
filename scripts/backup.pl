@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.24 $
+# $Revision: 1.25 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Oct-13
+# Last modified: 2003-Nov-24
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
 #               or a user specified command archiver ( tar? )
@@ -426,7 +426,7 @@ if ( ! -f $TMP_LOCK ) {
         # create a selections file
         system("dpkg --get-selections \\* > selections.txt");
         if ( $? == 0 ) {
-            print STDOUT "Debian selections file created as: selections.txt.\n Use:\n dpkg --set-selections < selections.txt && dselect update \n to restore from this list.";
+            print STDOUT "Debian selections file created as: selections.txt.\n Use:\n dpkg --set-selections < selections.txt && dselect install \n to restore from this list.";
         }
     }
 

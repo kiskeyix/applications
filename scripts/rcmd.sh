@@ -7,8 +7,8 @@
 # clusters and maintaining lots of servers
 #
 
-HOSTS="sal japhy carlo julio mardou"
-RSH=rsh
+HOSTS="`cat ~/.remote-hosts`"
+RSH=ssh
 
 if [ "x$1" != "x" ]; then
     for i in $HOSTS; do
@@ -16,5 +16,5 @@ if [ "x$1" != "x" ]; then
         $RSH $i $@
     done
 else
-    echo -e "Usage: $0 CMD \n \t Where CMD is any command \n"
+    echo -e "Usage: $0 CMD \n \t Where CMD is any command \n Put your remote hosts names/ips (one per line) in ~/.remote-hosts"
 fi

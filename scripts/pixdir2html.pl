@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE:
@@ -177,7 +177,6 @@ sub main {
 sub init_config {
     
     my $ROOT = shift;
-    
     if (open(CONFIG, "<$ROOT/$CONFIG_FILE")){
         while (<CONFIG>) {
             next if /^\s*#/;
@@ -204,7 +203,8 @@ __EOF__
         $myconfig{footer}="";
 
     }
-#construct a header if it doesn't yet exist:
+    
+    #construct a header if it doesn't yet exist:
     if ( $myconfig{header} eq "" ) {
 
         print LOGFILE ("Blank header. Generating my own ... \n");
@@ -221,6 +221,8 @@ __EOF__
         \n
         ";
     }
+
+    return %myconfig;
 }
 
 # Takes one argument directory to create images for
@@ -294,7 +296,7 @@ sub mkthumb {
     if (!-f "$ROOT/.nopictDir2htmlrc") {
        
         # read specific config file for this directory
-        init_config($ROOT);
+        %myconfig = init_config($ROOT);
         
         open(FILE, "> $ROOT/$FILE_NAME") || die "Couldn't write file $FILE_NAME to $ROOT";
 
@@ -488,7 +490,7 @@ sub menuMaker {
             if ( $ls[$i] ne "" ) {
                 # if link exists, otherwise leave it blank
                 ($ts = $ls[$i]) =~ s/(.*)\/$FILE_NAME/$1/gi;
-                $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='$myconfig{new}'>":""; # if .new file
+                $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='$myconfig{new}' alt='new'>":""; # if .new file
                 $ts = ucfirst($ts);
                 print FILE ("<a href='$myconfig{uri}/$ls[$i]' target='_top'>$IMG $ts</a>\n");
             } else {

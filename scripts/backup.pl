@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-May-25
+# Last modified: 2003-May-26
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
 #              it will create 3 files:
@@ -137,6 +137,8 @@ if ( ! -f $TMP_LOCK ) {
         }
     }
 
+    print STDOUT "Backing up system files \n";
+
     Archive::Tar->create_archive (
             "system-$MIDDLE_STR.tar.gz", 
             9, 
@@ -171,6 +173,8 @@ if ( ! -f $TMP_LOCK ) {
     }
     #print STDOUT join(" ",@filelist)."\n";
     
+    print STDOUT "Backing up users files \n";
+
     Archive::Tar->create_archive (
             "users-$MIDDLE_STR.tar.gz", 
             9, 
@@ -191,6 +195,8 @@ if ( ! -f $TMP_LOCK ) {
         }
     }
     
+    print STDOUT "Backing up other files $CONFIG{DIRS} \n";
+
     Archive::Tar->create_archive (
             "other-$MIDDLE_STR.tar.gz", 
             9, 

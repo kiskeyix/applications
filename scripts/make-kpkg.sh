@@ -1,7 +1,7 @@
 #!/bin/bash
-# $Revision: 1.20 $
+# $Revision: 1.21 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Nov-09
+# Last modified: 2003-Nov-23
 #
 # DESCRIPTION:  an interactive wrapper to Debian's "make-kpkg"
 #               to build a custom kernel package.
@@ -52,7 +52,7 @@ MODULE_LOC="../modules/"            # modules are located in the
 NO_UNPATCH_BY_DEFAULT="YES"         # please do not unpatch the 
                                     # kernel by default
 
-PATCH_THE_KERNEL="YES"              # always patch the kernel
+PATCH_THE_KERNEL="NO"               # always patch the kernel
 
 ALL_PATCH_DIR="../kernel-patches/"  # patches are located before 
                                     # this directory
@@ -64,6 +64,14 @@ INITRD_OK="YES"
 
 export IMAGE_TOP ALL_PATCH_DIR PATCH_THE_KERNEL 
 export MODULE_LOC NO_UNPATCH_BY_DEFAULT INITRD_OK
+
+# Should we build an initrd image?
+if [ $INITRD_OK="YES" ]; then
+    echo "Initrd support enabled"
+    INITRD=" --initrd"
+else
+    INITRD=""
+fi
 
 if [ $1 -a $1 != "--help" ]; then
 
@@ -103,7 +111,7 @@ if [ $1 -a $1 != "--help" ]; then
         --config oldconfig \
         --append-to-version -custom.$1 \
         --revision $REVISION \
-        --initrd \
+        $INITRD \
         kernel_image $KERNEL_HEADERS
     fi
 
@@ -115,7 +123,7 @@ if [ $1 -a $1 != "--help" ]; then
         --config oldconfig \
         --append-to-version -custom.$1 \
         --revision $REVISION \
-        --initrd \
+        $INITRD \
         $KERNEL_HEADERS
     fi
 
@@ -138,6 +146,7 @@ if [ $1 -a $1 != "--help" ]; then
         --config oldconfig \
         --append-to-version -custom.$1 \
         --revision $REVISION \
+        $INITRD \
         modules_image
     fi
 else

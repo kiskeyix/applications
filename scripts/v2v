@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.83 $
+# $Revision: 1.84 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -222,14 +222,14 @@ my $usage="
     # flags
     '-h|--help'                     Help
     '-v|--version'                  Print Version and exit
-    '-srtsubrip'                    Subtitle rip (?)
+    '--srtsubrip'                   Subtitle rip (?)
     '-tv'                           Record TV
     '-d|--debug'                    Debug Script
     '-i|--info'                     Print Informational Messages
     '-c|--with-cluster'             Run in Cluster mode
     '-t|--test'                     Do a minor test with movie
     '-dvd9-to-dvd5'                 Convert from DVD-9 to DVD-5
-    '--dvdbackup'                   Backup a DVD using dvdbackup (interactive)
+    '--dvdbackup'                   Backup a DVD using dvdbackup (interactive) and exit
     '--avi-to-vcd'                  Create VCD Image from AVI
     # strings
     '-D|--directory=s'              Use this directory as WORK DIR
@@ -250,9 +250,21 @@ my $usage="
     '-M|--make-dvd=s'               Use this name to create a DVD iso
     # numbers
     '-a|--default_audio_channel=i'  Number of Audio Channels
-    '-titleset=i'                   Rip this TitleSet for DVD-9 to DVD-5
+    '--titleset=i'                  Rip this TitleSet for DVD-9 to DVD-5
     '-n|--nice=i'                   Nice level (UNIX) [+5]
-    \n V2divx /path/to/vob SIZE\n See README file.\n";
+
+    \n # to rip a DVD
+    \n cd /scratch_disk && mkdir DVD
+    \n V2dvix ./DVD rip # or V2divx --dvdbackup ./DVD 
+    \n # to convert to DVD5
+    \n mkdir DVD5 && cd DVD5
+    \n V2divx --dvd9-to-dvd5 /scratch_disk/DVD # or, if --dvdbackup:
+    \n # V2divx --dvd9-to-dvd5 /scratch_disk/DVD/\"DVD_TITLE_HERE\"
+    \n # to make a .avi
+    \n mkdir /scratch_disk/AVI && cd /scratch_disk/AVI
+    \n V2divx /scratch_disk/DVD 680 # replace 680 with desired size
+    \n 
+    \n See README file for more examples.\n";
 
 # You may Modify the Next value but take care
 # (see the transcode man pages - about Bits per Pixel)
@@ -3916,6 +3928,11 @@ sub dvdbackup
     # similar to --rip. Choose whichever you prefer.
     # @param 0 directory := string path to directory that will hold the VOBs, or current directory if no argument passed
     # @param 1 integer := title to rip from DVD. Defaults to 1
+    #
+    # TODO
+    # if we get --chapter-start=N and --chapter-end=M, we will use
+    # -t $TITLE -s N -e M instead of simply -T $TITLE
+    #
     my $dir = shift;
     my $title = shift;
 

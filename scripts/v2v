@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.56 $
+# $Revision: 1.57 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -1718,7 +1718,7 @@ sub create_nav
     if ($pid)
     {
         $sys = "cat $VOBPATH/* | tcdemux $demux -W > tmp/file.nav";
-        pinfo($sys."\n");
+        print STDOUT ($sys."\n");
         system ("nice -$nice $sys") == 0  
             or ( system ("touch tmp/filenav.finish")== 0 
             and mydie "Unable to create file nav\n" );

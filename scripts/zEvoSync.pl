@@ -1,8 +1,8 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2002-Nov-16
+# Last modified: 2002-Nov-17
 # 
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # 
 # VERSION: 0.1
 #
@@ -15,7 +15,9 @@
 #       addressbook.
 # 
 # RESOURCES:
-#       * vCard description: http://www.ietf.org/rfc/rfc2739.txt
+#       * vCard description LDAP : http://www.ietf.org/rfc/rfc2739.txt
+#       * vCard MIME directory: http://www.ietf.org/rfc/rfc2426.txt
+#       * vCard MIME content-type: http://www.ietf.org/rfc/rfc2425.txt
 #
 # USAGE: 
 #       ** NO SWITCHES **
@@ -25,6 +27,7 @@
 #       * GTK module
 #       * DB_File
 #       * XML::Parser
+#       * evolution-addressbook-import must be in users' path
 #
 # BUGS: 
 #
@@ -39,14 +42,15 @@ $|++;               # disable buffering on standard output
 
 use Gtk;
 use Gtk::Atoms;
-#use XML::Simple; 
 
 #--------------------------------------#
 #            Configuration             #
 #--------------------------------------#
 
-# db to xml file for evo addressbook
-my $temp_file = "$ENV{HOME}/evolution/.tmp-file.xml";
+# db to xml file from evo addressbook
+my $temp_file = "$ENV{HOME}/.tmp-file.xml";
+# xml to vcard temporary file file to evo addressbook
+my $temp_vcard = "$ENV{HOME}/.tmp-vcard.vcf";
 
 # zaurus xml file
 my $zau_xml = "$ENV{HOME}/.palmtopcenter/addressbook/addressbook.xml";
@@ -57,13 +61,39 @@ my %DBFILE = ();
 # Definition for functions/subroutines #
 #--------------------------------------#
 
+# Takes Zaurus .xml file from your $HOME directory
+# and converts it to vcard format, then passes
+# this vcard formatted file to evolution's import
+# utility with a --sync option set.
+# One could also get the Zaurus file directly from
+# the Zaurus... but, that could be another function
+# (the one that gets the file and passes that to
+# do_zau_sync)
+#
 sub do_zau_sync {
     
     use XML::Parser;
     
+    unlink $temp_vcard;
+    open(FILE,"> $temp_vcard");
+    close(FILE);
+
     my $p= new XML::Parser(Style => 'Stream');
     $p->parsefile($zau_xml);
 
+    # you must kill evolution first!
+    system("killev");
+    if ($? == 0) {
+        # keep a backup
+        rename "$ENV{HOME}/evolution/local/Contacts/addressbook.db", "$ENV{HOME}/evolution/local/Contacts/addressbook.db.bak";
+        
+        system("evolution-addressbook-import --sync --input-file='$temp_vcard'");
+    } else {
+        print STDERR "Could not kill Evolution using 'killev' program. Make sure 'killev' is in your path and it's executable by your user.";
+    }
+
+    # done with temporary file
+    unlink $temp_vcard;
 }
 
 #
@@ -136,6 +166,8 @@ sub do_evo_sync {
         my ($pobox, $address2, $address1, $city, $state, $zip, $country) = split /;/, $dbhash{'ADR;WORK'};
         my ($hpobox, $haddress2, $haddress1, $hcity, $hstate, $hzip, $hcountry) = split /;/, $dbhash{'ADR;HOME'};
         my ($company, $dept) = split /;/, $dbhash{ORG};
+        my $uid;
+        ($uid = $dbhash{UID}) =~ s/pas-id//;
         # print e/a contact
         print FILE "<Contact FirstName=\"$firstname\"".
         " MiddleName=\"$middle\" LastName=\"$lastname\" ".
@@ -158,46 +190,89 @@ sub do_evo_sync {
         "BusinessPager=\"$dbhash{'TEL;PAGER'}\" ".
         "Spouse=\"$dbhash{'X-EVOLUTION-SPOUSE'}\" ".
         "Nickname=\"$dbhash{NICKNAME}\" ".
-        "Notes=\"$dbhash{'NOTE;QUOTED-PRINTABLE'}\"/>\n";
+        "Notes=\"$dbhash{'NOTE;QUOTED-PRINTABLE'} $dbhash{NOTE}\" ".
+        "Uid=\"$uid\" />\n";
     }
 
     print FILE "</Contacts>\n</AddressBook>\n";
     dbmclose(%DBFILE);
 
     close($temp_file);
+
+    # Keep a backup
+    rename $zau_xml, "$zau_xml.bak"; 
+    rename $temp_file, $zau_xml;
+    
+    # done with temp_file
+    unlink $temp_file;
 }
 
 # sample printVcard function
 # borrowed from: http://www.heise.de/ix/artikel/1999/05/161/01.shtml
 
 # calls for XML::Parser->stream
+sub StartDocument {}
+sub Text {}
+sub PI {}
+sub EndDocument {}
+sub EndTag {}
 sub StartTag {
-    my $p = shift;
-    my $key = shift;
-}
-sub EndTag {
-    my (%vcard) = @_;
-    my $p = shift;
-    my $t = shift;
-    #undef $key;
-    if ($t eq "vcard") {
-        printVcard(%vcard);
+    if ($_ =~ m/Contact\b/i){
+        printVcard(%_);
     }
 }
+
 # prints vCards
 sub printVcard {
     my (%hash) = @_;
-    print "begin:vcard\n";
-    print "n:$hash{nachname};$hash{vorname}\n";
-    print "fn: $hash{vorname} $hash{nachname}\n";
-    if (exists $hash{strasse} && exists $hash{plz} &&
-        exists $hash{ort}) {
-        print "adr:;;$hash{strasse};$hash{ort};;$hash{plz};Germany\n";
+    open(FILE,">> $temp_vcard");
+
+    # temporarily turn off warnings
+    no warnings;
+
+    print FILE "BEGIN:VCARD\r\n";
+    print FILE "X-EVOLUTION-FILE-AS:$hash{FileAs}\r\n";
+    print FILE "FN: $hash{FirstName} $hash{LastName}\r\n";
+    print FILE "N:$hash{LastName};$hash{FirstName}\r\n";
+    # Home address:
+    if (exists $hash{HomeStreet} && 
+        exists $hash{HomeCity} &&
+        exists $hash{HomeState} &&
+        exists $hash{HomeZip}
+    ) {
+        print FILE "ADR;HOME:;;$hash{HomeStreet};$hash{HomeCity};$hash{HomeState};$hash{HomeZip};\r\n";
     }
-    print "tel;work:$hash{telgesch}\n" if (exists $hash{telgesch});
-    print "tel;fax;work:$hash{faxgesch}\n" if (exists $hash{faxgesch});
-    print "email;internet:$hash{mail}\n" if (exists $hash{mail});
-    print "end:vcard\n";
+    # Business address:
+    if (exists $hash{BusinessStreet} && 
+        exists $hash{BusinessCity} &&
+        exists $hash{BusinessState} &&
+        exists $hash{BusinessZip}
+    ) {
+        print FILE "ADR;HOME:;;$hash{BusinessStreet};$hash{BusinessCity};$hash{BusinessState};$hash{BusinessZip};\r\n";
+    }
+    print FILE "TEL;HOME:$hash{HomePhone}\r\n" if (exists $hash{HomePhone});
+    print FILE "TEL;FAX;HOME:$hash{HomeFax}\r\n" if (exists $hash{HomeFax});
+    print FILE "TEL;WORK:$hash{BusinessPhone}\r\n" if (exists $hash{BusinessPhone});
+    print FILE "TEL;FAX;WORK:$hash{BusinessFax}\r\n" if (exists $hash{BusinessFax});
+    print FILE "ORG:$hash{Company}\r\n" if (exists $hash{Company});
+    print FILE "EMAIL;INTERNET:$hash{DefaultEmail}\r\n" if (exists $hash{DefaultEmail});
+    if (exists $hash{Emails}){
+        foreach (split(/ /,$hash{Emails})){
+            if ( $_ ne "$hash{DefaultEmail}" ) {
+                print FILE "EMAIL;INTERNET:$_\r\n";
+            }
+        }
+    }
+    print FILE "URL:$hash{HomeWebPage}\r\n" if (exists $hash{HomeWebPage});
+    print FILE "URL:$hash{BusinessWebPage}\r\n" if (exists $hash{BusinessWebPage});
+    print FILE "ROLE:$hash{JobTitle}\r\n" if (exists $hash{JobTitle});
+    print FILE "BDAY:$hash{Birthday}\r\n" if (exists $hash{Birthday});
+    print FILE "NICKNAME:$hash{Nickname}\r\n" if (exists $hash{Nickname});
+    print FILE "NOTE:$hash{Notes}\r\n" if (exists $hash{Notes});
+    print FILE "UID:$hash{Uid}\r\n" if (exists $hash{Uid});
+    print FILE "END:VCARD\r\n\r\n";
+
+    close(FILE);
 }
 
 #
@@ -396,18 +471,18 @@ sub init_config_gui {
     $box2->set_border_width(10);
     $box1->pack_start($box2, 0, 1, 0);
     
-    $label3 = new Gtk::Label "Total Progress:";
-    $label3->set_usize(20, 20);
-    $label3->set_alignment(0.5, 0.5);
-    $box2->pack_start($label3, 1, 1, 0);
+    #$label3 = new Gtk::Label "Total Progress:";
+    #$label3->set_usize(20, 20);
+    #$label3->set_alignment(0.5, 0.5);
+    #$box2->pack_start($label3, 1, 1, 0);
 
-    $pbar = new Gtk::ProgressBar;
-    $pbar->set_usize(200,20);
-    $box2->pack_start($pbar,1,1,0);
-    $pbar->show;
+    #$pbar = new Gtk::ProgressBar;
+    #$pbar->set_usize(200,20);
+    #$box2->pack_start($pbar,1,1,0);
+    #$pbar->show;
 
     # init progress bar
-    $pbar->update(0.0);
+    #$pbar->update(0.0);
 
     $bget_evo_db = new Gtk::Button("Evolution --> Zaurus");
     $bget_evo_db->signal_connect('clicked', sub{ do_evo_sync(); });

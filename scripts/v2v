@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.75 $
+# $Revision: 1.76 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -13,6 +13,7 @@
 # WEB :         http://v2divx.sourceforge.net
 #
 # TODO:
+#   * remove all those prompts with prompt() ** hint: chomp($rep)
 #   SEE TODO FILE
 #   
 #  HACKING: 
@@ -206,7 +207,7 @@ my $MULTIPLEXER="tcmplex"; # By default use this multiplexer
 ## LH string will be replaced (s///) with RH string
 # XXXFILEXXX := <vob file="video.mpg" />
 # XXXFILEXXX := <vob file="video1.mpg" />\n<vob file="video2.mpg" />...
-my $DVDAUTHOR = "<dvdauthor>\n<vmgm />\n    <titleset>\n        <titles>\n            <pgc>\n                XXXFILEXXX\n            </pgc>\n        </titles>\n    </titleset>\n</dvdauthor>\n"; # xml file
+my $DVDAUTHOR = "<dvdauthor>\n<vmgm />\n    <titleset>\n        <titles>\n            <pgc>\nXXXFILEXXX\n            </pgc>\n        </titles>\n    </titleset>\n</dvdauthor>\n"; # xml file
 
 # global for do_file_ary
 my @ary_files = ();
@@ -278,22 +279,32 @@ sub mydie
 
 use sigtrap qw(handler mydie normal-signals error-signals) ;
 
+sub prompt
+{
+    #@param 0 string := question to prompt
+    #returns answer
+    print STDOUT "@_";
+    my $rep= <STDIN>;
+    chomp($rep);
+    return $rep;
+}
+
 sub pinfo
 {
     # takes a string a prints a green message:
-   print STDOUT $GREEN."@_\n".$NORM ;
+   print STDOUT "$GREEN @_ $NORM\n" ;
 }
 
 sub pdebug 
 {   
     # prints a string only if $DEBUG is true
-    print STDERR " + @_ \n" if ( $DEBUG );
+    print STDERR "$RED + @_ $NORM\n" if ( $DEBUG );
 }
 
 sub pwarn
 {
     # takes a string and prints a red warn message
-    print STDOUT $RED."@_\n".$NORM;
+    print STDOUT "$RED @_ $NORM\n";
 }
 
 sub format_date 
@@ -475,14 +486,10 @@ sub ask_logo
     {
         if ( -r $LOGO )
         {       
-            print " Do you want to add the Logo $LOGO at the beginning of this movie (Y/n)? ";
-            my $rep= <STDIN>;
-            chomp($rep);
+            my $rep = prompt(" Do you want to add the Logo $LOGO at the beginning of this movie (Y/n)? ");
             if ( $rep ne "N" && $rep ne "n" )
             {
-                print(" How many seconds after the movie beginning must be your Logo displayed (MAX=$RUNTIME - see your $userconfigfile for [default:$STARTLOGO]): ");
-                my $rep=<STDIN>;
-                chomp($rep);
+                my $rep=prompt(" How many seconds after the movie beginning must be your Logo displayed (MAX=$RUNTIME - see your $userconfigfile for [default:$STARTLOGO]): ");
                 $STARTLOGO=$rep if ( $rep ne  ""  ) ;
                 while ( $ADDLOGO eq ""  || $ADDLOGO + $STARTLOGO > $RUNTIME )
                 {
@@ -3703,7 +3710,12 @@ sub dvd9to5
     }
     say_end();
     # ask to make DVD image
-    #make_dvd($dir); # $DVD name is chosen for us. we could use basename($dir)... but...
+    my $rep = prompt("Do you want to make a DVD iso? [y/N]");
+    if ( $rep =~ m/^[yY]/ )
+    {
+        #DVD name is chosen for us. we could use basename($dir)...
+        make_dvd($dir); 
+    }
 } # end dvd9to5()
 
 sub avitovcd
@@ -3802,20 +3814,21 @@ sub make_dvd
 
     $name = ($name ne "") ? $name : "V2DVD";
     # cleanup $name
-    ($name = $name) =~ s,[\s]+,_,g; # replace whitespaces with _
-    ($name = $name) =~ y/[A-Z]/[a-z]/; #uppercase $name
+    ($name = $name) =~ s,[\s-]+,_,g; # replace whitespaces with _
+    ($name = $name) =~ y/a-z/A-Z/; #uppercase $name
     $name = substr($name,0,$VOLIDMAXLENGTH); # limit no. of characters
 
     my $dvdauthor = which("dvdauthor");
     if ( !-x $dvdauthor )
     {
         # no need to continue
-        perror("dvdauthor not found in PATH=". $ENV{'PATH'}."!");
+        pwarn("dvdauthor not found in PATH=". $ENV{'PATH'}."!");
         exit(1);
-    } else {
-        # mk tmp directory
-        mkdir("tmp",oct(1777)) or die ("Could not create tmp directory. $!");
-    }
+    } 
+    
+    # mk tmp directory
+    mkdir("tmp",oct(1777)) 
+        or die ("Could not create tmp directory. $!");
     pinfo("$v2d DVD name : $name");
 
     # make DVD
@@ -3827,8 +3840,8 @@ sub make_dvd
 
     foreach my $file (@files) # maybe there is a simpler way to do this
     {
-        $files .= " <vob file=\"$file\" />\n";
-        $mfiles .= " $dir/$file ";
+        $files .= " \t\t\t\t\t<vob file=\"$file\" />\n"; # pretty print
+        $mfiles .= " $file ";
     }
     
     ($DVDAUTHOR = $DVDAUTHOR) =~ s/XXXFILEXXX/$files/g;
@@ -3847,7 +3860,11 @@ sub make_dvd
         "I assume that you know what you are doing");
     }
 
-    system("$dvdauthor -o 'tmp/$name' -x 'tmp/dvdauthor.xml' $mfiles ") 
+    my $args = ( ! $DEBUG ) ? ">/dev/null 2>&1" :"";
+
+    my $sys = "$dvdauthor -o 'tmp/$name' -x 'tmp/dvdauthor.xml' $mfiles $args";
+    pdebug($sys);
+    system("$sys") 
         or die("Could not create DVD directory at tmp. $!\n");
 
     # remove XML file
@@ -3855,19 +3872,29 @@ sub make_dvd
     
     # make DVD Image
     my $mkisofs = which("mkisofs");
-    if ( !-x $mkisofs )
+    if ( -x $mkisofs && -f "tmp/$name/VIDEO_TS/VIDEO_TS.IFO" )
     {
-        # we make the dvd, but warn about the image
-        perror("mkisofs not found in PATH=".$ENV{'PATH'}."! The DVD directory will be created in tmp anyway. You will need to run 'cd tmp && mkisofs -dvd-video -udf -o '$name.iso' -V '$name' '$name' ");
-    } else {
         pinfo("$v2d Image Path : $dir/tmp/$name.iso");
-        chdir("tmp"); # makes things simpler
         # fix permissions. TODO use find() later to avoid system()
-        chmod(oct(0555),$name); # oct() changes to oct-based numbers
-        system("find '$name' -type d -exec chmod 0555 {} \\; ") or pwarn("Could not update permissions for directories. $!\n");
-        system("find '$name' -type f -exec chmod 0444 {} \\; ") or pwarn("Could not update permissions for files. $!\n");
+        chmod(oct(0555),"tmp/$name"); # oct() changes to oct-based numbers
+        system("find 'tmp/$name' -type d -exec chmod 0555 {} \\; ");
+        system("find 'tmp/$name' -type f -exec chmod 0444 {} \\; ");
         # make iso
-        system("$mkisofs -dvd-video -udf -o '$name.iso' -V '$name' '$name'"); #-dvd-video implies UDF, but...
+        my $sys="$mkisofs -dvd-video -udf -o '$name.iso' -V '$name' 'tmp/$name' $args";
+        pdebug($sys);
+        system("$sys");
+        #or pwarn("Failed to create $name.iso!. $!"); 
+    } else {
+        # we make the dvd, but warn about the image
+        pwarn("mkisofs not found in PATH=".$ENV{'PATH'}."! The DVD directory will be created in tmp anyway. You will need to run 'mkisofs -dvd-video -udf -o '$name.iso' -V '$name' 'tmp/$name' ") if ( !-x $mkisofs );
+        pwarn("$name/VIDEO_TS/VIDEO_TS.IFO file not found. Make sure $dvdauthor is creating the right DVD tree. Hint: run with '$0 --debug ...'") if ( ! -f "tmp/$name/VIDEO_TS/VIDEO_TS.IFO" );
+    }
+    
+    my $rep = prompt("Cleanup tmp directory? [y/N] ");
+    if ( $rep =~ /^[yY]/ )
+    {
+        system("find 'tmp' -type d -exec chmod 0775 {} \\; ");
+        system("rm -fr 'tmp'");
     }
 } # end make_dvd()
 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.22 $
+# $Revision: 1.23 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2005-Feb-28
 #
@@ -98,7 +98,7 @@ if ($this_string =~ /\w/) {
         $modified = 0; # clear flag
 
         open (FILE,"<$thisFile") or die "could not open $thisFile. $!\n";
-        if ( $that_string gt "" )
+        if ( $that_string )
         {
             while(<FILE>) {
                 $i++;

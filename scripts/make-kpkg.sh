@@ -1,10 +1,14 @@
 #!/bin/bash
 # vim: ft=sh:columns=80 :
-# $Revision: 1.37 $
+# $Revision: 1.38 $
+# $Date: 2005-01-08 20:38:20 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Jan-08
 #
 # LICENSE: GPL (http://www.gnu.org/licenses/gpl.txt)
+# 
+# URL: http://www.latinomixed.com/downloads/make-kpkg.sh.gz
+#      http://www.kiskeyix.org/downloads/make-kpkg.sh.gz
 #
 # DESCRIPTION:  an interactive wrapper to Debian's "make-kpkg"
 #               to build a custom kernel package using 

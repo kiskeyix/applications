@@ -74,6 +74,8 @@ CPID=$$ # current process id is saved
 EXIT=1  # always assume we will need to exit, 
         # unless we are doing condstop
 
+HOSTNAME="`hostname`"
+
 if [ ! $1 ]; then
     echo "Usage: $0 start|stop|condstop"
     exit 1
@@ -92,7 +94,7 @@ function _exit()        # function to run upon exit of shell
         rm -f $PIDF # removes PID file of this script
         $PKILL $PROCESS # kill all seti processes by me
         if [ $DEBUG -ne 0 ]; then
-            echo "Hasta la vista seti"
+            echo "Hasta la vista seti $HOSTNAME"
         fi
         # reenable signals
         trap EXIT HUP TERM INT
@@ -113,12 +115,12 @@ function killold ()
     for i in $MPID; do
         if [ x`$CAT $PIDF` = x$i -a x$CPID != x$i ]; then
             # kill startseti.sh old PID
-            echo "Killing $0 number $i"
+            echo "Killing $0 number $i at $HOSTNAME"
             kill -9 `$CAT $PIDF` &&\
             rm -f $PIDF &&\
             SUCCESS=1
         elif [ x$CPID != x$i ]; then
-            echo "Murdering $0 number $i"
+            echo "Murdering $0 number $i at $HOSTNAME"
             kill -9 $i &&\
             SUCCESS=1
         elif [ $DEBUG -ne 0 ]; then
@@ -143,7 +145,7 @@ LOAD=$(uptime|sed -e "s/.*: \([^,]*\).*/\1/" -e "s/ //g" -e "s/^\([0-9]\+\)\..*/
 if [ $LOAD -ge $MAXLOAD -a x$1 = "xcondstop" ]; then
     # stop setiathome but leave startseti.sh running
     EXIT=0 # do not kill previous startseti.sh
-    echo -n "Load is high stopping $PROCESS "
+    echo -n "Load is high at $HOSTNAME. Stopping $PROCESS "
     $PKILL $PROCESS &&\
         echo "[ok]" &&\
         exit 0
@@ -151,7 +153,7 @@ if [ $LOAD -ge $MAXLOAD -a x$1 = "xcondstop" ]; then
     echo "[failed]" && exit 1
 elif [ x$1 = "xstop" ]; then
     # completely stop seti and startseti.sh
-    echo -n "Stopping $PROCESS " 
+    echo -n "Stopping $PROCESS at $HOSTNAME " 
     # cleanup startseti.sh processes if any...
     $PKILL $PROCESS && \
         echo "[ok]"
@@ -161,7 +163,7 @@ elif [ x$1 = "xstop" ]; then
 elif [ x$1 = "xcondstop" ]; then
     # load is not high enough, exit
     if [ $DEBUG -ne 0 ]; then
-        echo "Load no high enough [$LOAD < $MAXLOAD]"
+        echo "Load no high enough at $HOSTNAME [$LOAD < $MAXLOAD]"
     fi
     EXIT=0 # do not kill previous startseti.sh
     exit 0
@@ -181,7 +183,7 @@ else
     for i in $MPID; do
         if [ x`$CAT $PIDF` = x$i ]; then
             if [ $DEBUG -ne 0 ]; then
-                echo "$0 is already running"
+                echo "$0 is already running at $HOSTNAME"
             fi
             RUNNING=1
         fi
@@ -196,7 +198,7 @@ else
     fi
 fi
 
-echo -n "Starting seti "
+echo -n "Starting seti at $HOSTNAME "
 if [ $LOAD -lt $MAXLOAD -a x$1 = "xstart" ]; then
     echo "[ok]" # assume seti will work...
     while true; do
@@ -208,6 +210,6 @@ if [ $LOAD -lt $MAXLOAD -a x$1 = "xstart" ]; then
 else
     # we should never reach here
     echo "[failed]"
-    echo "Load $LOAD is not less than $MAXLOAD"
+    echo "Load $LOAD is not less than $MAXLOAD at $HOSTNAME"
 fi
 

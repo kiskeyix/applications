@@ -9,6 +9,7 @@
 # mkisofs.pl DIR dvd # to make a DVD image
 
 $DEBUG=0;
+$VOLIDMAXLENGTH=32;
 
 # You could get only the selected files from nautilus, but
 # it's better to let the user put all those files in 
@@ -19,6 +20,9 @@ chomp($ARGV[0]); # remove end-line
 
 # Volume id needs no spaces or other characters
 ( $volumeid = $ARGV[0] ) =~ s,[\s-]+,_,g;
+# length should be less than $VOLIDMAXLENGTH
+#my $str_length = length ($volumeid);
+$volumeid = substr($volumeid,0,$VOLIDMAXLENGTH);
 # put a .iso extension
 ( $name = $ARGV[0] ) =~ s,(.+),$1.iso,;
 

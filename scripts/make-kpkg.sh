@@ -1,7 +1,8 @@
 #!/bin/bash
-# $Revision: 1.29 $
+# vim: ft=sh:columns=80 :
+# $Revision: 1.30 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Jun-16
+# Last modified: 2004-Sep-21
 #
 # DESCRIPTION:  an interactive wrapper to Debian's "make-kpkg"
 #               to build a custom kernel package using 
@@ -36,19 +37,19 @@
 # we can use both ccache and distcc
 
 
-if test -x "/usr/bin/ccache" -a -x "/usr/bin/distcc"; then
+if [[ -x "/usr/bin/ccache" && -x "/usr/bin/distcc" ]]; then
     echo "Setting up distcc with ccache"
     export MAKEFLAGS="CCACHE_PREFIX=distcc";
     export CCACHE_PREFIX="distcc"
-    if test -L "/usr/local/bin/gcc"; then
-        readlink /usr/local/bin/gcc | grep ccache && \
+    if [[ -L "/usr/local/bin/gcc" ]]; then
+        readlink "/usr/local/bin/gcc" | grep ccache && \
             echo "ccache is correctly setup" &&
             export CC="/usr/local/bin/gcc" \
             || echo "No symlink from gcc to ccache found in /usr/local/bin"
     fi
 fi
 
-if [ -f "$HOME/.distcc/hosts" ];then
+if [[ -f "$HOME/.distcc/hosts" ]];then
     echo "Reading $HOME/.distcc/hosts"
     export DISTCC_HOSTS=`cat "$HOME/.distcc/hosts"`
 else
@@ -78,9 +79,11 @@ IMAGE_TOP="../"                     # where to save the resulting
 export IMAGE_TOP ALL_PATCH_DIR PATCH_THE_KERNEL 
 export MODULE_LOC NO_UNPATCH_BY_DEFAULT 
 export CONCURRENCY_LEVEL
-if [ $1 -a $1 != "--help" ]; then
 
-    if [ $2 ]; then
+## get arguments. if --help, print USAGE
+if [[ ! -z $1 && "$1" != "--help" ]]; then
+
+    if [[ ! -z $2 ]]; then
         REVISION="$2"
     else
         REVISION="1.0"
@@ -144,7 +147,7 @@ if [ $1 -a $1 != "--help" ]; then
     esac
  
 
-    if [ $makeit -eq 1 ]; then
+    if [[ $makeit -eq 1 ]]; then
         echo -e "Building kernel [ initrd opts: $BUILD_INITRD ] \n"
         make-kpkg clean
         make-kpkg   --rootcmd $FAKEROOT \
@@ -157,7 +160,7 @@ if [ $1 -a $1 != "--help" ]; then
 
     # Sometimes we just want to make the headers indepentently
     
-    if [ x$KERNEL_HEADERS != "x" -a $makeit -eq 0  ]; then
+    if [[ x$KERNEL_HEADERS != "x" && $makeit -eq 0  ]]; then
         echo -e "Building kernel headers only \n"
         make-kpkg   --rootcmd $FAKEROOT \
         --config oldconfig \
@@ -168,7 +171,7 @@ if [ $1 -a $1 != "--help" ]; then
     fi
   
     # make the modules
-    if [ $mmakeit -eq 1 ]; then
+    if [[ $mmakeit -eq 1 ]]; then
         make-kpkg clean modules_clean
         make-kpkg   --rootcmd $FAKEROOT \
         --config oldconfig \

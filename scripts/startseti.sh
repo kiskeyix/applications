@@ -203,7 +203,12 @@ if [ $LOAD -lt $MAXLOAD -a x$1 = "xstart" ]; then
     echo "[ok]" # assume seti will work...
     while true; do
         # seti is smart enough to know if it's already running
-        nohup ./$PROCESS > /dev/null 2>&1 &
+        if [ x$2 = "xlog" ]; then
+            ./$PROCESS
+        else
+            # do not show log
+            nohup ./$PROCESS > /dev/null 2>&1 &
+        fi
         # old setiathome: -nice $NICE
         sleep $SLEEP
     done

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.40 $
+# $Revision: 1.41 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -1386,7 +1386,7 @@ sub cluster
 
         my  $max=0;	
         $i=0;
-        @allnodes=`cat $s_file`;
+        @allnodes=`cat $s_file`; # TODO read file using Perl
         unlink("$s_file"); 
 
         foreach $node (@allnodes )     
@@ -1410,13 +1410,6 @@ sub cluster
                 $this_cmd=""; # reset command string
                 if ( $rhost ne "$localhost" &&  $rhost ne "localhost" ) 
                 { 	
-                    # Luis Mondesi 
-                    # -n remote_host is the name of the window for
-                    # xterm. or it will be left blank for other terminals
-                    # note that $XTERM contains the %s string placeholder
-                    # you might want to add more arguments according
-                    # to which XTERM the user wants... gnome-terminal,
-                    # konsole, screen, etc... 
                     $this_arg="-n $rhost" if $XTERM =~ /xterm/i;
                     $this_arg="-t $rhost" if $XTERM =~ /gnome-terminal/i;
                     $this_cmd=sprintf("$XTERM $RMCMD $rhost $0 --runclust $wdir &",$this_arg);
@@ -1426,7 +1419,6 @@ sub cluster
                     $this_arg="-n $rhost" if $XTERM =~ /xterm/i;
                     $this_arg="-t $rhost" if $XTERM =~ /gnome-terminal/i;
                     $this_cmd=sprintf("$XTERM $0 --runclust $wdir &",$this_arg);
-                    #$this_cmd=sprintf("$XTERM ls --runclust $wdir &",$this_arg);
                     print $DEBUG "+ executing $this_cmd\n";
                     system ( $this_cmd );
                 }
@@ -1435,13 +1427,23 @@ sub cluster
                 $sumpow= $sumpow + $pow;
                 # we have to be SURE that V2divx has started on the remote node 
                 # before continue ( we wait for 15 secondes max)
+                # FIXME
+                # Luis: 15 seconds is not enough taking into account 
+                # that the cluster node will have to run zooming, 
+                # which in turn runs calculate_bitrate and others... 
+                # This almost always 
+                # times out. We should find a better way to know 
+                # if the cluster is running.
+                # As a test, I'll add a "touch tmp/node_started"
+                # as soon as the first --runclust is found
+                # before it reads the configuration or anything else.
                 my $j=0;
                 while ( ! -e "tmp/node_started" && $j < 15 )
                 {
                     sleep(1);
                     $j++;
                 }
-                perror("V2divx on node $rhost is well started\n");
+                pinfo("V2divx on node $rhost is well started\n");
                 unlink("tmp/node_started" );
                 mydie("Seems that there is a problem on node $rhost\n $0 has not started correctly\n Unable to continue.\n") if ( $j == 15 );
             }
@@ -1475,7 +1477,7 @@ sub cluster
                 print "\r\\"; 
                 sleep(1);
             }
-            pinfo("$v2d\t Node $endnode has finished encoding\n") if ( -e "tmp/2-$dvdtitle${endnode}_0.finish");
+            pinfo("$v2d\t Node $rhost [$endnode] has finished encoding\n") if ( -e "tmp/2-$dvdtitle${endnode}_0.finish");
             pwarn("\tCritical error on node: $endnode during Pass One\n") if ( -e "tmp/1-$dvdtitle${endnode}.PB");
             pwarn("\tCritical error on node: $endnode during Pass Two \n") if ( -e "tmp/2-$dvdtitle${endnode}.PB");
             $NODE_ERROR=1 if ( -e "tmp/2-$dvdtitle${endnode}.PB" || -e "tmp/1-$dvdtitle${endnode}.PB");
@@ -1739,12 +1741,13 @@ sub aviencode
 
     if (  $CLUSTER ne "NO" )	
     {
-    # We are on an encoding node
-    # We get the W parameters from tmp/cluster.args
+        # We are on an encoding node
+        # We get the W parameters from tmp/cluster.args
         my $cluster=`cat tmp/cluster.args`;
         chomp($cluster);
+        # TODO use Perl to parse this
         $node=`cat tmp/cluster.args| awk -F, '{print \$1}'`;
-    # we can free the tmp/cluster.args for other nodes now
+        # we can free the tmp/cluster.args for other nodes now
         system("touch tmp/node_started");
         chomp($node);
         $fparams="$params -W $cluster,tmp/file.nav";
@@ -1752,15 +1755,16 @@ sub aviencode
         $stream_unit=$CLUSTER;
     } else {
         $stream_unit=0;
-        # Encode all frames (only if $last_sec AND $deb_sec < 600 ) , we'll split after
+        # Encode all frames 
+        # (only if $last_sec AND $deb_sec < 600 ) , we'll split after
         if ( $deb_sec < 600 )
         {  
             $from_frames=0;
         } else {
             $from_frames=$deb_sec*$FPS}
-            if ( $last_sec < 600 )
-            { 
-                $to_frames=$tot_frames; 
+        if ( $last_sec < 600 )
+        { 
+            $to_frames=$tot_frames; 
             } else { 
                 $to_frames=$tot_frames-$last_sec*$FPS 
             }
@@ -3143,13 +3147,17 @@ if ( $RUNCLUST )
 {
     if (defined($ARGV[0]))
     {
-    # $ARGV[0] is the dir where user is working on the master (NOT the $VOBPATH)
+        # $ARGV[0] is the dir where user is working on 
+        # the master (NOT the $VOBPATH)
         $wdir=$ARGV[0];
         chdir($wdir) or mydie $wdir." does not exist or isn't a directory";		
-        # We are on a cluster node all needed parameters ARE known via -->
+        # We are on a cluster node all needed parameters 
+        # ARE known via -->
         readconf;
         chk_wdir; # is needed to know input video format
-        # And now we can aviencode  
+        # And now we can aviencode
+        # first, notify that the process started on this node:
+        system("touch tmp/node_started"); # FIXME do we need this here?
         zooming;
         aviencode;
         exit(0);

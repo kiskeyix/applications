@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Dec-26
+# Last modified: 2004-Feb-08
 #
 # DESCRIPTION: A simple script to install GnoMetal2 in one shot
 # USAGE: [sudo] ./install.pl --all [or --user for single user]
@@ -19,7 +19,7 @@ my @packages=("gaim","icons","themes"); # packages inside: $NAME-$package[$i].ta
 # -u -r -g "/path/to/gaim/pixmaps" -t "/path/to/themes" -i "/path/to/icons"
 my $USER=0; # install only for the user executing this script
 my $ALL=0; # installing for all users
-my $GAIM="/usr/local/share/pixmaps";
+my $GAIM="/usr/share/pixmaps";
 my $THEMES="/usr/share/themes";
 my $ICONS="/usr/share/icons";
 
@@ -47,7 +47,7 @@ GetOptions(
     # numbers
 );
 
-my $USAGE = "./install.pl --user|--all [--gaim=/path][--icons=/path] [--themes=/path]\n \t --user [exclusive] install only for this user\n \t --all [exclusive] install for all users\n \t --gaim path which contains gaim pixmaps directory\n \t --themes path for the themes folder\n \t --icons path for the icons folder\n\n";
+my $USAGE = "./install.pl --user|--all [--gaim=$GAIM][--icons=$ICONS] [--themes=$THEMES]\n \t --user [exclusive] install only for this user\n \t --all [exclusive] install for all users\n \t --gaim path which contains gaim pixmaps directory [$GAIM]\n \t --themes path for the themes folder [$THEMES]\n \t --icons path for the icons folder [$ICONS]\n\n";
 
 if ( $HELP > 0  || ( $ALL == 0 && $USER == 0 ) ) 
 {
@@ -64,11 +64,8 @@ chomp($package_dir); # remove new_line char
 # this is very very ugly code, but it works... so shut up!
 foreach $file (@packages)
 {
-    # TODO We should check for UID too... but
-    # let's give the user the benefit of the doubt, in other words
-    # the user does have write access to $ICONS, $THEMES and whatever
-    # other path
-    if ( $ALL > 0 ) 
+    # when using root (uid 0) we install for all automatically
+    if ( $ALL > 0 || $< == 0 ) 
     {
         if ( $file eq "gaim" ) 
         {

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.10 $
+# $Revision: 1.11 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE:
@@ -90,7 +90,7 @@ my $CONFIG_FILE=".pixdir2htmlrc";
 my $THUMBNAIL="t";  # individual thumnails
 my $HTMLDIR="h";    # individual HTML files
 
-my $EXT="html";     # extension for generated HTML files
+my $EXT="php";     # extension for generated HTML files
 
 my $FILE_NAME="index.$EXT";
 my $MENU_NAME="menu.$EXT";

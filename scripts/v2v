@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
 #               Dominique CARON <domiATlpm.univ-montp2.fr> 
 #		Tom ROTH <tomATtomroth.de>
@@ -138,7 +138,7 @@ system("clear");
 
 my $start_time = time;
 my $f_start_time = format_date($start_time);
-print STDOUT "Start Time: $f_start_time \n";
+print $GREEN."Start Time: $f_start_time \n".$NORM;
 
 # Read or create the user configuration file
 # we kept .vob2divxrc for backward compatibility
@@ -347,7 +347,7 @@ sub srt_subrip
     } 
     if ( ! -f "tmp/srtpgm_done")
     {
-        system("/bin/rm tmp/srtpgm2txt_done") if (-f "tmp/srtpgm2txt_done");
+        unlink "tmp/srtpgm2txt_done" if (-f "tmp/srtpgm2txt_done");
         @def_grey=('255,255,0,255','255,255,255,0','255,0,255,255','0,255,255,255');
         my $i=0;
         $rep="NO";
@@ -386,10 +386,10 @@ sub srt_subrip
     }
     if ( ! -f "tmp/srtpgm2txt_done")
     {
-        system("/bin/rm $dvdtitle.srt") if ( -f "$dvdtitle.srt");
+        unlink "$dvdtitle.srt" if ( -f "$dvdtitle.srt");
 #run pgm2txt without ocr using a db file (db file can be reused for other rips )
         system ("pgm2txt -v -f @_[1] -d  tmp/$dvdtitle");
-        system ("/bin/rm tmp/$dvdtitle*.pgm");
+        unlink "tmp/$dvdtitle*.pgm";
         system("touch tmp/srtpgm2txt_done");
     }else{
         print $RED."$v2d\t Pgm2txt already done, remove tmp/srtpgm2txt_done  to remake it\n".$NORM;
@@ -397,7 +397,7 @@ sub srt_subrip
     if ( ! -f "$dvdtitle.srt")
     {
         system ("srttool -s -v -i tmp/$dvdtitle.srtx -o $dvdtitle.srt");
-        system ("/bin/rm tmp/$dvdtitle*.pgm.txt");
+        unlink "tmp/$dvdtitle*.pgm.txt";
     }else{
         print $RED."$v2d\t $dvdtitle.srt already done, remove it to remake it\n".$NORM;
     }	
@@ -417,7 +417,7 @@ sub mydie
         system("mv tmp/dvdtitle $vobpath/dvdtitle") if ( -e "tmp/dvdtitle" );
         system("mv tmp/probe.rip $vobpath/probe.rip") if ( -e "tmp/probe.rip" );
     }else{ 
-        system("/bin/rm tmp/$dvdtitle*.pgm tmp/$dvdtitle.srtx 2> /dev/null");
+        unlink "tmp/$dvdtitle*.pgm tmp/$dvdtitle.srtx 2> /dev/null";
         sleep(3);
     }
     exit(0);
@@ -863,19 +863,31 @@ sub printinfo
                 opendir(VOB,$vobpath);
                 my(@files)=grep {! /^\./ & -f "$vobpath/$_"}readdir(VOB);
                 closedir(VOB);
-                @files=sort @files;
+                my $da;
+                my $db;
+                @files = sort { 
+                    ($da = lc $a) =~ s/[\W_]+//g;
+                    ($db = lc $b) =~ s/[\W_]+//g;
+                    $da cmp $db;
+                } @files;
+                #@files=sort @files;
                 my $i=0;
                 my $pid = fork();
                 mydie "couldn't fork" unless defined $pid;
                 if ($pid)
                 { 	
-                foreach $file (@files)
-                {	
-                $sys="transcode -M 1 -q 0 -z -K -x $in_video_codec,null -i \"$vobpath/$file\" -y ppm,null -c 130-135  -o autoclip$i  >/dev/null 2>&1";
-# DO WE REALLY NEED video_magic ?				$sys="transcode -M 1 -q 0 -z -K -i \"$vobpath/$file\" -y ppm,null -c 130-135  -o autoclip$i  >/dev/null 2>&1";
-print $DEBUG "$sys\n";
-system ("$sys")==0 or ( system("touch tmp/fndclip.finish && /bin/rm autoclip*.pgm ")==0 and  mydie "Unable to encode to ppm file ($vobpath/$file)" );
-$i++;
+                    foreach $file (@files)
+                    {	
+                    $sys="transcode -M 1 -q 0 -z -K -x $in_video_codec,null -i \"$vobpath/$file\" -y ppm,null -c 130-135  -o autoclip$i  >/dev/null 2>&1";
+                # DO WE REALLY NEED video_magic ?
+                # $sys="transcode -M 1 -q 0 -z -K -i\
+                # \"$vobpath/$file\" -y ppm,null -c 130-135\
+                # -o autoclip$i  >/dev/null 2>&1";
+                print $DEBUG "$sys\n";
+                system ("$sys")==0 or 
+                ( system("touch tmp/fndclip.finish && /bin/rm autoclip*.pgm ")==0 and  
+                    mydie "Unable to encode to ppm file ($vobpath/$file)" );
+                $i++;
                         }
                         system("touch tmp/fndclip.finish");
                         wait;
@@ -893,7 +905,7 @@ $i++;
                     $tb=$clip[0];
                     $lr=$clip[1];
                     print $GREEN."-j $tb,$lr\n".$NORM;
-                }else{
+                } else {
                     print $RED."$v2d\t pgmfindclip in your PATH:\t\t   | NO\n".$NORM;
                     print $INFO "You may find pgmfindclip at http://www9.informatik.uni-erlangen.de/~Vogelgsang/bp/tctools.html\n";
                     sleep(2);

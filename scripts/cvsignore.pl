@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2005-Jan-23
 #
@@ -65,8 +65,8 @@ sub clean
 {
     my $str=shift;
     # remove bad characters from filenames
-    $str =~ s/^\?//gc;
-    return $str;
+    my ($tmp = $str) =~ s/^\?//gc;
+    return $tmp;
 }
 
 __END__

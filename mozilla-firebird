@@ -1,5 +1,0 @@
-#!/bin/sh
-
-BROWSER=/usr/local/MozillaFirebird/MozillaFirebird
-
-$BROWSER -remote "openURL($@, new-tab)" 2>/dev/null || $BROWSER $@

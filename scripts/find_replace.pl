@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.10 $
+# $Revision: 1.11 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jul-17
+# Last modified: 2003-Jul-19
 #
 # BUGS: if replacement string contains invalid characters
 #       nothing gets done. Have to find a way to escape
@@ -79,15 +79,12 @@ if ($this_string =~ /\w/
 
         open (FILE,"<$thisFile") or die "could not open $thisFile. $!\n";
         while(<FILE>) {
-            
+            $i++;
             if ($_ =~ s($this_string)($that_string)g) {
                 print STDOUT "$thisFile [$i]: $_"; 
                 $modified = 1;
             }
-
             push @new_file,$_;
-
-            $i++;
         }
         close(FILE);
 

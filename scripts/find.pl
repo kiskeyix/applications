@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.13 $
+# $Revision: 1.14 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jul-17
+# Last modified: 2003-Jul-19
 #
 # DESC: finds a string in a set of files
 #
@@ -69,13 +69,11 @@ if ($this_string =~ /\w/) {
         $i = 0;
 
         open (FILE,"<$thisFile") or die "could not open $thisFile. $!\n";
-        while(<FILE>) {
-            
+        while(<FILE>) { 
+            $i++; 
             if ($_ =~ m($this_string)gi) {
                 print STDOUT "$thisFile [$i]: $_"; 
             }
-
-            $i++;
         }
         close(FILE);
 

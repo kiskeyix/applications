@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2004-Dec-07
 #
@@ -59,43 +59,26 @@ if ( -f $FILE )
 {
     my $mp3 = MP3::Tag->new($FILE);
     my $hashref = $mp3->autoinfo();
+    print STDOUT "file\t$FILE\n";
     foreach(@tags)
     {
         print STDOUT ($_, "\t", $hashref->{$_}, "\n");
     }
-
-#    $mp3->get_tags();
-#    my $id3v2 = $mp3->{ID3v2} if exists $mp3->{ID3v2};
-#    if ( defined ( $id3v2 ) )
-#    {
-#        my $frameIDs_hash = $id3v2->get_frame_ids;
-#        foreach my $frame (keys %$frameIDs_hash) {
-#            my ($info, $name) = $id3v2->get_frame($frame);
-#            if (ref $info) {
-#                print "$name ($frame):\n";
-#                while(my ($key,$val)=each %$info) {
-#                    print " * $key => $val\n";
-#                }
-#            } else {
-#                print "$name: $info\n";
-#            }
-#        }
-#    } else {
-#        print STDERR "$FILE does not have id3v2 tags\n";
-#    }
-}
-
-sub _mp3_info
-{
-    my $handle = shift;
-    my %record = ();
-
-    $record{"song"} = $handle->song();
-    $record{"track"} = $handle->track();
-    $record{"artist"} = $handle->artist();
-    $record{"album"} = $handle->album();
-
-    return \%record;
+    my ($track,$garbage) = split(/\//,$hashref->{'track'});
+    $FILE =~ m/(\.[a-zA-Z0-9]{1,5})$/; # catches the extension in $1
+    print STDERR ("DEBUG: EXT $1\n") if ( $DEBUG );
+    my $path = lc( catdir($hashref->{'artist'},$hashref->{'album'}) );
+    my $file = lc( catfile($path,$track."-".$hashref->{'song'}.$1) );
+    print STDOUT ("to file\t$file\n");
+    if ( ! -f "$file" )
+    {
+        if ( ! rename ( $FILE,$file ) )
+        {
+            print STDOUT ("Renaming $FILE to $file failed. Do you have permissions to write in $path?\n");
+        }
+    } else {
+        print STDOUT ("$FILE skipped ... $file already exist.\n");
+    }
 }
 
 __END__

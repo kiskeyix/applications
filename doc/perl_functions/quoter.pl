@@ -5,7 +5,7 @@ $tab = "&nbsp;" x 4;
 $nl = "<br>";
 $seconds = 30;
 $max = 1020;
-$command = "fortune -sn " . $max;
+$command = "fortune -sn $max | recode -q ISO-8859-1..utf-8 ";
 
 %PLUGIN_INFO = (
 	perl_api_version => 2,

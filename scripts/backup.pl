@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.9 $
+# $Revision: 1.10 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jun-01
 #
@@ -174,7 +174,9 @@ if ( ! -f $TMP_LOCK ) {
     #print STDOUT join(" ",@filelist)."\n";
     
     print STDOUT "Backing up users files \n";
-    # temporarily turn off warnings
+
+    {
+    # temporarily turn off warnings in this block
     no warnings;
     
     Archive::Tar->create_archive (
@@ -182,7 +184,7 @@ if ( ! -f $TMP_LOCK ) {
             9, 
             @filelist
         );
-    
+    }
 
     # backup others
     @filelist = ();

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.21 $
+# $Revision: 1.22 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2005-Feb-28
 #
@@ -167,11 +167,11 @@ sub is_binary
     # returns 1 if true
     my $file = shift;
     my $file_t = qx/file "$file"/;
-    if ( $file_t =~ m/text\s+executable/i )
+    if ( $file_t =~ m/(text\s+executable|\s+text\s+)/i )
     {
         return 0;
     }
-    if ( $file_t =~ m/elf|executable|data$/i )
+    if ( $file_t =~ m/elf|executable|data/i )
     {
         return 1;
     }

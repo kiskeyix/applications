@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jan-16
+# Last modified: 2003-Jan-17
 #
 # DESC: finds a string in a set of files
 #
@@ -17,21 +17,20 @@ my $DEBUG = 0;
 #           NO NEED TO MODIFY ANYTHING PASS THIS LINE               #
 # -------------------------------------------------------------------
 
-my $usage = "Usage: find_infile.pl \"string\" \"FILE_PATTERN\"\n";
+my $usage = "Usage: find_infile.pl \"string\" [\"FILE_PATTERN\"]\n";
 
 my $thisFile = "";      # general current file
 my @new_file = ();      # lines to be printed in new file
 my @ls = ();            # array of files
 
-my ($this_string,$f_pattern) = @ARGV;
-
-if (!$ARGV[0] || !$ARGV[1]) {
+if (!$ARGV[0]) {
     print STDERR $usage;
     exit 1;
 }
 
-if ($this_string =~ /\w/ 
-    && $f_pattern =~ /\w/) {
+my ($this_string,$f_pattern) = @ARGV;
+
+if ($this_string =~ /\w/) {
 
     my $i =0;
     
@@ -76,13 +75,21 @@ sub file_ary {
 
     #construct array of all files and put in @ls
     while (defined($thisFile = readdir(DIR))) {
-        next if ($thisFile =~ /^\..*/);
         next if ($thisFile !~ /\w/);
         if (-d "$dir/$thisFile") {
+            # we don't care about directories . and ..
+            next if ($thisFile =~ /^\.{1,2}$/);
             push @subdir,"$dir/$thisFile"; 
             next;
         }
-        next if ($thisFile !~ m/$f_pattern/i);
+        # is file a plain text (ASCII) file?
+        next if (!-f "$dir/$thisFile" && !-T "$dir/$thisFile");
+       
+        # do we want specific file extensions?
+        no warnings;
+        if ( $f_pattern gt "" ) {
+            next if ($thisFile !~ m/$f_pattern/i);
+        }
         
         if ($DEBUG) { print STDERR "this file $thisFile\n"; }
         

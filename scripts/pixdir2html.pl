@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.59 $
+# $Revision: 1.60 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -12,7 +12,7 @@
 #                            
 #           pixdir2html.pl -f # force copies the root/.pixdir2htmlrc
 #                             # to all other directories within this tree
-#           pixdir2html.pl --menuonly # generates a menu.$EXT file only
+#           pixdir2html.pl --menu-only # generates a menu.$EXT file only
 #                                     # see "menuheader_footer" var
 #                                     # in case you don't want headers/
 #                                     # footers in that file (as if
@@ -326,7 +326,7 @@ die $USAGE if $HELP;
 # TODO make sure this works in different systems/shells
 # Go thru the PATH variable and finding the binaries:
 # (this might not work on some systems...)
-my @xbinaries = ("Xdialog","xdialog","gdialog","kdialog");
+my @xbinaries = ("zenity","Xdialog","xdialog","gdialog","kdialog");
 my @binaries = ("dialog","whiptail","cdialog"); 
 my $FOUND = 0; # flag
 
@@ -478,7 +478,7 @@ sub main {
 
     if ( $THUMBSONLY > 0 ) {
         # this is a quick "dirty" way of getting only
-        # thumbnails and their respetive index.html files
+        # thumbnails 
         return 0;
     }
 
@@ -533,25 +533,25 @@ sub init_config {
     # ROOT/dir_a/dir_a1/dir_a2
     # ROOT/dir_b ...
     # for which case you will need a full path
-    $config_tmp{$ROOT}{"uri"}="..";
-    $config_tmp{$ROOT}{"percent"}=$PERCENT;
-    $config_tmp{$ROOT}{"title"}="Images";
-    $config_tmp{$ROOT}{"meta"}="<meta http-equiv='content-type' content='text/html;charset=iso-8859-1'>";
-    $config_tmp{$ROOT}{"stylesheet"}="<link rel='stylesheet' href='../styles.css' type='text/css'>";
-    $config_tmp{$ROOT}{"html_msg"}="<h1 class='pdheader1'>Free form HTML</h1>";
-    $config_tmp{$ROOT}{"body"}="<body class='pdbody'>";
-    $config_tmp{$ROOT}{"p"}="<p class='pdparagraph'>";
-    $config_tmp{$ROOT}{"table"}="<table border='0' class='pdtable'>";
-    $config_tmp{$ROOT}{"td"}="<td valign='top' align='left' class='pdtd'>";
-    $config_tmp{$ROOT}{"tr"}="<tr class='pdtr'>";
+    $config_tmp{"$ROOT"}{"uri"}="..";
+    $config_tmp{"$ROOT"}{"percent"}=$PERCENT;
+    $config_tmp{"$ROOT"}{"title"}="Images";
+    $config_tmp{"$ROOT"}{"meta"}="<meta http-equiv='content-type' content='text/html;charset=iso-8859-1'>";
+    $config_tmp{"$ROOT"}{"stylesheet"}="<link rel='stylesheet' href='../styles.css' type='text/css'>";
+    $config_tmp{"$ROOT"}{"html_msg"}="<h1 class='pdheader1'>Free form HTML</h1>";
+    $config_tmp{"$ROOT"}{"body"}="<body class='pdbody'>";
+    $config_tmp{"$ROOT"}{"p"}="<p class='pdparagraph'>";
+    $config_tmp{"$ROOT"}{"table"}="<table border='0' class='pdtable'>";
+    $config_tmp{"$ROOT"}{"td"}="<td valign='top' align='left' class='pdtd'>";
+    $config_tmp{"$ROOT"}{"tr"}="<tr class='pdtr'>";
     # when header is set, title, meta, stylesheet, etc...
     # are discarded. So do a complete set
     # such as <HTML><head><title>...
     # and close with "footer"
-    $config_tmp{$ROOT}{"header"}="";
-    $config_tmp{$ROOT}{"footer"}="";
-    $config_tmp{$ROOT}{"menuheader_footer"}=0;
-    $config_tmp{$ROOT}{"ext"}=$EXT;
+    $config_tmp{"$ROOT"}{"header"}="";
+    $config_tmp{"$ROOT"}{"footer"}="";
+    $config_tmp{"$ROOT"}{"menuheader_footer"}=0;
+    $config_tmp{"$ROOT"}{"ext"}=$EXT;
 
     if ( -f "$ROOT/$CONFIG_FILE" )
     {
@@ -568,19 +568,22 @@ sub init_config {
                 $line .= <CONFIG>;
                 redo unless eof(CONFIG);
             }
-            $config_tmp{$ROOT}{"$1"} = $2 if ( $line =~ m,^\s*([^=]+)=(.+), );
+            $config_tmp{"$ROOT"}{"$1"} = $2 if ( $line =~ m,^\s*([^=]+)=(.+), );
         }
         close(CONFIG);
     } else {
-        warn << "__EOF__";
-   Could not find $ROOT/$CONFIG_FILE 
-__EOF__
+        warn "Could not find $ROOT/$CONFIG_FILE\n";
+        
+        my $this_root_ref = \%config_tmp;
+
         if ( $create_config =~ /true/ ) 
         {
             if (open(CONFIG, ">$ROOT/$CONFIG_FILE")) {
-                foreach my $key ( keys %config_tmp ) {
-                    print CONFIG "$key=" . $config_tmp{"$key"}."\n";
-                }
+                #        foreach my $keys ( keys %config_tmp ) {
+                    foreach my $key ( keys %$this_root_ref ) {
+                        print CONFIG "$key=" . $config_tmp{"$ROOT"}{"$key"}."\n";
+                    }
+                    #}
             } else {
                 print STDERR "Could not write $ROOT/$CONFIG_FILE. Check permissions?";
             }
@@ -588,37 +591,36 @@ __EOF__
     }
 
     #construct a header if it doesn't yet exist:
-    if ( $config_tmp{$ROOT}{"header"} =~ /^\s+$/ ) 
+    if ( $config_tmp{"$ROOT"}{"header"} eq "" ) 
     {
         print $LOGFILE (": Blank header. Generating my own [$ROOT] ... \n");
-        $config_tmp{$ROOT}{"header"}="<html>
+        $config_tmp{"$ROOT"}{"header"}="<html>
         <head>
-        ".$config_tmp{$ROOT}{"meta"}."
-        <title>".$config_tmp{$ROOT}{"title"}."</title>
-        ".$config_tmp{$ROOT}{"stylesheet"}."
+        ".$config_tmp{"$ROOT"}{"meta"}."
+        <title>".$config_tmp{"$ROOT"}{"title"}."</title>
+        ".$config_tmp{"$ROOT"}{"stylesheet"}."
         </head>\n".
-        $config_tmp{$ROOT}{"body"}."
+        $config_tmp{"$ROOT"}{"body"}."
         \n<center>\n".
-        $config_tmp{$ROOT}{"html_msg"}."\n";
+        $config_tmp{"$ROOT"}{"html_msg"}."\n";
     }
 
     #construct a footer if it doesn't yet exist:
-    if ( $config_tmp{$ROOT}{"footer"} eq "" )
+    if ( $config_tmp{"$ROOT"}{"footer"} eq "" )
     {
         print $LOGFILE (": Blank footer. Generating my own [$ROOT] ... \n");
-        $config_tmp{$ROOT}{"footer"}="</center>\n</body></html>";
+        $config_tmp{"$ROOT"}{"footer"}="</center>\n</body></html>";
     }
         
     # ext can be passed in a .pixdir2htmlrc file
     # like: ext=html or ext=php ...
     if ( 
-        ! exists $config_tmp{$ROOT}{"ext"} ||
-        $config_tmp{$ROOT}{"ext"} eq "" 
+        ! exists $config_tmp{"$ROOT"}{"ext"} ||
+        $config_tmp{"$ROOT"}{"ext"} eq "" 
     ) {
         # default to HTML extension
-        $config_tmp{$ROOT}{"ext"}="html";
+        $config_tmp{"$ROOT"}{"ext"}="html";
     }
-
 
     # save hash
     %config = %config_tmp;
@@ -651,7 +653,7 @@ sub mkindex {
         $i = 0;
         # read specific config file for this directory
         if ( -f "$this_base/$CONFIG_FILE" && ! -f "$this_base/.nopixdir2htmlrc" ) {
-            if ( ! exists $config{$this_base} )
+            if ( ! exists $config{"$this_base"} )
             {
                 init_config($this_base);
             } else {
@@ -675,7 +677,7 @@ sub mkindex {
         }
       
         # "serialization"
-        my @files = @{$$hashref{$this_base}};
+        my @files = @{$$hashref{"$this_base"}};
 
         # yet another sort...
         # sort menus alphabetically (dictionary order):
@@ -689,31 +691,31 @@ sub mkindex {
         } @files;
 
         # FILE_NAME is a global
-        open(FILE, "> ".$this_base."/".$FILE_NAME.".".$config{$this_base}{"ext"}) || 
-        die "Couldn't write file $FILE_NAME.".$config{$this_base}{"ext"}." to $this_base";
+        open(FILE, "> ".$this_base."/".$FILE_NAME.".".$config{"$this_base"}{"ext"}) || 
+        die "Couldn't write file $FILE_NAME.".$config{"$this_base"}{"ext"}." to $this_base";
 
         # start HTML
-        print FILE ($config{$this_base}{"header"}."\n");
+        print FILE ($config{"$this_base"}{"header"}."\n");
         # print menu (if any)
         print FILE ("$MENU_STR");
         # start table
-        print FILE ($config{$this_base}{"table"}."\n");
+        print FILE ($config{"$this_base"}{"table"}."\n");
         #print all picts now
         foreach(@files){
             $this_file = basename($_);
             if ($i == 0) {
                 # open a new row
                 # this row doesn't need bgcolor
-                if ( $config{$this_base}{"tr"} =~ m/\%+bgcolor\%+/i ) {
-                    ($config{$this_base}{"tr"} = $config{$this_base}{"tr"}) =~ s/\%+bgcolor\%+//i;
+                if ( $config{"$this_base"}{"tr"} =~ m/\%+bgcolor\%+/i ) {
+                    ($config{"$this_base"}{"tr"} = $config{"$this_base"}{"tr"}) =~ s/\%+bgcolor\%+//i;
                 }
-                print FILE ($config{$this_base}{"tr"}."\n");
+                print FILE ($config{"$this_base"}{"tr"}."\n");
             } 
-            print FILE ("\t".$config{$this_base}{"td"}."\n");
+            print FILE ("\t".$config{"$this_base"}{"td"}."\n");
             ($file_name = $this_file) =~ s/$EXT_INCL_EXPR//gi;
             ($file_name = $file_name) =~ s/^$THUMB_PREFIX//; # removes prefix
             # EXT is a global and so is THUMBNAIL
-            print FILE ("<a class='pdlink' href='$HTMLDIR/$file_name.".$config{$this_base}{"ext"}."'>".
+            print FILE ("<a class='pdlink' href='$HTMLDIR/$file_name.".$config{"$this_base"}{"ext"}."'>".
                 "<img class='pdimage' src='$THUMBNAIL/"."$this_file'></a>\n");
             print FILE ("\t</td>\n");
             if ($i<($TD-1)) {
@@ -727,14 +729,14 @@ sub mkindex {
         # complete missing TD
         if ($i != 0) {
             for (;$i<$TD;$i++) {
-                print FILE ("\t".$config{$this_base}{"td"}."\n");
+                print FILE ("\t".$config{"$this_base"}{"td"}."\n");
                 print FILE ("&nbsp;");
                 print FILE ("\t</td>\n");
             }
         }
         print FILE ("</tr>\n");
         print FILE ("</table>\n");
-        print FILE ($config{$this_base}{"footer"}."\n");
+        print FILE ($config{"$this_base"}{"footer"}."\n");
         print FILE ("\n");
         close(FILE);
     } # end for e/a this_base
@@ -878,7 +880,7 @@ sub mkthumb {
 
         #print STDOUT $HTMLSDIR."\n";
         if (!-d "$THUMBNAILSDIR") { 
-            print $LOGFILE ("= Making thumbnail directory in $BASE\n");
+            print $LOGFILE ("= Making thumbnail's directory in $BASE\n");
             mkdir("$THUMBNAILSDIR",0755);
         }
 
@@ -913,7 +915,7 @@ sub mkthumb {
         $PROGRESS++;
     } #end foreach @ls
 
-    if ( $NOINDEX == 0 ) {
+    if ( $NOINDEX == 0 || $THUMBSONLY == 0 ) {
         mkindex(\%pixfiles,$MENU_STR);  # pass hash reference
         # and a menu string
         # to be included in e/a file

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jun-01
 #
@@ -26,7 +26,7 @@ my $EXCEPTION_LIST = "\.soc|\.sock";
 my $modified = 0;
 
 my $usage = "Usage: \n \
-find_replace.pl \"string\" \"replacement\" \"filenames_pattern\"\n";
+find_replace.pl \"string\" \"replacement\" \"filename_regex\"\n";
 
 my $thisFile = "";      # general current file
 my @new_file = ();      # lines to be printed in new file

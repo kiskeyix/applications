@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.18 $
+# $Revision: 1.19 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE:
@@ -96,6 +96,7 @@ my $USAGE = "pixdir2html.pl [-n|--nomenu]
                             [-E|--extension]
                             [-t|--thumbsonly]
                             [-D|--directory]
+                            [-l|--menulinks]
                             [-h|--help]
  
    force    - creates a .pixdir2htmlrc in every subdir overriding
@@ -103,6 +104,7 @@ my $USAGE = "pixdir2html.pl [-n|--nomenu]
    nomenu   - do not create menus after finishing creating thumbnails
    noindex  - do not create the index.EXT files after creating thumbnails
    menuonly - only create a menu file and exit
+   menulinks- number of links to put in the Menu per row. Default is 10
    extension- use this extension instead of default (php)
    directory- use this directory instead of default (current)
    help     - prints this help and exit\n
@@ -110,6 +112,10 @@ my $USAGE = "pixdir2html.pl [-n|--nomenu]
    e.g.
     cd /path/to/picture_directory
     pixdir2html --extension='html'
+    
+    is the same as:
+    pixdir2html -E html
+    
    ";
 
 # update these if needed
@@ -137,7 +143,7 @@ my $EXT_INCL_EXPR = "\.(jpg|png|jpeg|gif)";
 # This is the default, in case the config file
 # doesn't exist or do not have this item in it
 my $PERCENT="20%";
-# How many TDs per table?
+# How many TDs per table in e/a index.EXT?
 my $TD=4;
 # How many TDs per menu table?
 my $menu_td=10;
@@ -175,6 +181,7 @@ GetOptions(
     'M|menuonly'    =>  \$MENUONLY,
     't|thumbsonly'  =>  \$THUMBSONLY,
     'N|noindex'     =>  \$NOINDEX,
+    'l|menulinks=i' =>  \$menu_td,
     # strings
     'E|extension=s' =>  \$EXT,
     'D|directory=s' =>  \$ROOT_DIRECTORY

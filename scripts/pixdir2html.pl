@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.32 $
+# $Revision: 1.33 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -82,9 +82,9 @@ my $USAGE = "pixdir2html.pl [-n|--nomenu]
                             [-N|--noindex]
                             [-f|--force] 
                             [-M|--menuonly]
-                            [-E|--extension]
+                            [-E|--extension] (php)
                             [-t|--thumbsonly]
-                            [-D|--directory]
+                            [-D|--directory] (.)
                             [-l|--menulinks]
                             [-h|--help]
  
@@ -328,9 +328,9 @@ sub mkindex {
         $i = 0;
 
         # read specific config file for this directory
-        if ( -f "$this_base/$CONFIG_FILE" ) {
+        if ( -f "$this_base/$CONFIG_FILE" && ! -f "$this_base/.nopixdir2htmlrc" ) {
             %myconfig = init_config($this_base);
-        } else {
+        } elsif ( ! -f "$this_base/.nopixdir2htmlrc" ) {
             # oops, missing config... getting base file
             if ( 
                     copy("$ROOT_DIRECTORY/$CONFIG_FILE", 
@@ -485,7 +485,7 @@ sub mkthumb {
                 }
             } # end if FORCE
 
-            if ( ! -f  "$BASE/$CONFIG_FILE" ) {
+            if ( ! -f  "$BASE/$CONFIG_FILE" && ! -f "$BASE/.nopixdir2htmlrc" ) {
                 if ( 
                     copy("$ROOT_DIRECTORY/$CONFIG_FILE", 
                         "$BASE/$CONFIG_FILE") 
@@ -496,10 +496,10 @@ sub mkthumb {
                 }
             } # end if missing $CONFIG_FILE
 
-            # change of base, reset two-dimensional array counter
-            print LOGFILE "+ Reading config for $BASE\n";
             # read specific config file for this directory
             if (! -f "$BASE/.nopixdir2htmlrc" ) {
+                # change of base, reset two-dimensional array counter
+                print LOGFILE "+ Reading config for $BASE\n";
                 %myconfig = init_config($BASE);
             }
             $total_directories++;
@@ -617,9 +617,9 @@ sub thumb_html_files {
         #print STDOUT "Base: $BASE.\n";
 
         if ( $BASE ne $tmp_BASE ) {
-            print LOGFILE "+ ThumbHtmlFiles Reading config for $BASE\n";
             # read specific config file for this directory
             if (! -f "$BASE/.nopixdir2htmlrc" ) {
+                print LOGFILE "+ ThumbHtmlFiles Reading config for $BASE\n";
                 %myconfig = init_config($BASE);
             }
         }
@@ -643,7 +643,7 @@ sub thumb_html_files {
             print LOGFILE ": Overriding $current_html_file\n";
         } # end if not current_html_file
 
-        print LOGFILE ("\n= Creating html file into $current_html_file\n");
+        print LOGFILE ("= Creating html file into $current_html_file\n");
         # TODO routine for creating file should be called here...
         open(FILE, "> $current_html_file") || 
         die "Couldn't write file $current_html_file";

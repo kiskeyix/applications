@@ -1,5 +1,5 @@
 #!/bin/sh
-# Last modified: 2002-Sep-21
+# Last modified: 2002-Oct-16
 # Luis Mondesi < lemsx1@hotmail.com >
 # backup a site every night
 # 
@@ -14,7 +14,7 @@ BAK="/home/bak";
 # directories being backup
 EXCLUDES="--exclude=*.pid --exclude=*.soc --exclude=*.sock --exclude=*.log";
 
-DIRS="/etc /usr/var/www/html/latinomixed.com /var/lib/jabber /var/lib/mysql /var/mail /var/spool /usr/local/lib/webstats /var/lib/ldap ";
+DIRS="/etc /usr/var/www/html/latinomixed.com /usr/var/www/html/accplusli.com /usr/var/www/cvs /var/lib/jabber /var/lib/mysql /var/mail /var/spool /usr/local/lib/webstats /var/lib/ldap ";
 
 ######## NO NEED TO MODIFY #################
 

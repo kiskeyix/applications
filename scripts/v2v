@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.79 $
+# $Revision: 1.80 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -3718,18 +3718,17 @@ sub dvd9to5
 sub avitovcd
 {
     # @param 0 file := string filename .avi
-    # output will be a video.mpeg file in the current directory
+    # output will be a movie.mpg file in the current directory
+    # or a .cue file if you choose to do so with vcdimager
     my $file = shift;
 
-    my $video = "video.mpeg"; # output
+    my $video = "movie"; # output root
+    my $ovideo = "$video.mpg"; # movie
     my $VERBOSITY = ( $DEBUG == 0 ) ? 0 : 2;
     # and add navigational information for dvdauthor
-    my $TCMPLEX = qx/which tcmplex/;
-    my $MPLEX = qx/which mplex/;
-    my $vcdimager = qx/which vcdimager/;
-    chomp($vcdimager);
-    chomp($TCMPLEX);
-    chomp($MPLEX);
+    my $TCMPLEX = which("tcmplex");
+    my $MPLEX = which("mplex");
+    my $vcdimager = which("vcdimager");
     
     my $multiplex_config = "multiplexer.cfg";
   
@@ -3746,9 +3745,11 @@ sub avitovcd
         close(PROFILE);
     }
 
-    if (!-f "$video")
+    if (!-f "$video.mpa" && !-f "$video.m1v")
     {
-        my $sys = "transcode -E 44100 -b 224 -V -y mpeg2enc,mpeg -F 1,-M2 -Z 352x240 -i $file";
+        #my $sys = "transcode -E 44100 -b 224 -V -y mpeg2enc,mpeg -F 1,-M2 -Z 352x240 -i $file -o $video";
+        # generalized (not just .avi):
+        my $sys = "transcode -i $file -V -y mpeg -F v,4 -E 44100 -b 224 -o $video";
         system("$sys");
     } else {
         pwarn("Video file $video exists. Not extracting new video.");
@@ -3762,7 +3763,7 @@ sub avitovcd
             # favor tcmplex over mplex. mplex chokes on some movies
             my $args = ""; # extra options for TCMPLEX
             # -m v standard VCD mode
-            my $sys = "$TCMPLEX $args -d $VERBOSITY -o $video -i $video.m1v -p $video.mpa -m v";
+            my $sys = "$TCMPLEX $args -d $VERBOSITY -o $ovideo -i $video.m1v -p $video.mpa -m v";
             pinfo("$sys") if ( $DEBUG );
             system("$sys");
         } else {
@@ -3772,7 +3773,7 @@ sub avitovcd
     {
         if ( -x $MPLEX )
         {
-            my $sys = "$MPLEX -f 1 -V -s 2324 -p 1 -o $video $video.mpa $video.m1v";
+            my $sys = "$MPLEX -f 1 -V -s 2324 -p 1 -o $ovideo $video.mpa $video.m1v";
             pinfo("$sys") if ( $DEBUG );
             system("$sys");
         } else {
@@ -3784,7 +3785,7 @@ sub avitovcd
 
     if ( -x $vcdimager )
     {
-        my $sys = "$vcdimager -c file.cue -b file.bin $video";
+        my $sys = "$vcdimager -c file.cue -b file.bin $ovideo";
         pinfo("$sys") if ( $DEBUG );
         system("$sys");
     } else {

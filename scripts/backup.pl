@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.11 $
+# $Revision: 1.12 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jun-08
+# Last modified: 2003-Jun-07
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
 #              it will create 3 files:
@@ -31,6 +31,8 @@
 # EXC_ULIST="exclude_users_from_list_separated_by_|"
 #
 # TIPS:
+# Setting the script in debugging mode doesn't create any tar.gz
+# files.
 # To override a default value, just specify what you want
 # in your .backuprc file. For instance: 
 # SYSTEM="". 
@@ -40,6 +42,15 @@
 # Would backup only those directories
 #
 # Do not use quotes in your .backuprc except for the regexp strings
+#
+# MacOS X users should first make sure they have Archive::Tar installed
+# issue the command:
+# > sudo perl -e shell -MCPAN
+# 
+# and when in CPAN prompt, type:
+# > install Archive::Tar
+# 
+# Then follow the prompts.
 #
 
 use strict;
@@ -79,11 +90,14 @@ my $TMP_LOCK = ".backup-lock";
 
 my %TMP_CONFIG = init_config($CONFIG_FILE); # override defaults with...
 
-my %CONFIG = ();   # where the two will be merged
+my %CONFIG = ();    # where the two will be merged
 my @tmp_files = (); # temporary list of files
+my @filelist = ();  # temp list
+my @tmp_dirs = ();  # temp dirs
 
 # merge two hashes and warn about dups... use the last defined key=>val
 my ($k, $v) = "";
+
 foreach my $hashref ( \%MY_CONFIG, \%TMP_CONFIG ) {
     while (($k, $v) = each %$hashref) {
         if ( $DEBUG != 0 && exists $CONFIG{$k}) {
@@ -123,13 +137,13 @@ if ( ! -f $TMP_LOCK ) {
     print FILE $year."-".$mon."-".$mday." ".$hour.":".$min.":".$sec;
     close(FILE); 
     
-    if ( $CONFIG{SYSTEM} gt "" ) {
+    if ( exists $CONFIG{SYSTEM} ) {
         # backup system
         # Archive::Tar->create_archive ("my.tar.gz", 9, "/this/file", "/that/file");
-        my @filelist = ();
+        @filelist = ();
         # a bit of sanity checking... 
         # check for two spaces or commas in list
-        my @tmp_dirs = split(/ +|,+/,$CONFIG{SYSTEM});
+        @tmp_dirs = split(/ +|,+/,$CONFIG{SYSTEM});
 
         foreach ( @tmp_dirs ) {
             if ( -d $_ ) {
@@ -149,14 +163,20 @@ if ( ! -f $TMP_LOCK ) {
     } # end if $CONFIG{SYSTEM} 
 
     # backup users
-    my %user = ();                  # user/userdir pair in a hash
+    my %user = ();  # user/userdir pair in a hash
 
-    my $users_excluded_pattern = eval($CONFIG{EXC_ULIST});
+    my $users_excluded_pattern = $CONFIG{EXC_ULIST};
+
     while (my @r = getpwent()) {
         # $name,$passwd,$uid,$gid,$quota,$comment,$gcos,$dir,$shell,$expire
         #print "$r[0]:$r[1]:$r[2]:$r[3]:$r[6]:$r[7]:$r[8]\n";
-        if ( $r[0] !~ m/$users_excluded_pattern/i && $CONFIG{LOW_UID} <= $r[2] ) {
+        if ( 
+            
+            $r[0] !~ m/$users_excluded_pattern/i && 
+            $CONFIG{LOW_UID} <= $r[2] 
+        ) {
             $user{$r[0]}=$r[7];
+            #print $r[0]."\n";
         }
     }
 
@@ -185,7 +205,7 @@ if ( ! -f $TMP_LOCK ) {
         );
     } # end if debug
 
-    if ( $CONFIG{DIRS} gt "" ) {
+    if ( exists $CONFIG{DIRS} ) {
         # backup others
         @filelist = ();
         # a bit of sanity checking... 

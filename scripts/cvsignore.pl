@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2005-Jan-23
 #
@@ -10,37 +10,37 @@
 use strict;
 $|++;
 
-#my $revision = "1.0"; # version
+my $revision = "1.0"; # version
 
 # standard Perl modules
-#use Getopt::Long;
-#Getopt::Long::Configure('bundling');
+use Getopt::Long;
+Getopt::Long::Configure('bundling');
 
 # Args:
-#my $PVERSION=0;
-#my $HELP=0;
-#my $DEBUG=0;
+my $PVERSION=0;
+my $HELP=0;
+my $DEBUG=0;
 ## get options
-#GetOptions(
-#    # flags
-#    'v|version'         =>  \$PVERSION,
-#    'h|help'            =>  \$HELP,
-#    'D|debug'           =>  \$DEBUG,
-#    # strings
-#    #'o|option=s'       =>  \$NEW_OPTION,
-#    # numbers
-#    #'a|another-option=i'      =>  \$NEW_ANOTHER_OPTION,
-#);
+GetOptions(
+    # flags
+    'v|version'         =>  \$PVERSION,
+    'h|help'            =>  \$HELP,
+    'D|debug'           =>  \$DEBUG,
+    # strings
+    #'o|option=s'       =>  \$NEW_OPTION,
+    # numbers
+    #'a|another-option=i'      =>  \$NEW_ANOTHER_OPTION,
+);
 
-#if ( $HELP ) { 
-#    use Pod::Text;
-#    my $parser = Pod::Text->new (sentence => 0, width => 78);
-#    $parser->parse_from_file(File::Spec->catfile("$0"),
-#			   \*STDOUT);
-#    exit 0;
-#}
-#
-#if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
+if ( $HELP ) { 
+    use Pod::Text;
+    my $parser = Pod::Text->new (sentence => 0, width => 78);
+    $parser->parse_from_file(File::Spec->catfile("$0"),
+			   \*STDOUT);
+    exit 0;
+}
+
+if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
 
 my $basename = "";
 my $dirname = "";
@@ -59,9 +59,6 @@ while (<STDIN>)
     $basename = "";
     $dirname = "";
 }
-
-close(IGNORE);
-
 __END__
 
 =head1 NAME
@@ -75,6 +72,22 @@ B<cvs update | cvsignore.pl>
 =head1 DESCRIPTION 
 
     This script adds filenames to .cvsignore per directory
+
+=head1 OPTIONS
+
+=over 8
+
+=item -v,--version
+
+prints version and exits
+
+=item -D,--debug
+
+enables debug mode
+
+=item -h,--help
+
+prints this help and exits
 
 =cut
 

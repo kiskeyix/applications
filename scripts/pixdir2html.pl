@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.71 $
+# $Revision: 1.72 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -421,11 +421,10 @@ my $THUMBNAILSDIR="$ROOT_DIRECTORY/$THUMBNAIL";
 my $HTMLSDIR="$ROOT_DIRECTORY/$HTMLDIR";
 
 warn << "__EOF__";
-Perl pixdir2html v$Revision: 1.71 $
-(Luis Mondesi <lemsx1\@hotmail.com> / LatinoMixed.com) 
-(running with Perl $] on $Config{'archname'}) \n \n
+Pixdir2html v\$Revision: 1.72 $
+Luis Mondesi <lemsx1\@hotmail.com> / LatinoMixed.com)
+(Running with Perl $] on $Config{'archname'}) \n \n
 __EOF__
-
 
 main();
 

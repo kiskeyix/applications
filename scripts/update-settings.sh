@@ -1,5 +1,5 @@
 #!/bin/bash
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Jan-20
 #
@@ -42,7 +42,7 @@ for i in $FILES; do
     fi
     if [[ $SKIP_FILE -eq 0 ]]; then
         echo "Setting $i"
-        cd $HOME
+        cd "$HOME"
         command tar x${VERBOSE}jf "$TMP/$i"
         if [[ $REMOVE_FILES -eq 1 ]]; then
             command rm -f "$TMP/$i"

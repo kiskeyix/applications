@@ -422,10 +422,27 @@ $IPT -t mangle -A OUTPUT -p tcp -j TOS --dport 80 --set-tos $TOSOPT
 $IPT -t mangle -A OUTPUT -p tcp -j TOS --dport 443 --set-tos $TOSOPT
 
 
-# --------( Rules Configuration - ICMP - Default Ruleset )--------
+# --------( Rules Configuration - ICMP - Ruleset Filtered by GUI )--------
 
-# Allowing all ICMP
-$IPT -t filter -A INPUT -p icmp -s 0/0 -d $NET -m limit --limit 10/s -j ACCEPT
+# ICMP: Ping Requests
+$IPT -t filter -A INPUT -p icmp -s 0/0 -d $NET --icmp-type echo-request -m limit --limit 1/s -j ACCEPT
+$IPT -t filter -A INPUT -p icmp -s 0/0 -d $NET --icmp-type echo-reply -m limit --limit 1/s -j ACCEPT
+# ICMP: Traceroute Requests
+$IPT -t filter -A INPUT -p udp -s 0/0 -d $NET --dport 33434 -j ACCEPT
+# ICMP: MS Traceroute Requests
+$IPT -t filter -A INPUT -p icmp -s 0/0 -d $NET --icmp-type destination-unreachable -j ACCEPT
+# ICMP: Unreachable Requests
+$IPT -t filter -A INPUT -p icmp -s 0/0 -d $NET --icmp-type host-unreachable -j $STOP
+# ICMP: Timestamping Requests
+$IPT -t filter -A INPUT -p icmp -s 0/0 -d $NET --icmp-type timestamp-request -j ACCEPT
+$IPT -t filter -A INPUT -p icmp -s 0/0 -d $NET --icmp-type timestamp-reply -j ACCEPT
+# ICMP: Address Masking
+$IPT -t filter -A INPUT -p icmp -s 0/0 -d $NET --icmp-type address-mask-request -j ACCEPT
+$IPT -t filter -A INPUT -p icmp -s 0/0 -d $NET --icmp-type address-mask-reply -j ACCEPT
+# ICMP: Redirection Requests
+$IPT -t filter -A INPUT -p icmp -s 0/0 -d $NET --icmp-type redirect -m limit --limit 2/s -j ACCEPT
+# ICMP: Source Quench Requests
+$IPT -t filter -A INPUT -p icmp -s 0/0 -d $NET --icmp-type source-quench -m limit --limit 2/s -j ACCEPT
 
 
 # --------( Rules Configuration - Inbound Traffic - Block nonroutable IP Addresses )--------

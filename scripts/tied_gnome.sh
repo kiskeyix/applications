@@ -17,16 +17,16 @@
 GCONFTOOL="/usr/bin/gconftool-2"
 
 # booleans
-SHOW_SPLASH=1
+SHOW_SPLASH=1 # 1 -> true, 0 -> false
 DEFAULT_THEME=1 # would you like all users to use your specified 
-                # themes only? see below
+                # themes only? see below. 1 -> true, 0 -> false
 DEFAULT_BACKGROUND=0 # would you like a background as the only choice?
-                     # see below for background path
-DEFAULT_FONT=1  # set a given font. see below
+                     # see below for background path. 1 -> true, 0 -> false
+DEFAULT_FONT=1  # set a given font. see below. 1 -> true, 0 -> false
 
-DEFAULT_MENU_TEAROFF=1 # don't tearoff menus by default (this is confusing)
-DEFAULT_TITLEBAR_FONT=1 # does metacity uses system font? or see below to set one
-DEFAULT_BROWSER=1 # use default browser as mandatory? see below to specify which browser
+DEFAULT_MENU_TEAROFF=1 # don't tearoff menus by default (this is confusing). 1 -> don't tearoff, 0 -> tearoff
+DEFAULT_TITLEBAR_FONT=1 # does metacity uses system font? or see below to set one. 1 -> true, 0 -> false
+DEFAULT_BROWSER=1 # use default browser as mandatory? see below to specify which browser. 1 -> true, 0 -> false
 
 # integers
 NUMBER_OF_WORKSPACES=2
@@ -39,8 +39,8 @@ METACITY_THEME=$GTK_THEME
 ICON_THEME="Nuvola"
 BACKGROUND="/usr/share/wallpapers/All-Good-People-1.jpg"
 SPLASH_IMAGE="/usr/local/share/pixmaps/Splash-Crystal.png" 
+#"/usr/share/pixmaps/splash/gnome-splash.png" <-- default gnome 
 BACKGROUND_ORIENTATION="wallpaper" # wallpaper,centered,scaled,strecthed
-#"/usr/share/pixmaps/splash/gnome-splash.png"
 MONOSPACE_FONT_NAME="Sans Bold 12"
 FONT_NAME="Sans Bold 11"
 DESKTOP_FONT="Sans Bold 14" # nautilus

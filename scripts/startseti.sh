@@ -25,7 +25,9 @@
 
 # We allow our path to include the current directory
 PATH=/usr/bin:/bin:.
-NICE=10
+# these settings can be modified on a per computer basis. just
+# copy them to a file named "startsetirc" inside your $SETI directory
+NICE=19
 SLEEP=14400 # 4 hours
 SETI="$HOME/Develop/seti"
 PIDF="$SETI/.startseti.pid" # process id file
@@ -39,6 +41,7 @@ PKILL="pkill" # pkill is smart about process names
 CPID=$$ # current process id is saved
 
 cd $SETI || exit 1
+[ -f startsetirc ] && . startsetirc # load defaults for this system
 
 # set LOAD to 0 if you want to disable this check
 LOAD=$(uptime|sed -e "s/.*: \([^,]*\).*/\1/" -e "s/ //g" -e "s/^\([0-9]\+\)\..*/\1/" )

@@ -1,7 +1,7 @@
 #!/bin/sh
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Oct-15
+# Last modified: 2003-Oct-16
 #
 # DESCRIPTION: a simple debian script to install java from Sun. This is
 #               for java version 1.4.2 and up. You must this as root
@@ -27,11 +27,12 @@ fi
 
 if [ -f "$TMP_JAVA" ]; then
     WD=`pwd`
-    FILE=`basename $1`
+    FILE=`basename $TMP_JAVA`
     cd /usr/local
-    tar xzf "$WD/$FILE"
+    #tar xzf "$WD/$FILE"
+    /bin/sh $TMP_JAVA
     if [ $? != 0 ]; then
-        echo "Extracting $1 failed"
+        echo "Extracting $TMP_JAVA failed"
         echo $MESSAGE
         cd $WD
         exit 1
@@ -39,9 +40,9 @@ if [ -f "$TMP_JAVA" ]; then
         # TODO  
         # the name of the extracted file might not be j2re-1_4_2...
         # is there a way to automatically detect this?
-        mv j2re-1_4_2_01 j2re
+        ln -sf /usr/local/j2re-1_4_2_01 /usr/local/j2re
         if [ $? !=0 ];then
-            echo "Renaming /usr/local/j2re-1_4_2_01 to /usr/local/j2re failed"
+            echo "Linking /usr/local/j2re-1_4_2_01 to /usr/local/j2re failed"
             echo "Please make sure this directory exists so that we can proceed"
             echo "After that, you can just call this script without any arguments"
             exit 1

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.25 $
+# $Revision: 1.26 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -104,8 +104,16 @@ my $USAGE = "pixdir2html.pl [-n|--nomenu]
     
    ";
 
-# update these if needed
-my $ROOT_DIRECTORY=".";
+# Get Nautilus current working directory, if under Natilus:
+
+my $nautilus_root = "";
+
+if ( $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} =~ m#^file:///# ) {
+    ($nautilus_root = $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} ) =~ s#%([0-9A-Fa-f]{2})#chr(hex($1))#ge;
+    ($nautilus_root = $nautilus_root ) =~ s#^file://##g;
+}
+
+my $ROOT_DIRECTORY= ( -d $nautilus_root ) ? $nautilus_root : $ENV{PWD};
 
 my $LOG="$ROOT_DIRECTORY/pixdir2html.log";
 

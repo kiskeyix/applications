@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.80 $
+# $Revision: 1.81 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -3795,7 +3795,7 @@ sub avitovcd
     {
         unlink($multiplex_config) or warn("Could not remove file. $!");
     }
-    pinfo("Use 'cdrdao write --device /dev/sg0 file.cue' to burn the image");
+    pinfo("Use 'cdrdao write --device /dev/sg0 --driver generic-mmc file.cue' to burn the image");
     say_end();
 } # end avitovcd()
 

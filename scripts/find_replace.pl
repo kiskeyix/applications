@@ -1,12 +1,17 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jan-08
+#
+# BUGS: if replacement string contains invalid characters
+#       nothing gets done. Have to find a way to escape
+#       all characters which might be used by Perl's
+#       s/// operator
 #
 use strict;
 $|++;
 
-my $DEBUG = 1;
+my $DEBUG = 0;
 
 # -------------------------------------------------------------------
 #           NO NEED TO MODIFY ANYTHING PASS THIS LINE               #
@@ -49,12 +54,6 @@ if ($this_string =~ /\w/
     }
     closedir(DIR);
 
-# cleanup this_string and that_string
-# escaping @
-
-$this_string  =~ s/@/\@/g;
-$that_string  =~ s/@/\@/g;
-
 my $i =0;
     for (@ls) {
         # yes, this is a wrapper for a standard tip!
@@ -75,7 +74,7 @@ my $i =0;
         open (FILE,"<$thisFile") or die "could not open $thisFile. $!\n";
         while(<FILE>) {
             
-            if ($_ =~ s/$this_string/$that_string/g) {
+            if ($_ =~ s($this_string)($that_string)g) {
                 print STDOUT "$thisFile [$i]: $_"; 
                 $modified = 1;
             }
@@ -92,6 +91,9 @@ my $i =0;
             print NEWFILE @new_file;
             close(NEWFILE);
         }
+
+        # cleanup array
+        @new_file = ();
 
     }
 }

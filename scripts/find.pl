@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.20 $
+# $Revision: 1.21 $
 # Luis Mondesi < lemsx1@gmail.com >
-# Last modified: 2005-Feb-19
+# Last modified: 2005-Feb-28
 #
 # DESC: finds a string in a set of files
 #
@@ -26,6 +26,13 @@ $|++;
 my $DEBUG = 0;
 
 my $EXCEPTION_LIST = "\.soc\$|\.sock\$|\.so\$|\.o\$|\.swp\$";
+
+# some colors:
+
+my $RED = "\033[1;31m";
+my $NORM = "\033[0;39m";
+my $GREEN = "\033[0;32m";
+my $BLUE = "";
 
 # -------------------------------------------------------------------
 #           NO NEED TO MODIFY ANYTHING PASS THIS LINE               #
@@ -63,7 +70,7 @@ if (!$f_pattern) {
 if ( $DEBUG > 0 )
 {
     print "s: '$this_string' r: '$that_string' f: '$f_pattern'\n";
-    print STDERR "DEBUG in place... pausing for 10 seconds\n";
+    print STDERR "$RED DEBUG in place... pausing for 10 seconds$NORM\n";
     sleep(10);
 }
 
@@ -96,7 +103,7 @@ if ($this_string =~ /\w/) {
             while(<FILE>) {
                 $i++;
                 if ($_ =~ s($this_string)($that_string)g) {
-                    print STDOUT "$thisFile [$i]: $_"; 
+                    print STDOUT "$GREEN $thisFile [$i]:$NORM $_"; 
                     $modified = 1;
                 }
                 push @new_file,$_;

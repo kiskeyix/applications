@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.27 $
+# $Revision: 1.28 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Feb-20
+# Last modified: 2004-Sep-28
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
 #               or a user specified command archiver ( tar? )
@@ -225,7 +225,7 @@ if ( -d $CONFIG{"BAK"} ) {
 if ( ! -f $TMP_LOCK ) {
 
     my ($sec,$min,$hour,$mday,$mon,$year) = localtime; # get date
-
+    $mon += 1; ## adjust Month: 0..11 instead of natural 1 .. 12
     $year += 1900;
 
     my $MIDDLE_STR = ( exists $ARGV[0] && $ARGV[0] eq "daily" ) ? "daily" : $year."-$mon-$mday";
@@ -486,11 +486,12 @@ if ( ! -f $TMP_LOCK ) {
     if ( -f "/etc/debian_version" ) {
         # this is a debian system
         # create a selections file
-        system("dpkg --get-selections \\* > selections.txt");
+        my $sel = $CONFIG{"NAME"}."-selections.txt";
+        system("dpkg --get-selections \\* > $sel");
         if ( $? == 0 ) {
             print STDOUT "Debian selections file created as:".
-            " selections.txt.\n ".
-            " Use:\n dpkg --set-selections < selections.txt".
+            " $sel.\n ".
+            " Use:\n dpkg --set-selections < $sel".
             " && dselect install \n to restore from this list.\n";
         }
     }

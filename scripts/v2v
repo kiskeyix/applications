@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.22 $
+# $Revision: 1.23 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -30,9 +30,45 @@
 #     The goal should be to use v2divx.pl from workstations
 #     without needing Xfree86 or any other GUI manager.
 #
+#   * Create a hash that holds all strings for different
+#     languages. Let "english" be the default language
+#     and go from there. i.e.
+#     %LANG = ();
+#     $LANG{"en"}{"This is a string"} = "This is a string";
+#     $LANG{"es"}{"This is a string"} = "Esta es una palabra";
+#     $LANG{"fr"}{"This is a string"} = "C'est un mot";
+#
+#     This way the user can define a default language in his/her
+#     configuration file or from the command line with the
+#     environmental variable/locale $LANG.
+#
 #   * code cleanup needed
 #   * "use strict" for Perl to bitch about everything
 #   * test more against latest transcode (0.6.11)
+#
+# CODE GUIDELINES:
+#   This is a simple effort to keep things clean:
+#   * Use vim and let it set the formatting according to the 
+#     vim formatting line at the beginning of this file. This
+#     is very important. If using a different editor, please
+#     try to keep things in the same format. Do not use TAB,
+#     only spaces and indent things accordingly
+#   * Wrap lines longer than 70 characters
+#   * Reuse code instead of writing new functions, especially
+#     for printing common things such as info or errors. pinfo(),
+#     and perror() are your friends. Use them.
+#   * Use all caps for variable names which are GLOBAL. Simple
+#     convention that helps c/c++ coders remember the scope of
+#     things. Especially if those variables don't change their
+#     values throughout the code.
+#   * Allow users to modify default values no matter how important
+#     they might be to you. Modifications should be made from both
+#     the command line and the configuration file (if necessary).
+#     Command line should always take precedense over config file
+#     options.
+#   * Use comments to explain your reasoning even if it's obvious
+#     to you what the code does. Comments are your friends, and
+#     they help debugging things later if things go wrong.
 
 use POSIX;
 use Env qw(HOME);
@@ -728,8 +764,9 @@ sub get_audio_channel
                 $i++;
             }
         }
-    }		
-    return(0) if ( defined($_[0])); # get_audio_channel has been call by printinfo ;-)
+    }
+    # get_audio_channel has been call by printinfo ;-)
+    return(0) if ( defined($_[0]) ); 
     if ( $in_video_magic eq 'mov' )
     {
         $probe=`tcprobe -i $vobpath/$sample 2>&1 | grep 'audio track:'` or mydie "Problem when running \'tcprobe -i $vobpath/$sample\'";
@@ -779,15 +816,15 @@ sub get_audio_channel
         if ( $DEF_AUDIOCHANNEL <= @achannels[$number_of_ac])
         { 
             $audio_channel = $DEF_AUDIOCHANNEL;
-            print "(see your $userconfigfile): | ".$RED;
+            print ":\t   | ".$RED;
         } else {
             $audio_channel=0;
             print ":\t   | ".$RED;
         }	
         print $audio_channel."\n".$NORM;
     }
-    print $DEBUG "  <--- get_audio_channel\n";
-}
+    print $DEBUG "<--- get_audio_channel\n";
+} # end get_audio_channel
 
 sub readuserconf
 {
@@ -1052,7 +1089,11 @@ sub ask_clust
                 $display=$strF + 1;
                 if ( $strF > 10 )
                 {
-                    print $RED."\tThere is too much sequence units in this clip to encode it\n\tin cluster mode with a good video quality\n\tReversing to NO CLUSTER...\n".$NORM;
+                    print $RED."\tThere is too much sequence units".
+                    " in this clip to encode it\n".
+                    "\tin cluster mode with a good ".
+                    "video quality\n\tReversing to NO".
+                    " CLUSTER...\n".$NORM;
                     $strF=NO;
                     sleep(2);
                 }
@@ -2830,7 +2871,12 @@ if ($ARGV[1] eq "continue" || $ARGV[0] eq "continue" || ! defined($ARGV[0]))
     get_params;
 }  
 
-if (defined ($ARGV[0]) && $ARGV[0] ne  "continue" && ! defined($ARGV[1]))
+if ( 
+    ( defined ($ARGV[0]) 
+        && $ARGV[0] ne  "continue" 
+        && ! defined($ARGV[1]) ) 
+    || $HELP == 1
+)
 { 
     system (" echo \"$usage\" | less -R ");
     exit(1);

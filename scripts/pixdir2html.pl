@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.69 $
+# $Revision: 1.70 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -1045,10 +1045,7 @@ sub thumb_html_files {
         print FILE ($config{"$BASE"}{"header"}."\n");
         # start table
         print FILE ($config{"$BASE"}{"table"}."\n");
-        print FILE ("<tr><td align='center'>\n<div align='center'>\n");
-        # image here
-        print FILE ("<img src='../$pix_name' alt='$file_name' border=0>\n");
-        print FILE ("</div></td></tr>\n<tr><td valign='bottom' align='center'><div align='center'>\n");
+        # FIXME image was here
         # set menu-name now (from command-line or config file)
         if ( $NEW_MENU_NAME gt "" ) 
         {
@@ -1095,8 +1092,11 @@ sub thumb_html_files {
             #       array... 
             #print FILE (" <a href='../$next_file_name.$EXT'>&gt;&gt;</a> \n");
         }
-
         print FILE ("</div></td></tr>\n");
+        print FILE ("<tr><td align='center'>\n<div align='center'>\n");
+        # image here
+        print FILE ("<img src='../$pix_name' alt='$file_name' border=0>\n");
+        print FILE ("</div></td></tr>\n<tr><td valign='bottom' align='center'><div align='center'>\n");
         print FILE ("</table>\n");
         print FILE ($config{"$BASE"}{"footer"}."\n");
         close(FILE);
@@ -1269,7 +1269,14 @@ sub menu_file {
                 } else {
                     print LOGFILE "$ts has no thumbnail [$THUMBNAIL] directory. Have you executed $0 without --menu-only or --menu-type='modern' yet?";
                 }
-                print FILE ("\t\t<a class='pdlink' href='$ls[$i]' target='_top'>\n\t\t<img src='$ts/$THUMBNAIL/$image' border=0 alt='$tmp_ts album'></a></td>\n\t".$config{"$ROOT_DIRECTORY"}{"td"}."\n\t\t<a class='pdlink' href='$ls[$i]' target='_top'>$IMG $tmp_ts</a>\n");
+                my $tmp_image="";
+                if ( -f "$ts/$THUMBNAIL/$image" )
+                {
+                    $tmp_image="<img src='$ts/$THUMBNAIL/$image' border=0 alt='$tmp_ts album'>";
+                } else {
+                    $tmp_image="MISSING. Try re-running $0 with no arguments";
+                }
+                print FILE ("\t\t<a class='pdlink' href='$ls[$i]' target='_top'>\n\t\t$tmp_image</a></td>\n\t".$config{"$ROOT_DIRECTORY"}{"td"}."\n\t\t<a class='pdlink' href='$ls[$i]' target='_top'>$IMG $tmp_ts</a>\n");
                 print FILE ("\t</td>\n</tr>\n");
                 $i++;
                 $x--;

@@ -1,0 +1,47 @@
+#!/usr/bin/perl -w
+# $Revision: 1.1 $
+# Luis Mondesi < lemsx1@gmail.com >
+#
+# DESCRIPTION: test regular expressions against a string
+# USAGE: $0 'regex' 'string'
+# LICENSE: GPL
+
+use strict;
+$|++;
+
+# Args:
+my $HELP_MSG="$0 'regex' 'string'";
+my $REGEX=undef;
+my $STR=undef;
+my $str = undef; 
+
+$REGEX=$ARGV[0];
+$STR=$ARGV[1];
+
+#$REGEX="0";
+#$STR="0123abc";
+
+if ( defined($REGEX) and defined($STR) )
+{
+    no warnings;
+    ($str = $STR) =~ s/($REGEX)//mg;
+
+    print STDOUT (
+        "String: '",
+        $STR,
+        "'\n",
+        "Regex: m/$REGEX/mg",
+        "\n");
+    print STDOUT (
+        "Matches all!",
+        "\n",
+    ) if ( $str =~ /^$/ );
+    print STDOUT (
+        "Not Matching: '",
+        $str,
+        "'\n",
+    ) if ( $str =~ /^.+$/ );
+} else {
+    print STDERR $HELP_MSG,"\n";
+}
+

@@ -1,9 +1,9 @@
 #!/usr/bin/perl -w
-# $Revision: 1.3 $
-# $Date: 2003-03-11 00:58:44 $
+# $Revision: 1.4 $
+# $Date: 2003-03-12 05:16:45 $
 #
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Mar-11
+# Last modified: 2003-Mar-12
 #
 # DESCRIPTION: interactively create a new
 #               virtual website
@@ -58,7 +58,7 @@ my $WEBMASTER_EMAIL="$WEBMASTER\@$SITE";
 my $VOLUME="375m"; # 3Gbits = 375MBytes
 my $PERIOD="4w";   # montly = 4w
 
-$VOLUME=prompt("Please Enter mod_throtle volume[$VOLUME]: ",$VOLUME);
+$VOLUME=prompt("Please Enter mod_throttle volume[$VOLUME]: ",$VOLUME);
 $PERIOD=prompt("Please Enter mod_throttle period[$PERIOD]: ",$PERIOD);
 
 # virtual hosts go to:
@@ -69,7 +69,7 @@ my $SMTP_VIRTUAL="/etc/postfix/virtual";
 $APACHE_CONF=prompt("Enter apache config file[$APACHE_CONF]: ",$APACHE_CONF);
 $SMTP_VIRTUAL=prompt("Enter SMTP virtual config file[$SMTP_VIRTUAL]: ",$SMTP_VIRTUAL);
 
-my $APACHE_HOST_TEMPLATE="\n<VirtualHost $SERVER_IP>\nThrottlePolicy Volume 375m 4w\nServerAdmin $WEBMASTER_EMAIL\nDocumentRoot /home/$WEBMASTER/$SITE/html\nServerName $SITE\nErrorLog /var/log/apache/$SITE-error.log\nCustomLog /var/log/apache/$SITE-access_log combined\n<Directory />\nAllowOverride FileInfo AuthConfig Limit Options\n</Directory>\n</VirtualHost>\n";
+my $APACHE_HOST_TEMPLATE="\n<VirtualHost $SERVER_IP>\n\tThrottlePolicy Volume $VOLUME $PERIOD\n\tServerAdmin $WEBMASTER_EMAIL\n\tDocumentRoot /home/$WEBMASTER/$SITE/html\n\tServerName $SITE\n\tErrorLog /var/log/apache/$SITE-error.log\n\tCustomLog /var/log/apache/$SITE-access_log combined\n\t<Directory />\n\t\tAllowOverride FileInfo AuthConfig Limit Options\n\t</Directory>\n</VirtualHost>\n";
 
 # print output to files:
 # summary to STDOUT
@@ -78,6 +78,7 @@ print STDOUT "\tServer IP: $SERVER_IP\n";
 print STDOUT "\tSite: $SITE\n";
 print STDOUT "\tWebmaster: $WEBMASTER\n";
 print STDOUT "\tE-Mail: $WEBMASTER_EMAIL\n";
+print STDOUT "\tApache.conf append: $APACHE_HOST_TEMPLATE\n";
 
 # prompt user whether he/she wants to go ahead with changes
 my $CONFIRM="n";

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.10 $
+# $Revision: 1.11 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Jan-21
 #
@@ -91,8 +91,8 @@ if ( $MASTER )
         } else {
             # last tar command failed?
             # TODO Find a way to "remember" which file failed
-            printf STDOUT ("|%-".$n_files."s|", "#" x ($j-1)); # progress
-            printf STDOUT ("|%-".$n_files."s|", "!" x 1); # progress
+            printf STDOUT ("|%-".($n_files-($j-1))."s|", "#" x ($j-1)); # progress
+            printf STDOUT ("%-".($j-1)."s|", "!" x 1); # progress
             push(@failed,"$i");
         }
     }
@@ -141,8 +141,8 @@ foreach my $h ( @hosts )
             } else {
                 # last tar command failed?
                 # TODO Find a way to "remember" which file failed
-                printf STDOUT ("|%-".$n_files."s|", "#" x ($j-1)); # progress
-                printf STDOUT ("|%-".$n_files."s|", "!" x 1); # progress
+                printf STDOUT ("|%-".($n_files-($j-1))."s", "#" x ($j-1)); # progress
+                printf STDOUT ("%-".($j-1)."s|", "!" x 1); # progress
                 push(@failed,"$i");
             }
             if ( $REMOVE_FILES )

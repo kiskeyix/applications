@@ -1,5 +1,5 @@
 #!/bin/bash
-# $Revision: 1.23 $
+# $Revision: 1.24 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Dec-14
 #
@@ -90,16 +90,19 @@ if [ $1 -a $1 != "--help" ]; then
             BUILD_INITRD=" --initrd"
             INITRD="YES"
             INITRD_OK="YES"
+
+            expotr $INITRD
         ;;
         *)
             echo "Initrd support disabled"
             BUILD_INITRD=""
             # reset initrd
-            INITRD=""
+            unset INITRD
             INITRD_OK="NO"
         ;;
     esac
-    export INITRD_OK INITRD
+
+    export INITRD_OK 
 
     # ask about making the kernel headers
     yesno="No"
@@ -127,7 +130,7 @@ if [ $1 -a $1 != "--help" ]; then
  
 
     if [ $makeit -eq 1 ]; then
-        echo -e "Building kernel \n"
+        echo -e "Building kernel [ initrd opts: $BUILD_INITRD ] \n"
         make-kpkg clean
         make-kpkg   --rootcmd $FAKEROOT \
         --config oldconfig \

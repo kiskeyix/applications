@@ -23,14 +23,18 @@
 use strict;
 $|++;
 
+# some globals
+my $CACHE_CLEAN=0;
+my $GREEN="\033[0;32m";
+my $NORM="\033[0;39m";
+
 # helper functions
 
 sub detect_ut_dir
 {
-    if ( -d "/usr/local/games/ut" )
+    my $ut_dir = "/usr/local/games/ut";
+    if ( !-d "$ut_dir" )
     {
-        $ut_dir = "/usr/local/games/ut";
-    } else {
         $ut_dir = prompt("Where is your Unreal Tournament installed? [DEFAULT: /usr/local/games/ut ] ");
     }
     return $ut_dir;
@@ -55,18 +59,17 @@ sub cleanup_cache_ini
         open(CACHE,">cache.ini");
         print CACHE "[Cache]\n";
         close(CACHE);
-        print("File cache.ini has been cleared\n");
+        print("$GREEN File cache.ini has been cleared $NORM\n");
     }
     return $FLAG;
 }
 
 # main script
 
-my $home_ut_dir = "$ENV{'HOME'}/.loki/ut/Cache";
+# are we already in ~/.loki/ut/Cache? check for cache.ini
+my $home_ut_dir = ( -f "cache.ini" ) ? "." : "$ENV{'HOME'}/.loki/ut/Cache";
 
-$home_ut_dir = ( defined($ARGV[0]) ) $ARGV[0] : $home_ut_dir;
-
-chdir("$home_ut_dir") or die("Could not change to dir $home_ut_dir");
+chdir("$home_ut_dir") or die("Could not change to dir $home_ut_dir. $!");
 
 open (my_file,"cache.ini");
 
@@ -86,24 +89,22 @@ while (<my_file>){
     }
 }
 
-my $CACHE_CLEAN=0;
-
 my $ut_dir = detect_ut_dir();
 my $rep = prompt("Copy renamed files to $ut_dir [y/N] ");
 
 if ( $rep =~ /^y/i )
 {
     # TODO check if we have permission to write to $ut_dir
-    system("/bin/mv *.u *.int $ut_dir/System/ ");
-    print("System files were moved\n") if $?;
-    system("/bin/mv *.utx $ut_dir/Textures/ ");
-    print("Textures files were moved\n") if $?;
-    system("/bin/mv *.unr $ut_dir/Maps/ ");
-    print("Maps files were moved\n") if $?;
-    system("/bin/mv *.umx $ut_dir/Music/ ");
-    print("Music files were moved\n") if $?;
-    system("/bin/mv *.uax $ut_dir/Sounds/ "); 
-    print("Sounds files were moved\n") if $?;
+    system("/bin/mv *.u *.int $ut_dir/System/ 2> /dev/null");
+    print("$GREEN System files were moved $NORM\n") if ! $?;
+    system("/bin/mv *.utx $ut_dir/Textures/ 2> /dev/null");
+    print("$GREEN Textures files were moved $NORM\n") if ! $?;
+    system("/bin/mv *.unr $ut_dir/Maps/ 2> /dev/null");
+    print("$GREEN Maps files were moved $NORM\n") if ! $?;
+    system("/bin/mv *.umx $ut_dir/Music/ 2> /dev/null");
+    print("$GREEN Music files were moved $NORM\n") if ! $?;
+    system("/bin/mv *.uax $ut_dir/Sounds/ 2> /dev/null"); 
+    print("$GREEN Sounds files were moved $NORM\n") if ! $?;
     # we cleanup cache.ini
     $CACHE_CLEAN = cleanup_cache_ini();
 }
@@ -112,8 +113,8 @@ if (!$CACHE_CLEAN)
 {
     # we ask user to cleanup cache.ini if they didn't
     # want to move the files to $ut_dir automatically above
-    my $rep = prompt("Do you want to cleanup cache.ini? [y/N] ");
-    if ( $rep =~ /^y/i )
+    my $crep = prompt("Do you want to cleanup cache.ini? [y/N] ");
+    if ( $crep =~ /^y/i )
     {
         cleanup_cache_ini();
     } else {

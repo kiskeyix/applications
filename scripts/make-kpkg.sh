@@ -1,8 +1,8 @@
 #!/bin/bash
 # vim: ft=sh:columns=80 :
-# $Revision: 1.34 $
+# $Revision: 1.35 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Nov-08
+# Last modified: 2004-Dec-12
 #
 # LICENSE: GPL (http://www.gnu.org/licenses/gpl.txt)
 #
@@ -34,8 +34,8 @@
 #     so that we can use both ccache and distcc. 
 #     Make sure that $CCACHE_DIR is setup correctly (man ccache)
 
-CCACHE=`command -v ccache`
-DISTCC=`command -v distcc`
+CCACHE="`command -v ccache 2> /dev/null`"
+DISTCC="`command -v distcc 2> /dev/null`"
 
 if [[ -x "$CCACHE" && -x "$DISTCC" ]]; then
     echo "Setting up distcc with ccache"
@@ -94,7 +94,7 @@ export CCACHE_PREFIX DISTCC_HOSTS
 export MAKEFLAGS CONCURRENCY_LEVEL
 
 ## get arguments. if --help, print USAGE
-if [[ ! -z $1 && "$1" != "--help" ]]; then
+if [[ ! -z "$1" && "$1" != "--help" ]]; then
     if [[ ! -z $2 ]]; then
         REVISION="$2"
     else
@@ -109,6 +109,12 @@ if [[ ! -z $1 && "$1" != "--help" ]]; then
         y* | Y*)
             makeit=1
         ;;
+        # no need to continue otherwise
+        # Sometimes we just want to make the headers indepentently
+        # and/or the debianized sources... thus, continue
+#        *)
+#            #exit 0
+#        ;;
     esac
     # ask about initrd 
     yesno="No"
@@ -144,6 +150,15 @@ if [[ ! -z $1 && "$1" != "--help" ]]; then
         ;;
     esac
 
+    # ask about making kernel_source target
+    yesno="No"
+    read -p "...Source package for this Kernel? [y/N] " yesno
+    case $yesno in
+        y* | Y*)
+        KERNEL_HEADERS="$KERNEL_HEADERS kernel_source"
+        ;;
+    esac
+
     # ask whether to create all kernel module images
     # from ../modules (or /usr/src/modules)
     
@@ -163,19 +178,20 @@ if [[ ! -z $1 && "$1" != "--help" ]]; then
         make-kpkg clean
         make-kpkg   --rootcmd $FAKEROOT \
         --config oldconfig \
-        --append-to-version $1 \
+        --append-to-version "$1" \
         --revision $REVISION \
         $BUILD_INITRD \
         kernel_image $KERNEL_HEADERS
     fi
 
     # Sometimes we just want to make the headers indepentently
+    # or kernel_source 
     
     if [[ x$KERNEL_HEADERS != "x" && $makeit -eq 0  ]]; then
-        echo -e "Building kernel headers only \n"
+        echo -e "Building kernel [$KERNEL_HEADERS] only \n"
         make-kpkg   --rootcmd $FAKEROOT \
         --config oldconfig \
-        --append-to-version $1 \
+        --append-to-version "$1" \
         --revision $REVISION \
         $BUILD_INITRD \
         $KERNEL_HEADERS
@@ -187,7 +203,7 @@ if [[ ! -z $1 && "$1" != "--help" ]]; then
         make-kpkg modules_clean
         make-kpkg   --rootcmd $FAKEROOT \
         --config oldconfig \
-        --append-to-version $1 \
+        --append-to-version "$1" \
         --revision $REVISION \
         $BUILD_INITRD \
         modules_image

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.22 $
+# $Revision: 1.23 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE:
@@ -542,12 +542,12 @@ sub thumb_html_files {
 
     #print all picts now
     foreach(@ls){
-        $pix_name = basename($ls[$i]);
+        $pix_name = basename($_);
         # strip extension from file name
         ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR//g;
         # get base directory
-        ( $BASE = $ls[$i] ) =~ s/(.*)\/$pix_name$/$1/g;
-        #print STDOUT $BASE."\n";
+        ( $BASE = $_ ) =~ s/(.*)\/$pix_name$/$1/g;
+        #print STDOUT "Base: $BASE.\n";
 
         if ( $BASE ne $tmp_BASE ) {
             print LOGFILE "+ ThumbHtmlFiles Reading config for $BASE\n";

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.16 $
+# $Revision: 1.17 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -88,9 +88,8 @@ $userconfig="
 \$INFO=STDOUT;
 
 # EXT SUBTITLE FILTER 5 LAST OPTIONS (here we just use 3) ...See the docs 8-(
-    \$EXTSUB=0:0:255;
-
-    ";
+\$EXTSUB=0:0:255;
+";
 
 ############# SOME VARIABLES ###################
 $release="2.2.3 (C) 2002-2003 Dominique Caron";
@@ -587,6 +586,16 @@ sub chk_wdir
     system ("mv $vobpath/probe.rip tmp/probe.rip") if ( -f "$vobpath/probe.rip");
     # Verify that there is no alien files in vobpath 
     # AND GET the Video Input Format
+    # TODO
+    # Luis Mondesi <lemsx1AT_NO_SPAM_hotmail.com> 
+    # 2003-12-14 17:35 EST 
+    # We should also check for valid filetypes extensions.
+    # the most common ones at least.
+    # Or, remove a given set of files from here... like any
+    # text file. Perhaps use the "file" UNIX utility to
+    # determine if a file is text data or whatever
+    # and exclude it from this @files array?
+    
     opendir(VOB,$vobpath);
     my(@files)=grep {! /^\./ & -f "$vobpath/$_"} readdir(VOB);
     closedir(VOB);
@@ -1113,14 +1122,25 @@ sub cluster
             $tabpower[$i]=$sumpow;
             sleep(3);
         }
-        print $GREEN."$v2d\t Wait for nodes finish ....\n".$NORM;
+        
+        print $GREEN."$v2d\t Wait for nodes to finish ....\n".$NORM;
+        
         foreach $endnode ( @tabpower )
-        {	
+        {
+            # Luis Mondesi 
+            # This is a potentially dangerous loop...
             while ( ! -e "tmp/2-$dvdtitle${endnode}_0.finish" )
             {
-                print "\r|"; sleep(1); print "\r/"; sleep(1); print "\r-"; sleep(1); print "\r\\"; sleep(1);
+                print "\r|"; 
+                sleep(1); 
+                print "\r/"; 
+                sleep(1); 
+                print "\r-"; 
+                sleep(1); 
+                print "\r\\"; 
+                sleep(1);
             }
-            print $GREEN."$v2d\t Node $endnode has finished to encode\n".$NORM;
+            print $GREEN."$v2d\t Node $endnode has finished encoding\n".$NORM;
         }	
         merge;
         twoac;
@@ -1735,6 +1755,9 @@ sub get_params
         }
         mydie "Path: $vobpath does not exist." if (! -e $vobpath);
         mkdir ("tmp",1777);
+        # Luis Mondesi <lemsx1AT_NOSPAM_hotmail.com> 
+        # how does the script knows that the "sample" keyword
+        # was given?
         if ($ARGV[$i] > 1)
         {	
             $filesize = $ARGV[$i];
@@ -1786,7 +1809,8 @@ sub get_params
             }
             $poslogo=$POSLOGO;
         } else {
-            print $RED."Transcode is not compile with ImageMagick.\nUnable to encode your Logo $LOGO\n".$NORM; sleep 1;
+            print $RED."Transcode is not compile with ImageMagick.\nUnable to encode your Logo $LOGO\n".$NORM; 
+            sleep 1;
         }
     }
 
@@ -1805,39 +1829,43 @@ sub get_params
     if ( defined($deb_sec) ) {
         print CONF "#deb_sec:$deb_sec\n";
     }
-    if ( defined($audio_bitrate) ) {print CONF "#audio_bitrate:$audio_bitrate\n";
-}
-if ( defined($filesize) ) {
-    print CONF "#filesize:$filesize\n";
-}
-if ( defined($addlogo) ){
-    print CONF "#addlogo:$addlogo # THIS VALUE IS THE DURING TIME OF LOGO (in sec.)\n";
-}
-if ( defined($beginlogo) ){
-    print CONF "#beginlogo:$beginlogo\n";
-}
-if ( defined($poslogo) ){
-    print CONF "#poslogo:$poslogo\n";
-}
-if ( defined($dvdtitle) ){
-    print CONF "#dvdtitle:$dvdtitle # DO NOT MODIFY THIS LINE\n";
-}
-if ( defined($params) ) {
-    print CONF "#params:$params# YOU MUST KNOW WHAT YOU DO IN THIS LINE\n";
-}
-if ( defined($CLUSTER) ) {
-    print CONF "#CLUSTER:$CLUSTER # YOU CAN REMOVE BUT NOT MODIFY THIS LINE\n";
-}
-if ( defined($sub_title) ) {print CONF "#sub_title:$sub_title\n";
+    if ( defined($audio_bitrate) ) {
+        print CONF "#audio_bitrate:$audio_bitrate\n";
     }
-    if ( defined($deintl) ) {print CONF "#deintl:$deintl\n";
-}
-if ( defined($ac2) ) {print CONF "#ac2:$ac2\n";
+    if ( defined($filesize) ) {
+        print CONF "#filesize:$filesize\n";
+    }
+    if ( defined($addlogo) ){
+        print CONF "#addlogo:$addlogo # THIS VALUE IS THE DURING TIME OF LOGO (in sec.)\n";
+    }
+    if ( defined($beginlogo) ){
+        print CONF "#beginlogo:$beginlogo\n";
+    }
+    if ( defined($poslogo) ){
+        print CONF "#poslogo:$poslogo\n";
+    }
+    if ( defined($dvdtitle) ){
+        print CONF "#dvdtitle:$dvdtitle # DO NOT MODIFY THIS LINE\n";
+    }
+    if ( defined($params) ) {
+        print CONF "#params:$params# YOU MUST KNOW WHAT YOU DO IN THIS LINE\n";
+    }
+    if ( defined($CLUSTER) ) {
+        print CONF "#CLUSTER:$CLUSTER # YOU CAN REMOVE BUT NOT MODIFY THIS LINE\n";
+    }
+    if ( defined($sub_title) ) {
+        print CONF "#sub_title:$sub_title\n";
+    }
+    if ( defined($deintl) ) {
+        print CONF "#deintl:$deintl\n";
+    }
+    if ( defined($ac2) ) {
+        print CONF "#ac2:$ac2\n";
     }
     close(CONF);
 
     print $DEBUG "<--- get_params\n";
-}
+} # end get params
 
 # ##################### Audio Input format ###################
 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.69 $
+# $Revision: 1.70 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -245,7 +245,7 @@ V2divx options (override ~/.V2divxrc variables)
 \t -S|--SUB_TITLE_opts 'value'          use 'value' as extsub transcode filter option
 \t -a|--default_audio_channel 'int'     use 'int' as default audiochannel
 \t -o|--output_audio 'value'            use 'value' as output audio format (ogg or mp3)
-\t -d9d5|--dvd9-to-dvd5                 converts the VOB files from the directory passed to the script to a 4.4GB MPEG-2 file that can be used in dvdauthor to create a DVD. Will use dvdauthor directly later to setup a simple movie
+\t --dvd9-to-dvd5                 converts the VOB files from the directory passed to the script to a 4.4GB MPEG-2 file that can be used in dvdauthor to create a DVD. Will use dvdauthor directly later to setup a simple movie
 
 You can interrupt the program anytime. To continue encoding, just run the script
 without parameters in the same directory.\n$RED\t You MUST NOT run V2divx from the /path/to/vobs directory.\n$NORM
@@ -3652,7 +3652,7 @@ GetOptions(
     'i|info'                    =>  \$INFO,
     'c|with-cluster'            =>  \$OKCLUSTER,
     't|test'                    =>  \$TEST,
-    'd9d5|dvd9-to-dvd5'         =>  \$DVD9TO5,
+    'dvd9-to-dvd5'         =>  \$DVD9TO5,
     # strings
     'D|directory=s'             => \$ROOT_DIRECTORY,
     's|source-video-format=s'   => \$SVIDEO_FORMAT,

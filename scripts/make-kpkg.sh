@@ -1,7 +1,7 @@
 #!/bin/bash
-# $Revision: 1.28 $
+# $Revision: 1.29 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Feb-19
+# Last modified: 2004-Jun-16
 #
 # DESCRIPTION:  an interactive wrapper to Debian's "make-kpkg"
 #               to build a custom kernel package using 
@@ -55,6 +55,10 @@ else
     export DISTCC_HOSTS="localhost www2"
 fi 
 
+CONCURRENCY_LEVEL=5                 # use more than one thread for make
+                                    # should detect from the number of
+                                    # hosts above
+
 FAKEROOT="fakeroot"
 
 MODULE_LOC="../modules/"            # modules are located in the 
@@ -73,7 +77,7 @@ IMAGE_TOP="../"                     # where to save the resulting
 
 export IMAGE_TOP ALL_PATCH_DIR PATCH_THE_KERNEL 
 export MODULE_LOC NO_UNPATCH_BY_DEFAULT 
-
+export CONCURRENCY_LEVEL
 if [ $1 -a $1 != "--help" ]; then
 
     if [ $2 ]; then

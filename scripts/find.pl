@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.11 $
+# $Revision: 1.12 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jul-06
+# Last modified: 2003-Jul-17
 #
 # DESC: finds a string in a set of files
 #
@@ -36,7 +36,7 @@ if (!$ARGV[0]) {
 
 my ($this_string,$f_pattern) = @ARGV;
 
-if ( $f_pattern =~ m(^\.) ) {
+if ( defined $f_pattern && $f_pattern =~ m(^\.) ) {
     print "WARNING: using a dot in file pattern can match too many files. Escape dots with '\.'.\n Waiting 5 seconds before continuing\n Press CTRL+C to abort script execution\n" ;
     sleep(5);
 }

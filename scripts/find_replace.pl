@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jul-14
+# Last modified: 2003-Jul-17
 #
 # BUGS: if replacement string contains invalid characters
 #       nothing gets done. Have to find a way to escape
@@ -40,7 +40,7 @@ if (!$ARGV[0] || !$ARGV[1] ) {
 
 my ($this_string,$that_string,$f_pattern) = @ARGV;
 
-if ( $f_pattern =~ m(^\.) ) {
+if ( defined $f_pattern && $f_pattern =~ m(^\.) ) {
     print "WARNING: using a dot in file pattern can match too many files. Escape dots with '\.'.\n Waiting 5 seconds before continuing\n Press CTRL+C to abort script execution\n" ;
     sleep(5);
 }

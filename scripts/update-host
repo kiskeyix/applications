@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.16 $
+# $Revision: 1.17 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Feb-28
 #
@@ -27,7 +27,7 @@ my $EXCLUDE= "172.16.1.250|as400";
 my @FILES=("bashrc.tar.bz2", "vimrc.tar.bz2", "muttrc.tar.bz2", "Applications.tar.bz2");
  
 ############## NO NEED TO MODIFY THESE #################
-my @hosts; # global variable to hold hosts
+my %hosts; # global multi-dimensional hash to store hosts' information
 my $VERBOSE=0;
 my $DEBUG=0;
 my $REMOVE_FILES=0;
@@ -38,16 +38,17 @@ my $NORM = "\033[0;39m";
 my $GREEN = "\033[0;32m";
 my $VERBOSE_ARGS="";
 my $WGET_ARGS="--continue --timestamping";
+my $HOST=undef;
 
 ## GET OPTIONS ##
 GetOptions(
     # flags
-    'debug'         =>  \$DEBUG,
-    'remove'        =>  \$REMOVE_FILES,
-    'verbose'       =>  \$VERBOSE,
-    'master'        =>  \$MASTER,
-    'local'         =>  \$LOCAL
-);
+    'D|debug'       =>  \$DEBUG,
+    'r|remove'      =>  \$REMOVE_FILES,
+    'V|verbose'     =>  \$VERBOSE,
+    'm|master'      =>  \$MASTER,
+    'l|local'       =>  \$LOCAL
+) and $HOST=shift;
 ## START SCRIPT ##
 
 if ( $VERBOSE )
@@ -118,64 +119,45 @@ if ( $MASTER )
     exit(0);
 }
 
+# update a single host and exit
+if ( $HOST )
+{
+    debug("Doing single host $HOST");
+    print STDERR ("WARNING! This host is in the excluded list\n") 
+    if ( grep(/$EXCLUDE/,$HOST) );
+    $hosts{$HOST}{alive}=-1; # initialize key
+    
+    if ( !$DEBUG )
+    {
+        print update_host($HOST); # prints error if any
+    } else {
+        debug("*** SKIPPED $HOST");
+    }
+    exit(0);
+}
+
+# do all hosts
 slurp_hosts($REMOTE_HOSTS_FILE);
 
-#print "\e[H\e[J"; # clear the screen
-
-foreach my $h ( @hosts )
+foreach my $h ( keys %hosts )
 {
     next if ( grep(/$EXCLUDE/,$h) );
-    my @failed = (); # array of failes that failed
-
-    #print "\e[H"; # return the cursor to the normal position
-
-    # we only care about IPs here:
-    if ( !$DEBUG && $h =~ /(\d+.\d+.\d+.\d+)/ )
+    if ( ! is_alive($h) )
     {
-        if ( ! is_alive($h) )
-        {
-            printf STDOUT ("%20s",$h);
-            print STDOUT (" is dead\n");
-            next;
-        }
-        $j=0;
-        # make sure the .backup and $TMP dir exists
-        system("ssh $h mkdir -p $TMP .backup ".$silent);
-        # make sure this signature file exists:
-        system("ssh $h touch .signaturerc ".$silent);
-        # copy and unpack files:
-        foreach my $i ( @FILES )
-        {
-            $j++;
-            print STDOUT "\r";
-            printf STDOUT ("%20s",$h); # host padded
-            system("scp $LOCAL_PATH/$i $h:$TMP/ ".$silent); 
-            my $cmd = "ssh $h command tar x".$VERBOSE_ARGS."jf '$TMP/$i'";
-            system($cmd.$silent);
-            if ( ! $? ) 
-            {
-                printf STDOUT ("|%-".$n_files."s|", "#" x $j); # progress
-            } else {
-                # last tar command failed?
-                # TODO Find a way to "remember" which file failed
-                printf STDOUT ("|%-".($n_files-($j-1))."s", "#" x ($j-1)); # progress
-                printf STDOUT ("%-".($j-1)."s|", "!" x 1); # progress
-                push(@failed,"$i");
-            }
-            if ( $REMOVE_FILES )
-            {
-                system("ssh $h command rm -f '$TMP/$i' ".$silent);
-            }
-        } 
-        print STDOUT ("\n$h These files failed: ".join ( " ",@failed )."\n") if ( $#failed > 0 );
-        print STDOUT "\n";
+        printf STDOUT ("%20s",$h);
+        print STDOUT (" is dead\n");
+        next;
+    }
+    if ( !$DEBUG )
+    {
+        print update_host($h); # prints error if any
     } else {
         # debugging 
         debug("*** SKIPPED $h");
     }
 }
-print "\n";
 
+# @desc slurps fields of a hosts file to a global hash: %hosts
 sub slurp_hosts
 {
     my $file = shift;
@@ -185,24 +167,43 @@ sub slurp_hosts
         chomp($_);
         if ( $_ gt "" && $_ !~ /^\s*#/ )
         {
-            push @hosts, split(/\s+/,$_);
+            if ( $_ =~ /(\d+.\d+.\d+.\d+)\s+(\w+)/,$_)
+            {
+                $hosts{$1}{ip}=$2;
+                $hosts{$1}{alive}=-1;
+            }
         }
     }
 }
 
+# @desc checks whether a given host is alive by pinging it. 
+#  pinging to a given host will be cached/saved for us so that we don't 
+#  have to test for a given host more than once.
+# @arg 1 $host string or ip representing a given host
+# @return 1 if true 0 if false
 sub is_alive
 {
     my $host = shift;
-    if ( $host )
+    my $ret = 0; # assume host is not alive
+
+#    no warnings;
+    if ( $host && $hosts{$host}{alive} == -1  )
     {
         # send 1 package of 8 bytes to $host and wait 2 seconds before
         # exiting
-        my $ret = qx/ping -c 1 -w 2 -s 8 $host/;
+        my $tmp_str = qx/ping -c 1 -w 2 -s 8 $host/;
+        # 0 when good
+        # 256 when not good
+        debug ("*** pinging $host returned $?");
+        # return the opposite of ping's return output
+        $ret = ( $? ) ? 0:1;
+        $hosts{$host}{alive} = $ret; # save for future reference
+    } elsif ( $hosts{$host}{alive} >= 0 ) {
+        debug ("*** no need to ping $host [".$hosts{$host}{alive}."]");
+        $ret = $hosts{$host}{alive};
     }
-    # 0 when good
-    # 256 when not good
-    debug ("*** pinging $host returned $?");
-    return ( $? ) ? 0:1; # return the opposite of ping's return output
+    #debug("is_alive returning $ret for $host");
+    return $ret;
 }
 
 sub which
@@ -229,3 +230,46 @@ sub debug
     print STDERR ("$RED $msg $NORM\n")  if ( $DEBUG );
 }
 
+# @desc do all needed steps to update a given host
+# @return error string if any errors were found
+sub update_host
+{
+    my $h = shift;
+    my $j=0;
+    my @failed = (); # array of failes that failed
+
+    # sanity check. make sure host is alive:
+    return "ERROR: host $h is dead\n" if ( ! is_alive($h) );
+
+    # make sure the .backup and $TMP dir exists
+    system("ssh $h mkdir -p $TMP .backup ".$silent);
+    # make sure this signature file exists:
+    system("ssh $h touch .signaturerc ".$silent);
+    # copy and unpack files:
+    foreach my $i ( @FILES )
+    {
+        $j++;
+        print STDOUT "\r";
+        printf STDOUT ("%20s",$h); # host padded
+        system("scp $LOCAL_PATH/$i $h:$TMP/ ".$silent); 
+        my $cmd = "ssh $h command tar x".$VERBOSE_ARGS."jf '$TMP/$i'";
+        system($cmd.$silent);
+        if ( ! $? ) 
+        {
+            printf STDOUT ("|%-".$n_files."s|", "#" x $j); # progress
+        } else {
+            # last tar command failed?
+            printf STDOUT ("|%-".($n_files-($j-1))."s", "#" x ($j-1)); # progress
+            printf STDOUT ("%-".($j-1)."s|", "!" x 1); # progress
+            push(@failed,"$i");
+        }
+        if ( $REMOVE_FILES )
+        {
+            system("ssh $h command rm -f '$TMP/$i' ".$silent);
+        }
+    } 
+    print STDOUT ("\n$h These files failed: ".join ( " ",@failed )."\n") if ( $#failed > 0 );
+    print STDOUT "\n";
+    # no errors:
+    return "";
+}

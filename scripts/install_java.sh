@@ -1,11 +1,11 @@
 #!/bin/sh
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Feb-17
+# Last modified: 2004-Mar-21
 #
 # DESCRIPTION: a simple debian script to install java from Sun. This is
 #               for java version 1.4.2 and up. You must this as root
-# USAGE: sudo $0
+# USAGE: sudo install_java.sh /path/to/j2re-version-linux-i586.bin
 # CHANGELOG:
 #
 
@@ -17,7 +17,7 @@ MOZILLA_ICON="$MOZILLA_DIR/icons/mozicon50.xpm" # icon for .desktop
 # by users when double click on .desktop
 MOZILLA_CMD_STR="#!/bin/sh\n BROWSER=$MOZILLA_DIR/$MOZILLA \n\$BROWSER -remote \"openURL(\$@, new-tab)\" 2>/dev/null || \$BROWSER \$@"
 
-MESSAGE="Please get the java binary from http://www.java.com and pass it to this installation as an argument. i.e. ./install_java j2re-version-linux-i586.bin"
+MESSAGE="Please get the java binary from http://www.java.com and pass it to this installation as an argument. i.e. ./install_java /path/to/j2re-version-linux-i586.bin"
 
 TMP_JAVA="$1"
 

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.17 $
+# $Revision: 1.18 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Oct-10
+# Last modified: 2004-Oct-24
 #
 # DESC: finds a string in a set of files
 #
@@ -111,6 +111,10 @@ sub is_binary
     # returns 1 if true
     my $file = shift;
     my $file_t = qx/file "$file"/;
+    if ( $file_t =~ m/text\s+executable/i )
+    {
+        return 0;
+    }
     if ( $file_t =~ m/elf|executable|data$/i )
     {
         return 1;

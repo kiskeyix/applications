@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.64 $
+# $Revision: 1.65 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -725,7 +725,7 @@ sub mkindex {
             ($file_name = $file_name) =~ s/^$THUMB_PREFIX//; # removes prefix
             # EXT is a global and so is THUMBNAIL
             print FILE ("<a class='pdlink' href='$HTMLDIR/$file_name.".$config{"$this_base"}{"ext"}."'>".
-                "<img class='pdimage' src='$THUMBNAIL/"."$this_file'></a>\n");
+                "<img class='pdimage' src='$THUMBNAIL/"."$this_file' border=0 alt='$file_name'></a>\n");
             print FILE ("\t</td>\n");
             if ($i<($TD-1)) {
                 $i++;
@@ -861,11 +861,11 @@ sub mkthumb {
             } # end if missing $CONFIG_FILE
 
             # read specific config file for this directory
-            if (! -f "$BASE/.nopixdir2htmlrc" && ! exists $config{$BASE} ) 
+            if (! -f "$BASE/.nopixdir2htmlrc" && ! exists $config{"$BASE"} ) 
             {
                 # change of base, reset two-dimensional array counter
                 print $LOGFILE "+ Reading config for $BASE\n";
-                # also init $config{$BASE} for us...
+                # also init $config{"$BASE"} for us...
                 init_config("$BASE");
             } # end if not nopixdir2htmlrc
             $total_directories++;
@@ -902,7 +902,7 @@ sub mkthumb {
         # end if thumbnail file
 
         # save pixname for the index.html file
-        push @{$pixfiles{$BASE}}, "$THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name";
+        push @{$pixfiles{"$BASE"}}, "$THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name";
         # update flags
         $LAST_BASE = $BASE;
         # update progressbar
@@ -1011,7 +1011,7 @@ sub thumb_html_files {
             # read specific config file for this directory
             if (! -f "$BASE/.nopixdir2htmlrc") 
             {
-                if  (! exists $config{$BASE} ) 
+                if  (! exists $config{"$BASE"} ) 
                 {
                     print $LOGFILE "+ Thumb_Html_Files Reading config for $BASE\n";
                     init_config("$BASE");
@@ -1029,8 +1029,8 @@ sub thumb_html_files {
             mkdir("$HTMLSDIR",0755);
         }
 
-        $current_html_file = "$HTMLSDIR/$file_name.".$config{$BASE}{"ext"};
-        $current_link = "$file_name.".$config{$BASE}{"ext"};
+        $current_html_file = "$HTMLSDIR/$file_name.".$config{"$BASE"}{"ext"};
+        $current_link = "$file_name.".$config{"$BASE"}{"ext"};
         if ( -f $current_html_file ){
             print $LOGFILE ": Overriding $current_html_file\n";
         } # end if not current_html_file
@@ -1040,13 +1040,20 @@ sub thumb_html_files {
         mydie("Couldn't write file $current_html_file","thumb_html_files");
 
         # start HTML
-        print FILE ($config{$BASE}{"header"}."\n");
+        print FILE ($config{"$BASE"}{"header"}."\n");
         # start table
-        print FILE ($config{$BASE}{"table"}."\n");
-        print FILE ("<tr><td>\n");
+        print FILE ($config{"$BASE"}{"table"}."\n");
+        print FILE ("<tr><td align='center'>\n<div align='center'>\n");
         # image here
-        print FILE ("<img src='../$pix_name'>\n");
-        print FILE ("</td></tr>\n<tr><td valign='bottom' align='center'><div align='center'>\n");
+        print FILE ("<img src='../$pix_name' alt='$file_name' border=0>\n");
+        print FILE ("</div></td></tr>\n<tr><td valign='bottom' align='center'><div align='center'>\n");
+        if ( 
+            $MENU_TYPE eq "modern" 
+            || $config{"$BASE"}{"menutype"} eq "modern" 
+        )
+        {
+            print FILE ("<a href='".$config{"$BASE"}{"uri"}."/".$MENU_NAME.".".$config{"$BASE"}{"ext"}."'>&lt;&lt;</a>\n");
+        }
         # backward link here
         if ( $last_html_file ne "this_is/dummy\string" 
             && -f $last_html_file 
@@ -1057,7 +1064,7 @@ sub thumb_html_files {
             print FILE ("&lt;==");
         }
         # home link here
-        print FILE (" | <a href='../$FILE_NAME.".$config{$BASE}{"ext"}."'>HOME</a> | \n");
+        print FILE (" | <a href='../$FILE_NAME.".$config{"$BASE"}{"ext"}."'>HOME</a> | \n");
 
         if ( -f $ls[$i+1] ) {
             $next_pix_name = "....";
@@ -1071,7 +1078,7 @@ sub thumb_html_files {
             $next_file_name = "";
             ($next_file_name = $next_pix_name) =~ s/$EXT_INCL_EXPR//gi;
             #print FILE ("==&gt;");
-            print FILE ("<a href='$next_file_name.".$config{$BASE}{"ext"}."'>==&gt;</a>\n");
+            print FILE ("<a href='$next_file_name.".$config{"$BASE"}{"ext"}."'>==&gt;</a>\n");
         } else {
             print FILE ("==&gt;");
             # TODO would be nice to jump to next directory in the
@@ -1182,8 +1189,8 @@ sub menu_file {
     {
         # create modern menu 
         # modern menu is a file, no --menu-only needed here
-        open(FILE, "> ".$ROOT_DIRECTORY."/".$MENU_NAME.".".$config{$ROOT_DIRECTORY}{"ext"}) 
-        or mydie("Couldn't write file $MENU_NAME.".$config{$ROOT_DIRECTORY}{"ext"}." to $ROOT_DIRECTORY","menu_file");
+        open(FILE, "> ".$ROOT_DIRECTORY."/".$MENU_NAME.".".$config{"$ROOT_DIRECTORY"}{"ext"}) 
+        or mydie("Couldn't write file $MENU_NAME.".$config{"$ROOT_DIRECTORY"}{"ext"}." to $ROOT_DIRECTORY","menu_file");
         print FILE ($config{"$ROOT_DIRECTORY"}{"header"}."\n");
         print FILE ($config{"$ROOT_DIRECTORY"}{"table"}."\n");
         # loop
@@ -1191,12 +1198,12 @@ sub menu_file {
         while($x>0){
             # temporarily turn off warnings
             no warnings;
-            if ($config{$ROOT_DIRECTORY}{"tr"}=~m/\%+bgcolor\%+/i){
+            if ($config{"$ROOT_DIRECTORY"}{"tr"}=~m/\%+bgcolor\%+/i){
                 # alternate colors for TR?
                 if (($j % 2) == 0){
-                    ($tmp_tr = $config{$ROOT_DIRECTORY}{"tr"}) =~ s/\%+bgcolor\%+/bgcolor=#efefef/i;
+                    ($tmp_tr = $config{"$ROOT_DIRECTORY"}{"tr"}) =~ s/\%+bgcolor\%+/bgcolor=#efefef/i;
                 } else {
-                    ($tmp_tr = $config{$ROOT_DIRECTORY}{"tr"}) =~ s/\%+bgcolor\%+//i;
+                    ($tmp_tr = $config{"$ROOT_DIRECTORY"}{"tr"}) =~ s/\%+bgcolor\%+//i;
                 }
                 print FILE ($tmp_tr."\n");
             } else {
@@ -1212,7 +1219,7 @@ sub menu_file {
                 # if link exists, otherwise leave it blank
                 # TODO there is a better way to do this... find it...
                 ($ts = $ls[$i]) =~ 
-                s#(.*)/$FILE_NAME.$config{$ROOT_DIRECTORY}{"ext"}#$1#gi;
+                s#(.*)/$FILE_NAME.$config{"$ROOT_DIRECTORY"}{"ext"}#$1#gi;
                 if ( $nautilus_root gt "" ) {
                     ( $ls[$i] = $ls[$i] ) =~ s,$nautilus_root/,,g;
                     ( $ts = $ts ) =~ s,$nautilus_root/*,,g;
@@ -1235,7 +1242,7 @@ sub menu_file {
                 } else {
                     print LOGFILE "$ts has no thumbnail [$THUMBNAIL] directory. Have you executed $0 without --menu-only or --menu-type='modern' yet?";
                 }
-                print FILE ("<a href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/$ls[$i]' target='_top'><img src='$ts/$THUMBNAIL/$image' border=0 alt='$tmp_ts album'></a></td>".$config{"$ROOT_DIRECTORY"}{"td"}."<a href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/$ls[$i]' target='_top'>$IMG $tmp_ts</a>\n");
+                print FILE ("<a href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/$ls[$i]' target='_top'><img src='$ts/$THUMBNAIL/$image' border=0 alt='$tmp_ts album'></a></td>\n\t".$config{"$ROOT_DIRECTORY"}{"td"}."<a href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/".$ls[$i]."' target='_top'>$IMG $tmp_ts</a>\n");
                 print FILE ("\t</td>\n</tr>\n");
                 $i++;
                 $x--;
@@ -1248,15 +1255,15 @@ sub menu_file {
         close(FILE);
 
         # return a menu that contains a link back to menu.$EXT
-        $MENU_STR .= $config{$ROOT_DIRECTORY}{"table"}."\n<tr>\n\t<td>\n";
-        $MENU_STR .= "<a href='$MENU_NAME".$config{"$ROOT_DIRECTORY"}{"ext"}."'>Back to Menu</a>\n";
+        # Note that we use the URI here and not try to guess the relative path...
+        $MENU_STR .= $config{"$ROOT_DIRECTORY"}{"table"}."\n<tr>\n\t<td align='center'>\n<div align='center'>\n";
+        $MENU_STR .= "<a href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/".$MENU_NAME.".".$config{"$ROOT_DIRECTORY"}{"ext"}."'>Back to Menu</a>\n</div>\n";
         $MENU_STR .= "\t</td>\n</tr>\n</table>\n";
-
     } elsif ( $MENU_TYPE eq "classic" ) {
 
 
         if ( $MENUONLY > 0 ) {
-            open(FILE, "> ".$ROOT_DIRECTORY."/".$MENU_NAME.".".$config{$ROOT_DIRECTORY}{"ext"}) 
+            open(FILE, "> ".$ROOT_DIRECTORY."/".$MENU_NAME.".".$config{"$ROOT_DIRECTORY"}{"ext"}) 
             or mydie("Couldn't write file $MENU_NAME.".$config{"$ROOT_DIRECTORY"}{"ext"}." to $ROOT_DIRECTORY","menu_file 4");
         }
 
@@ -1280,9 +1287,9 @@ sub menu_file {
             {
                 if ( $MENUONLY > 0 ) 
                 {
-                    print FILE ($config{$ROOT_DIRECTORY}{"table"}."\n");
+                    print FILE ($config{"$ROOT_DIRECTORY"}{"table"}."\n");
                 }
-                $MENU_STR .= $config{$ROOT_DIRECTORY}{"table"}."\n";
+                $MENU_STR .= $config{"$ROOT_DIRECTORY"}{"table"}."\n";
                 # print all links now
                 my $tmp_tr = ""; # used to color the rows
                 while($x>0){
@@ -1293,29 +1300,29 @@ sub menu_file {
                     # with the str portion (see else)
                     #
                     if ( $MENUONLY > 0 ) {
-                        if ($config{$ROOT_DIRECTORY}{"tr"}=~m/\%+bgcolor\%+/i){
+                        if ($config{"$ROOT_DIRECTORY"}{"tr"}=~m/\%+bgcolor\%+/i){
                             if (($j % 2) == 0){
-                                ($tmp_tr = $config{$ROOT_DIRECTORY}{"tr"}) =~ s/\%+bgcolor\%+/bgcolor=#efefef/i;
+                                ($tmp_tr = $config{"$ROOT_DIRECTORY"}{"tr"}) =~ s/\%+bgcolor\%+/bgcolor=#efefef/i;
                             } else {
-                                ($tmp_tr = $config{$ROOT_DIRECTORY}{"tr"}) =~ s/\%+bgcolor\%+//i;
+                                ($tmp_tr = $config{"$ROOT_DIRECTORY"}{"tr"}) =~ s/\%+bgcolor\%+//i;
                             }
 
                             print FILE ($tmp_tr."\n");
 
                         } else {
-                            print FILE ($config{$ROOT_DIRECTORY}{"tr"}."\n");
+                            print FILE ($config{"$ROOT_DIRECTORY"}{"tr"}."\n");
                         }
                         for ($y=1;$y<=$menu_td;$y++){
                             # close the TD tags
                             if ($y > 1) { 
                                 print FILE ("\t </td> \n"); 
                             }   
-                            print FILE ("\t".$config{$ROOT_DIRECTORY}{"td"}."\n");
+                            print FILE ("\t".$config{"$ROOT_DIRECTORY"}{"td"}."\n");
 
                             if ( $ls[$i] ne "" ) {
                                 # if link exists, otherwise leave it blank
                                 # TODO there is a better way to do this... find it...
-                                ($ts = $ls[$i]) =~ s#(.*)/$FILE_NAME.$config{$ROOT_DIRECTORY}{"ext"}#$1#gi;
+                                ($ts = $ls[$i]) =~ s#(.*)/$FILE_NAME.$config{"$ROOT_DIRECTORY"}{"ext"}#$1#gi;
                                 # from nautilus one cannot pass arguments
                                 # "--menuonly" but... just to keep things
                                 # consistent...
@@ -1334,9 +1341,9 @@ sub menu_file {
 
                                 my $tmp_ts = str_truncate($ts);
 
-                                $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='".$config{$ROOT_DIRECTORY}{"new"}."' alt='new'>":""; # if .new file
+                                $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='".$config{"$ROOT_DIRECTORY"}{"new"}."' alt='new'>":""; # if .new file
                                 $ts = ucfirst($tmp_ts);
-                                print FILE ("<a href='".$config{$ROOT_DIRECTORY}{"uri"}."/$ls[$i]' target='_top'>$IMG $ts</a>\n");
+                                print FILE ("<a href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/$ls[$i]' target='_top'>$IMG $ts</a>\n");
                             } else {
                                 print FILE ("&nbsp;");
                             }
@@ -1348,28 +1355,28 @@ sub menu_file {
                     } else {
                         # general menu routine
                         # TODO cleanup
-                        if ($config{$ROOT_DIRECTORY}{"tr"}=~m/\%+bgcolor\%+/i){
+                        if ($config{"$ROOT_DIRECTORY"}{"tr"}=~m/\%+bgcolor\%+/i){
                             if (($j % 2) == 0){
-                                ($tmp_tr = $config{$ROOT_DIRECTORY}{"tr"}) =~ s/\%+bgcolor\%+/bgcolor=#efefef/i;
+                                ($tmp_tr = $config{"$ROOT_DIRECTORY"}{"tr"}) =~ s/\%+bgcolor\%+/bgcolor=#efefef/i;
                             } else {
-                                ($tmp_tr = $config{$ROOT_DIRECTORY}{"tr"}) =~ s/\%+bgcolor\%+//i;
+                                ($tmp_tr = $config{"$ROOT_DIRECTORY"}{"tr"}) =~ s/\%+bgcolor\%+//i;
                             }
                             $MENU_STR .= $tmp_tr."\n";
                         } else {
-                            $MENU_STR .= $config{$ROOT_DIRECTORY}{"tr"}."\n";
+                            $MENU_STR .= $config{"$ROOT_DIRECTORY"}{"tr"}."\n";
                         }
                         for ($y=1;$y<=$menu_td;$y++){
                             # close the TD tags
                             if ($y > 1) { 
                                 $MENU_STR .= "\t </td> \n";
                             }   
-                            $MENU_STR .= "\t".$config{$ROOT_DIRECTORY}{"td"}."\n";
+                            $MENU_STR .= "\t".$config{"$ROOT_DIRECTORY"}{"td"}."\n";
                             # menu entries
                             if ( $ls[$i] ne "" ) {
                                 # if link exists, otherwise leave it blank
                                 # TODO there is a better way to do this... find it...
-                                ( $ts = $ls[$i]) =~ s,(.*)/$FILE_NAME.$config{$ROOT_DIRECTORY}{"ext"},$1,gi;
-                                $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='".$config{$ROOT_DIRECTORY}{"new"}."' alt='new'>":""; # if .new file
+                                ( $ts = $ls[$i]) =~ s,(.*)/$FILE_NAME.$config{"$ROOT_DIRECTORY"}{"ext"},$1,gi;
+                                $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='".$config{"$ROOT_DIRECTORY"}{"new"}."' alt='new'>":""; # if .new file
                                 # if number of characters is greater than $STR_LIMIT
                                 # truncate $ts to a few characters.
                                 if ( $nautilus_root gt "" ) {
@@ -1387,7 +1394,7 @@ sub menu_file {
                                 $ts = ucfirst($tmp_ts);
                                 # $ls tends to hold the whole filename path+filename
                                 # we don't care about the whole path here...
-                                $MENU_STR .= "<a href='".$config{$ROOT_DIRECTORY}{"uri"}."/$ls[$i]' target='_top'>$IMG $ts</a>\n";
+                                $MENU_STR .= "<a href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/$ls[$i]' target='_top'>$IMG $ts</a>\n";
                             } else {
                                 $MENU_STR .= "&nbsp;";
                             }
@@ -1408,8 +1415,8 @@ sub menu_file {
                 print $LOGFILE (": Not a single link found\n");
             }
             # see previous notes on header
-            if ( $MENUONLY > 0 && $config{$ROOT_DIRECTORY}{"menuheader_footer"} > 0) {
-                print FILE ($config{$ROOT_DIRECTORY}{"footer"}."\n");
+            if ( $MENUONLY > 0 && $config{"$ROOT_DIRECTORY"}{"menuheader_footer"} > 0) {
+                print FILE ($config{"$ROOT_DIRECTORY"}{"footer"}."\n");
             } 
             if ( $MENUONLY > 0 ) {
                 close(FILE);

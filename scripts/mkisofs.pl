@@ -10,8 +10,18 @@
 use strict;
 $|++;
 
+use POSIX qw(ceil getcwd); # ceil()
+use File::Spec::Functions qw(splitpath curdir updir catfile catdir splitpath);
+use File::stat qw( stat );
+use File::Temp qw( tmpnam );
+
 my $DEBUG=0;
 my $VOLIDMAXLENGTH=32;
+my $FILENAMEMAXLENGTH=60;
+my $ISOLIMIT=680; # in MB
+
+my ($logfh,$logfile) = tmpnam();
+open ($logfh,">$logfile");
 
 # You could get only the selected files from nautilus, but
 # it's better to let the user put all those files in 
@@ -20,12 +30,8 @@ my $VOLIDMAXLENGTH=32;
 
 my $folder = $ARGV[0];
 chomp($folder); # remove end-line
-my $volumeid="";
-# Volume id needs no spaces or other characters
-( $volumeid = $folder ) =~ s,[\s-]+,_,g;
-# length should be less than $VOLIDMAXLENGTH
-#my $str_length = length ($volumeid);
-$volumeid = substr($volumeid,0,$VOLIDMAXLENGTH);
+$folder =~ s#/$##; # remove trailing slash
+my $volumeid = do_volid("$folder");
 # put a .iso extension
 my $name = $folder.".iso";
 my $nice =  ( -x "/usr/bin/nice" ) ? "/usr/bin/nice":"";
@@ -38,17 +44,99 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
     die("Directory is not valid DVD tree. Missing $folder/VIDEO_TS") if ( !-d "$folder/VIDEO_TS");
     mkdir("$folder/AUDIO_TS"); # we can afford to try this
     # fix permissions
-    m_system("chmod 0555 '$folder'");
-    m_system("$nice find '$folder' -type d -exec chmod 0555 {} \\; ");
-    m_system("$nice find '$folder' -type f -exec chmod 0444 {} \\; ");
+    m_system("chmod 0555 '$folder'",0);
+    m_system("$nice find '$folder' -type d -exec chmod 0555 {} \\; ",0);
+    m_system("$nice find '$folder' -type f -exec chmod 0444 {} \\; ",0);
     # make iso
-    m_system("$nice mkisofs -dvd-video -udf -o '$name' -V '$volumeid' '$folder'");
+    m_system("$nice mkisofs -dvd-video -udf -o '$name' -V '$volumeid' '$folder'",1);
 } else {
-    m_system("$nice mkisofs -J -r -v -o '$name' -V '$volumeid' '$folder' ");
+    # making regular ISO
+    my $temp = "$folder-tmp";
+    die ("** Directory $temp exists. Please remove it before continuing. ** ") 
+        if ( -d "$temp" );
+
+    my $i = 1; # dummy counter
+    my $nfolder = $folder."$i";
+    my $size = 0; # current size of CD ISO
+    
+    my $rootdir = getcwd();
+    # make file list
+    my $fullpath = catdir($rootdir,$folder);
+    my @files = find_files( $fullpath );
+    
+    mkdir("$temp");
+    chdir("$temp");
+
+    mkdir("$nfolder"); # $name-tmp/$nfolder
+
+    foreach my $f (@files)
+    {
+        $size += get_size("$f"); # gets size in megabytes
+        print STDOUT ("Current file $f \nCurrent Size $size\n") 
+            if ( $DEBUG > 0 );
+        
+        my ($vol,$basedir,$new_f) = splitpath( $f );
+        
+        my $nbasedir = $basedir;
+        # makes relative path
+        $nbasedir =~ s#\Q$fullpath##;
+        $nbasedir = catdir($nfolder,$nbasedir);
+        m_system ( "mkdir -p \"$nbasedir\"",1 ); # cheat!
+
+        # clean up new filename:
+        $new_f =~ s#\s+#_#; # replace spaces with _
+        $new_f =~ s#_+#_#; # remove excessive _
+        $new_f =~ s#\W+##; # remove non-word char [^0-9a-zA-Z]
+        $new_f  =~ s#^(.{1,$FILENAMEMAXLENGTH)\.(.*)$#$1.$2#; 
+        $new_f = catfile($nbasedir,$new_f);
+        symlink("$f","$new_f") or die "Symlink failed:\n  '$f -> $new_f'\n $! \n";
+        do_log($f);
+        if ( $size >= $ISOLIMIT )
+        {
+            print STDOUT ("Making CD ISO of size ".$size."MB\n");
+            m_system("$nice mkisofs -f -J -r -v -o '$name' -V '$volumeid' '$folder' ",1);
+            $size = 0; # reset size
+            $i++;
+            $nfolder = $folder."$i";
+            $name = $nfolder.".iso";
+            $volumeid = do_volid("$nfolder");
+            print STDOUT "Making new folder $nfolder for $name with volume id $volumeid\n";
+            mkdir ($nfolder);
+            do_log("#==mark== $nfolder");
+            #goto END; # FIXME
+        }
+    }
+    if ( $size > 0 )
+    {
+        my $res = prompt ("Do you want to make ISO of remaining size $size MB ($nfolder|$name)? [y/N]");
+        if ( $res eq "y" )
+        {
+            print STDOUT ("Making CD ISO of size ".$size."MB\n");
+            m_system("$nice mkisofs -f -J -r -v -o '$name' -V '$volumeid' '$folder' ",1);
+        }
+    }
+    # cleanup
+    chdir($rootdir);
+    print "Current directory ".getcwd()."\n";
+    if ( prompt ("Do you want to delete temporary dir '$temp'? [y/N] ") eq "y" )
+    {
+        print STDOUT "Deleting '$temp' and its contents\n";
+        m_system("rm -fr '$temp'",1);
+    } else {
+        print STDOUT "++ Remember to delete '$temp' when done ++\n";
+    }
 }
+close ($logfh);
+if ( prompt ("Remove temporary log file $logfile? [y/N] ") eq "y" )
+{
+    unlink ($logfile);
+    print STDOUT ("++ Removed log file $logfile ++\n");
+}
+
 sub m_system
 {
     my $cmd = shift;
+    my $die = shift;
     if ( $DEBUG )
     {
         print STDOUT $cmd."\n";
@@ -57,7 +145,77 @@ sub m_system
     if ( system($cmd) )
     {
         print STDERR $!."\n";
+        if ( $die > 0 ) 
+        {
+            die("Bailing out\n");
+        }
     }
+}
+
+sub find_files 
+{
+    my $dir = shift;
+    if ( ! -d "$dir" ) { return; }
+    my @ret = ();
+    my $find = "find $dir -follow ".
+    #"\\( ".
+          "  \\( -type f -o -type l \\) ". # -a
+          #"  \\( -name \\*mp3 -o -name \\*MP3 \\) -a ".
+          #"  \\( ".
+          #"    \! \\( $prune \\) ".
+          #"  \\) ".
+#	  "\\) ".
+	  " -print ";
+    my $files = qx($find);
+    @ret = split(/\n/,$files); 
+    return @ret;
+}
+
+sub get_size
+{
+    my $file = shift;
+    my $stat = stat("$file");
+    my $mb = POSIX::ceil(($stat->size / 1024)/1024); 
+    #print STDOUT ($stat->size." = ".$mb." ".$file."\n");
+    return $mb;
+}
+
+sub do_log
+{
+    my $l = shift;
+    print $logfh "$l\n";
+}
+
+sub is_in_log
+{
+    my @lines = <$logfh>;
+    my $matched = 0;
+    if ( $matched = grep(@lines,shift) ) 
+    {
+        return 1;
+    } 
+    return 0;
+}
+
+sub do_volid
+{
+    my $volid = shift;
+    # Volume id needs no spaces or other characters
+    $volid =~ s,[\s-]+,_,g;
+    # length should be less than $VOLIDMAXLENGTH
+    #my $str_length = length ($volumeid);
+    $volid = substr($volid,0,$VOLIDMAXLENGTH);
+    return $volid;
+}
+
+sub prompt
+{
+    #@param 0 string := question to prompt
+    #returns answer
+    print STDOUT "@_";
+    my $rep= <STDIN>;
+    chomp($rep);
+    return $rep;
 }
 
 #eof

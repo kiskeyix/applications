@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.12 $
+# $Revision: 1.13 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
 #               Dominique CARON <domiATlpm.univ-montp2.fr> 
@@ -1233,7 +1233,7 @@ sub calculate_nbrframe
     $tot_frames = $1;
 
     $info=`transcode -i $vobpath -c 1-2 2> /dev/null` or mydie "Problem when running \'tcprobe -i $vobpath\'";
-    $info =~ m,V: encoding fps     \| (\d+\.\d+)\n,;
+    $info =~ m,V: encoding fps[^\|]*\| (\d+\.\d+).*,;
     $FPS=$1;
 
     $nbr_frames= floor($tot_frames - ($deb_sec+$last_sec)*$FPS);

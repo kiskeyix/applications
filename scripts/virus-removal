@@ -1,0 +1,7 @@
+#!/bin/sh
+# by Luis Mondesi < lemsx1@gmail.com >
+# 
+if [ -d "/mnt/windows" ]; then
+	echo "Removing Virus from /mnt/windows"
+	/usr/bin/clamscan --unzip --unrar --arj --unzoo --lha --jar --tar --deb --tgz --remove --recursive /mnt/windows
+fi

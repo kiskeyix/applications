@@ -1,0 +1,12 @@
+[Desktop Entry]
+Encoding=UTF-8
+Version=1.0
+Type=Application
+Exec=/usr/local/bin/virus-removal
+TryExec=
+Icon=/usr/share/pixmaps/gnome-spider.png
+X-GNOME-DocPath=
+Terminal=true
+Name[en_US]=Virus Removal
+GenericName[en_US]=clamav
+Comment[en_US]=Removes virus from /mnt/windows

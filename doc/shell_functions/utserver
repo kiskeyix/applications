@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jan-05
 #
@@ -47,7 +47,7 @@ case "$1" in
     --make-pidfile --pidfile $PID \
     --verbose --exec $DAEMON $CMDLINE || echo -n "<Failed> "
     echo -n "$NAME"
-    if [ -f "$PID" -a "$UID" -eq 0 ]; then
+    if [ "$UID" -eq 0 ]; then
         # shutdown ftp server now
         echo -e "\nShutting down ftp server"
         $FTPSHUT now

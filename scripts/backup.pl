@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.18 $
+# $Revision: 1.19 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jul-06
 #
@@ -451,10 +451,10 @@ sub do_file_ary {
 }
 
 sub process_file {
-    my $base_name = basename($_);
+    #my $base_name = basename($_);
     if ( 
-        -f $_ && 
-        $base_name !~ m,$CONFIG{"EXCLUDES"},g
+        $_ !~ m,$CONFIG{"EXCLUDES"},g &&
+        -f $_ 
     ) {
         push @tmp_files,clean("$_") ;
         

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.28 $
+# $Revision: 1.29 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -17,6 +17,11 @@
 #
 # TODO:
 #   SEE TODO FILE
+#   
+#  HACKING: Warning
+#   Du to TELECINE $deintl MUST Stay the first transcode filter ( -J opt)
+#   Added new filter with the form
+#   $new_filter=" thefilter=options,";  ( with the comma at the end )
 
 use POSIX;
 use Env qw(HOME);
@@ -148,6 +153,7 @@ $GREEN="\033[0;32m";
 $NORM="\033[0;39m";
 $MAJOR=0;
 $MINOR=6;
+$VFORMAT="PAL";   # Default video format
 
 #  Functions Declarations
 sub mydie;
@@ -462,7 +468,7 @@ sub tv_recorder
         
     if ( $qual==1 )
     {
-        $sys=sprintf("transcode -i $VOBPATH/only_video.mpeg -p $VOBPATH/only_audio.avi -x yuv4mpeg,mp3 -R 1,tmp/Video.log  -y $DIVX $DIVX_OPT -w %d,250 -o /dev/null -u 100 -J dnr,$deintl,32detect=force_mode=3",$bitrate);
+        $sys=sprintf("transcode -i $VOBPATH/only_video.mpeg -p $VOBPATH/only_audio.avi -x yuv4mpeg,mp3 -R 1,tmp/Video.log  -y $DIVX $DIVX_OPT -w %d,250 -o /dev/null -u 100 -J $deintl,32detect=force_mode=3,dnr",$bitrate);
         pinfo("\t\tEncoding  Pass One \n");
         print $DEBUG "+ $sys\n";
         if ( -e "tmp/pass1_done" )
@@ -647,8 +653,9 @@ sub makelogo
     }
     pinfo("$v2d\t Making Logo\n");
     $fparams="$params -c $from_frames-$synclogo";
-    $add_logo=",logo=file=$LOGO:posdef=$poslogo:rgbswap=$RGBSWAP:range=$start_frames_logo-$end_frames_logo";
-    $filter="${add_logo}${deint}${sub_title},hqdn3d";
+    $fparams =$fparams." -M 2 " if ( $VFORMAT eq "NTSC" );
+    $add_logo="logo=file=$LOGO:posdef=$poslogo:rgbswap=$RGBSWAP:range=$start_frames_logo-$end_frames_logo,";
+    $filter=$deint.$add_logo.$sub_title.",hqdn3d";
     audiorescale;
     if ( ! -e "tmp/logopass1.done")
     {
@@ -999,6 +1006,8 @@ sub printinfo
         print "High" if ( $qual==1);
         print "Normal"  if ( $qual==2);
         print $NORM."\n";
+    }else{
+        print $v2d."   V:\tVideo input Format:\t(1)| $VFORMAT\n";
     }
     print $v2d."   V:\tVideo Output format:\t(1)| $DIVX\n";
     print $v2d."   V:\tVideo Input interlaced:\t   | ";
@@ -1008,6 +1017,8 @@ sub printinfo
         print $v2d."   V:\tDeinterlaced with:\t(2)| ";
         print "MPlayer postproc\n" if ( $deintl =~ m,pp, );
         print "YUVdenoise \n" if ( $deintl =~ m,yuvdenoise,); 
+        print "Smartdeinter \n" if ( $deintl =~ m,smartdeinter,); 
+        print "ivtc \n" if ( $deintl =~ m,ivtc,); 
         print "-I 3\n" if ($params=~ m,-I 3, )
     } else {
         print "NO\n";
@@ -1019,7 +1030,7 @@ sub printinfo
     {
         $start_frames_logo=floor(($deb_sec+$beginlogo)*$FPS);
         $end_frames_logo=floor($addlogo*$FPS+$start_frames_logo);
-        $add_logo=",logo=file=$LOGO:posdef=$poslogo:rgbswap=$RGBSWAP:range=$start_frames_logo-$end_frames_logo";
+        $add_logo="logo=file=$LOGO:posdef=$poslogo:rgbswap=$RGBSWAP:range=$start_frames_logo-$end_frames_logo,";
         $endlogo=$beginlogo+$addlogo;
         print  $v2d."   V:\tLogo starting time:\t(2)| $beginlogo s.\n";
         print  $v2d."   V:\tLogo ending time:\t(2)| $endlogo s.\n";
@@ -1071,7 +1082,7 @@ sub printinfo
     print $v2d." A/V:\tFinal AVI file name:\t   | $RED$dvdtitle$NORM.avi\n";
     print  $DEBUG $v2d."   T:\tTrcode main parameters:\t(2)| $params\n";
     $subtitle=$sub_title if ( $sub_title =~ m,extsub,); # Bug
-    my $filter=$add_logo.$deintl.$subtitle;
+    my $filter=$deintl.$add_logo.$subtitle;
     print $DEBUG $v2d."   T:\tOptional Filters:\t(2)| $filter\n";
     print "\n";
     print "(1)This value can be modify in your $userconfigfile\n";
@@ -1484,6 +1495,15 @@ sub create_extract
     $info=`transcode -i $VOBPATH -c 1-2 2> /dev/null` or mydie "Problem when running \'transcode -i $VOBPATH \'";
     $info =~ m,V:\s+encoding\s+fps.*\|\s+(\d+\.\d+),;
     my($FPS)=$1;
+    if ( $FPS =~ m,29\.97, )
+    {
+       print(" Is this Movie a NTSC TELECINE movie (MPlayer is your friend to know that)?[y|N]");
+      my $rep=<STDIN>;
+        chomp($rep);
+        $TELECINE=1 if ( $rep eq "y" || $rep eq "Y" );
+    }
+    $VFORMAT="NTSC" if ( $FPS =~ m,2[39]\.9, );
+
     if ( $NOAUDIO == 1  || $need_time == 1 )  
     {
         # || $in_video_magic eq 'mpeg2'(OK V=mpeg2,A=mp3.mpg)  
@@ -1585,9 +1605,17 @@ sub calculate_nbrframe
     ($info =~ m,V: (\d+) frames,) or mydie "Unable to find number of frames to encode in $LOG" ;
     $tot_frames = $1;
 
-    $info=`transcode -i $VOBPATH -c 1-2 2> /dev/null` or mydie "Problem when running \'tcprobe -i $VOBPATH\'";
+    $info=`transcode -i $VOBPATH -c 1-2 2> /dev/null` or mydie "Problem when running \'transcode -i $VOBPATH\'";
     $info =~ m,V: encoding fps[^\|]*\| (\d+\.\d+).*,;
     $FPS=$1;
+    if ( $FPS =~ m,29.97, && ! defined $TELECINE )
+    {
+       print(" Is this Movie a NTSC TELECINE movie (MPLayer is your friend to know that)?[y|N]");
+       my $rep=<STDIN>;
+        chomp($rep);
+        $TELECINE=1; 
+   }
+    $VFORMAT="NTSC" if ( $FPS =~ m,2[39]\.9, );
 
     $nbr_frames= floor($tot_frames - ($deb_sec+$last_sec)*$FPS);
     print $DEBUG "Number of frames: $nbr_frames\n";
@@ -1715,12 +1743,12 @@ sub aviencode
             print("*** SEQ UNIT = $i ********\n***  Cluster NODE number : $node ******* \n")  if (  $CLUSTER ne "NO" );
             if ( $addlogo && $i == 0 && $CLUSTER eq "NO" )
             {
-                $add_logo=",logo=file=$LOGO:posdef=$poslogo:rgbswap=$RGBSWAP:range=$start_frames_logo-$end_frames_logo";
+                $add_logo="logo=file=$LOGO:posdef=$poslogo:rgbswap=$RGBSWAP:range=$start_frames_logo-$end_frames_logo,";
             } else {
                 $add_logo="";
             }
             $subtitle=$sub_title if ( $sub_title =~ m,extsub,);  # Bug 
-            $filter=$add_logo.$deintl.$subtitle.",hqdn3d";# Use now hqdn3d filter                        
+            $filter=$deintl.$add_logo.$subtitle.",hqdn3d";# Use now hqdn3d filter                        
             # WE NEED the next 4 lines  because in non cluster mode we do not need $stream_unit value, 
             # And WE want encode all the sequences unit (so, no -S option) .
             if ( $stream_unit != 0 )
@@ -1742,6 +1770,9 @@ sub aviencode
             $audio_format="" if ( $audio_format eq pcm );
             $audio_format="vob" if ( $in_video_codec eq vob );
 
+            # Add NTSC demuxer opts
+            $fparams =$fparams." -M 2" if ( $VFORMAT eq "NTSC" );
+            $fparams =$fparams." -M 0 -f 23.976" if ( $deintl =~ m,ivtc,);
 
             # And Now ... Let the Rolling Stones
 
@@ -1750,7 +1781,7 @@ sub aviencode
                 unlink("tmp/2-${dvdtitle}${node}_${i}.finish");
                 unlink ("tmp/1-${dvdtitle}${node}_${i}.PB");
                 pinfo("$v2d\t Encode: $VOBPATH Pass One ....\n");
-                $sys = "transcode -i $VOBPATH $stream_opt $clust_percent $fparams -w $bitrate,$keyframes -J astat=\"tmp/astat\"$filter -y $DIVX,null $DIVX_OPT -x $in_video_codec,$audio_format $VID_OPT -R 1,tmp/$DIVX.${dvdtitle}${node}_${i}.log -o /dev/null"; 
+                $sys = "transcode -i $VOBPATH $stream_opt $clust_percent $fparams -w $bitrate,$keyframes -J ${filter},astat=\"tmp/astat\" -y $DIVX,null $DIVX_OPT -x $in_video_codec,$audio_format $VID_OPT -R 1,tmp/$DIVX.${dvdtitle}${node}_${i}.log -o /dev/null"; 
                 print $INFO "$sys\n";
                 my $pid = fork();
                 mydie "couldn't fork" unless defined $pid;
@@ -2175,6 +2206,14 @@ sub get_params
     if ( defined($ac2) ) {
         print CONF "#ac2:$ac2\n";
     }
+    if ( defined($VFORMAT) ) {
+        print CONF "#VFORMAT:$VFORMAT\n";
+    }
+    if ( defined($TELECINE) ) {
+        print CONF "#TELECINE:$TELECINE\n";
+    }
+
+
     close(CONF);
 
     print $DEBUG "<--- get_params\n";
@@ -2405,6 +2444,7 @@ sub zooming
 
     ( $probe =~ m,aspect ratio: (\d+):(\d+).*,) or ( $probe =~ m,frame size: -g (\d+)x(\d+).*,) or mydie "Unable to find Image Aspect ratio";
     $aspect_ratio=$1/$2;
+    print $DEBUG " PARAMS = $params\n";
     $params =~ m/-j (\d+),(\d+).*/;
     $tb=$1;
     $lr=$2;
@@ -2490,7 +2530,7 @@ sub zooming
         pinfo("$v2d\t Slow Zooming is necessary:\t\t   | NO\n") if ( ! -e "tmp/cluster.args");
         $Zoom_mode="B";
     } else {
-        pinfo("$v2d\tt Slow Zooming is necessary:\t\t   |$RED YES\n") if ( ! -e "tmp/cluster.args");
+        pinfo("$v2d\t Slow Zooming is necessary:\t\t   |$RED YES\n") if ( ! -e "tmp/cluster.args");
         $Zoom_mode="Z";
     }
     sleep(1);
@@ -2640,6 +2680,7 @@ sub config
         a_bitrate;
     }
 
+    $params = $good_audio;
 
     #****************CROPPING TOP/BOTTOM ***********************
     findclip;
@@ -2720,6 +2761,7 @@ sub config
             }
         }
     }
+    $params = $params." -j $tb,$lr";
 
     #************************* SUBTITLE ***********************
     $st=20;
@@ -2795,7 +2837,7 @@ sub config
                 }
                 $sub_title="SRT_${st}_${stlang}";
             } else {
-                $sub_title=",extsub=$st:$tb:0:1:$EXTSUB";
+                $sub_title="extsub=$st:$tb:0:1:$EXTSUB,";
             }
             open (CONF,">>tmp/V2divx.conf");
             print CONF "#deb_sec:$deb_sec\n";
@@ -2804,6 +2846,9 @@ sub config
         }
 
     }
+
+    zooming;
+
     #************** ANTIALIASING & DEINTERLACING ******************** 
     interlaced;
     print " Do you want to deinterlace this movie(";
@@ -2811,37 +2856,44 @@ sub config
     print "y|N)? " if ( $INTERLACE eq "no") ;
     $rep= <STDIN>;
     chomp($rep);
+    
 
-    if ( $rep eq "O" || $rep eq "o" || $rep eq "y" || $rep eq "Y" || ($INTERLACE eq "yes" && ($rep ne 'N' || $rep ne 'n')) )
+    if ( $rep eq "O" || $rep eq "o" || $rep eq "y" || $rep eq "Y" || ($INTERLACE eq "yes" && $rep ne 'N' && $rep ne 'n') ) # Bug
     {	
-        $PP=`transcode -J pp=lb -c 9-11  2>&1 | grep failed`;
-        pinfo("$v2d\t Mplayer postproc. enable:\t\t   | ");
-        print "YES\n".$NORM if ( $PP eq "" ) ;
-        print "NO\n".$NORM if ( $PP ne "" ) ;
-        print " To deinterlace, do you want to use:\n";
-        print "\tA) The -I 3 transcode option (a|A)\n\tB) The YUVdenoiser (b|B)";
-        print "\n\tC) the smart deinter filter (c|C)" ;
-        print "\n\tD) the Mplayer pp filter (d|D)" if ( $PP eq "" ) ;
-        print " [default:A]?:";
-        $rep= <STDIN>;
-        chomp($rep);
         open (CONF,">>tmp/V2divx.conf");
-        if ( ($rep eq "D" || $rep eq "d") && $PP eq "" )
+        if ( $TELECINE )
         {
-            $deintl=",pp=lb";
+            $deintl="ivtc,decimate," if ( $TELECINE ) ;
             print CONF "#deintl:$deintl\n";
-        } elsif  ( $rep eq "B" || $rep eq "b" )
-        {
-            $deintl=",yuvdenoise=sharpen=100:deinterlace=1";
-            print CONF "#deintl:$deintl\n";
-        } elsif  ( $rep eq "C" || $rep eq "c" )
-        {
-           $deintl=",smartdeinter=diffmode=2:highq=1:cubic=1";
-           print CONF "#deintl:$deintl\n";
-        } else {
-            $dintl=" -I 3";
-        }
-        close (CONF);
+        }else{
+            $PP=`transcode -J pp=lb -c 9-11  2>&1 | grep failed`;
+            pinfo("$v2d\t Mplayer postproc. enable:\t\t   | ");
+            print "YES\n".$NORM if ( $PP eq "" ) ;
+            print "NO\n".$NORM if ( $PP ne "" ) ;
+            print " To deinterlace, do you want to use:\n";
+            print "\tA) The -I 3 transcode option (a|A)\n\tB) The YUVdenoiser (b|B)";
+            print "\n\tC) the smart deinter filter (c|C)" ;
+            print "\n\tD) the Mplayer pp filter (d|D)" if ( $PP eq "" ) ;
+            print " [default:A]?:";
+            $rep= <STDIN>;
+            chomp($rep);
+            if ( ($rep eq "D" || $rep eq "d") && $PP eq "" )
+            {
+                $deintl="pp=lb,";
+                print CONF "#deintl:$deintl\n";
+            } elsif  ( $rep eq "B" || $rep eq "b" )
+            {
+                $deintl="yuvdenoise=sharpen=100:deinterlace=1,";
+                print CONF "#deintl:$deintl\n";
+            } elsif  ( $rep eq "C" || $rep eq "c" )
+            {
+                $deintl="smartdeinter=diffmode=2:highq=1:cubic=1,";
+                print CONF "#deintl:$deintl\n";
+            } else {
+                $dintl=" -I 3";
+            }
+            close (CONF);
+        } # END $TELECINE
 
     }
     print " Does your clip need Antialiasing (slower) (y|N)? ";
@@ -2851,12 +2903,11 @@ sub config
     $aalias=" -C 3" if ( $rep eq "O" || $rep eq "o" || $rep eq "y" || $rep eq "Y" );
     #       Write parameters
     ( $left_right eq 1 && $top_bot eq 1 ) or mydie "Oups Sorry.. I miss some parameters :-(";
-    $params = "$good_audio -j $tb,$lr$dintl$aalias";
+    $params = $params.$dintl.$aalias;
     open (CONF,">>tmp/V2divx.conf");
     print CONF "#params:$params # YOU MUST KNOW WHAT YOU DO IN THIS LINE\n";
     close(CONF);
 
-    zooming;
     #    Ask for a Logo
     ask_logo;
     #     Search DVD Title
@@ -2872,6 +2923,8 @@ sub config
     }
     open (CONF,">>tmp/V2divx.conf");
     print CONF "#dvdtitle:$dvdtitle # DO NOT MODIFY THIS LINE\n";
+    print CONF "#TELECINE:$TELECINE# DO NOT MODIFY THIS LINE\n";
+    print CONF "#VFORMAT:$VFORMAT# DO NOT MODIFY THIS LINE\n";
     close(CONF);
 
 }   # END Config 

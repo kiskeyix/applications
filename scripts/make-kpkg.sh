@@ -1,8 +1,8 @@
 #!/bin/bash
 # vim: ft=sh:columns=80 :
-# $Revision: 1.35 $
+# $Revision: 1.36 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Dec-12
+# Last modified: 2004-Dec-17
 #
 # LICENSE: GPL (http://www.gnu.org/licenses/gpl.txt)
 #
@@ -62,7 +62,7 @@ CONCURRENCY_LEVEL=5                 # use more than one thread for make
                                     # should detect from the number of
                                     # hosts above 
 
-FAKEROOT="fakeroot"
+FAKEROOT="fakeroot"                 # how to get root (fakeroot, sudo,...)
 
 MODULE_LOC="../modules/"            # modules are located in the 
                                     # directory prior to this
@@ -175,8 +175,8 @@ if [[ ! -z "$1" && "$1" != "--help" ]]; then
 
     if [[ $makeit -eq 1 ]]; then
         echo -e "Building kernel [ initrd opts: $BUILD_INITRD ] \n"
-        make-kpkg clean
-        make-kpkg   --rootcmd $FAKEROOT \
+        $FAKEROOT make-kpkg clean
+        $FAKEROOT make-kpkg \
         --config oldconfig \
         --append-to-version "$1" \
         --revision $REVISION \
@@ -189,7 +189,7 @@ if [[ ! -z "$1" && "$1" != "--help" ]]; then
     
     if [[ x$KERNEL_HEADERS != "x" && $makeit -eq 0  ]]; then
         echo -e "Building kernel [$KERNEL_HEADERS] only \n"
-        make-kpkg   --rootcmd $FAKEROOT \
+        $FAKEROOT make-kpkg \
         --config oldconfig \
         --append-to-version "$1" \
         --revision $REVISION \
@@ -199,9 +199,9 @@ if [[ ! -z "$1" && "$1" != "--help" ]]; then
   
     # make the modules
     if [[ $mmakeit -eq 1 ]]; then
-        make-kpkg clean
-        make-kpkg modules_clean
-        make-kpkg   --rootcmd $FAKEROOT \
+        $FAKEROOT make-kpkg clean
+        $FAKEROOT make-kpkg modules_clean
+        $FAKEROOT make-kpkg \
         --config oldconfig \
         --append-to-version "$1" \
         --revision $REVISION \

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.52 $
+# $Revision: 1.53 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -1086,10 +1086,10 @@ sub menu_file {
     #
     # When using nautilus we are off by one:
     # TODO needs more testing
-    if ( $nautilus_root gt "" ) 
-    {
-        $total_links-- ;
-    }
+#    if ( $nautilus_root gt "" ) 
+#    {
+#        $total_links-- ;
+#    }
 
     if ( $total_links > 1 )
     {

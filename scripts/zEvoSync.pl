@@ -2,37 +2,166 @@
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2002-Nov-16
 # 
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # 
 # VERSION: 0.1
 #
 # LICENSE:
-# GPL
-# http://www.gnu.org/licenses/gpl.html
+#       GPL http://www.gnu.org/licenses/gpl.html
 #
 # DESCRIPTION: 
+#       Using a different approach to sync the Zaurus
+#       XML-based addressbook and the evolution DB-based
+#       addressbook.
 # 
-# USAGE: 
+# RESOURCES:
+#       * vCard description: http://www.ietf.org/rfc/rfc2739.txt
 #
-# REQUIREMENTS: perl
+# USAGE: 
+#       ** NO SWITCHES **
+#
+# REQUIREMENTS: 
+#       * perl
+#       * GTK module
+#       * DB_File
+#       * XML::Parser
 #
 # BUGS: 
-# 
+#
+# TODO:
+#       * sync the calendar
+#       * add switches to make life simpler (no need for gui)
 
 my $DBUG = 0;       # use 1 for true
 
 use strict;         
 $|++;               # disable buffering on standard output
-      
-########################################
-# Definition for functions/subroutines #
-########################################
 
-sub do_sync {
+use Gtk;
+use Gtk::Atoms;
+#use XML::Simple; 
+
+#--------------------------------------#
+#            Configuration             #
+#--------------------------------------#
+
+# db to xml file for evo addressbook
+my $temp_file = "$ENV{HOME}/evolution/.tmp-file.xml";
+my %DBFILE = ();
+
+#--------------------------------------#
+# Definition for functions/subroutines #
+#--------------------------------------#
+
+sub do_zau_sync {
     # main function
     print STDERR "hello world";
 }
 
+#
+# borrowed from evolution-db-dump.pl v 0.02
+# gets the addressbook.db file from Evolution
+# and prints it's content in a format that 
+# the Zaurus can use.
+sub do_evo_sync {
+
+    use DB_File;
+  
+    my $key = "";
+    my $line = "";
+    my $item = "";
+    my $data = "";
+    my $field = "";
+    my @list = ();
+
+    dbmopen(%DBFILE,"$ENV{HOME}/evolution/local/Contacts/addressbook.db", 0400) || die "cant open db -->: $!\n";
+
+    open(FILE, "> $temp_file") || die "Couldn't write file --> $!\n";
+
+    print FILE "<?xml version=\"1.0\" encoding=\"UTF-8\"?><!DOCTYPE Addressbook><AddressBook>\n";
+    print FILE "<Contacts>\n";
+ 
+    # this line temporarily turns off warnings
+    no warnings;
+   
+    foreach $key (keys(%DBFILE)){
+        $line = $DBFILE{$key};
+    
+        next if $line !~ m/.*:.*/; 
+    
+        @list = split /\r\n/, $line;
+        my %dbhash;
+        foreach $item ( @list ) {
+            if ( $item =~ m/^$/ ) {     
+                next;
+            }
+            if ( $item =~ m/^\x00$/ ) {     
+                next;
+            }
+            chomp $item;
+            ($field, $data) = split /:/, $item, 2;
+            
+            if ($field =~ m/TEL.*WORK.*FAX.*/){
+                $field = "TEL;WORK;FAX";
+            } elsif ($field =~ m/TEL.*WORK.*/){
+                $field = "TEL;WORK;VOICE";
+            } elsif ($field =~ m/TEL.*VOICE.*/) {
+                $field = "TEL;HOME";
+            } elsif ($field =~ m/TEL.*HOME.*/) {
+                $field = "TEL;HOME";
+            } elsif ($field =~ m/TEL.*CELL.*/) {
+                $field = "TEL;CELL";
+            } elsif ($field =~ m/TEL.*PAGER.*/) {
+                $field = "TEL;PAGER";
+            } elsif ($field =~ m/ADR.*WORK/) {
+                $field = "ADR;WORK";
+            } elsif ($field =~ m/ADR.*/) {
+                $field = "ADR;HOME";
+            }
+
+            #print " data = $data -- field = $field\n";
+            $dbhash{$field} = $data;
+
+        } # end foreach
+        # parse vcard:
+        my ($lastname, $firstname, $middle, $rest) = split /;/, $dbhash{N}, 4;
+        my ($pobox, $address2, $address1, $city, $state, $zip, $country) = split /;/, $dbhash{'ADR;WORK'};
+        my ($hpobox, $haddress2, $haddress1, $hcity, $hstate, $hzip, $hcountry) = split /;/, $dbhash{'ADR;HOME'};
+        my ($company, $dept) = split /;/, $dbhash{ORG};
+        # print e/a contact
+        print FILE "<Contact FirstName=\"$firstname\"".
+        " MiddleName=\"$middle\" LastName=\"$lastname\" ".
+        "FileAs=\"$dbhash{'X-EVOLUTION-FILE-AS'}\" ".
+        "DefaultEmail=\"$dbhash{'EMAIL;INTERNET'}\" ".
+        "Emails=\"$dbhash{'EMAIL;INTERNET'}\" ".
+        "HomeStreet=\"$hpobox $haddress1 $haddress2\" ".
+        "HomeCity=\"$hcity\" HomeState=\"$hstate\" ".
+        "HomeZip=\"$hzip\" HomeCountry=\"$hcountry\" ".
+        "HomePhone=\"$dbhash{'TEL;HOME'}\" ".
+        "Company=\"$company\" ".
+        "BusinessStreet=\"$pobox $address1 $address2\" ".
+        "BusinessCity=\"$city\" BusinessState=\"$state\" ".
+        "BusinessZip=\"$zip\" BusinessCountry=\"$country\" ".
+        "BusinessWebPage=\"$dbhash{URL}\" ".
+        "JobTitle=\"$dbhash{ROLE}\" Department=\"$dept\" ".
+        "BusinessPhone=\"$dbhash{'TEL;WORK;VOICE'}\" ".
+        "BusinessFax=\"$dbhash{'TEL;WORK;FAX'}\" ".
+        "BusinessMobile=\"$dbhash{'TEL;CELL'}\" ".
+        "BusinessPager=\"$dbhash{'TEL;PAGER'}\" ".
+        "Spouse=\"$dbhash{'X-EVOLUTION-SPOUSE'}\" ".
+        "Nickname=\"$dbhash{NICKNAME}\" ".
+        "Notes=\"$dbhash{'NOTE;QUOTED-PRINTABLE'}\"/>\n";
+    }
+
+    print FILE "</Contacts>\n</AddressBook>\n";
+    dbmclose(%DBFILE);
+
+    close($temp_file);
+}
+
+#
+# GUI
+# 
 sub do_exit {
     Gtk->exit(0);
 }
@@ -162,9 +291,7 @@ sub item_factory_cb {
 sub init_config_gui {
     
     # load the Gtk module
-    use Gtk;
-    use Gtk::Atoms;
-    
+   
     init Gtk;
 
     my $window = new Gtk::Window('toplevel');
@@ -197,7 +324,7 @@ sub init_config_gui {
         ["/Help/_About",        undef,          30,     "<Item>"]
     );
     my ($accel_group, $item_factory, $box1, $label, $label3, $box2, $pbar);
-    my ($separator, $button, $dummy);
+    my ($separator, $button, $bget_evo_db, $dummy);
 
     $accel_group = new Gtk::AccelGroup;
     $item_factory = new Gtk::ItemFactory('Gtk::MenuBar', "<main>", $accel_group);
@@ -212,11 +339,14 @@ sub init_config_gui {
     $window->add($box1);
     $box1->pack_start($item_factory->get_widget('<main>'), 0, 0, 0);
     
-    $label = new Gtk::Label "Sample Text";
+    $label = new Gtk::Label "Backup your files first!";
     
     $label->set_usize(200, 200);
     $label->set_alignment(0.5, 0.5);
     $box1->pack_start($label, 1, 1, 0);
+
+    # TODO display a log file here
+    # and update this after whatever the user chooses todo
 
     $separator = new Gtk::HSeparator;
     $box1->pack_start($separator, 0, 1, 0);
@@ -238,8 +368,12 @@ sub init_config_gui {
     # init progress bar
     $pbar->update(0.0);
 
-    $button = new Gtk::Button("Sync");
-    $button->signal_connect('clicked', sub{ do_sync(); });
+    $bget_evo_db = new Gtk::Button("Evolution --> Zaurus");
+    $bget_evo_db->signal_connect('clicked', sub{ do_evo_sync(); });
+    $box2->pack_start($bget_evo_db, 1, 1, 0);
+    
+    $button = new Gtk::Button("Zaurus --> Evolution");
+    $button->signal_connect('clicked', sub{ do_zau_sync(); });
         #sub{update_pbar($pbar)});
         # sub {$window->destroy;});
     $box2->pack_start($button, 1, 1, 0);

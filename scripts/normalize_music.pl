@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2004-Dec-07
 #
@@ -16,7 +16,7 @@ my $revision = "1.0"; # version
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
 use POSIX;                  # cwd() ... man POSIX
-use File::Spec::Functions;  # abs2rel() and other dir/filename specific
+use File::Spec::Functions qw/ splitdir catdir catfile / ;  # abs2rel() and other dir/filename specific
 #use File::Copy;
 use File::Find;     # find();
 use File::Basename; # basename() && dirname()
@@ -72,8 +72,8 @@ if ( -f $FILE )
     print STDOUT ("to file\t$file\n");
     if ( ! -f "$file" )
     {
-        _mkdir($path) if ( ! -d $path );
-        if ( ! rename ( $FILE,$file ) )
+        _mkdir($path) if ( ! -d "$path" );
+        if ( ! rename ( "$FILE","$file" ) )
         {
             print STDOUT ("Renaming $FILE to $file failed. Do you have permissions to write in $path?\n");
         }

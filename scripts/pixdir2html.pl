@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE:
@@ -254,7 +254,11 @@ sub mkthumb {
         next if ($thisFile =~ m/$EXCEPTION_LIST/);
         next if ($thisFile !~ /\w/);
         next if ($thisFile =~ /^\..*/); 
-        if (-d "$ROOT/$thisFile" && $thisFile !~ m/^$THUMBNAIL$/ ) {
+        if (
+            -d "$ROOT/$thisFile" 
+            && $thisFile !~ m/^$THUMBNAIL$/ 
+            && $thisFile !~ m/^$HTMLDIR$/
+        ) {
             if (-f "$ROOT/$thisFile/.nopixdir2htmlrc") {
                 print LOGFILE ".nopixdir2htmlrc file exists in ($thisFile). Skipping ...\n";
                 next;
@@ -413,17 +417,19 @@ sub thumbfile {
         next if ($thisFile !~ /\w/);
         next if ($thisFile =~ /^\..*/); 
         # we skip the THUMBNAIL directory and the HTML files directory
-        if (-d "$ROOT/$thisFile" && $thisFile !~ m/^$HTMLDIR$/  ) {
+        if (
+            -d "$ROOT/$thisFile" 
+            && $thisFile !~ m/^$HTMLDIR$/ 
+            && $thisFile !~ m/^$THUMBNAIL$/
+        ) {
             # no need to keep going if we have a nopixdir2htmlrc file
             if (-f "$ROOT/$thisFile/.nopixdir2htmlrc") {
                 print LOGFILE ".nopixdir2htmlrc file exists in ($thisFile). Skipping ...\n";
                 next;
             }
 
-            if ( $thisFile !~ m/^$THUMBNAIL$/) {
-                $total_directories++;
-                push @subdir,"$ROOT/$thisFile";
-            }
+            $total_directories++;
+            push @subdir,"$ROOT/$thisFile";
         }
         next if ($thisFile !~ m/\.(jpg|png|jpeg|gif)/i);
         push @ls,$thisFile;
@@ -472,7 +478,7 @@ sub thumbfile {
             print FILE ("<tr><td>\n");
             # image here
             print FILE ("<img src='../$_'>\n");
-            print FILE ("</td></tr>\n<tr><td valign='bottom' align='center'>\n");
+            print FILE ("</td></tr>\n<tr><td valign='bottom' align='center'><div align='center'>\n");
             # back link here
             if ( -f $last_html_file ) {
                 print FILE ("<a href='$last_link'>&lt;==</a> \n"); 
@@ -488,7 +494,7 @@ sub thumbfile {
             } else {
                 print FILE ("==&gt;");
             }
-            print FILE ("</td></tr>\n");
+            print FILE ("</div></td></tr>\n");
             print FILE ("</table>\n");
 
             # close the footer if one doesn't exist:

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.11 $
+# $Revision: 1.12 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2004-Dec-07
 #
@@ -146,7 +146,7 @@ sub _rename
         print STDOUT ($_, "\t", $hashref->{$_}, "\n");
     }
     my ($track,$garbage) = split(/\//,$hashref->{'track'});
-    $track =~ s/^(\d{2}).*$/$1/g;
+    $track =~ s/^(\d{1,2}).*$/$1/g;
     $this_file =~ m/(\.[a-zA-Z0-9]{1,5})$/; # catches the extension in $1
     print STDERR ("DEBUG: EXT $1\n") if ( $DEBUG );
     my $path = lc( catdir($hashref->{'artist'},$hashref->{'album'}) );

@@ -1,9 +1,9 @@
 #!/usr/bin/perl -w
-# $Revision: 1.4 $
-# $Date: 2003-03-12 05:16:45 $
+# $Revision: 1.5 $
+# $Date: 2003-03-26 05:42:23 $
 #
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Mar-12
+# Last modified: 2003-Mar-26
 #
 # DESCRIPTION: interactively create a new
 #               virtual website
@@ -65,11 +65,17 @@ $PERIOD=prompt("Please Enter mod_throttle period[$PERIOD]: ",$PERIOD);
 my $APACHE_CONF="/etc/apache/httpd.conf";
 # virtual email go to:
 my $SMTP_VIRTUAL="/etc/postfix/virtual";
+my $SMTP_ACCESS="/etc/postfix/access";
 
 $APACHE_CONF=prompt("Enter apache config file[$APACHE_CONF]: ",$APACHE_CONF);
 $SMTP_VIRTUAL=prompt("Enter SMTP virtual config file[$SMTP_VIRTUAL]: ",$SMTP_VIRTUAL);
+$SMTP_ACCESS=prompt("Enter SMTP virtual config file[$SMTP_ACCESS]: ",$SMTP_ACCESS);
 
 my $APACHE_HOST_TEMPLATE="\n<VirtualHost $SERVER_IP>\n\tThrottlePolicy Volume $VOLUME $PERIOD\n\tServerAdmin $WEBMASTER_EMAIL\n\tDocumentRoot /home/$WEBMASTER/$SITE/html\n\tServerName $SITE\n\tErrorLog /var/log/apache/$SITE-error.log\n\tCustomLog /var/log/apache/$SITE-access_log combined\n\t<Directory />\n\t\tAllowOverride FileInfo AuthConfig Limit Options\n\t</Directory>\n</VirtualHost>\n";
+
+# same as before, but www.$SITE instead...
+my $APACHE_WWW_HOST_TEMPLATE="\n<VirtualHost $SERVER_IP>\n\tThrottlePolicy Volume $VOLUME $PERIOD\n\tServerAdmin $WEBMASTER_EMAIL\n\tDocumentRoot /home/$WEBMASTER/$SITE/html\n\tServerName www.$SITE\n\tErrorLog /var/log/apache/$SITE-error.log\n\tCustomLog /var/log/apache/$SITE-access_log combined\n\t<Directory />\n\t\tAllowOverride FileInfo AuthConfig Limit Options\n\t</Directory>\n</VirtualHost>\n";
+
 
 # print output to files:
 # summary to STDOUT
@@ -78,7 +84,7 @@ print STDOUT "\tServer IP: $SERVER_IP\n";
 print STDOUT "\tSite: $SITE\n";
 print STDOUT "\tWebmaster: $WEBMASTER\n";
 print STDOUT "\tE-Mail: $WEBMASTER_EMAIL\n";
-print STDOUT "\tApache.conf append: $APACHE_HOST_TEMPLATE\n";
+print STDOUT "\tApache.conf append: $APACHE_HOST_TEMPLATE\n$APACHE_WWW_HOST_TEMPLATE\n";
 
 # prompt user whether he/she wants to go ahead with changes
 my $CONFIRM="n";
@@ -108,12 +114,20 @@ if ( $USE_CPU ) {
 # append to apache conf file
 open (APACHE,">>$APACHE_CONF") or warn "File $APACHE_CONF could not be open for writing\n";
 print APACHE $APACHE_HOST_TEMPLATE,"\n";
+print APACHE $APACHE_WWW_HOST_TEMPLATE,"\n";
 close(APACHE);
 
 # SMTP virtual file
 open (SMTP,">>$SMTP_VIRTUAL") or warn "File $SMTP_VIRTUAL could not be open for writing\n";
 print SMTP "\@$SITE $WEBMASTER\n";
+close(SMTP);
 
+# SMTP access file
+open (SMTP,">>$SMTP_ACCESS") or warn "File $SMTP_ACCESS could not be open for writing\n";
+print SMTP "$SITE\tRELAY\n";
+close(SMTP);
+
+# make maps (hashes)
 my $MAKE_MAP="makemap";
 
 if ( $SMTP_VIRTUAL =~ m/postfix/i) {
@@ -122,7 +136,8 @@ if ( $SMTP_VIRTUAL =~ m/postfix/i) {
     $MAKE_MAP = "makemap hash"; 
 }
 
-print STDOUT "Run '$MAKE_MAP' or favorite hash map creator on '$SMTP_VIRTUAL' to activate alias name\n";
+print STDOUT "Run '$MAKE_MAP' or favorite hash map creator".
+" on '$SMTP_VIRTUAL' and '$SMTP_ACCESS' to activate alias name and relay emails from this domain\n";
 
 # functions
 

@@ -1,4 +1,4 @@
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2002-Dec-21
 #
@@ -43,6 +43,7 @@
 
 # usefull variables:
 $VERSION = "0.0.7";
+$NAME = "gaim_xp2p";
 
 $LIMIT = 10; # default limit for all text sent
 
@@ -63,29 +64,7 @@ $LIMIT = 10; # default limit for all text sent
 # list of characters
 @chars = qw/1 2 3 4 5 6 7 8 9 0 ! @ # $ % ^ & * ( ) _ + = ` ~ a b c d e f g h i j k l m n o p q r s t u v w x y z , < > ? [ ] { } " ' : ; | /;
 
-sub description {
-    my($a, $b, $c, $d, $e, $f) = @_;
-    ("gaim_xp2p", "$VERSION", "The main purpose of this script is to bother people
-if you don't want to bother them, then don't use this....\n
-\n\t- _r ## or _rand ## or _are ##
-        , sends random number of characters from global LIMIT/2 up to ##
-        NOTE: added _are because r gets substituted by 'are' by default
-
-\n\t- _s ## or _xs ##
-        , _s sends random smilies up to ## 
-            and _xs is the extended version of this... more smiles
-        mostly MSN specific though
-
-\n\t- _x message,## 
-        , where message is a string that will be repeated ## times
-
-\n\t- _z text,##
-        , zig zags text ## number of times", 
-        "Luis Mondesi &lt;lemsx1\@hotmail.com&gt;", "http://www.latinomixed.com/lems1", 
-        "/dev/null");
-}
-
-GAIM::register("gaim_xp2p", $VERSION, "goodbye", "");
+$handle = GAIM::register("gaim_xp2p", "0.0.7", "goodbye", "");
 
 #$ver = GAIM::get_info(0);
 #@ids = GAIM::get_info(1);
@@ -106,9 +85,9 @@ GAIM::register("gaim_xp2p", $VERSION, "goodbye", "");
 #GAIM::add_timeout_handler(60, "xtext_user");
 
 # when sending IMs activate this
-GAIM::add_event_handler("event_im_send", "xtext_user");
+GAIM::add_event_handler($handle,"event_im_send", "xtext_user");
 # when chatting...
-GAIM::add_event_handler("event_chat_send", "xchat_user");
+GAIM::add_event_handler($handle,"event_chat_send", "xchat_user");
 
 #sub echo_reply {
     #	$index = $_[0];
@@ -347,3 +326,29 @@ sub random_int_in ($$) {
     ($min, $max) = ($max, $min)  if  $min > $max;
     return $min + int rand(1 + $max - $min);
 } # end random # generator
+
+# main function for displaying a simple desc about this script
+# in GAIM 0.6x new plugins dialog (in preferences)
+
+sub description {
+    my($a, $b, $c, $d, $e, $f) = @_;
+    ("gaim_xp2p", "0.0.7", "The main purpose of this script is to bother people
+if you don't want to bother them, then don't use this.... :-) \n
+\n\t- _r ## or _rand ## or _are ##
+        , sends random number of characters from global LIMIT/2 up to ##
+        NOTE: added _are because r gets substituted by 'are' by default
+
+\n\t- _s ## or _xs ##
+        , _s sends random smilies up to ## 
+            and _xs is the extended version of this... more smiles
+        mostly MSN specific though
+
+\n\t- _x message,## 
+        , where message is a string that will be repeated ## times
+
+\n\t- _z text,##
+        , zig zags text ## number of times", 
+        "Luis Mondesi &lt;lemsx1\@hotmail.com&gt;", "http://www.latinomixed.com/lems1", 
+        "/dev/null");
+}
+

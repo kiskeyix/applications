@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.60 $
+# $Revision: 1.61 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -679,16 +679,7 @@ sub mkindex {
         # "serialization"
         my @files = @{$$hashref{"$this_base"}};
 
-        # yet another sort...
-        # sort menus alphabetically (dictionary order):
-        # print STDERR join(' ', @ls), "\n";
-        my $da;
-        my $db;
-        @files = sort { 
-            ($da = lc $a) =~ s/[\W_]+//g;
-            ($db = lc $b) =~ s/[\W_]+//g;
-            $da cmp $db;
-        } @files;
+        dict_sort(\@files);
 
         # FILE_NAME is a global
         open(FILE, "> ".$this_base."/".$FILE_NAME.".".$config{"$this_base"}{"ext"}) || 
@@ -784,16 +775,7 @@ sub mkthumb {
         #$TOTAL++;
     } #end images array creation
 
-    # TODO make this into a function and re-use it...
-    # sort files alphabetically (dictionary order):
-    # maybe we should've sorted before we got here...
-    my $da;
-    my $db;
-    @ls = sort { 
-        ($da = lc $a) =~ s/[\W_]+//g;
-        ($db = lc $b) =~ s/[\W_]+//g;
-        $da cmp $db;
-    } @ls;
+    dict_sort(\@ls);
 
     # progressbar stuff
     # gauge message
@@ -976,17 +958,7 @@ sub thumb_html_files {
         push @ls,$_;
     } #end images array creation
 
-    # yet yet another sort!!! goodness
-    # TODO make this into a function and re-use it...
-    # sort files alphabetically (dictionary order):
-    # maybe we should've sorted before we got here...
-    my $da;
-    my $db;
-    @ls = sort { 
-        ($da = lc $a) =~ s/[\W_]+//g;
-        ($db = lc $b) =~ s/[\W_]+//g;
-        $da cmp $db;
-    } @ls;
+    dict_sort(\@ls);
 
     # progressbar stuff
     # gauge message
@@ -1172,28 +1144,20 @@ sub menu_file {
     #
     foreach my $directory (@uniq){
         next if (-f "$directory/.nopixdir2htmlrc");
-
         if (
             !-f "$directory/.nopixdir2htmlrc"
         ) {
+            # remove ./ from begining of names
+            ($directory = $directory) =~ s/^\.\/*//g;
             # note that @ls holds the HTML links...
             # thus, paths are relative and not absolute here:
-
             $ls[$x] = "$directory/$FILE_NAME.".$config{$ROOT_DIRECTORY}{"ext"}; # why not push()? just to keep count I guess...
             $x++; 
         }
     }   
     $total_links = $x;
 
-    # sort menus alphabetically (dictionary order):
-    # print STDERR join(' ', @ls), "\n";
-    my $da;
-    my $db;
-    @ls = sort { 
-        ($da = lc $a) =~ s/[\W_]+//g;
-        ($db = lc $b) =~ s/[\W_]+//g;
-        $da cmp $db;
-    } @ls;
+    dict_sort(\@ls); 
 
     if ( $MENUONLY > 0 ) {
         open(FILE, "> ".$ROOT_DIRECTORY."/".$MENU_NAME.".".$config{$ROOT_DIRECTORY}{"ext"}) ||
@@ -1211,10 +1175,10 @@ sub menu_file {
     #
     # When using nautilus we are off by one:
     # TODO needs more testing
-#    if ( $nautilus_root gt "" ) 
-#    {
-#        $total_links-- ;
-#    }
+    #    if ( $nautilus_root gt "" ) 
+    #    {
+    #        $total_links-- ;
+    #    }
 
     if ( $total_links > 1 )
     {
@@ -1428,14 +1392,14 @@ sub do_dir_ary {
 sub process_dir {
     my $base_name = basename($_);
     if  ( 
-        !-f $_ 
+        -d $_ 
         && $base_name !~ m/^($EXCEPTION_LIST)$/
         && $base_name !~ m/\b$THUMBNAIL\b/
         && $base_name !~ m/\b$HTMLDIR\b/
         && $base_name !~ m/^\.[a-zA-Z0-9]+$/ 
         ) 
     {
-        s/^\.\/*//g;
+        #s/^\.\/*//g;
         push @pixdir,$_;
         #print $_ . "\n";
     }
@@ -1462,7 +1426,7 @@ sub do_file_ary {
     my %opt = (wanted => \&process_file, no_chdir=>1);
     find(\%opt,$ROOT);
     return @pixfile;
-} # end do_file_ary
+} # iend do_file_ary
 
 sub process_file {
     my $base_name = basename($_);
@@ -1501,3 +1465,42 @@ sub cut_dirs {
     return $tmp_str;
 } # end cut_dirs
 
+sub dict_sort
+{
+    # sort menus alphabetically (dictionary order):
+    #@param 0 array_ref := array to sort
+    #@param 1 string/pattern := what to ignore [optional]
+    my $aryref = shift;
+    my $ignore = shift;
+
+    #open(UNSORTED,">unsorted.txt");
+    #print UNSORTED join(' ', @$aryref), "\n";
+    #close(UNSORTED);
+    
+    my $da;
+    my $db;
+
+    if ( $ignore ne "" )
+    {
+        # TODO what's the best way to ignore this pattern?
+    #        my @local_ls;
+    #        my $i = 0;
+    #        foreach( @$aryref )
+    #        {
+    #            ( $local_ls[$i] = $_ ) =~ s/$ignore//g;
+    #            $i++;
+    #        }
+        @$aryref = sort { 
+            # TODO ignore here?
+            ($da = lc $a) =~ s/[\W_]+//g;
+            ($db = lc $b) =~ s/[\W_]+//g;
+            $da cmp $db;
+        } @$aryref;
+    } else {
+        @$aryref = sort { 
+            ($da = lc $a) =~ s/[\W_]+//g;
+            ($db = lc $b) =~ s/[\W_]+//g;
+            $da cmp $db;
+        } @$aryref;
+    }
+} # end dict_sort()

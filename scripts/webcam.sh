@@ -1,7 +1,7 @@
 #!/bin/sh
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jan-31
+# Last modified: 2003-Feb-05
 #
 # DESCRIPTION: a script to start|stop "webcam"
 # USAGE: webcam.sh [start|stop|restart] 
@@ -81,6 +81,8 @@ case "$1" in
         --verbose --exec $DAEMON $CMDLINE || echo -n "<Failed> "
 
     echo -n "$NAME"
+    
+    sleep 2
 
     if [  -f $PID ]; then
         if [ $EMAILUSER = "yes" ]; then

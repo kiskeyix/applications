@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.13 $
+# $Revision: 1.14 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jun-17
+# Last modified: 2003-Jul-06
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
 #              it will create 3 files:
@@ -194,15 +194,15 @@ if ( ! -f $TMP_LOCK ) {
             push(@filelist,@ary);
         }
     }
-    #print STDOUT join(" ",@filelist)."\n";
+    print STDOUT join(" ",@filelist)."\n";
     
     print STDOUT "Backing up users files \n";
     if ( $DEBUG == 0 ) {
-        Archive::Tar->create_archive (
-            "users-$MIDDLE_STR.tar.gz", 
-            9, 
-            @filelist
-        );
+        #Archive::Tar->create_archive (
+        #    "users-$MIDDLE_STR.tar.gz", 
+        #    9, 
+        #    @filelist
+        #);
     } # end if debug
 
     if ( exists $CONFIG{DIRS} ) {
@@ -310,12 +310,17 @@ sub do_file_ary {
 
 sub process_file {
     my $base_name = basename($_);
-    #my $excludes = eval($CONFIG{EXCLUDES});
-    #print STDOUT $excludes."\n";
     if ( 
         -f $_ && 
         $base_name !~ m/$CONFIG{EXCLUDES}/ 
     ) {
-        push @tmp_files,$_;
+        push @tmp_files,clean("$_") ;
     }
+}
+
+sub clean {
+    # ';&|><*?`$(){}[]!# ' /*List of chars to be escaped*/
+    # will change, for example, a!!a to a\!\!a
+    $_[0] =~ s/([;<>\*\|`&\$!#\(\)\[\]\{\}:'"\ ])/\\$1/g;
+    return @_;
 }

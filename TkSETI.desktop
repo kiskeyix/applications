@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=TkSETI
+Comment=Run Seti@home client
+Exec=/usr/bin/X11/tkseti ~/Develop/seti
+Icon=gnome-monitor
+MultipleArgs=true
+Terminal=false
+Type=Application
+Categories=Application;Network

@@ -1,8 +1,8 @@
 #!/bin/bash
 # vim: ft=sh:columns=80 :
-# $Revision: 1.36 $
+# $Revision: 1.37 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Dec-17
+# Last modified: 2005-Jan-08
 #
 # LICENSE: GPL (http://www.gnu.org/licenses/gpl.txt)
 #
@@ -33,6 +33,8 @@
 #   * If we also have ccache installed, then we arrange the commands 
 #     so that we can use both ccache and distcc. 
 #     Make sure that $CCACHE_DIR is setup correctly (man ccache)
+
+set -e
 
 CCACHE="`command -v ccache 2> /dev/null`"
 DISTCC="`command -v distcc 2> /dev/null`"

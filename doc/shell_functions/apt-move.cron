@@ -1,5 +1,7 @@
 #!/bin/sh
 LOCKFILE="/tmp/.apt-move.lck"
+DEBUG=0     # should debugging messages be displayed? $0 0 1 see $1
+VERBOSE=0   # should informational messages be displayed? $0 1 see $2
 ARCH="i386" # default arch for this script
 MOVEFROMTMP=1
 RUNUPDATE=1
@@ -10,17 +12,40 @@ LOCALRELEASE="local" # name of the local release... see below (is just a directo
 
 set -e
 
+function debug()
+{
+    if [ $DEBUG -eq 1 ]; then
+        echo "DEBUG: $1"
+    fi
+}
+
+function info()
+{
+    if [ $VERBOSE -eq 1 ]; then
+        echo "DEBUG: $1"
+    fi
+}
+
 function move_deb_from_tmp()
 {
+    debug "Entering move_deb_from_tmp()"
     for i in `/bin/ls /tmp/*.deb /home/Shared/tmp/*.deb 2> /dev/null`; do
         # move new packages into archives directory
         /bin/mv -u "$i" $CACHEDIR
         if [ -f "$i" ]; then
             # if old package, remove it from /tmp /home/Shared/tmp
+            debug "Removing $i"
             rm -f "$i";
         fi
     done
 }
+
+if [ $1 ]; then
+    VERBOSE=$1  # pass 1 from the command line
+fi
+if [ $2 ]; then
+    DEBUG=$2    # pass 1 from the command line (after info arg)
+fi
 
 if [ -f "$LOCKFILE" ]; then
     echo "Another instance running ... exiting "
@@ -34,14 +59,17 @@ if [ $MOVEFROMTMP -eq 1 ]; then
 fi
 
 if [ $RUNUPDATE -eq 1 ]; then
+    debug "Running apt-get update and autoclean"
     apt-get update > /dev/null 2>&1
     apt-get autoclean  > /dev/null 2>&1
 fi
 
+debug "Running apt-move update"
 apt-move update > /dev/null 2>&1
 
 # do local dist
 if [ $MAKELOCALMIRROR -eq 1 ]; then
+    debug "Entering $LOCALMIRROR"
     cd $LOCALMIRROR 
     # .deb's compiled locally are found here:
     mkdir -p dists/$LOCALRELEASE/main/binary-$ARCH  
@@ -49,19 +77,21 @@ if [ $MAKELOCALMIRROR -eq 1 ]; then
     mkdir -p dists/$LOCALRELEASE/main/source
 
     if [ -d "incoming" ]; then
-        mv incoming/*.deb dists/$LOCALRELEASE/main/binary-$ARCH  > /dev/null 2>&1
-        mv incoming/*.{dsc,gz,bz2} dists/$LOCALRELEASE/main/source > /dev/null 2>&1
+        for j in `/bin/ls incoming/*.deb 2> /dev/null`; do
+            mv $j dists/$LOCALRELEASE/main/binary-$ARCH > /dev/null 2>&1
+        done
+        for k in `/bin/ls incoming/*.{dsc,gz,bz2,changes} 2> /dev/null`; do 
+            mv $k dists/$LOCALRELEASE/main/source > /dev/null 2>&1
+        done
     fi
 
-    apt-ftparchive packages dists/$LOCALRELEASE/ > dists/$LOCALRELEASE/main/binary-$ARCH/Packages
-    # compress and rename
-    gzip -f dists/$LOCALRELEASE/main/binary-$ARCH/Packages
-    apt-ftparchive contents dists/$LOCALRELEASE/ > dists/$LOCALRELEASE/main/binary-$ARCH/Contents-$ARCH
-    # compress and rename
-    gzip -f dists/$LOCALRELEASE/main/binary-$ARCH/Contents-$ARCH
+    apt-ftparchive packages dists/$LOCALRELEASE/ | gzip > dists/$LOCALRELEASE/main/binary-$ARCH/Packages.gz
+    apt-ftparchive contents dists/$LOCALRELEASE/ | gzip > dists/$LOCALRELEASE/main/binary-$ARCH/Contents-$ARCH.gz
+    apt-ftparchive sources dists/$LOCALRELEASE/ | gzip > dists/$LOCALRELEASE/main/source/Sources.gz
+    debug "Making release file"
     apt-ftparchive release dists/$LOCALRELEASE/ > dists/$LOCALRELEASE/Release
-    #echo "To access your local mirror, add a line"
-    #echo "like this in /etc/apt/sources.list"
-    #echo "deb file:/$LOCALMIRROR $LOCALRELEASE main"
+    info "To access your local mirror, add a line"
+    info "like this in /etc/apt/sources.list"
+    info "deb file:/$LOCALMIRROR $LOCALRELEASE main"
 fi
 rm -f "$LOCKFILE"

@@ -1,0 +1,15 @@
+[Desktop Entry]
+Encoding=UTF-8
+Version=1.0
+Type=Application
+Exec=3ddesk
+TryExec=
+Icon=gnome-ccwindowmanager.png
+X-GNOME-DocPath=
+Terminal=false
+Name[en_US]=3ddesk
+GenericName[en_US]=
+Comment[en_US]=Switch workspaces in 3D
+Name=3ddesk
+GenericName=
+Comment=Switch workspaces in 3D

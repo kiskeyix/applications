@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.31 $
+# $Revision: 1.32 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -26,6 +26,8 @@
 use POSIX;
 use Env qw(HOME);
 use FileHandle;
+use File::Temp qw/ tempfile tempdir /; # Perl 5.6.1: 
+                                    # used to get secured temp file
 STDOUT->autoflush(1);
 
 # get options. Most of the V2divxrc options (if not all)
@@ -37,9 +39,10 @@ Getopt::Long::Configure('bundling');
 # get options
 # declare empty variables
 # flags
-my ($HELP,$VERSION,$RUNCLUST,$SRTSUBRIP) = 0;
+my ($HELP,$VERSION,$RUNCLUST,$SRTSUBRIP,$OKCLUSTER) = 0;
 # others
 my ($SVIDEO_FORMAT,$ROOT_DIRECTORY) = "";
+
 GetOptions(
     # flags
     'h|help'        =>  \$HELP,
@@ -49,6 +52,7 @@ GetOptions(
     'tv'            =>  \$TVREC,
     'd|debug'       =>  \$DEBUG,
     'i|info'        =>  \$INFO,
+    'c|with-cluster'   =>  \$OKCLUSTER,
     # strings
     'D|directory=s'             => \$ROOT_DIRECTORY,
     's|source-video-format=s'   => \$SVIDEO_FORMAT,
@@ -57,7 +61,7 @@ GetOptions(
     'V|video_player=s'          => \$XINE,
     'A|avi_player=s'            => \$AVIPLAY,
     'I|image_viewer=s'          => \$XV,
-    'c|cluster_config=s'        => \$CLUSTER_CONFIG,
+    'C|cluster_config=s'        => \$CLUSTER_CONFIG,
     'r|remote_cmd=s'            => \$RMCMD,
     'n|nice=s'                  => \$nice,
     'L|logo=s'                 => \$LOGO, 
@@ -648,9 +652,10 @@ sub makelogo
     }
     pinfo("$v2d\t Making Logo\n");
     $fparams="$params -c $from_frames-$synclogo";
-    $fparams =$fparams." -M 2 " if ( $VFORMAT eq "NTSC" && ! ($deintl =~ m,ivtc,));
-    $fparams =$fparams." -M 0 -f 23.976" if ( $deintl =~ m,ivtc,);
-
+#    $fparams =$fparams." -M 2 --psu_mode --nav_seek tmp/file.nav --no_split " if ( $VFORMAT eq "NTSC" );
+    $fparams =$fparams." -M 2 " if ( $VFORMAT eq "NTSC" );
+#     $fparams =$fparams." -M 0 -f 23.976 --psu_mode --nav_seek tmp/file.nav --no_split " if ( $deintl =~ m,ivtc,);
+     $fparams =$fparams." -M 0 -f 23.976 " if ( $deintl =~ m,ivtc,);
     $add_logo="logo=file=$LOGO:posdef=$poslogo:rgbswap=$RGBSWAP:range=$start_frames_logo-$end_frames_logo,";
     $filter=$deint.$add_logo.$sub_title.",hqdn3d";
     audiorescale;
@@ -1191,19 +1196,25 @@ sub findclip
 # And initialize the number of stream units if yes
 sub ask_clust
 {
+    my ($rep)='n';
     print $DEBUG "--->  Enter ask_clust\n";
+    $CLUSTER="NO";
     open(CONF,">>tmp/V2divx.conf");
     unlink("tmp/cluster.args");
-    $CLUSTER="NO";
     pinfo("$v2d\t Cluster config file exist:\t\t   |");
     if ( ! -e $CLUSTER_CONFIG )
     {
         pwarn(" NO\n");
     } else {
         pinfo(" Yes\n") if ( -e $CLUSTER_CONFIG );
-        print " Do you want to use a cluster (y|N)? ";
-        $rep=<STDIN>;
-        chomp($rep);
+        if ( ! $OKCLUSTER )
+        {
+            print " Do you want to use a cluster (y|N)? ";
+            $rep=<STDIN>;
+            chomp($rep);
+        }else{
+            $rep='y';
+        }
         if ( $rep eq "y" || $rep eq "Y" || $rep eq "o" || $rep eq "0")
         {	
             create_nav ;
@@ -1241,11 +1252,21 @@ sub cluster
     chomp($wdir);
     ( -e $CLUSTER_CONFIG ) or mydie $warnclust;
 
-    # Open a temporary file (/tmp/node) to 
+    # Open a secure temporary file in /tmp/ to 
     # rebuild cluster config file
     # which contain ONLY available nodes
-    open(GOODNODE,">/tmp/node");
     
+    my $s_file = new File::Temp(
+                                "TEMPLATE"  => "XXXXX",
+                                "DIR"       => "/tmp",
+                                "SUFFIX"    => ".txt"
+                            );
+
+    # FIXME
+    print $DEBUG "\nfile +++++++> $s_file <----- file\n\n";
+    
+    #open(GOODNODE,"> $s_file");
+
     # $node_counter is the counter of AVAILABLE nodes
     my $node_counter=`grep -v "^[[:space:]]*#" $CLUSTER_CONFIG | grep -v '^[[:space:]]*$$' | wc -l`;
 
@@ -1263,13 +1284,15 @@ sub cluster
         $localhost=`hostname`;
         chomp($localhost);
 
-    # read the cluster config file
+        # TODO use Perl code to read this file:
+        #   @allnodes=custom_read_file(); where this function returns a string
+        # read the cluster config file
         @allnodes=`grep -v "^[[:space:]]*#" $CLUSTER_CONFIG | grep -v '^[[:space:]]*$$'| awk -F"#" '{print \$1}'`;
 
         foreach $node  ( @allnodes )	
         {
-    # chost[0] is the node name
-    # chost[1] is the percent of frame to encode
+            # chost[0] is the node name
+            # chost[1] is the percent of frames to encode
             @chost=split /:/, $node;
             $rhost=$chost[0];
             if ( $rhost ne "$localhost" )
@@ -1278,7 +1301,7 @@ sub cluster
                 my $pid = fork();
                 mydie "couldn't fork [function: cluster]" unless defined $pid;
                 if ($pid)
-                 {
+                {
                     $sys="$RMCMD $rhost 'cd ".$wdir." && ".$0." -v' >/dev/null 2>&1";  
                     print $INFO $sys."\n";
                     $rs=system ("$sys");
@@ -1287,10 +1310,10 @@ sub cluster
                 } else {
                     smily(checknode);
                 }
-    # $rs != 0 means node unreachable 
-    # 'V2divx -v' exit with non 0 status
-    # or master working directory does not exist on node
-    # so we don't run on it
+                # $rs != 0 means node unreachable 
+                # or 'V2divx -v' exit with non 0 status
+                # or master working directory does not exist on node
+                # so we don't run on it
                 if ( $rs != 0 )
                 {
                     $node_counter = $node_counter - 1;
@@ -1303,11 +1326,12 @@ sub cluster
                 } else {
                     $P=$chost[1];
                     chomp($P);
-    # This node is OK we print it in the good nodes temporary file
+                    # This node is OK we print it in the good nodes temporary file
                     print GOODNODE "$rhost:$P\n";
                     $poweron = $poweron + $P;
                 }
-            } else { # This is the master (localhost) 
+            } else { 
+                # This is the master (localhost) 
                 $P=$chost[1];
                 chomp($P);
                 print $DEBUG "+ Host : ".$chost[0]." , Pow = $P\n";
@@ -1315,14 +1339,16 @@ sub cluster
                 $poweron = $poweron + $P;
             }
         }
-    # $addpower is the percentage of frames
-    # that available nodes need to encode 
-    # more than requested
+        # $addpower is the percentage of frames
+        # that available nodes need to encode 
+        # more than requested
         $addpower = $poweroff / $node_counter;
 
-        close(GOODNODE);
+        # closing the file deletes it...
+        #close(GOODNODE); 
     } else {
-        unlink("/tmp/node");
+        # we don't need cluster-mode?
+        unlink("$s_file");
     }
 
     pinfo("$v2d\t Number of available Nodes:\t\t   |$node_counter\n");
@@ -1332,29 +1358,31 @@ sub cluster
     # need to encode more
     # So we run V2divx on nodes ...
 
-    if ( -e "/tmp/node" )
+    if ( -f "$s_file" )
     {	
-    # tabpower is just a table to know when nodes has finished to encode
+        # tabpower is just a table to know when nodes 
+        # have finished to encode
         $tabpower="";
 
-    # percentage of frames already encode 
+        # percentage of frames already encode 
         my $sumpow=0;
 
         my  $max=0;	
         $i=0;
-        @allnodes=`cat /tmp/node`;
-        unlink("/tmp/node");
+        @allnodes=`cat $s_file`;
+        unlink("$s_file"); # unlink() or close() would do...
+
         foreach $node (@allnodes )     
         { 
             @chost=split /:/, $node; 
             $rhost=$chost[0];
             if ( $sumpow < 100 )
             {	
-    # we add the percentage of frames to encode more
+                # we add the percentage of frames to encode more
                 $pow=$chost[1] + $addpower;
-    # percentage of frames which will be encoded
+                # percentage of frames which will be encoded
                 $max=$sumpow + $pow;
-    # is this is > %100 just encode to reach 100% .
+                # is this is > %100 just encode to reach 100% .
                 $pow = 100 - $sumpow if ( $max > 100 );
 
                 open(CLUSTERARGS,">tmp/cluster.args");
@@ -1379,15 +1407,15 @@ sub cluster
                 } else {
                     $this_arg="-n $rhost" if $XTERM =~ /xterm/i;
                     $this_cmd=sprintf("$XTERM $0 --runclust $wdir &",$this_arg);
-#                    $this_cmd=sprintf("$XTERM ls --runclust $wdir &",$this_arg);
+                    #$this_cmd=sprintf("$XTERM ls --runclust $wdir &",$this_arg);
                     print $DEBUG "+ executing $this_cmd\n";
                     system ( $this_cmd );
                 }
                 $tabpower[$i]=$sumpow;
                 $i++;
                 $sumpow= $sumpow + $pow;
-    # we have to be SURE that V2divx has started on the remote node 
-    # before continue ( we wait for 15 secondes max)
+                # we have to be SURE that V2divx has started on the remote node 
+                # before continue ( we wait for 15 secondes max)
                 my $j=0;
                 while ( ! -e "tmp/node_started" && $j < 15 )
                 {
@@ -1399,8 +1427,8 @@ sub cluster
                 mydie("Seems that there is a problem on node $rhost\n $0 has not started correctly\n Unable to continue.\n") if ( $j == 15 );
             }
         }
-    # If percentage of frames < 100%
-    # We encode the rest on localnode
+        # If percentage of frames < 100%
+        # We encode the rest on localnode
         if  ( $sumpow <  100 )
         {
             $pow = 100 - $sumpow;
@@ -1417,7 +1445,7 @@ sub cluster
 
         foreach $endnode ( @tabpower )
         {
-            while ( ! -e "tmp/2-$dvdtitle${endnode}_0.finish" && ! -e "tmp/2-$dvdtitle${endnode}_0.PB" && ! -e "tmp/1-$dvdtitle${endnode}_0.PB")
+            while ( ! -e "tmp/2-$dvdtitle${endnode}_0.finish" && ! -e "tmp/2-$dvdtitle${endnode}.PB" && ! -e "tmp/1-$dvdtitle${endnode}.PB")
             {
                 print "\r|"; 
                 sleep(1); 
@@ -1429,11 +1457,11 @@ sub cluster
                 sleep(1);
             }
             pinfo("$v2d\t Node $endnode has finished encoding\n") if ( -e "tmp/2-$dvdtitle${endnode}_0.finish");
-            pwarn("\tCritical error on node: $endnode during Pass One\n") if ( -e "tmp/1-$dvdtitle${endnode}_0.PB");
-            pwarn("\tCritical error on node: $endnode during Pass Two \n") if ( -e "tmp/2-$dvdtitle${endnode}_0.PB");
-            $NODE_ERROR=1 if ( -e "tmp/2-$dvdtitle${endnode}_0.PB" || -e "tmp/1-$dvdtitle${endnode}_0.PB");
-            unlink("tmp/2-$dvdtitle${endnode}_0.PB");
-            unlink("tmp/1-$dvdtitle${endnode}_0.PB");
+            pwarn("\tCritical error on node: $endnode during Pass One\n") if ( -e "tmp/1-$dvdtitle${endnode}.PB");
+            pwarn("\tCritical error on node: $endnode during Pass Two \n") if ( -e "tmp/2-$dvdtitle${endnode}.PB");
+            $NODE_ERROR=1 if ( -e "tmp/2-$dvdtitle${endnode}.PB" || -e "tmp/1-$dvdtitle${endnode}.PB");
+            unlink("tmp/2-$dvdtitle${endnode}.PB");
+            unlink("tmp/1-$dvdtitle${endnode}.PB");
         }	
         mydie("\tCould'nt continue, critical error on one or more nodes ...\n") if ( $NODE_ERROR );
         merge;
@@ -1491,6 +1519,7 @@ sub create_extract
         $TELECINE=1 if ( $rep eq "y" || $rep eq "Y" );
     }
     $VFORMAT="NTSC" if ( $FPS =~ m,2[39]\.9, );
+#    create_nav if ( $VFORMAT eq "NTSC");
 
     if ( $NOAUDIO == 1  || $need_time == 1 )  
     {
@@ -1604,6 +1633,7 @@ sub calculate_nbrframe
         $TELECINE=1; 
    }
     $VFORMAT="NTSC" if ( $FPS =~ m,2[39]\.9, );
+#    create_nav if ( $VFORMAT eq "NTSC");
 
     $nbr_frames= floor($tot_frames - ($deb_sec+$last_sec)*$FPS);
     print $DEBUG "Number of frames: $nbr_frames\n";
@@ -1683,8 +1713,8 @@ sub aviencode
     $params .=" -$Zoom_mode $zH,$zW,$row" if ($Zoom_mode eq B);
 
     printinfo if ( ! -e "tmp/cluster.args");
-    # We are not in Cluster Mode and there is no cluster args file ???
-    # It means that we are in cluster mode and not on an encoding node
+    # We are in Cluster Mode and there is no cluster args file ???
+    # It means that we are in cluster mode on the master 
     # We call the cluster subroutine and will never return here
     cluster if ( $CLUSTER ne "NO" && ! -e "tmp/cluster.args");
 
@@ -1761,13 +1791,15 @@ sub aviencode
             # Add NTSC demuxer opts
             $fparams =$fparams." -M 2 " if ( $VFORMAT eq "NTSC" && ! ($deintl =~ m,ivtc,));
             $fparams =$fparams." -M 0 -f 23.976" if ( $deintl =~ m,ivtc,);
+#            $fparams =$fparams." --psu_mode --nav_seek tmp/file.nav --no_split " if ( $CLUSTER eq "NO" && $VFORMAT eq "NTSC" );
+            $clust_percent=" --a52_dolby_off " if ( $VFORMAT eq "NTSC" && $CLUSTER eq "NO" );
 
             # And Now ... Let the Rolling Stones
 
             if (! -e "tmp/1-${dvdtitle}${node}_${i}.finish")
             {
                 unlink("tmp/2-${dvdtitle}${node}_${i}.finish");
-                unlink ("tmp/1-${dvdtitle}${node}_${i}.PB");
+                unlink ("tmp/1-${dvdtitle}${node}.PB");
                 pinfo("$v2d\t Encode: $VOBPATH Pass One ....\n");
                 $sys = "transcode -i $VOBPATH $stream_opt $clust_percent $fparams -w $bitrate,$keyframes -J ${filter},astat=\"tmp/astat\" -y $DIVX,null $DIVX_OPT -x $in_video_codec,$audio_format $VID_OPT -R 1,tmp/$DIVX.${dvdtitle}${node}_${i}.log -o /dev/null"; 
                 print $INFO "$sys\n";
@@ -1776,13 +1808,13 @@ sub aviencode
                 if ($pid)
                 {
                     wait;
-                    if ( -f "tmp/1-${dvdtitle}${node}_${i}.PB")
+                    if ( -f "tmp/1-${dvdtitle}${node}.PB")
                     {    
                         mydie("\t\t**** Pass One failed on node(${node}),seq(${i}) ****.\n\tFailed to execute:\n $sys")
                     }
                     system("touch tmp/1-${dvdtitle}${node}_${i}.finish");
                 } else {
-                    system("nice -$nice $sys")==0 or system("touch tmp/1-${dvdtitle}${node}_${i}.PB");
+                    system("nice -$nice $sys")==0 or system("touch tmp/1-${dvdtitle}${node}.PB");
                     print "\n";
                     exit(0);
                 }
@@ -1792,7 +1824,7 @@ sub aviencode
             audiorescale;
             if (! -e "tmp/2-${dvdtitle}${node}_${i}.finish")
             {
-                unlink ("tmp/2-${dvdtitle}${node}_${i}.PB");
+                unlink ("tmp/2-${dvdtitle}${node}.PB");
                 $filter="$filter,dnr,normalize";	
                 $filter="-J $filter" if ( $filter ne "" );
                 unlink("tmp/merge.finish");	
@@ -1805,13 +1837,13 @@ sub aviencode
                 if ($pid)
                 {    
                     wait;
-                    if ( -f "tmp/2-${dvdtitle}${node}_${i}.PB") 
+                    if ( -f "tmp/2-${dvdtitle}${node}.PB") 
                     { 
                         mydie("\t\t**** Pass Two failed on node(${node}),seq(${i}) ****.\n\tFailed to execute:\n $sys"); 
                     }        
                     system("touch tmp/2-${dvdtitle}${node}_${i}.finish");
                 } else {	
-                    system("nice -$nice $sys")==0 or system("touch tmp/2-${dvdtitle}${node}_${i}.PB");
+                    system("nice -$nice $sys")==0 or system("touch tmp/2-${dvdtitle}${node}.PB");
                     print"\n";
                     exit(0);
                 }

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE:
@@ -85,10 +85,6 @@ my $PERCENT="20%";
 # How many TDs per table?
 my $td=4;
 
-#TODO will make this into  a sub later
-#       remember to make it recursive
-my $MENUMAKER=$ENV{"HOME"}."/bin/menuMaker.pl";
-
 # dont worry if you don't have a log rotation facility...
 # just leave it as is
 my $SAVELOG = "/usr/bin/savelog";
@@ -117,10 +113,11 @@ sub main {
         die ("could not find 'convert'. Install ImageMagick.");
     }
     open (LOGFILE,"> $LOG");
+    init_config(".");
     mkthumb($IMAGE_DIRECTORY);
     unless ( $NOMENU == 1 ) {
         print LOGFILE ("Creating menu file\n");
-        system("$MENUMAKER >> $LOG 2>&1 ");
+        menuMaker();
     }
     close(LOGFILE);
     if ( -x $SAVELOG ) {
@@ -129,6 +126,57 @@ sub main {
 
     print STDOUT "$total_directories directories.\n Read log $LOG for details. \n";
 } # endmain
+
+# Takes one argument:
+# ROOT = directory from which we will take the config file
+sub init_config {
+    
+    my $ROOT = shift;
+    
+    if (open(CONFIG, "<$ROOT/$CONFIG_FILE")){
+        while (<CONFIG>) {
+            next if /^\s*#/;
+            chomp;
+            $myconfig{$1} = $2 if m/^\s*([^=]+)=(.+)\;\;+/;
+        }
+        close(CONFIG);
+
+    } else {
+        warn << "__EOF__";
+   Could not find $ROOT/$CONFIG_FILE 
+__EOF__
+
+        $myconfig{percent}="20%";
+        $myconfig{title}="Images";
+        $myconfig{meta}="<meta http-equiv='content-type' content='text/html;charset=iso-8859-1'>";
+        $myconfig{stylesheet}="<link rel='stylesheet' href='../styles.css' type='text/css'>";
+        $myconfig{html_msg}="<h1>Free form HTML</h1>";
+        $myconfig{body}="<body bgcolor='#000000' text='#ffffff'>";
+        $myconfig{p}="<p>";
+        $myconfig{table}="<table border='0'>";
+        $myconfig{td}="<td valign='top' align='left'>";
+        $myconfig{tr}="<tr>";
+        $myconfig{footer}="";
+
+    }
+#construct a header if it doesn't yet exist:
+    if ( $myconfig{header} eq "" ) {
+
+        print LOGFILE ("Blank header. Generating my own ... \n");
+
+        $myconfig{header}="<html>
+        <head>
+        ".$myconfig{meta}."
+        <title>".$myconfig{title}."</title>
+        ".$myconfig{stylesheet}."
+        </head>".
+        $myconfig{body}."
+        <center>".
+        $myconfig{html_msg}."
+        \n
+        ";
+    }
+}
 
 # Takes one argument directory to create images for
 # If a directory is found inside this directory containing
@@ -200,49 +248,7 @@ sub mkthumb {
 
     if (!-f "$ROOT/.nopictDir2htmlrc") {
         open(FILE, "> $ROOT/$FILE_NAME") || die "Couldn't write file $FILE_NAME to $ROOT";
-        if (open(CONFIG, "<$ROOT/$CONFIG_FILE")){
-            while (<CONFIG>) {
-                next if /^\s*#/;
-                chomp;
-                $myconfig{$1} = $2 if m/^\s*([^=]+)=(.+)\;\;+/;
-            }
-            close(CONFIG);
 
-        } else {
-            warn << "__EOF__";
-   Could not find $ROOT/$CONFIG_FILE 
-__EOF__
-
-            $myconfig{percent}="20%";
-            $myconfig{title}="Images";
-            $myconfig{meta}="<meta http-equiv='content-type' content='text/html;charset=iso-8859-1'>";
-            $myconfig{stylesheet}="<link rel='stylesheet' href='../styles.css' type='text/css'>";
-            $myconfig{html_msg}="<h1>Free form HTML</h1>";
-            $myconfig{body}="<body bgcolor='#000000' text='#ffffff'>";
-            $myconfig{p}="<p>";
-            $myconfig{table}="<table border='0'>";
-            $myconfig{td}="<td valign='top' align='left'>";
-            $myconfig{tr}="<tr>";
-            $myconfig{footer}="";
-
-        }
-#construct a header if it doesn't yet exist:
-        if ( $myconfig{header} eq "" ) {
-
-            print LOGFILE ("Blank header. Generating my own ... \n");
-
-            $myconfig{header}="<html>
-            <head>
-            ".$myconfig{meta}."
-            <title>".$myconfig{title}."</title>
-            ".$myconfig{stylesheet}."
-            </head>".
-            $myconfig{body}."
-            <center>".
-            $myconfig{html_msg}."
-            \n
-            ";
-        }
 
 # Percentage for this folder?
         $PERCENT = ("$myconfig{percent}") ? $myconfig{percent}:$PERCENT;
@@ -330,7 +336,7 @@ __EOF__
     # creates an HTML page for a thumbnail
     # this will be implemented later
 
-    #}
+#}
 sub prompt {
     # promt user and return input 
     # pass string when calling subroutine: $var = prompt("string");
@@ -347,4 +353,119 @@ sub prompt {
         #$input = $term->readline($string);
         #}
     return $input;
+}
+
+sub menuMaker {
+# How does it work?
+# Run it from the given folder where the menu.html
+# file will be located, and relative to this file
+# links will be constructed for e/a folder
+# inside this given folder that has a file named: index.html or index.php
+# 
+# if there is a file named .new inside the given directory,
+# then a IMG tag will be put in front of the link with a gif
+# file $GIF
+# 
+
+    my $MENU_NAME="menu.html";
+
+# this is used for the 'new' gif
+    my $GIF = "http://www.latinomixed.com/sex/images/new.png";
+
+# URI is used for creating the link. Everything
+# is relative to this. Will put this in the .pictDir2htmlrc file
+    my $URI = "http://sex.latinomixed.com";
+
+    my $IMG = ""; #init variable
+
+# How many TDs per table?
+    my $tds=10;
+
+###Nothing below this line should need to be configured.###
+    my $line = "";
+    my $thisFile= "";
+    my $x=0;
+    my $y=0;
+    my $i=0;
+    my $j=0; # count number of TR's
+    my $total_links=0;
+    my @ls = ();
+    my $ts = "";
+    my @files=();
+
+    opendir (DIR,"$HTML_DIRECTORY") || die "Couldn't open dir $HTML_DIRECTORY";
+#construct array of all HTML files
+    while (defined($thisFile = readdir(DIR))) {
+        next if ($thisFile !~ /\w/);
+        next if (-f "$HTML_DIRECTORY/$thisFile/.nopictDir2htmlrc");
+        next if (!-f "$HTML_DIRECTORY/$thisFile/$FILE_NAME");
+        $ls[$x] = "$thisFile/$FILE_NAME"; # link
+        $x+=1;
+        #@files = grep(/\.html$/,$thisFile);    
+    }
+    closedir(DIR);
+
+# sort menus alphabetically (dictionary order):
+# print STDERR join(' ', @ls), "\n";
+# sort @ls;
+    my $da;
+    my $db;
+    @ls = sort { 
+        ($da = lc $a) =~ s/[\W_]+//g;
+        ($db = lc $b) =~ s/[\W_]+//g;
+        $da cmp $db;
+    } @ls;
+# print STDERR join(' ', @ls), "\n";
+
+    $total_links = $x;
+
+    open(FILE, "> $HTML_DIRECTORY/$MENU_NAME") || die "Couldn't write file $MENU_NAME to $HTML_DIRECTORY";
+
+# TODO sometimes menus don't need headers and footers
+#       device a way to turn it off in the rc file
+#print FILE ($myconfig{header}."\n");
+    print FILE ("$myconfig{table}\n");
+
+# print all links now
+
+    my $tmp_tr = ""; # used to color the rows
+
+    while($x>0){
+        # temporarily turn off warnings
+        no warnings;
+
+        if ($myconfig{tr}=~m/\%+bgcolor\%+/i){
+            if (($j % 2) == 0){
+                ($tmp_tr = $myconfig{tr}) =~ s/\%+bgcolor\%+/bgcolor=#efefef/i;
+            } else {
+                ($tmp_tr = $myconfig{tr}) =~ s/\%+bgcolor\%+//i;
+            }
+
+            print FILE ($tmp_tr."\n");
+
+        } else {
+            print FILE ($myconfig{tr}."\n");
+        }
+        for ($y=1;$y<=$tds;$y++){
+            if ($y > 1) { print FILE ("\t </td> \n"); }   # close the TD tags
+            print FILE ("\t".$myconfig{td}."\n");
+            if ( $ls[$i] ne "" ) {
+                # if link exists, otherwise leave it blank
+                ($ts = $ls[$i]) =~ s/(.*)\/$FILE_NAME/$1/gi;
+                $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='$myconfig{new}'>":""; # if .new file
+                $ts = ucfirst($ts);
+                print FILE ("<a href='$URI/$ls[$i]' target='_top'>$IMG $ts</a>\n");
+            } else {
+                print FILE ("&nbsp;");
+            }
+            $i++;
+            $x--;
+        } # end for $y
+        print FILE ("</tr>\n");
+        $j++; # incr TR counter
+    }
+    print FILE ("</table>\n");
+#print FILE ($myconfig{footer}."\n");
+    close(FILE);
+    print STDERR "Done with menus. I count $total_links files.\n";
 }

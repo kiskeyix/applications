@@ -1,11 +1,13 @@
 #!/bin/sh
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jan-05
 #
 # DESCRIPTION: a script to start|stop Unreal Tournament
 # USAGE: utserver [start|stop|restart] 
 #
+
+MAP="CTF-Adobie.unr" # startup map
 
 USER=ucc            # userid which owns this process
 PID=$HOME/ucc.pid   # Process ID of current server
@@ -15,7 +17,7 @@ REALDAEMON=/usr/local/games/ut/System/ucc-bin   # used when stopping
                                                 # if no PID is known
 NAME=ucc            # name of the binary
 DESC="Unreal Tournament Daemon"
-CMDLINE="server CTF-Adobie.unr?mutator=BDBMapVote302.BDBMapVote?game=Botpack.CTFGame"
+CMDLINE="server $MAP?mutator=BDBMapVote302.BDBMapVote?game=Botpack.CTFGame"
 
 CHUID=""            # change uid command
 

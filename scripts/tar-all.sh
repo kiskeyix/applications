@@ -1,5 +1,5 @@
 #!/bin/bash
-# Last modified: 2003-Sep-29
+# Last modified: 2004-Sep-09
 # Luis Mondesi < lemsx1@hotmail.com >
 # 
 # DESCRIPTION: use this script to tar
@@ -7,8 +7,12 @@
 
 set -e
 echo -e "tarring tar.bz2 \n";
-for i in `ls $1`; do
-    #echo -e "$i \n";
-    tar -cjvf $1/$i.tar.bz2 $1/$i;
+for i in `/bin/ls -1 $1`; do
+    #echo "$i";
+    if [ -d $i ]; then
+        tar -cjvf $1/$i.tar.bz2 $1/$i;
+    else
+        echo "Skipping $i. Not directory"
+    fi
 done
 

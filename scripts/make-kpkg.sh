@@ -1,7 +1,7 @@
 #!/bin/bash
-# $Revision: 1.19 $
+# $Revision: 1.20 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Nov-03
+# Last modified: 2003-Nov-09
 #
 # DESCRIPTION:  an interactive wrapper to Debian's "make-kpkg"
 #               to build a custom kernel package.
@@ -63,7 +63,7 @@ IMAGE_TOP="../"                     # where to save the resulting
 INITRD_OK="YES"
 
 export IMAGE_TOP ALL_PATCH_DIR PATCH_THE_KERNEL 
-export MODULE_LOC NO_UNPATCH_BY_DEFAULT INITRD
+export MODULE_LOC NO_UNPATCH_BY_DEFAULT INITRD_OK
 
 if [ $1 -a $1 != "--help" ]; then
 
@@ -100,10 +100,10 @@ if [ $1 -a $1 != "--help" ]; then
         echo -e "Building kernel \n"
         make-kpkg clean
         make-kpkg   --rootcmd $FAKEROOT \
-        --initrd \
         --config oldconfig \
         --append-to-version -custom.$1 \
         --revision $REVISION \
+        --initrd \
         kernel_image $KERNEL_HEADERS
     fi
 
@@ -112,10 +112,10 @@ if [ $1 -a $1 != "--help" ]; then
     if [ x$KERNEL_HEADERS != "x" -a $makeit -eq 0  ]; then
         echo -e "Building kernel headers only \n"
         make-kpkg   --rootcmd $FAKEROOT \
-        --initrd \
         --config oldconfig \
         --append-to-version -custom.$1 \
         --revision $REVISION \
+        --initrd \
         $KERNEL_HEADERS
     fi
 

@@ -1,32 +1,83 @@
 #!/usr/bin/perl -w
-# $Revision: 1.17 $
+# $Revision: 1.18 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2005-Feb-28
 #
-# DESCRIPTION: A simple script to update my settings in $HOME
-# USAGE: $0 [--remove|--verbose]
-#
-# If remove is passed, the FILES will be deleted after downloading them
-#
+# DESCRIPTION: A simple script to update my settings in $HOME @see --help
+# USAGE: $0 --help
+
 use strict;
 $|++;
 
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
+use POSIX;                  # cwd() ... man POSIX
+use File::Spec::Functions;  # abs2rel() and other dir/filename specific
+use File::Copy;
+use File::Find;     # find();
+use File::Basename; # basename() && dirname()
+use FileHandle;     # for progressbar
 
+############## NO NEED TO MODIFY THESE #################
+=pod
+=head1 update-remote-hosts.pl
+
+update-remote-hosts.pl - by Luis Mondesi <lemsx1@gmail.com>
+
+=head1 SYNOPSIS
+
+B<update-remote-hosts.pl>  
+[-v,--version]
+[-h,--help]   
+[-D,--debug]
+[-r,--remove]
+[-V,--verbose]
+[-m,--master] 
+[-l,--local]  
+[--host] 
+[--files]  
+[--local-path]
+[--hosts-file]
+[HOSTNAME]
+
+=head1 DESCRIPTION 
+
+This script updates my user configurations on this computer from a remote host, or distributes them from this host to others in ~/.remote-hosts.
+
+The files from the master host will be downloaded using a URL (wget). And all other downloads will be done via ssh (for hosts in ~/.remote-hosts by default).
+
+The script tries to find if a given host is alive first by using ping.
+
+=head1 EXAMPLES
+
+B<update-remote-hosts.pl>  --master --host URL
+
+updates localhost using files from URL
+
+B<update-remote-hosts.pl> --hosts-file ~/.hosts
+
+updates all hosts found in ~/.hosts. If --hosts-file is omitted, it will upgrade all hosts found in ~/.remote-hosts
+
+B<update-remote-hosts.pl> --hosts-file ~/.hosts --files "bashrc.tar.bz2,vimrc.tar.bz2"
+
+updates only bashrc and vimrc files to all hosts found in ~/.hosts
+
+=head1 OPTIONS
+
+=cut
+
+my $PVERSION=0;
+my $HELP=0;
 my $MASTER_HOST = "http://lems1.kiskeyix.org";
 my $LOCAL_PATH  = "$ENV{'HOME'}/Shared/software/settings";
 my $REMOTE_HOSTS_FILE = "$ENV{'HOME'}/.remote-hosts";
 # path to temporary directory
 my $TMP="tmp";
-
 # ary of systems to be excluded from updating
 # separate by |. i.e.: 127.0.0.1|192.168.1.2|10.1.1.1
 my $EXCLUDE= "172.16.1.250|as400";
 # files we will be updating
 my @FILES=("bashrc.tar.bz2", "vimrc.tar.bz2", "muttrc.tar.bz2", "Applications.tar.bz2");
  
-############## NO NEED TO MODIFY THESE #################
 my %hosts; # global multi-dimensional hash to store hosts' information
 my $VERBOSE=0;
 my $DEBUG=0;
@@ -40,16 +91,83 @@ my $VERBOSE_ARGS="";
 my $WGET_ARGS="--continue --timestamping";
 my $HOST=undef;
 
+my $CONF_FILES=undef; # comma separated list
+
 ## GET OPTIONS ##
+=pod
+=over 8
+
+=item -v,--version
+
+Prints version and exits
+
+=item -D,--debug
+
+Enables debug mode
+
+=item -h,--help
+
+Prints this help and exits
+
+=item -r,--remove
+
+Remove all temporary files after updating
+
+=item -V,--verbose
+
+be verbose
+
+=item -m,--master
+
+Update localhost from master. Default is to upgrade all the computers found in ~/.remote-hosts. @see --host
+
+=item -l,--local
+
+Use copies in $LOCAL_PATH instead of remote $MASTER_HOST. @see --local-path
+
+=item --local-path PATH
+
+Sets $LOCAL_PATH to PATH instead of the default $ENV{"HOME"}/Shared/software/settings
+
+=item --host URL
+
+Sets $MASTER_HOST to URL
+
+=item --files FILES
+
+Comma separated list of files to get/upgrade instead of the defaults at @FILES.
+
+=item --host-file FILE
+
+Uses FILE instead of ~/.remote-hosts as our hosts file. This file is in the same format as /etc/hosts.
+
+=cut
+
 GetOptions(
     # flags
-    'D|debug'       =>  \$DEBUG,
-    'r|remove'      =>  \$REMOVE_FILES,
-    'V|verbose'     =>  \$VERBOSE,
-    'm|master'      =>  \$MASTER,
-    'l|local'       =>  \$LOCAL
+    'v|version'         =>  \$PVERSION,
+    'h|help'            =>  \$HELP,
+    'D|debug'           =>  \$DEBUG,
+    'r|remove'          =>  \$REMOVE_FILES,
+    'V|verbose'         =>  \$VERBOSE,
+    'm|master'          =>  \$MASTER,
+    'l|local'           =>  \$LOCAL,
+    # strings
+    'host=s'            =>  \$MASTER_HOST,
+    'files=s'           =>  \$CONF_FILES,
+    'local-path=s'      =>  \$LOCAL_PATH,
+    'hosts-file=s'      =>  \$REMOTE_HOSTS_FILE
 ) and $HOST=shift;
+
 ## START SCRIPT ##
+
+if ( $HELP ) { 
+    use Pod::Text;
+    my $parser = Pod::Text->new (sentence => 0, width => 78);
+    $parser->parse_from_file(File::Spec->catfile("$0"),
+			   \*STDOUT);
+    exit 0;
+}
 
 if ( $VERBOSE )
 {
@@ -67,6 +185,9 @@ my $silent = ( ! $VERBOSE ) ? " > /dev/null 2>&1" : "";
 if ( $MASTER )
 {
     my @failed = (); # array of files that failed
+    
+    _mkdir($LOCAL_PATH);
+
     chdir($LOCAL_PATH) or die ("$LOCAL_PATH $!");
     if ( !$LOCAL )
     {
@@ -206,6 +327,7 @@ sub is_alive
     return $ret;
 }
 
+# @desc finds binaries in your $PATH 
 sub which
 {
     # @param 0 string := binary to find in $ENV{PATH}
@@ -224,6 +346,7 @@ sub which
     return $path; # -1 means not found
 }
 
+# @desc prints colored messages
 sub debug
 {
     my $msg = "@_";
@@ -248,6 +371,7 @@ sub update_host
     # copy and unpack files:
     foreach my $i ( @FILES )
     {
+        next if ( ! -f "$LOCAL_PATH/$i" );
         $j++;
         print STDOUT "\r";
         printf STDOUT ("%20s",$h); # host padded
@@ -273,3 +397,21 @@ sub update_host
     # no errors:
     return "";
 }
+
+# @desc implements `mkdir -p`
+sub _mkdir
+{
+    my $path = shift;
+    my @dirs = splitdir($path);
+    my $last = "";
+    my $flag=1;
+    foreach (@dirs)
+    {
+        next if ( $_ =~ m/^\s*$/ );
+        $last = ( $flag > 1 ) ? catdir($last,$_) : $_ ;
+        mkdir ($last) if ( ! -d $last);
+        $flag++;
+    }
+    return $flag; # number of directories created
+}
+

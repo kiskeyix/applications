@@ -40,18 +40,43 @@ PKILL="pkill" # pkill is smart about process names
 
 CPID=$$ # current process id is saved
 
+#
+# Functions
+#
+
+# trap some signals:
+# our exit function removes the .pid file
+function _exit()        # function to run upon exit of shell
+{
+    rm -f $PIDF # removes PID file of this script
+    $PKILL $PROCESS # kill all seti processes by me
+    echo "Hasta la vista seti" 
+    # reenable signals
+    trap EXIT HUP TERM INT
+    exit 0
+}
+# hint: trap -l (displays signals)
+# SIGTERM (15) is sent to us from init when rebooting
+#trap _exit EXIT HUP TERM INT
+
+#
+# END FUNCTIONS 
+#
+#echo $-
 cd $SETI || exit 1
 [ -f startsetirc ] && . startsetirc # load defaults for this system
+
+#echo "Started Seti: `date`" > startseti.log
 
 # set LOAD to 0 if you want to disable this check
 LOAD=$(uptime|sed -e "s/.*: \([^,]*\).*/\1/" -e "s/ //g" -e "s/^\([0-9]\+\)\..*/\1/" )
 
 # are we stopping?
 if [ $LOAD -gt 5 -a x$1 = "xcondstop" -o x$1 = "xstop" ]; then
-    echo -n "Stopping $PROCESS "
+    echo -n "Stopping $PROCESS " 
     # cleanup startseti.sh processes if any...
     $PKILL $PROCESS && \
-    echo "[ok]" && \
+    echo "[ok]"  && \
     kill `cat $PIDF` && \
     rm -f $PIDF && \
     exit 0
@@ -68,7 +93,7 @@ fi
 if [ x$1 = "xstart" -a ! -f $PIDF ]; then
     echo $CPID > $PIDF 
 else
-    echo "$PIDF exists. We can't start seti until you remove this file"
+    echo "$PIDF exists. We can't start seti until you remove this file" 
     exit 1
 fi
 if [ $LOAD -lt 5 -a x$1 = "xstart" ]; then

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.23 $
+# $Revision: 1.24 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Sep-30
+# Last modified: 2003-Oct-13
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
 #               or a user specified command archiver ( tar? )
@@ -238,6 +238,13 @@ if ( ! -f $TMP_LOCK ) {
     }
 
     # ========== START BACKUP PROCESS ================= #
+    if ( -x "/usr/bin/flite" ) 
+    {
+        # emit an audible alert
+        system("echo Starting backup process | /usr/bin/flite");
+        system("/usr/bin/flite -t '".$hour." ".$min."'");
+    }
+    
     # System backup
     if ( exists $CONFIG{"SYSTEM"} ) {
         # backup system
@@ -524,8 +531,9 @@ sub clean {
 # which is then returned to the original caller
 # my $var = prompt("string");
 sub prompt {
-    # promt user and return input     my($string) = shift;
-    my($input) = "";                                                                                 
+    # prompt user and return input     
+    my $string = shift;
+    my $input = "";                                                                                 
     print ($string."\n");
     chomp($input = <STDIN>);
     # chomp is the same as:

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.28 $
+# $Revision: 1.29 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Sep-28
+# Last modified: 2004-Oct-27
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
 #               or a user specified command archiver ( tar? )
@@ -228,8 +228,13 @@ if ( ! -f $TMP_LOCK ) {
     $mon += 1; ## adjust Month: 0..11 instead of natural 1 .. 12
     $year += 1900;
 
-    my $MIDDLE_STR = ( exists $ARGV[0] && $ARGV[0] eq "daily" ) ? "daily" : $year."-$mon-$mday";
-
+    my $MIDDLE_STR = "";
+    if ( exists $ARGV[0] && $ARGV[0] =~ /^(daily|weekly|monthly)$/i )
+    {
+        $MIDDLE_STR = "$1";
+    } else {
+        $MIDDLE_STR = $year."-".$mon."-".$mday;
+    }
     # write lock file:
     open(FILE,"> $TMP_LOCK") || die "could not open $TMP_LOCK. $! \n";
     print FILE $year."-".$mon."-".$mday." ".$hour.":".$min.":".$sec;

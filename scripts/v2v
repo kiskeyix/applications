@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.46 $
+# $Revision: 1.47 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -1689,11 +1689,11 @@ sub cluster
 
 sub create_nav
 {
-    return()  if (  -e "tmp/filenav-ok" &&  -e "tmp/file.nav" );
+    return()  if (  -f "tmp/filenav-ok" &&  -f "tmp/file.nav" );
     my $demux=" -M 2" if ( $VideoNorm eq "NTSC" );
     pinfo("$v2d\t Creating File Navigation:\t\t   | tmp/file.nav\n");
     my $pid = fork();
-    mydie "couldn't fork [function: create_nav]" unless defined $pid;
+    mydie "couldn't fork [function: create_nav]\n" unless defined $pid;
     if ($pid)
     {
         $sys = "cat $VOBPATH/* | tcdemux $demux -W > tmp/file.nav";

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jan-05
 #
@@ -47,7 +47,7 @@ case "$1" in
     --make-pidfile --pidfile $PID \
     --verbose --exec $DAEMON $CMDLINE || echo -n "<Failed> "
     echo -n "$NAME"
-    if [ "$UID" -eq 0 -a x$2 != "xnoftpshut" ]; then
+    if [ -x $FTPSHUT -a "$UID" -eq 0 -a x$2 != "xnoftpshut" ]; then
         # shutdown ftp server now
         echo -e "\nShutting down ftp server"
         $FTPSHUT now
@@ -61,7 +61,7 @@ case "$1" in
     --pidfile $PID --exec $REALDAEMON || echo -n "<Failed> "
     echo -n "$NAME"
     rm -f $PID
-    if [ "$UID" -eq 0 ]; then
+    if [ -x $FTPSHUT -a "$UID" -eq 0 ]; then
         # restore ftp service
         echo -e "\nRestoring ftp service"
         #$FTPSHUT -R

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.47 $
+# $Revision: 1.48 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -558,8 +558,20 @@ sub mkindex {
             # and init a %config{this_base} hash for us
             init_config($this_base);
         }
-       
+      
+        # "serialization"
         my @files = @{$$hashref{$this_base}};
+
+        # yet another sort...
+        # sort menus alphabetically (dictionary order):
+        # print STDERR join(' ', @ls), "\n";
+        my $da;
+        my $db;
+        @files = sort { 
+            ($da = lc $a) =~ s/[\W_]+//g;
+            ($db = lc $b) =~ s/[\W_]+//g;
+            $da cmp $db;
+        } @files;
 
         # FILE_NAME is a global
         open(FILE, "> ".$this_base."/".$FILE_NAME.".".$config{$this_base}{"ext"}) || 
@@ -651,18 +663,6 @@ sub mkthumb {
     my %seen = ();
     my @uniq = grep(!$seen{$_}++,@ary);
 
-    # TODO make this into a function and re-use it...
-    # sort files alphabetically (dictionary order):
-    # maybe we should've sorted before we got here...
-    my $da;
-    my $db;
-    @uniq = sort { 
-        ($da = lc $a) =~ s/[\W_]+//g;
-        ($db = lc $b) =~ s/[\W_]+//g;
-        $da cmp $db;
-    } @uniq;
-
-
     # parse array of images
     foreach (@uniq){
         $thisFile = basename($_);
@@ -672,6 +672,17 @@ sub mkthumb {
         push @ls,$_;
         #$TOTAL++;
     } #end images array creation
+
+    # TODO make this into a function and re-use it...
+    # sort files alphabetically (dictionary order):
+    # maybe we should've sorted before we got here...
+    my $da;
+    my $db;
+    @ls = sort { 
+        ($da = lc $a) =~ s/[\W_]+//g;
+        ($db = lc $b) =~ s/[\W_]+//g;
+        $da cmp $db;
+    } @ls;
 
     # progressbar stuff
     # gauge message
@@ -844,6 +855,18 @@ sub thumb_html_files {
         next if ($thisFile !~ m/$EXT_INCL_EXPR/i);
         push @ls,$_;
     } #end images array creation
+
+    # yet yet another sort!!! goodness
+    # TODO make this into a function and re-use it...
+    # sort files alphabetically (dictionary order):
+    # maybe we should've sorted before we got here...
+    my $da;
+    my $db;
+    @ls = sort { 
+        ($da = lc $a) =~ s/[\W_]+//g;
+        ($db = lc $b) =~ s/[\W_]+//g;
+        $da cmp $db;
+    } @ls;
 
     # progressbar stuff
     # gauge message

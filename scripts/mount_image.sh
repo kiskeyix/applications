@@ -3,7 +3,7 @@
 # Title="Mount Image"
 # Title[es]="Montar Imagen"
 #
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Oct-31
 #
@@ -50,7 +50,8 @@ SU="gksu --disable-grab "       # xsu|gnome-sudo. graphical representation of "s
 # "umount" and "mount" to avoid unecessary questions
 DIALOG="zenity" # gdialog|xdialog. dialog replacement for Gnome
 MOUNT="mount"   # mount command
-
+UMOUNT="umount" # umount command
+NAUTILUS="nautilus" # nautilus command
 
 # language settings
 
@@ -196,7 +197,7 @@ unmount()
 {
     # @arg1 message
     # @arg2 path
-    $SU -u $SUSER -t "${TIT_UMOUNT}: $1" "umount $2"
+    $SU -u $SUSER -t "${TIT_UMOUNT}: $1" "$UMOUNT $2"
     if [ $? -eq 0 ]; then
         echo "yes"
     else
@@ -282,11 +283,12 @@ do
 
     # if already mounted continue
     if [ "`mount | grep \"${arg}\"`" ]; then
-        RET=`unmount "$arg ${MSG_MOUNTED}" "$arg"`
-        if [ $RET = "yes" ]; then
+        if [ "`unmount "$arg ${MSG_MOUNTED}" "$arg"`" = "yes" ]; then
             info "$arg $MSG_UMOUNTED"
         else
             error "$MSG_NOTUMOUNTED $arg"
+            # TODO find where is mounted and open with nautilus
+            # $NAUTILUS 
         fi
         continue
     fi
@@ -315,7 +317,7 @@ do
     # try mounting the filesystem with what we know so far
 
     if [ "`lmount $mtype $arg $USERMOUNTDIR`" = "yes" ]; then 
-        nautilus $USERMOUNTDIR
+        $NAUTILUS $USERMOUNTDIR
     else
         # if mount failed, ask about encryption and filetype
         
@@ -337,7 +339,7 @@ do
 
             if [ "`setup_enloop $LOOPDEV $arg $CYPHER`" = "yes" ]; then
                 if [ "`lmount $mtype $LOOPDEV $USERMOUNTDIR`" = "yes" ]; then
-                    nautilus $USERMOUNTDIR
+                    $NAUTILUS $USERMOUNTDIR
                 else
                     error "$MSG_EMOUNT $LOOPDEV --> $USERMOUNTDIR"
                     
@@ -369,7 +371,7 @@ do
             fi
 
             if [ "`lmount $mtype $arg $USERMOUNTDIR`" = "yes" ]; then
-                nautilus $USERMOUNTDIR
+                $NAUTILUS $USERMOUNTDIR
             else
                 error "$MSG_EMOUNT $arg --> $USERMOUNTDIR"
                 rmdir $USERMOUNTDIR

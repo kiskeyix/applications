@@ -1,14 +1,8 @@
 #!/bin/sh
 #
-# local     Settings for Tuxy (latinomixed.com). Use to setup stuff
-#           needed by Tuxy workstation.
-#
+# local     Use to setup stuff needed by Tuxy workstation.
 #           Written by Luis Mondesi <lemsx1@hotmail.com>.
 #
-# CHANGELOG
-# * 2003-11-01 23:33 EST fixed tests... this script might be innecessary...
-#
-# 2003-09-28 15:42 EDT Luis M <lemsx1@hotmail.com>
 
 PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 NAME="local"
@@ -39,17 +33,11 @@ INSMOD="/sbin/insmod"
 
 set -e # exit if a program ends in non-zero status ( $? )
 
-# if the via82cxxx module is there, then let's set
-# our UDMA 5:
-
-VIA82CXXX="`/bin/lsmod | /bin/egrep -i \"^via82cxxx\" | /usr/bin/cut -d\" \" -f1`"
-
 case "$1" in
     start)
     echo "Starting 'local' settings "
-#     if [ x$VIA82CXXX = "xvia82cxxx" ]; then
-        echo -n "Starting hdparm settings "
-        $HDPARM $HDPARMARGS /dev/hda #> /dev/null
+        echo -n "[hdparm] ->"
+        $HDPARM $HDPARMARGS /dev/hda > /dev/null
         RETHDA=$?
         if [ $RETHDA -eq 0 ]; then
              echo -n " [sucessfull] "
@@ -63,31 +51,8 @@ case "$1" in
 #         else
 #             echo -n " [failed] "
 #         fi
-         echo "."
-#     else
-#         echo -n "Loading module via82cxxx "
-#         # try loading the module and test again
-#         $INSMOD via82cxxx
-#         if [ $? -eq 0 ]; then
-#             echo " [successful] "
-#             echo -n "Starting hdparm settings "
-#             $HDPARM $HDPARMARGS /dev/hda #> /dev/null
-#             RETHDA=$?
-#             $HDPARM $HDPARMARGS /dev/hdb #> /dev/null
-#             RETHDB=$?
-#             if [ $RETHDA -eq 0 -a $RETHDB -eq 0 ]; then
-#                 echo -n " [sucessfull] "
-#             else
-#                 echo -n " [failed] "
-#             fi
-#             echo "."
-#         else
-#             echo -n " [failed] "
-#             echo "."
-#         fi
-#     fi
    
-#     echo -n "Starting nvidia settings "
+#     echo -n "[nvidia] "
 #     if [ ! -c /dev/.devfsd ]; then
 #         for i in 0 1 2 3 4 5 6 7; do
 #             node="/dev/nvidia$i"
@@ -102,9 +67,8 @@ case "$1" in
 #         chmod 0666 $node         || echo "chmod \"$node\""
 #         chown :video $node     || echo "chown \"$node\""
 #     fi
-#     echo "."
     
-#     echo -n "Starting Zip settings "
+#     echo -n "[zip] "
 #     if [ ! -c /dev/.devfsd ]; then
 #        
 #         # special case:
@@ -124,9 +88,8 @@ case "$1" in
 #         # by default partition 4 is the one we care:
 #         ln -s /dev/hdd4 /dev/zip || echo "/dev/zip skipped"
 #     fi
-#     echo "."
     
-    echo -n "Starting vmware settings "
+    echo -n "[vmware] "
     if [ ! -c /dev/.devfsd ]; then
         for i in 0 1 2 8 9; do
             node="/dev/vmnet$i"

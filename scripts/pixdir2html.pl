@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.24 $
+# $Revision: 1.25 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -344,7 +344,7 @@ sub mkindex {
             } 
             print FILE ("\t".$myconfig{td}."\n");
 
-            ($file_name = $this_file) =~ s/$EXT_INCL_EXPR//g;
+            ($file_name = $this_file) =~ s/$EXT_INCL_EXPR//gi;
             
             ($file_name = $file_name) =~ s/^$THUMB_PREFIX//; # removes prefix
             
@@ -429,14 +429,14 @@ sub mkthumb {
     foreach(@ls){
         $pix_name = basename($_);
         # strip extension from file name
-        ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR//g;
+        ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR//gi;
         # get base directory
         ( $BASE = $_ ) =~ s/(.*)\/$pix_name$/$1/g;
         #print STDOUT $BASE."\n";
 
         if ( $BASE !~ m/$tmp_BASE/ ) {
             if ( 
-                ( $FORCE > 0 ) && 
+                ( $FORCE > 0 || ! -f  "$BASE/$CONFIG_FILE" ) && 
                 (! -f "$BASE/.nopixdir2htmlrc" ) 
             ) {
                 if ( 
@@ -472,6 +472,7 @@ sub mkthumb {
         if ( !-f "$THUMBNAILSDIR/".$THUMB_PREFIX.$pix_name ){
         
             print LOGFILE ("\n= Converting file $BASE/$pix_name into $THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name \n");
+
             system("convert -geometry $PERCENT $BASE/$pix_name $THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name");
             if ( $? != 0 ) {
                 die "ERROR: conversion failed\n $! ";
@@ -545,7 +546,7 @@ sub thumb_html_files {
     for ( $i=0; $i <= $#ls; $i++) {
         $pix_name = basename($ls[$i]);
         # strip extension from file name
-        ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR//g;
+        ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR//gi;
         # get base directory
         ( $BASE = $ls[$i] ) =~ s/(.*)\/$pix_name$/$1/g;
         #print STDOUT "Base: $BASE.\n";
@@ -621,7 +622,7 @@ sub thumb_html_files {
         if ( -f $ls[$i+1] && ($BASE eq $NEXT_BASE) ) {
             $next_file_name = "";
         
-            ($next_file_name = $next_pix_name) =~ s/$EXT_INCL_EXPR//g;
+            ($next_file_name = $next_pix_name) =~ s/$EXT_INCL_EXPR//gi;
             
             #print FILE ("==&gt;");
 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.94 $
+# $Revision: 1.95 $
 # Luis Mondesi  <lemsx1@hotmail.com>
 # 
 # REQUIRED: ImageMagick's Perl module and a dialog 
@@ -456,6 +456,7 @@ sub mkindex {
     my @files = ();
 
     foreach $this_base ( sort keys %$hashref ) {
+        next if ( -f "$this_base/.nopixdir2htmlrc" );
         my ($my_bgcolor,$file_name) = ""; 
         $i = 0;
         # read specific config file for this directory
@@ -920,7 +921,7 @@ sub menu_file {
     foreach my $directory (@uniq){
         next if (-f "$directory/.nopixdir2htmlrc");
         # remove ./ from begining of names
-        $directory =~ s/^\.\/*//g;
+        $directory =~ s,^\./*,,g;
         # note that @ls holds the HTML links...
         # thus, paths are relative and not absolute here:
         push(@ls,"$directory/$FILE_NAME.".$config{"$ROOT_DIRECTORY"}{"ext"});
@@ -1305,7 +1306,7 @@ sub process_file {
     my $dir_name = dirname ($_);
     if  ( 
         -f $_
-        && ! -f $dir_name."/.nopixdir2htmlrc"
+        && ! -f "$dir_name/.nopixdir2htmlrc"
         && $base_name =~ m/$EXT_INCL_EXPR$/i # only pictures please
         && $base_name !~ m/^($EXCEPTION_LIST)$/
         && $base_name !~ m/\b$THUMBNAIL\b/

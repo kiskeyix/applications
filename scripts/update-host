@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.11 $
+# $Revision: 1.12 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Jan-21
 #
@@ -96,8 +96,7 @@ if ( $MASTER )
             push(@failed,"$i");
         }
     }
-    print "These files failed: ".join ( " ",@failed )."\n" if ( $#failed > 0 );
-    print STDOUT "\n";
+    print ("\nThese files failed: ".join ( " ",@failed )."\n") if ( $#failed > 0 );
     exit(0);
 }
 
@@ -150,8 +149,7 @@ foreach my $h ( @hosts )
                 system("ssh $h command rm -f '$TMP/$i' ".$silent);
             }
         } 
-        print "$h These files failed: ".join ( " ",@failed )."\n" if ( $#failed > 0 );
-        print STDOUT "\n";
+        print STDOUT ("\n$h These files failed: ".join ( " ",@failed )."\n") if ( $#failed > 0 );
     } else {
         # debugging 
         print "*** SKIPPED $h\n" if ( $DEBUG );

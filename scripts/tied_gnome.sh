@@ -26,6 +26,7 @@ DEFAULT_FONT=1  # set a given font. see below
 
 DEFAULT_MENU_TEAROFF=1 # don't tearoff menus by default (this is confusing)
 DEFAULT_TITLEBAR_FONT=1 # does metacity uses system font? or see below to set one
+DEFAULT_BROWSER=1 # use default browser as mandatory? see below to specify which browser
 
 # integers
 NUMBER_OF_WORKSPACES=2
@@ -37,22 +38,28 @@ GTK_THEME="Nuvola"
 METACITY_THEME=$GTK_THEME
 ICON_THEME="Nuvola"
 BACKGROUND="/usr/share/wallpapers/All-Good-People-1.jpg"
-SPLASH_IMAGE="/usr/share/pixmaps/splash/gnome-splash.png"
+SPLASH_IMAGE="/usr/local/share/pixmaps/Splash-Crystal.png" 
+#"/usr/share/pixmaps/splash/gnome-splash.png"
 MONOSPACE_FONT_NAME="Sans Bold 12"
 FONT_NAME="Sans Bold 11"
 DESKTOP_FONT="Sans Bold 14" # nautilus
 TITLE_BAR_FONT="Sans Bold 10" # only if DEFAULT_TITLEBAR_FONT is 0
+BROWSER="mozilla-firebird"
 
-if [ $SHOW_SPLASH ]; then
+if [ $SHOW_SPLASH != 0 ]; then
     # show splash for all users?
     $GCONFTOOL --direct --config-source xml:readwrite:/etc/gconf/gconf.xml.mandatory --type bool --set /apps/gnome-session/options/show_splash_screen true
     if [ $? != 0 ]; then
         echo "Setting Show Splash failed"
     fi
 
-    $GCONFTOOL --direct --config-source xml:readwrite:/etc/gconf/gconf.xml.mandatory --type string --set /apps/gnome-session/options/splash_image "$SPLASH_IMAGE"
-    if [ $? != 0 ]; then
-        echo "Setting Splash Image failed"
+    if [ -f $SPLASH_IMAGE ]; then
+        $GCONFTOOL --direct --config-source xml:readwrite:/etc/gconf/gconf.xml.mandatory --type string --set /apps/gnome-session/options/splash_image "$SPLASH_IMAGE"
+        if [ $? != 0 ]; then
+            echo "Setting Splash Image failed"
+        fi
+    else 
+        echo "'$SPLASH_IMAGE' not found"
     fi
 else 
     $GCONFTOOL --direct --config-source xml:readwrite:/etc/gconf/gconf.xml.mandatory --type bool --set /apps/gnome-session/options/show_splash_screen false
@@ -79,7 +86,7 @@ if [ $? != 0 ]; then
 fi
 
 # themes
-if [ $DEFAULT_THEME ]; then
+if [ $DEFAULT_THEME != 0 ]; then
     $GCONFTOOL --direct --config-source xml:readwrite:/etc/gconf/gconf.xml.mandatory --type string --set /desktop/gnome/interface/gtk_theme "$GTK_THEME"
     if [ $? != 0 ]; then
         echo "Setting Gtk Theme failed"
@@ -95,7 +102,7 @@ if [ $DEFAULT_THEME ]; then
 fi
 
 # background
-if [ $DEFAULT_BACKGROUND ]; then
+if [ $DEFAULT_BACKGROUND != 0 ]; then
     $GCONFTOOL --direct --config-source xml:readwrite:/etc/gconf/gconf.xml.mandatory --type string --set /desktop/gnome/background/picture_filename "$BACKGROUND"
     if [ $? != 0 ]; then
         echo "Setting a background failed"
@@ -108,7 +115,7 @@ if [ $DEFAULT_BACKGROUND ]; then
 fi
 
 #fonts
-if [ $DEFAULT_FONT ]; then
+if [ $DEFAULT_FONT != 0 ]; then
     $GCONFTOOL --direct --config-source xml:readwrite:/etc/gconf/gconf.xml.mandatory --type string --set /desktop/gnome/interface/font_name "$FONT_NAME"
     if [ $? != 0 ]; then
         echo "Setting Font Name failed"
@@ -124,7 +131,7 @@ if [ $DEFAULT_FONT ]; then
         echo "Setting Desktop Font failed";
     fi
 
-    if [ $DEFAULT_TITLEBAR_FONT ]; then
+    if [ $DEFAULT_TITLEBAR_FONT != 0 ]; then
         $GCONFTOOL --direct --config-source xml:readwrite:/etc/gconf/gconf.xml.mandatory --type bool --set /apps/metacity/general/titlebar_uses_system_font true
         if [ $? != 0 ]; then
             echo "Setting Titlebar Font to System Font failed"
@@ -138,7 +145,7 @@ if [ $DEFAULT_FONT ]; then
 fi
 
 # tearoff
-if [ $DEFAULT_MENU_TEAROFF ]; then
+if [ $DEFAULT_MENU_TEAROFF != 0 ]; then
     $GCONFTOOL --direct --config-source xml:readwrite:/etc/gconf/gconf.xml.mandatory --type bool --set /desktop/gnome/interface/menus_have_tearoff false
     if [ $? != 0 ]; then
         echo "Setting Menu Have Tearoff failed"
@@ -152,6 +159,13 @@ if [ $DEFAULT_MENU_TEAROFF ]; then
     $GCONFTOOL --direct --config-source xml:readwrite:/etc/gconf/gconf.xml.mandatory --type bool --set /desktop/gnome/interface/toolbar_detachable false
     if [ $? != 0 ]; then
         echo "Setting Toolbar detachable failed"
+    fi
+fi
+
+if [ $DEFAULT_BROWSER != 0 ]; then
+    $GCONFTOOL --direct --config-source xml:readwrite:/etc/gconf/gconf.xml.mandatory --type string --set /desktop/gnome/applications/browser/exec "$BROWSER"
+    if [ $? != 0 ]; then
+        echo "Setting Browser failed"
     fi
 fi
 

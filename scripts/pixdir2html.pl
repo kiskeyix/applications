@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE:
@@ -62,6 +62,9 @@ use File::Copy;
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
 
+use File::Find;     # find();
+use File::Basename; # basename();
+
 use strict;
 use vars qw( $VERSION @INC );
 use Config;
@@ -87,7 +90,7 @@ my $CONFIG_FILE=".pixdir2htmlrc";
 my $THUMBNAIL="t";  # individual thumnails
 my $HTMLDIR="h";    # individual HTML files
 
-my $EXT="php";     # extension for generated HTML files
+my $EXT="html";     # extension for generated HTML files
 
 my $FILE_NAME="index.$EXT";
 my $MENU_NAME="menu.$EXT";
@@ -95,6 +98,8 @@ my $MENU_NAME="menu.$EXT";
 # list directories that should be skipped here
 # separated by |
 my $EXCEPTION_LIST = "CVS|RCS";
+# regex of files we want to include
+my $EXT_INCL_EXPR = "\.(jpg|png|jpeg|gif)";
 
 # How big are the thumbnails?
 # This is the default, in case the config file
@@ -113,9 +118,12 @@ my $SAVELOG = "/usr/bin/savelog";
 ###Nothing below this line should need to be configured.###
 #**************************************************************#
 
-my %myconfig = ""; # init config hash
+my @pixdir = (); # for menu
+
+my %myconfig = (); # init config hash
 
 my $total_directories=0;
+my $total_links=0;
 
 my $IMAGE_DIRECTORY=".";
 
@@ -174,16 +182,19 @@ sub main {
     print STDOUT "$total_directories directories.\n Read log $LOG for details. \n";
 } # endmain
 
-# Takes one argument:
-# ROOT = directory from which we will take the config file
+
 sub init_config {
+    # Takes one argument:
+    # ROOT = directory from which we will take the config file   
+
+    my %config_tmp = "";
     
     my $ROOT = shift;
     if (open(CONFIG, "<$ROOT/$CONFIG_FILE")){
         while (<CONFIG>) {
             next if /^\s*#/;
             chomp;
-            $myconfig{$1} = $2 if m/^\s*([^=]+)=(.+)/;
+            $config_tmp{$1} = $2 if m/^\s*([^=]+)=(.+)/;
         }
         close(CONFIG);
 
@@ -192,46 +203,47 @@ sub init_config {
    Could not find $ROOT/$CONFIG_FILE 
 __EOF__
 
-        $myconfig{percent}="20%";
-        $myconfig{title}="Images";
-        $myconfig{meta}="<meta http-equiv='content-type' content='text/html;charset=iso-8859-1'>";
-        $myconfig{stylesheet}="<link rel='stylesheet' href='../styles.css' type='text/css'>";
-        $myconfig{html_msg}="<h1>Free form HTML</h1>";
-        $myconfig{body}="<body bgcolor='#000000' text='#ffffff'>";
-        $myconfig{p}="<p>";
-        $myconfig{table}="<table border='0'>";
-        $myconfig{td}="<td valign='top' align='left'>";
-        $myconfig{tr}="<tr>";
-        $myconfig{footer}="";
+        $config_tmp{percent}="20%";
+        $config_tmp{title}="Images";
+        $config_tmp{meta}="<meta http-equiv='content-type' content='text/html;charset=iso-8859-1'>";
+        $config_tmp{stylesheet}="<link rel='stylesheet' href='../styles.css' type='text/css'>";
+        $config_tmp{html_msg}="<h1>Free form HTML</h1>";
+        $config_tmp{body}="<body bgcolor='#000000' text='#ffffff'>";
+        $config_tmp{p}="<p>";
+        $config_tmp{table}="<table border='0'>";
+        $config_tmp{td}="<td valign='top' align='left'>";
+        $config_tmp{tr}="<tr>";
+        $config_tmp{footer}="";
 
     }
     
     #construct a header if it doesn't yet exist:
-    if ( $myconfig{header} eq "" ) {
+    if ( $config_tmp{header} eq "" ) {
 
         print LOGFILE ("Blank header. Generating my own ... \n");
 
-        $myconfig{header}="<html>
+        $config_tmp{header}="<html>
         <head>
-        ".$myconfig{meta}."
-        <title>".$myconfig{title}."</title>
-        ".$myconfig{stylesheet}."
+        ".$config_tmp{meta}."
+        <title>".$config_tmp{title}."</title>
+        ".$config_tmp{stylesheet}."
         </head>".
-        $myconfig{body}."
+        $config_tmp{body}."
         <center>".
-        $myconfig{html_msg}."
+        $config_tmp{html_msg}."
         \n
         ";
     }
 
-    return %myconfig;
+    return %config_tmp;
 }
 
-# Takes one argument directory to create images for
-# If a directory is found inside this directory containing
-# images, then it recursively calls itself over and over
+
 sub mkthumb {
-    
+    # Takes one argument directory to create images for
+    # If a directory is found inside this directory containing
+    # images, then it recursively calls itself over and over
+
     my $ROOT = $_[0];
     $THUMBNAILSDIR="$ROOT/$THUMBNAIL";
 
@@ -249,7 +261,7 @@ sub mkthumb {
     
     print LOGFILE ("Working in $ROOT \n");
     
-#construct array of all image files
+    # construct array of all image files
     while (defined($thisFile = readdir(DIR))) {
         next if ($thisFile =~ m/$EXCEPTION_LIST/);
         next if ($thisFile !~ /\w/);
@@ -287,7 +299,7 @@ sub mkthumb {
                 }
             }
         }
-        next if ($thisFile !~ m/\.(jpg|png|jpeg|gif)/i);
+        next if ($thisFile !~ m/$EXT_INCL_EXPR/i);
         push @ls,$thisFile;
         $total_picts++;
     } #end images array creation
@@ -347,7 +359,7 @@ sub mkthumb {
             print FILE ("\t".$myconfig{td}."\n");
             if (-f "$THUMBNAILSDIR/"."t$_"){
                 # if file exists, create a link, otherwise leave it blank
-                ($file_name = $_) =~ s/\.jpg|\.gif|\.png//g;
+                ($file_name = $_) =~ s/$EXT_INCL_EXPR//g;
                 print FILE ("<a href='$HTMLDIR/$file_name.$EXT'><img src='$THUMBNAIL/"."t$_'></a>\n");
             } else {
                 print FILE ("&nbsp;");
@@ -428,12 +440,12 @@ sub thumbfile {
                 next;
             }
 
-            $total_directories++;
+            #$total_directories++;
             push @subdir,"$ROOT/$thisFile";
         }
-        next if ($thisFile !~ m/\.(jpg|png|jpeg|gif)/i);
+        next if ($thisFile !~ m/$EXT_INCL_EXPR/i);
         push @ls,$thisFile;
-        $total_picts++;
+        #$total_picts++;
     } #end images array creation
     closedir(DIR);
 
@@ -455,7 +467,7 @@ sub thumbfile {
 
         #print all picts now
         foreach(@ls){
-            ($file_name = $_) =~ s/\.jpg|\.gif|\.png//g;
+            ($file_name = $_) =~ s/$EXT_INCL_EXPR//g;
 
             my $current_html_file = "$HTMLSDIR/$file_name.$EXT";
             my $current_link = "$file_name.$EXT";
@@ -489,7 +501,7 @@ sub thumbfile {
             print FILE ("<a href='../$FILE_NAME'>HOME</a>");
             # next link here
             if ( -f $ROOT."/".$ls[$i+1] ) {
-                ($file_name = $ls[$i+1]) =~ s/\.jpg|\.gif|\.png//g;
+                ($file_name = $ls[$i+1]) =~ s/$EXT_INCL_EXPR//g;
                 print FILE (" <a href='$file_name.$EXT'>==&gt;</a> \n");
             } else {
                 print FILE ("==&gt;");
@@ -542,49 +554,94 @@ sub prompt {
     return $input;
 }
 
-sub menuMaker {
-# How does it work?
-# Run it from the given folder where the menu.html
-# file will be located, and relative to this file
-# links will be constructed for e/a folder
-# inside this given folder that has a file named: index.html or index.php
-# 
-# if there is a file named .new inside the given directory,
-# then a IMG tag will be put in front of the link with an image
-# src=myscript{new} in it
-# 
-# Thus in the config file put a line as such:
-# new=http://images.server.com/new_icon.png;;
+sub do_dir_ary {
+    # uses find() to recur thru directories
+    # returns an array of directories
+    # i.e. in directory "a" with structure:
+    # /a
+    # /a/b
+    # /a/b/c
+    # /a/b2/c2
+    # 
+    # my @ary = &do_dir_ary(".");
+    # 
+    # will yield:
+    # a
+    # a/b
+    # a/b/c
+    # a/b2/c2
+    # 
+    my $ROOT = shift;
+    
+    my %opt = (wanted => \&process, no_chdir=>1);
+    
+    find(\%opt,$ROOT);
+    
+    return @pixdir;
+}
 
-    # init a couple of needed variables
+sub process {
+    my $base_name = basename($_);
+    if ( 
+        !-f $_ && 
+        $base_name !~ m/^($EXCEPTION_LIST|$THUMBNAIL|$HTMLDIR|\..*)$/ 
+    ) {
+        s/^\.\/*//g;
+        push @pixdir,$_;
+    }
+}
+
+sub menuMaker {
+    ##############################################
+    # It creates a menu.$EXT file at 
+    # the root level of the picture
+    # directory (at the first 
+    # directory that was passed to the script)
+    #
+    # if there is a file named .new 
+    # inside the given directory,
+    # then a IMG tag will be put in 
+    # front of the link with an image
+    # src=myscript{new} in it
+    # 
+    # Thus in the config file put a line as such:
+    # new=http://images.server.com/new_icon.png;
+    ##############################################
+
+    # TODO this was read at some point... maybe it
+    # should be passed to this function in some way...
+    my %myconfig = init_config($HTML_DIRECTORY);
+
     my $IMG = ""; 
     my $line = "";
-    my $thisFile= "";
-    my $x=0;
-    my $y=0;
-    my $i=0;
-    my $j=0; # count number of TR's
-    my $total_links=0;
+    #my $thisFile= "";
+    my $x=0;    # counts number of links
+    my $y=0;    # counts number of td's
+    my $i=0;    # general purpose counter
+    my $j=0;    # count number of TR's
+    
     my @ls = ();
     my $ts = "";
     my @files=();
-
-    opendir (DIR,"$HTML_DIRECTORY") || die "Couldn't open dir $HTML_DIRECTORY";
-
-    # TODO use function to init the @ls array recursively
-    #construct array of all HTML files
-    while (defined($thisFile = readdir(DIR))) {
-        next if ($thisFile !~ /\w/);
-        next unless (-d "$HTML_DIRECTORY/$thisFile");
-        next if (-f "$HTML_DIRECTORY/$thisFile/.nopixdir2htmlrc");
-        next unless (-f "$HTML_DIRECTORY/$thisFile/$FILE_NAME");
-        $ls[$x] = "$thisFile/$FILE_NAME"; # link
-        $x+=1;
-    }
-    closedir(DIR);
-
-# sort menus alphabetically (dictionary order):
-# print STDERR join(' ', @ls), "\n";
+    my @pixdir = (); # reset array
+    
+    my @ary = do_dir_ary("$HTML_DIRECTORY");
+    
+    foreach(@ary){
+        if (
+            !-f "$HTML_DIRECTORY/$_/.nopixdir2htmlrc" &&
+            -f "$HTML_DIRECTORY/$_/$FILE_NAME"
+        ) {
+            # note that @ls holds the HTML links...
+            $ls[$x] = "$_/$FILE_NAME"; # why not push()?
+            $x++; 
+        }
+    }   
+    
+    $total_links = $x;
+    
+    # sort menus alphabetically (dictionary order):
+    # print STDERR join(' ', @ls), "\n";
     my $da;
     my $db;
     @ls = sort { 
@@ -593,17 +650,16 @@ sub menuMaker {
         $da cmp $db;
     } @ls;
 
-    $total_links = $x;
-
-    open(FILE, "> $HTML_DIRECTORY/$MENU_NAME") || \
+    open(FILE, "> $HTML_DIRECTORY/$MENU_NAME") ||
         die "Couldn't write file $MENU_NAME to $HTML_DIRECTORY";
 
-# TODO sometimes menus don't need headers and footers
-#       device a way to turn it off in the rc file
-#print FILE ($myconfig{header}."\n");
+    if ($myconfig{nomenuheader_footer} == 0) {
+        print FILE ($myconfig{header}."\n");
+    }
+
     print FILE ("$myconfig{table}\n");
 
-# print all links now
+    # print all links now
 
     my $tmp_tr = ""; # used to color the rows
 
@@ -628,6 +684,7 @@ sub menuMaker {
             print FILE ("\t".$myconfig{td}."\n");
             if ( $ls[$i] ne "" ) {
                 # if link exists, otherwise leave it blank
+                # TODO there is a better way to do this... find it...
                 ($ts = $ls[$i]) =~ s/(.*)\/$FILE_NAME/$1/gi;
                 $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='$myconfig{new}' alt='new'>":""; # if .new file
                 $ts = ucfirst($ts);
@@ -642,7 +699,11 @@ sub menuMaker {
         $j++; # incr TR counter
     }
     print FILE ("</table>\n");
-#print FILE ($myconfig{footer}."\n");
+    
+    if ($myconfig{nomenuheader_footer} == 0) {
+        print FILE ($myconfig{footer}."\n");
+    }
+    
     close(FILE);
-    print STDERR "Done with menus. I count $total_links files.\n";
+    print STDERR "$total_links links in menu.\n";
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.66 $
+# $Revision: 1.67 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -337,6 +337,53 @@ my $readme="\n See README file or run $0 --help \n\n \t\t\t (Type q)";
 my $bpp=0.18;   # This value =  bitrate x 1000 / ( fps x height x width ) 
 
 ######################## FUNCTIONS #########################
+
+# === Helper Functions === #
+
+sub mydie
+{
+    print $RED.$_[0]."\n".$NORM;
+    if ( ! $RUNCLUST  && ! $SRTSUBRIP )
+    {
+        system("mv tmp/dvdtitle $VOBPATH/dvdtitle") if ( -e "tmp/dvdtitle" );
+        system("mv tmp/probe.rip $VOBPATH/probe.rip") if ( -e "tmp/probe.rip" );
+    } else { 
+        system("/bin/rm tmp/$TITLE*.pgm tmp/$TITLE.srtx 2> /dev/null");
+        sleep(3);
+    }
+    unlink("tmp/PB");
+    exit(1);
+}
+
+use sigtrap qw(handler mydie normal-signals error-signals) ;
+
+sub pinfo
+{
+    # takes a string a prints a green message:
+   print STDOUT $GREEN."@_".$NORM ;
+}
+
+sub myperror
+{
+    # takes a string and prints a red error message
+    print $RED."@_".$NORM  if ( $DEBUG );
+}
+
+sub pdebug 
+{   # prints a string only if $DEBUG is true
+    print " + @_ \n" if ( $DEBUG );
+}
+
+sub pwarn
+{
+    my $red="\033[1;31m";
+    my $norm="\033[0;39m";
+    # takes a string and prints a red warn message
+    print STDOUT $red."@_".$norm;
+}
+
+# === Routines === #
+
 sub tcsync
 {   # Return the sync fine tunning suggested by tcprobe
     # Regex must be deeper tested
@@ -750,23 +797,6 @@ sub srt_subrip
     system ("ispell $ilang  $TITLE.srt");
     pdebug ("<--- srt_subrip");
 }
-
-sub mydie
-{
-    print $RED.$_[0]."\n".$NORM;
-    if ( ! $RUNCLUST  && ! $SRTSUBRIP )
-    {
-        system("mv tmp/dvdtitle $VOBPATH/dvdtitle") if ( -e "tmp/dvdtitle" );
-        system("mv tmp/probe.rip $VOBPATH/probe.rip") if ( -e "tmp/probe.rip" );
-    } else { 
-        system("/bin/rm tmp/$TITLE*.pgm tmp/$TITLE.srtx 2> /dev/null");
-        sleep(3);
-    }
-    unlink("tmp/PB");
-    exit(1);
-}
-
-use sigtrap qw(handler mydie normal-signals error-signals) ;
 
 sub makelogo
 {
@@ -3587,33 +3617,6 @@ sub ripdvd
     print " You may now run V2divx with yours arguments to encode the vob file(s)\n\n";
     exit(0);
 } # END ripdvd
-
-#### UTILITIES ####
-
-sub pinfo
-{
-    # takes a string a prints a green message:
-   print STDOUT $GREEN."@_".$NORM ;
-}
-
-sub myperror
-{
-    # takes a string and prints a red error message
-    print $RED."@_".$NORM  if ( $DEBUG );
-}
-
-sub pdebug 
-{   # prints a string only if $DEBUG is true
-    print " + @_ \n" if ( $DEBUG );
-}
-
-sub pwarn
-{
-    my $red="\033[1;31m";
-    my $norm="\033[0;39m";
-    # takes a string and prints a red warn message
-    print STDOUT $red."@_".$norm;
-}
 
 # ************ End of Functions Declarations *********** #
 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.34 $
+# $Revision: 1.35 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Jan-25
 #
@@ -275,7 +275,7 @@ if ( ! -f $TMP_LOCK ) {
         $TMP_EXCLUDES .= "'";
 
         # construct our main command
-        $COMMAND = sprintf("%s cf - %s  xxFILESxx 2> /dev/null",
+        $COMMAND = sprintf("%s cf - %s  xxFILESxx 2> /dev/null &",
             $CONFIG{"TAR"},
             $TMP_EXCLUDES
         );

@@ -1,6 +1,9 @@
 #!/bin/sh
-# $Revision: 1.1 $
-
+# $Revision: 1.2 $
+# 
+# DESC: close program given by "list" if temperature
+#       is higher than "limit"
+      
 # if temperature is higher than:
 LIMIT=50
 
@@ -21,5 +24,5 @@ if [ $TEMP -gt $LIMIT ]; then
         sleep 3
     done
 #else
-    #echo "Ditto. Temp is fine: $TEMP"
+#    echo "Ditto. Temp is fine: $TEMP"
 fi

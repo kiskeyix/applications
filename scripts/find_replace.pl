@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jan-08
 #
@@ -22,8 +22,9 @@ my $modified = 0;
 my $usage = "Usage: find_replace.pl \
     \"string\" \"replacement\" \"filenames_pattern\"\n";
 
-my $thisFile = "";
-my @new_file = ();
+my $thisFile = "";      # general current file
+my @new_file = ();      # lines to be printed in new file
+my @ls = ();            # array of files
 
 my ($this_string,$that_string,$f_pattern) = @ARGV;
 
@@ -36,25 +37,10 @@ if ($this_string =~ /\w/
     && $that_string =~ /\w/ 
     && $f_pattern =~ /\w/) {
 
-    opendir (DIR,".") || die "Couldn't open current directory. $!\n";
-
-    my @ls = ();
-    my $x = 0;
-
-#construct array of all files
-    while (defined($thisFile = readdir(DIR))) {
-        next if (-d "./$thisFile");
-        next if ($thisFile !~ /\w/);
-        next if ($thisFile !~ m/$f_pattern/i);
-        
-        if ($DEBUG) { print STDERR "this file $thisFile\n"; }
-        
-        $ls[$x] = $thisFile;
-        $x+=1;
-    }
-    closedir(DIR);
-
-my $i =0;
+    my $i =0;
+    
+    file_ary("."); # start at current directory
+    
     for (@ls) {
         # yes, this is a wrapper for a standard tip!
         #
@@ -95,5 +81,37 @@ my $i =0;
         # cleanup array
         @new_file = ();
 
+    }
+}
+
+sub file_ary {
+    
+    my $dir = $_[0];
+    my @subdir = ();
+
+    if ($DEBUG) { print STDOUT "dir $dir\n"; }
+    
+    opendir (DIR,"$dir") || die "Couldn't open current directory. $!\n";
+
+    #construct array of all files and put in @ls
+    while (defined($thisFile = readdir(DIR))) {
+        next if ($thisFile =~ /^\..*/);
+        next if ($thisFile !~ /\w/);
+        if (-d "$dir/$thisFile") {
+            push @subdir,"$dir/$thisFile"; 
+            next;
+        }
+        next if ($thisFile !~ m/$f_pattern/i);
+        
+        if ($DEBUG) { print STDERR "this file $thisFile\n"; }
+        
+        push @ls, "$dir/$thisFile";
+    }
+    closedir(DIR);
+
+    # recur thru rest of directories
+    # there is no limit in recursion. be careful!
+    foreach(@subdir) {
+        file_ary("$_");
     }
 }

@@ -1,13 +1,19 @@
 #!/bin/sh
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Oct-16
+# Last modified: 2004-Feb-10
 #
 # DESCRIPTION: a simple debian script to install java from Sun. This is
 #               for java version 1.4.2 and up. You must this as root
 # USAGE: sudo $0
 # CHANGELOG:
 #
+
+MOZILLA="firefox" # name of the .desktop file and command to execute
+MOZILLA_DIR="/usr/local/firefox" # path to Mozilla directory
+# this string will become /usr/local/bin/$MOZILLA and will be executed
+# by users when double click on .desktop
+MOZILLA_CMD_STR="#!/bin/sh\n BROWSER=$MOZILLA_DIR/$MOZILLA \n\$BROWSER -remote \"openURL(\$@, new-tab)\" 2>/dev/null || \$BROWSER \$@"
 
 MESSAGE="Please get the java binary from http://www.java.com and pass it to this installation as an argument. i.e. ./install_java j2re-version-linux-i586.bin"
 
@@ -59,37 +65,45 @@ update-alternatives \
     /usr/local/j2re/plugin/i386/ns610-gcc32/libjavaplugin_oji.so \
     50
 
-if [ -d "/usr/local/MozillaFirebird/plugins" ]; then
+if [ -d "$MOZILLA_DIR/plugins" ]; then
 #    update-alternatives \
 #    --install /usr/local/MozillaFirebird/plugins/libjavaplugin_oji.so \
 #    libjavaplugin_oji.so \
 #    /usr/local/j2re/plugin/i386/ns610-gcc32/libjavaplugin_oji.so \
 #    50
-    
+    WD=`pwd`
+    cd "$MOZILLA_DIR/plugins" 
     ln -sf /etc/alternatives/libjavaplugin_oji.so \
-        /usr/local/MozillaFirebird/plugins/libjavaplugin_oji.so
+        libjavaplugin_oji.so
 
     echo "Putting Mozilla Firebird in Gnome-2 menu"
-    echo "[Desktop Entry]" > /usr/share/applications/mozilla-firebird.desktop
-    echo "Name=Mozilla Firebird" >> /usr/share/applications/mozilla-firebird.desktop
-    echo "Comment=Firebird Web Browser"  >> /usr/share/applications/mozilla-firebird.desktop
-    echo "Exec=mozilla-firebird %U"  >> /usr/share/applications/mozilla-firebird.desktop
-    echo "Terminal=false"  >> /usr/share/applications/mozilla-firebird.desktop
-    echo "MultipleArgs=false"  >> /usr/share/applications/mozilla-firebird.desktop
-    echo "Type=Application"  >> /usr/share/applications/mozilla-firebird.desktop
-    echo "Icon=web-browser"  >> /usr/share/applications/mozilla-firebird.desktop
-    echo "Categories=Application;Network"  >> /usr/share/applications/mozilla-firebird.desktop
+    echo "[Desktop Entry]" > /usr/share/applications/$MOZILLA.desktop
+    echo "Name=$MOZILLA" >> /usr/share/applications/$MOZILLA.desktop
+    echo "Comment=Firebird Web Browser"  >> /usr/share/applications/$MOZILLA.desktop
+    echo "Exec=$MOZILLA %U"  >> /usr/share/applications/$MOZILLA.desktop
+    echo "Terminal=false"  >> /usr/share/applications/$MOZILLA.desktop
+    echo "MultipleArgs=false"  >> /usr/share/applications/$MOZILLA.desktop
+    echo "Type=Application"  >> /usr/share/applications/$MOZILLA.desktop
+    echo "Icon=web-browser"  >> /usr/share/applications/$MOZILLA.desktop
+    echo "Categories=Application;Network"  >> /usr/share/applications/$MOZILLA.desktop
 fi
 
-if [ -d "/usr/lib/mozilla-firebird/plugins" ]; then
+if [ -d "/usr/lib/$MOZILLA/plugins" ]; then
 #    update-alternatives \
-#    --install /usr/lib/mozilla-firebird/plugins/libjavaplugin_oji.so \
+#    --install /usr/lib/$MOZILLA/plugins/libjavaplugin_oji.so \
 #    libjavaplugin_oji.so \
 #    /usr/local/j2re/plugin/i386/ns610-gcc32/libjavaplugin_oji.so \
 #    50
- 
+    #cd "/usr/lib/$MOZILLA/plugins" 
     ln -sf /etc/alternatives/libjavaplugin_oji.so \
-        /usr/lib/mozilla-firebird/plugins/libjavaplugin_oji.so
+        /usr/lib/$MOZILLA/plugins/libjavaplugin_oji.so
 
+fi
+
+if [ ! -x "/usr/local/bin/$MOZILLA" ]; then
+    echo -e $MOZILLA_CMD_STR > "/usr/local/bin/$MOZILLA"
+    chmod 0755 "/usr/local/bin/$MOZILLA"
+else
+    echo "/usr/local/bin/$MOZILLA already exists"
 fi
 

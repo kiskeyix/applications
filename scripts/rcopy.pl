@@ -2,8 +2,10 @@
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2002-Sep-15
 # 
-# $Id: rcopy.pl,v 1.3 2002-09-15 19:12:25 luigi Exp $
+# $Id: rcopy.pl,v 1.4 2002-09-15 19:13:00 luigi Exp $
 # 
+# VERSION: 0.9
+#
 # LICENSE:
 # GPL
 # http://www.gnu.org/licenses/gpl.html

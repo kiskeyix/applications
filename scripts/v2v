@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.25 $
+# $Revision: 1.26 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -119,7 +119,11 @@ $userconfig="
 #		Cluster config if you intend to use cluster mode
 \$CLUSTER_CONFIG=/path/to/.V2divxrc-cluster;  # YOU MUST MODIFY THIS LINE !!!
 
-#               Xterm command (default is 'xterm \%s -e') 
+#               Xterm command (default is 'xterm \%s -e'). \%s is a 
+#               series of arguments that will be passed before the
+#               execution code '-e' or '-x' according to the given
+#               terminal. Xterm requires that all arguments come before
+#               -e for instance.
 #               You can also set it to things like: gnome-terminal -x, 
 #               konsole -x, screen -d -m, etc...
 \$XTERM=xterm \%s -e ;
@@ -2288,9 +2292,9 @@ sub zooming
     }
     sleep(1);
     $AR=abs(100-($NXaxis*100/($NYaxis*$aspect_ratio)));
-    print $DEBUG "<--- Zooming\n" && sleep(5);
-}	
-
+    print $DEBUG "<--- Zooming\n";
+    sleep(5); # pause 5 seconds FIXME
+} # end zooming
 
 # ********************** Config ****************************
 
@@ -2564,105 +2568,106 @@ sub config
             if ($rep eq "F" or $rep eq "f")
             { 
                 if ( $deb_sec)
-                {   print $RED.$v2d."\t Due to synchro we need to keep begin credits:\n".$NORM;
-                $deb_sec=0; 
-            }
-            if ( -f "tmp/probe.rip")
-            {
-                open(PROBE,"<tmp/probe.rip");
-                while(<PROBE>)
-                {
-                    $stlang=$1 if ( $_=~ m, subtitle 0${st}=<(.*)>,);
+                {   
+                    print $RED.$v2d."\t Due to synchro we need to keep begin credits:\n".$NORM;
+                    $deb_sec=0; 
                 }
-                close(PROBE);
-            }else{
-                print " What is the language of this subtitle ?\n\t1) en\n\t2) fr\n\t3) de\n\t4) es\n";
-                $rep=<STDIN>;
-                SWITCH:
+                if ( -f "tmp/probe.rip")
                 {
-                    if ( $rep == 2 ) { $stlang = fr ; last SWITCH ;}
-                    if ( $rep == 3 ) { $stlang = de ; last SWITCH ;}
-                    if ( $rep == 4 ) { $stlang = es ; last SWITCH ;}
-                    $stlang = en ; 
+                    open(PROBE,"<tmp/probe.rip");
+                    while(<PROBE>)
+                    {
+                        $stlang=$1 if ( $_=~ m, subtitle 0${st}=<(.*)>,);
+                    }
+                    close(PROBE);
+                }else{
+                    print " What is the language of this subtitle ?\n\t1) en\n\t2) fr\n\t3) de\n\t4) es\n";
+                    $rep=<STDIN>;
+                    SWITCH:
+                    {
+                        if ( $rep == 2 ) { $stlang = fr ; last SWITCH ;}
+                        if ( $rep == 3 ) { $stlang = de ; last SWITCH ;}
+                        if ( $rep == 4 ) { $stlang = es ; last SWITCH ;}
+                        $stlang = en ; 
+                    }
                 }
+                $sub_title="SRT_${st}_${stlang}";
+            } else {
+                $sub_title=",extsub=$st:$tb:0:1:$EXTSUB";
             }
-            $sub_title="SRT_${st}_${stlang}";
-        } else {
-            $sub_title=",extsub=$st:$tb:0:1:$EXTSUB";
+            open (CONF,">>tmp/V2divx.conf");
+            print CONF "#deb_sec:$deb_sec\n";  # Bug 
+            print CONF "#sub_title:$sub_title\n";
+            close (CONF);
         }
-        open (CONF,">>tmp/V2divx.conf");
-        print CONF "#deb_sec:$deb_sec\n";  # Bug 
-        print CONF "#sub_title:$sub_title\n";
-        close (CONF);
+
     }
-
-}
-#************** ANTIALIASING & DEINTERLACING ******************** 
-interlaced;
-print " Do you want to deinterlace this movie(";
-print "Y|n)? " if ( $INTERLACE eq "yes" );
-print "y|N)? " if ( $INTERLACE eq "no") ;
-$rep= <STDIN>;
-chomp($rep);
-
-if ( $rep eq "O" || $rep eq "o" || $rep eq "y" || $rep eq "Y" || ($INTERLACE eq "yes" && ($rep ne 'N' || $rep ne 'n')) )
-{	
-    $PP=`transcode -J pp=lb -c 9-11  2>&1 | grep failed`;
-    pinfo("$v2d\t Mplayer postproc. enable:\t\t   | ");
-    print "YES\n".$NORM if ( $PP eq "" ) ;
-    print "NO\n".$NORM if ( $PP ne "" ) ;
-    print " To deinterlace, do you want to use:\n";
-    print "\tA) The -I 3 transcode option (a|A)\n\tB) The YUVdenoiser (b|B)";
-    print "\n\tC) the Mplayer pp filter (c|C)" if ( $PP eq "" ) ;
-    print " [default:A]?:";
+    #************** ANTIALIASING & DEINTERLACING ******************** 
+    interlaced;
+    print " Do you want to deinterlace this movie(";
+    print "Y|n)? " if ( $INTERLACE eq "yes" );
+    print "y|N)? " if ( $INTERLACE eq "no") ;
     $rep= <STDIN>;
     chomp($rep);
+
+    if ( $rep eq "O" || $rep eq "o" || $rep eq "y" || $rep eq "Y" || ($INTERLACE eq "yes" && ($rep ne 'N' || $rep ne 'n')) )
+    {	
+        $PP=`transcode -J pp=lb -c 9-11  2>&1 | grep failed`;
+        pinfo("$v2d\t Mplayer postproc. enable:\t\t   | ");
+        print "YES\n".$NORM if ( $PP eq "" ) ;
+        print "NO\n".$NORM if ( $PP ne "" ) ;
+        print " To deinterlace, do you want to use:\n";
+        print "\tA) The -I 3 transcode option (a|A)\n\tB) The YUVdenoiser (b|B)";
+        print "\n\tC) the Mplayer pp filter (c|C)" if ( $PP eq "" ) ;
+        print " [default:A]?:";
+        $rep= <STDIN>;
+        chomp($rep);
+        open (CONF,">>tmp/V2divx.conf");
+        if ( ($rep eq "C" || $rep eq "c") && $PP eq "" )
+        {
+            $deintl=",pp=lb";
+            print CONF "#deintl:$deintl\n";
+        } elsif  ( $rep eq "B" || $rep eq "b" ) 
+        {
+            $deintl=",yuvdenoise=sharpen=100:deinterlace=1";
+            print CONF "#deintl:$deintl\n";
+        } else {
+            $dintl=" -I 3";
+        }
+        close (CONF);
+    }
+    # Sorry, only RGB input allowed for now: $deintl="_-J_smartdeinter=diffmode=2:highq=1:cubic=1";
+    print " Does your clip need Antialiasing (slower) (y|N)? ";
+    $rep= <STDIN>;
+    chomp($rep);
+
+    $aalias=" -C 3" if ( $rep eq "O" || $rep eq "o" || $rep eq "y" || $rep eq "Y" );
+    #       Write parameters
+    ( $left_right eq 1 && $top_bot eq 1 ) or mydie "Oups Sorry.. I miss some parameters :-(";
+    $params = "$good_audio -j $tb,$lr$dintl$aalias";
     open (CONF,">>tmp/V2divx.conf");
-    if ( ($rep eq "C" || $rep eq "c") && $PP eq "" )
+    print CONF "#params:$params # YOU MUST KNOW WHAT YOU DO IN THIS LINE\n";
+    close(CONF);
+
+    zooming;
+    #    Ask for a Logo
+    ask_logo;
+    #     Search DVD Title
+    if ( ! defined($dvdtitle))
     {
-        $deintl=",pp=lb";
-        print CONF "#deintl:$deintl\n";
-    } elsif  ( $rep eq "B" || $rep eq "b" ) 
-    {
-        $deintl=",yuvdenoise=sharpen=100:deinterlace=1";
-        print CONF "#deintl:$deintl\n";
-    } else {
-        $dintl=" -I 3";
+        print " Enter the title of this movie (blank space available): ";
+        $dvdtitle=<STDIN>;
+        $dvdtitle =~ s/ /_/g;
+        chomp($dvdtitle);
+        if ( $dvdtitle eq "" ) {
+            $dvdtitle="movie";
+        }
     }
-    close (CONF);
-}
-# Sorry, only RGB input allowed for now: $deintl="_-J_smartdeinter=diffmode=2:highq=1:cubic=1";
-print " Does your clip need Antialiasing (slower) (y|N)? ";
-$rep= <STDIN>;
-chomp($rep);
+    open (CONF,">>tmp/V2divx.conf");
+    print CONF "#dvdtitle:$dvdtitle # DO NOT MODIFY THIS LINE\n";
+    close(CONF);
 
-$aalias=" -C 3" if ( $rep eq "O" || $rep eq "o" || $rep eq "y" || $rep eq "Y" );
-#       Write parameters
-( $left_right eq 1 && $top_bot eq 1 ) or mydie "Oups Sorry.. I miss some parameters :-(";
-$params = "$good_audio -j $tb,$lr$dintl$aalias";
-open (CONF,">>tmp/V2divx.conf");
-print CONF "#params:$params # YOU MUST KNOW WHAT YOU DO IN THIS LINE\n";
-close(CONF);
-
-zooming;
-#    Ask for a Logo
-ask_logo;
-#     Search DVD Title
-if ( ! defined($dvdtitle))
-{
-    print " Enter the title of this movie (blank space available): ";
-    $dvdtitle=<STDIN>;
-    $dvdtitle =~ s/ /_/g;
-    chomp($dvdtitle);
-    if ( $dvdtitle eq "" ) {
-        $dvdtitle="movie";
-    }
-}
-open (CONF,">>tmp/V2divx.conf");
-print CONF "#dvdtitle:$dvdtitle # DO NOT MODIFY THIS LINE\n";
-close(CONF);
-
-            }   # END Config 
+}   # END Config 
 
 # *************** RIP A DVD ***********************
 sub ripdvd
@@ -2828,12 +2833,12 @@ if ($ARGV[1] eq "config")
     ask_clust;
 }
 
-if ($ARGV[0] eq runclust )
+if ( $ARGV[0] eq runclust )
 {
     if (defined($ARGV[1]))
     {
         $wdir=$ARGV[1];
-        chdir($wdir) or mydie $wdir." does not exist or is'nt a directory";		
+        chdir($wdir) or mydie $wdir." does not exist or isn't a directory";		
         # We are on a cluster node all needed parameters ARE known via -->
         readconf;
         # And now we can aviencode  

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.42 $
+# $Revision: 1.43 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -45,14 +45,14 @@ my ($SVIDEO_FORMAT,$ROOT_DIRECTORY) = "";
 
 GetOptions(
     # flags
-    'h|help'        =>  \$HELP,
-    'v|version'     =>  \$VERSION,
-    'runclust'      =>  \$RUNCLUST,
-    'srtsubrip'     =>  \$SRTSUBRIP,
-    'tv'            =>  \$TVREC,
-    'd|debug'       =>  \$DEBUG,
-    'i|info'        =>  \$INFO,
-    'c|with-cluster'   =>  \$OKCLUSTER,
+    'h|help'                    =>  \$HELP,
+    'v|version'                 =>  \$VERSION,
+    'runclust'                  =>  \$RUNCLUST,
+    'srtsubrip'                 =>  \$SRTSUBRIP,
+    'tv'                        =>  \$TVREC,
+    'd|debug'                   =>  \$DEBUG,
+    'i|info'                    =>  \$INFO,
+    'c|with-cluster'            =>  \$OKCLUSTER,
     # strings
     'D|directory=s'             => \$ROOT_DIRECTORY,
     's|source-video-format=s'   => \$SVIDEO_FORMAT,
@@ -64,11 +64,11 @@ GetOptions(
     'C|cluster_config=s'        => \$CLUSTER_CONFIG,
     'r|remote_cmd=s'            => \$RMCMD,
     'n|nice=s'                  => \$nice,
-    'L|logo=s'                 => \$LOGO, 
+    'L|logo=s'                  => \$LOGO, 
     'l|lang|language=s'         => \$LANGUAGE, 
-    'S|sub_title_opts=s'      => \$EXTSUB ,
+    'S|sub_title_opts=s'        => \$EXTSUB ,
     # numbers
-    'a|default_audio_channel=i'   => \$DEF_AUDIOCHANNEL 
+    'a|default_audio_channel=i' => \$DEF_AUDIOCHANNEL 
 );
     # reset DIVX_OPT if DIVX is pass as parameter and not DIVX_OPT
     $DIVX_OPT="" if ( defined $DIVX && ! defined $DIVX_OPT);
@@ -734,7 +734,7 @@ sub audiorescale
     print $DEBUG "---> Enter audiorescale\n";
     if ( $CLUSTER ne "NO" )
     {	
-        create_extract if ( ! -e "tmp/extract.text" || ! -e "tmp/extract-ok" ) ;
+        create_extract if ( ! -f "tmp/extract.text" || ! -f "tmp/extract-ok" ) ;
         $info=`cat tmp/extract.text`;
         ( $info =~ m,suggested volume rescale=(\d+.*\d+),) or mydie "Unable to find Suggested volume rescal in tmp/extract.text";
         if ( $1  > 1)
@@ -1063,15 +1063,15 @@ sub printinfo
     get_audio_channel("junk") if (! defined($findaudio_channel));
     print $v2d."   A:\tLanguage Audio channel:\t(1)| $LANGUAGE\n" if (defined($findaudio_channel)) ;
     print $v2d."   C:\tCluster config file:\t(1)| $CLUSTER_CONFIG\n" if ( $CLUSTER ne NO);
-    print $v2d."   C:\tCluster remote cmd:\t(1)| $RMCMD\n" if ( $CLUSTER ne NO);
+    print $v2d."   C:\tCluster remote cmd:\t(1)| $RMCMD\n" if ( $CLUSTER ne "NO" );
     open (CC,"<$CLUSTER_CONFIG");
     my $i=1;
     while(<CC>)
     {
         if ( $_=~ m/([^\s#]*)#*/)
         {
-            print $v2d."   C:\tCluster node $i:\t\t(3)| $1% frames to process\n" if ( $CLUSTER ne NO && $1 ne "" );
-            $i++ if ( $CLUSTER ne NO && $1 ne "" );
+            print $v2d."   C:\tCluster node $i:\t\t(3)| $1% frames to process\n" if ( $CLUSTER ne "NO" && $1 ne "" );
+            $i++ if ( $CLUSTER ne "NO" && $1 ne "" );
         }	
     }
     close CC;   
@@ -1110,7 +1110,7 @@ sub printinfo
     print "\n";
     print "(1)This value can be modify in your $userconfigfile\n";
     print "(2)This value can be modify in tmp/V2divx.conf\n";
-    print "(3)This value can be modify in your $CLUSTER_CONFIG\n" if ( $CLUSTER ne NO);
+    print "(3)This value can be modify in your $CLUSTER_CONFIG\n" if ( $CLUSTER ne "NO" );
     print $RED."\tYou can say \'no\' at this time, modify by hand some parameters \n\t in the tmp/V2divx.conf(BUT TAKE CARE!) \n\t or in your $userconfigfile,\n\t and then rerun V2divx without parameters\n".$NORM;
     print " Ready to encode (y|N)? ";
     $rep=<STDIN>;
@@ -1223,17 +1223,17 @@ sub ask_clust
     open(CONF,">>tmp/V2divx.conf");
     unlink("tmp/cluster.args");
     pinfo("$v2d\t Cluster config file exist:\t\t   |");
-    if ( ! -e $CLUSTER_CONFIG )
+    if ( ! -f $CLUSTER_CONFIG )
     {
         pwarn(" NO\n");
     } else {
-        pinfo(" Yes\n") if ( -e $CLUSTER_CONFIG );
+        pinfo(" Yes\n") if ( -f $CLUSTER_CONFIG );
         if ( ! $OKCLUSTER )
         {
             print " Do you want to use a cluster (y|N)? ";
             $rep=<STDIN>;
             chomp($rep);
-        }else{
+        } else {
             $rep='y';
         }
         if ( $rep eq "y" || $rep eq "Y" || $rep eq "o" || $rep eq "0")
@@ -1241,27 +1241,31 @@ sub ask_clust
             create_nav ;
             my $stream_units=`tail -1 tmp/file.nav | awk '{print \$1}'`;
             chomp($stream_units);
-            if ( $stream_units > 10 ) # Take care there is too much stream units !!
+            # Take care there is too much stream units !!
+            if ( $stream_units > 10 ) 
             {
-                pwarn("\tThere is too much stream units".
-                " in this clip to encode it\n".
-                "\tin cluster mode with a good ".
+                pwarn("\tThere are too many stream units".
+                " to encode this clip \n".
+                "\t in cluster mode with a good ".
                 "video quality\n\tReversing to NO".
                 " CLUSTER...\n");
-                $stream_units=NO;
+                $stream_units="NO";
                 sleep(2);
             }
+
             # WE need create-extract in CLUSTER Mode to have $audio_rescale :-(
-                create_extract if ( $stream_units ne NO && ( ! -e "tmp/extract-ok" || ! -e "tmp/extract.text"));
+                create_extract if ( $stream_units ne "NO" 
+                && ( ! -f "tmp/extract-ok" || ! -f "tmp/extract.text")
+            );
             # Initialize the $CLUSTER to the number of stream Units or to NO if there
-            # is too much Stream Units 
-                $CLUSTER=$stream_units;
+            # are too many Stream Units 
+            $CLUSTER=$stream_units;
         }
     }
     print CONF "#CLUSTER:$CLUSTER # YOU CAN REMOVE BUT NOT MODIFY THIS LINE\n";
     close(CONF);
     print $DEBUG "<--- ask_clust\n";
-}
+} # end ask_clust
 
 # ============= Cluster MODE =================== # 
 sub cluster
@@ -1538,18 +1542,20 @@ sub create_extract
     get_audio_channel if ( ! defined($audio_channel));
     $audio_format=audioformat("-a $audio_channel") if ( $NOAUDIO != 1 );	
     a_bitrate if ( ! defined($audio_bitrate));
-    $info=`transcode -i $VOBPATH -c 1-2 2> /dev/null` or mydie "Problem when running \'transcode -i $VOBPATH \'";
+    $info=`transcode -i $VOBPATH -c 1-2 2> /dev/null` 
+        or mydie "Problem when running \'transcode -i $VOBPATH \'";
     $info =~ m,V:\s+encoding\s+fps.*\|\s+(\d+\.\d+),;
     my($FPS)=$1;
     if ( $FPS =~ m,29\.97, )
     {
-       print(" Is this Movie a NTSC TELECINE movie (MPlayer is your friend to know that)?[y|N]");
-      my $rep=<STDIN>;
+        print(" Is this Movie a NTSC TELECINE movie".
+            " (MPlayer is your friend to know that)?[y|N]");
+        my $rep=<STDIN>;
         chomp($rep);
         $TELECINE=1 if ( $rep eq "y" || $rep eq "Y" );
     }
     $VFORMAT="NTSC" if ( $FPS =~ m,2[39]\.9, );
-#    create_nav if ( $VFORMAT eq "NTSC");
+    #    create_nav if ( $VFORMAT eq "NTSC");
 
     if ( $NOAUDIO == 1  || $need_time == 1 )  
     {
@@ -1605,7 +1611,8 @@ sub create_extract
                 } else {
                     $sys = "cat $VOBPATH/* | nice -$nice tcextract -x $audio_format -t $in_video_magic | nice -$nice tcscan -b $audio_bitrate -x pcm -f $FPS -e $audio_rate 2>> tmp/extract.text  >> tmp/extract.text";
                 }
-            } elsif (  $audio_format eq mp3  || $in_video_magic eq 'avi') {
+            } elsif (  $audio_format eq mp3  
+            || $in_video_magic eq 'avi') {
                 chk_wdir if ( ! defined($sample));
                 $sys = "nice -$nice tcextract -i \"$VOBPATH/$sample\" -x $audio_format | nice -$nice tcdecode -x $audio_format | nice -$nice tcscan -b $audio_bitrate -x pcm -e $audio_rate -f $FPS 2>> tmp/extract.text  >> tmp/extract.text";
             } else {
@@ -1630,7 +1637,7 @@ sub create_extract
     $duree =~ m,estimated clip length=(\d+.\d+) seconds,;
     pinfo("$v2d\t Estimated Clip Length:\t\t\t   | $1 sec\n");
     print $DEBUG "<--- create_extract\n";
-}
+} # end create_extract
 
 #  ***** Calculate How many Frames to encode ***** #
 
@@ -1639,36 +1646,39 @@ sub calculate_nbrframe
     print $DEBUG "---> Enter calculate_nbrframe\n";
     # We need Info about Clip
 
-    if ( -e "tmp/probe.rip" && ! -e "tmp/probe.rip-BAD")
+    if ( -f "tmp/probe.rip" && ! -f "tmp/probe.rip-BAD")
     {  	
         $info = `cat tmp/probe.rip`;
         $LOG="tmp/probe.rip";
     } else {
-        create_extract if (! -e "tmp/extract-ok" || ! -e "tmp/extract.text" );
+        create_extract if (! -f "tmp/extract-ok" || ! -f "tmp/extract.text" );
         $info = `cat tmp/extract.text`;
         $LOG="tmp/extract.text";
     }
 
-    ($info =~ m,V: (\d+) frames,) or mydie "Unable to find number of frames to encode in $LOG" ;
+    ($info =~ m,V: (\d+) frames,) 
+        or mydie "Unable to find number of frames to encode in $LOG";
     $tot_frames = $1;
 
-    $info=`transcode -i $VOBPATH -c 1-2 2> /dev/null` or mydie "Problem when running \'transcode -i $VOBPATH\'";
+    $info=`transcode -i $VOBPATH -c 1-2 2> /dev/null` 
+        or mydie "Problem when running \'transcode -i $VOBPATH\'";
     $info =~ m,V: encoding fps[^\|]*\| (\d+\.\d+).*,;
     $FPS=$1;
     if ( $FPS =~ m,29.97, && ! defined $TELECINE )
     {
-       print(" Is this Movie a NTSC TELECINE movie (MPLayer is your friend to know that)?[y|N]");
-       my $rep=<STDIN>;
+        print(" Is this Movie a NTSC TELECINE movie".
+        " (MPLayer is your friend to know that)?[y|N]");
+        my $rep=<STDIN>;
         chomp($rep);
         $TELECINE=1; 
-   }
+    }
     $VFORMAT="NTSC" if ( $FPS =~ m,2[39]\.9, );
-#    create_nav if ( $VFORMAT eq "NTSC");
+    #    create_nav if ( $VFORMAT eq "NTSC");
 
     $nbr_frames= floor($tot_frames - ($deb_sec+$last_sec)*$FPS);
     print $DEBUG "Number of frames: $nbr_frames\n";
     print $DEBUG "<--- calculate_nbrframe\n";
-}
+} # end calculate_nbrframe
 
 #  ********** Calculate Bitrate ****************
 
@@ -2131,7 +2141,7 @@ sub readconf
 sub get_params
 {  	
     print $DEBUG "--->  Enter get_params\n";
-    if ( ! -e "tmp/V2divx.conf")
+    if ( ! -f "tmp/V2divx.conf")
     {
         # We are in Quick Mode
         $i = 0;
@@ -2264,10 +2274,7 @@ sub get_params
     if ( defined($TELECINE) ) {
         print CONF "#TELECINE:$TELECINE\n";
     }
-
-
     close(CONF);
-
     print $DEBUG "<--- get_params\n";
 } # end get params
 

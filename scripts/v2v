@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.73 $
+# $Revision: 1.74 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -1478,8 +1478,8 @@ sub get_audio_channel
             chomp;
             if ( $_ =~ m,(?:ac3|mpeg2ext|lpcm|dts|mp3) ([^\s]+) ,)
             {
-                pinfo("$v2d\t Language of audio stream $i:\t\t   | $1") if ( ! defined($_[0]) && $FLAG_GAC); 
-                $findaudio_channel=$i if ( $1 eq $LANGUAGE && ! defined($findaudio_channel));
+                pinfo("$v2d\t Language of audio stream $i:\t\t   | $1") if ( $_[0] eq "all"  && $FLAG_GAC); 
+                $findaudio_channel=$i if ( $1 eq $LANGUAGE && $findaudio_channel eq "" );
                 $i++;
             }
         }

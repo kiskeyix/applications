@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.78 $
+# $Revision: 1.79 $
 # Luis Mondesi  <lemsx1@hotmail.com>
 # 
 # REQUIRED: ImageMagick's Perl module and a dialog 
@@ -215,6 +215,17 @@ sub main {
     }
     # which progressbar are we using?
     print $LOGFILE ("Mode $MODE\n");
+    print $LOGFILE "= Start directory $ROOT_DIRECTORY \n";
+
+    # we need to create thumbnails first... 
+    # TODO separate index creation from mkthumb()
+    if ( $THUMBSONLY > 0 || $MENUONLY == 0  ) {
+        # make all thumbnails and indices
+        mkthumb($ROOT_DIRECTORY,$menu_str);
+        if ( $THUMBSONLY > 0 ) {
+            return 0;
+        }
+    }
     # are we creating a menu file only?
     if ( 
         $MENUONLY > 0 
@@ -225,7 +236,7 @@ sub main {
         menu_file();
         return 0;
     }
-    print $LOGFILE "= Start directory $ROOT_DIRECTORY \n";
+    
     if ( ! -f "$ROOT_DIRECTORY/$CONFIG_FILE" )
     {
         print $LOGFILE 
@@ -237,11 +248,7 @@ sub main {
         print $LOGFILE ("= Creating menu string\n");
         $menu_str = menu_file();
     }
-    # make all thumbnails and indices
-    mkthumb($ROOT_DIRECTORY,$menu_str);
-    if ( $THUMBSONLY > 0 ) {
-        return 0;
-    }
+
     # make all supporting HTML files
     thumb_html_files($ROOT_DIRECTORY);
     # close progressbar

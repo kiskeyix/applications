@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.9 $
+# $Revision: 1.10 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jul-03
+# Last modified: 2003-Jul-06
 #
 # DESC: finds a string in a set of files
 #
@@ -17,7 +17,7 @@ $|++;
 
 my $DEBUG = 0;
 
-my $EXCEPTION_LIST = "\.soc|\.sock";
+my $EXCEPTION_LIST = "\.soc\$|\.sock\$|\.so\$|\.o\$";
 
 # -------------------------------------------------------------------
 #           NO NEED TO MODIFY ANYTHING PASS THIS LINE               #
@@ -106,15 +106,16 @@ sub do_file_ary {
 sub process_file {
     my $base_name = basename($_);
     if ( 
+        $_ =~ m($f_pattern) &&
         -f $_ && 
-        $_ =~ m/^($f_pattern)$/ &&
-        $base_name !~ m/^($EXCEPTION_LIST)$/
+        $base_name !~ m/$EXCEPTION_LIST/
     ) {
         s/^\.\/*//g;
         push @ls,$_;
     }
 }
 
+# without using Find
 #sub file_ary {
 #    
 #    my $dir = $_[0];

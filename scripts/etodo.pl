@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2002-Sep-17
-# $Id: etodo.pl,v 1.2 2002-09-20 15:01:05 luigi Exp $
+# Last modified: 2002-Sep-20
+# $Id: etodo.pl,v 1.3 2002-09-20 17:17:58 luigi Exp $
 #
 # DESC:
 #   This script takes your tasks.ics file from Evolution
@@ -62,9 +62,39 @@ my $vtask = $ENV{'HOME'}."/evolution/local/Tasks/tasks.ics";
 my $ohtml = "/var/www/html/tasks.html";
 
 # End configuration... no need to edit below this comment
-#
+#************************************************************
+my $HIDE_COMPLETED = 0;
+my $SHOW_TIME = 0;
+my $user_name = "none";
+my $SECONDS_TO_RUN = 0;
 
-my $user_name = ( $ARGV[1] ) ? $ARGV[1] : "none";
+while ( $_ = ( $ARGV[0] ) ? $ARGV[0] : "" , /^-/) {
+    shift;
+    last if /^--$/;
+#   * add switch to hide completed tasks ( -hc or --hide-completed )
+#   * add the date and a optional switch to put the date in the title
+#     of the HTML file ( -t or --time )
+#   * add switch to run in daemon mode for with number of second sleep
+#     ( -d SECONDS or --daemon=SECONDS ). Daemon mode should detach 
+#     from the terminal and become a background process. Thus there
+#     would be no need to run it from a cron job
+#   * add a switch for displaying the help ( --help or -h )
+#
+    if (/^-+hc/) { $HIDE_COMPLETED = 1; } 
+    elsif (/^-+t/) { $SHOW_TIME = 1;}
+    elsif (/^-+user\s*=\s*(\w+)|^-+u\s*(\w+)/){ $user_name=$1;}
+    elsif (/^-+d[aemon]*(=| )([0-9]+)/) { $SECONDS_TO_RUN=$2;}
+    elsif (/^-+h|^-+help/) { 
+        print "USAGE: etodo.pl [options] \n 
+        \t -u \"USER\",--user=\"user\" \t use this name for the title 
+        \n \t -u,-update \t updates config 
+        \n \t -d,-daemon \t non interactive (no /dev/tty)
+        \n \t -example \t creates an example config file that can be edited by hand (for the impatient \n\n";
+    exit(0); 
+    }
+}
+
+#my $user_name = ( $ARGV[1] ) ? $ARGV[1] : "none";
 my @ary;
 
 my $i = 0; # counter

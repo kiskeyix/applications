@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jun-01
+# Last modified: 2003-Jul-03
 #
 # BUGS: if replacement string contains invalid characters
 #       nothing gets done. Have to find a way to escape
@@ -32,16 +32,24 @@ my $thisFile = "";      # general current file
 my @new_file = ();      # lines to be printed in new file
 my @ls = ();            # array of files
 
-my ($this_string,$that_string,$f_pattern) = @ARGV;
-
-if (!$ARGV[0] || !$ARGV[1] || !$ARGV[2]) {
+if (!$ARGV[0] || !$ARGV[1] ) {
     print STDERR $usage;
     exit 1;
 }
 
+my ($this_string,$that_string,$f_pattern) = @ARGV;
+
+# was there a third argument?
+if (!$ARGV[2]) {
+    print STDERR "All files chosen\n";
+    $f_pattern = ".*";
+}
+
+print "s: '$this_string' s: '$that_string' f: '$f_pattern'\n" if ($DEBUG != 0);
+
 if ($this_string =~ /\w/ 
     && $that_string =~ /\w/ 
-    && $f_pattern =~ /\w/) {
+    ) {
 
     my $i =0;
     
@@ -87,7 +95,8 @@ if ($this_string =~ /\w/
         # cleanup array
         @new_file = ();
 
-    }
+    } #end for
+
 } else {
     print $usage;
 }
@@ -120,6 +129,7 @@ sub do_file_ary {
 
 sub process_file {
     my $base_name = basename($_);
+    #print STDERR "$_\n";
     if ( 
         -f $_ && 
         $_ =~ m/^($f_pattern)$/ &&

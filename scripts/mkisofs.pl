@@ -18,7 +18,7 @@ use File::Temp qw( tmpnam );
 my $DEBUG=0;
 my $VOLIDMAXLENGTH=32;
 my $FILENAMEMAXLENGTH=59; # gives room to 4 char extensions
-my $ISOLIMIT=680; # in MB
+my $ISOLIMIT=680; # in MB (*1024)
 
 my ($logfh,$logfile) = tmpnam();
 open ($logfh,">$logfile");
@@ -34,6 +34,7 @@ $folder =~ s#/$##; # remove trailing slash
 my $volumeid = do_volid("$folder");
 # put a .iso extension
 my $name = $folder.".iso";
+
 my $nice =  ( -x "/usr/bin/nice" ) ? "/usr/bin/nice":"";
 
 print "Argument: $ARGV[0] | Volume Name: $volumeid | FileName: $name\n" if $DEBUG == 1;
@@ -48,7 +49,7 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
     m_system("$nice find '$folder' -type d -exec chmod 0555 {} \\; ",0);
     m_system("$nice find '$folder' -type f -exec chmod 0444 {} \\; ",0);
     # make iso
-    m_system("$nice mkisofs -dvd-video -udf -o '$name' -V '$volumeid' '$folder'",1);
+    m_system("$nice mkisofs -dvd-video -udf -o '../$name' -V '$volumeid' '$folder'",1);
 } else {
     # making regular ISO
     my $temp = "$folder-tmp";
@@ -57,6 +58,8 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
 
     my $i = 1; # dummy counter
     my $nfolder = $folder."$i";
+    $name = $nfolder.".iso";
+
     my $size = 0; # current size of CD ISO
     
     my $rootdir = getcwd();
@@ -104,7 +107,7 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
         if ( $size >= $ISOLIMIT )
         {
             print STDOUT ("Making CD ISO of size ".$size."MB\n");
-            m_system("$nice mkisofs -f -J -r -v -o '$name' -V '$volumeid' '$nfolder' ",1);
+            m_system("$nice mkisofs -f -J -r -v -o '../$name' -V '$volumeid' '$nfolder' ",1);
             $size = 0; # reset size
             $i++;
             $nfolder = $folder."$i";
@@ -122,7 +125,7 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
         if ( $res eq "y" )
         {
             print STDOUT ("Making CD ISO of size ".$size."MB\n");
-            m_system("$nice mkisofs -f -J -r -v -o '$name' -V '$volumeid' '$nfolder' ",1);
+            m_system("$nice mkisofs -f -J -r -v -o '../$name' -V '$volumeid' '$nfolder' ",1);
         }
     }
     # cleanup

@@ -1,7 +1,9 @@
 #! /bin/sh
 
-test -f /usr/sbin/ntpdate || exit 0
-#test -f /etc/default/ntp-servers || exit 0
+if [ ! -f /usr/sbin/ntpdate ]; then
+    echo " no ntpdate "
+    exit 0
+fi
 
 #. /etc/default/ntp-servers
 NTPSERVERS="ntp.ctr.columbia.edu 208.184.49.9 131.107.1.10"

@@ -1,8 +1,8 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2002-Sep-15
+# Last modified: 2002-Oct-03
 # 
-# $Id: rcopy.pl,v 1.4 2002-09-15 19:13:00 luigi Exp $
+# $Id: rcopy.pl,v 1.5 2002-10-04 02:54:30 luigi Exp $
 # 
 # VERSION: 0.9
 #
@@ -28,8 +28,12 @@
 #                           (daemon-like)
 #                           Means not to attach to the current terminal
 #                           (/dev/tty)
+#
 #        rcopy -example     makes a sample config
 #                           that you can edit by hand ...
+#                           
+#        rcopy -gui         Edit the .rcopy config file with a GUI 
+#                           (graphical user interface)
 #
 # REQUIREMENTS: perl, XML::Simple
 # 
@@ -135,6 +139,7 @@ while ( $_ = ( $ARGV[0] ) ? $ARGV[0] : "" , /^-/) {
     elsif (/^-+d(.*)/) { $DAEMON=1; } 
     elsif (/^-+u(.*)/ ) { update_config(); exit(0); }
     elsif (/^-+ex(.*)/) { create_example(); exit(0); }
+    elsif (/^-+gui/) { edit_config_gui(); exit(0); }
     elsif (/^-+h(.*)/) { 
         print "USAGE: rcopy [option] \n 
                 \t -n,-new \t create new config file 
@@ -460,3 +465,30 @@ sub prompt {
         # $input =~ s/\n//g; # remove lineend
     return $input;
 } # ends prompt
+
+sub edit_config_gui {
+
+    # check for the config file and load that
+    # if it exist, if it doesnt, then create a sample
+    # and parse that
+    if (!-f $xmlconfig) { 
+        print STDERR ("No config file found \n"); 
+        create_example();
+        #exit(1); 
+    }
+    
+    # load the Tk module
+    use Tk;
+    # load the settings from the config file
+    my $config = XMLin($xmlconfig,forcearray=>1);
+    
+    my $Main = MainWindow->new();
+
+    my $box1 = $Main->Label(-text => "$xmlconfig", -borderwidth => 1, -relief => "raised");
+    $box1->form(-top => '%0', -left => '%0', -right => '%100');
+    
+    MainLoop;
+    #__END__
+    
+
+}

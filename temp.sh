@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # 
 # DESC: close program given by "list" if temperature
 #       is higher than "limit"
@@ -9,6 +9,8 @@ LIMIT=50
 
 # start killing these programs (separate by spaces)
 LIST="setiathome"
+# commands separated by semi-colons
+COMMANDS="/etc/init.d/utserver stop;"
 
 # 
 # command to cleanup the temperature
@@ -27,6 +29,9 @@ if [ $TEMP -gt $LIMIT ]; then
         killall $i
         sleep 3
     done
+
+    echo "Executing $COMMANDS"
+    $COMMANDS
 #else
 #    echo "Ditto. Temp is fine: $TEMP"
 fi

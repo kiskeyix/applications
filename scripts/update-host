@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.19 $
+# $Revision: 1.20 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -11,7 +11,7 @@ $|++;
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
 #use POSIX;                  # cwd() ... man POSIX
-use File::Spec::Functions;  # abs2rel() and other dir/filename specific
+use File::Spec::Functions  qw/ splitdir catdir catfile /;  # abs2rel() and other dir/filename specific
 #use File::Copy;
 #use File::Find;     # find();
 #use File::Basename; # basename() && dirname()

@@ -1,7 +1,7 @@
 #!/bin/sh
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-May-06
+# Last modified: 2004-May-15
 #
 # DESCRIPTION: fixes gcc symlinks when updating to a new version under debian
 # USAGE: ./fix_gcc.sh

@@ -1,8 +1,8 @@
 #!/bin/sh
 ##################################################################
-# Last modified: 2003-Mar-11
+# Last modified: 2003-May-23
 # Luis Mondesi < lemsx1@hotmail.com >
-# $Revision: 1.9 $
+# $Revision: 1.10 $
 # 
 # DESC: run in a cron job to 
 #       backup a site every night.
@@ -38,8 +38,8 @@ fi
 ############# NO NEED TO MODIFY #################
 
 TAR="tar $EXCLUDES -cjf ";  # j for bz2 ... do not modify this!!
-MDATE=`date +%m`;
-FDATE=`date +%Y-%m-%d`;      # iso 8601 format. full date. 
+MDATE=`date +'%m'`;
+FDATE=`date +'%Y-%m-%d'`;      # iso 8601 format. full date. 
 
 if [ -d $BAK ]; then
     cd $BAK;

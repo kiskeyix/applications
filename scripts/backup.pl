@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-May-26
+# Last modified: 2003-May-30
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
 #              it will create 3 files:
@@ -175,11 +175,11 @@ if ( ! -f $TMP_LOCK ) {
     
     print STDOUT "Backing up users files \n";
 
-    Archive::Tar->create_archive (
-            "users-$MIDDLE_STR.tar.gz", 
-            9, 
-            @filelist
-        );
+    #Archive::Tar->create_archive (
+    #        "users-$MIDDLE_STR.tar.gz", 
+    #        9, 
+    #        @filelist
+    #    );
     
 
     # backup others
@@ -203,6 +203,15 @@ if ( ! -f $TMP_LOCK ) {
             @filelist
         );
 
+    # debian specific
+    if ( -f "/etc/debian_version" ) {
+        # this is a debian system
+        # create a selections file
+        system("dpkg --get-selections \\* > selections.txt");
+        if ( $? == 0 ) {
+            print STDOUT "Debian selections file created as: selections.txt.\n Use:\n dpkg --set-selections < selections.txt && dselect update \n to restore from this list.";
+        }
+    }
 } else {
     die "Lock file $TMP_LOCK exists... exiting.\n";
 }

@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Nov-11
 #
@@ -22,17 +22,26 @@ SIGNATURE=1
 QUOTE=1
 STDOUT=1
 RECODE=1
+EVOLUTION=1 # evolution requires sig to be in HTML <br>
 
 # -- end copy --#
 # Now use that to create a ~/.signaturerc file
 # per server
 . "$HOME"/.signaturerc
 
+ENDLINE="\n"
+
+if [ $EVOLUTION -eq 1 -a $STDOUT -eq 1 ]; then
+    ENDLINE="<br>"
+else
+    ENDLINE="\n"
+fi
+
 # signature header
 if [ $STDOUT -eq 1 ]; then
-    echo -e "----)(----- \n$NAME\n$POSITION\n$COMPANY\n$PHONE\n$EMAIL\n"
+    echo -e "----)(----- $ENDLINE $NAME $ENDLINE $POSITION $ENDLINE $COMPANY $ENDLINE $PHONE $ENDLINE $EMAIL $ENDLINE"
 else
-    echo -e "----)(----- \n$NAME\n$POSITION\n$COMPANY\n$PHONE\n$EMAIL\n" > "$HOME/.signature"
+    echo -e "----)(----- $ENDLINE $NAME $ENDLINE $POSITION $ENDLINE $COMPANY $ENDLINE $PHONE $ENDLINE $EMAIL $ENDLINE" > "$HOME/.signature"
 fi
 
 # body
@@ -56,7 +65,7 @@ fi
 
 # footer
 if [ $STDOUT -eq 1 ]; then
-    echo -e "\n \n $URL"
+    echo -e "$ENDLINE $ENDLINE $URL"
 else
-    echo -e "\n \n $URL" >> "$HOME/.signature"
+    echo -e "$ENDLINE $ENDLINE $URL" >> "$HOME/.signature"
 fi

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.9 $
+# $Revision: 1.10 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2004-Dec-07
 #
@@ -137,7 +137,7 @@ sub _rename
     {
         return "$_ missing. Bailing out" if ( $hashref->{$_} =~ m/^\s*$/ );
         # clean chars that might not be good for filenames
-        $hashref->{$_} =~ s/[^ραινσϊ\w\d\!\@\*\#\%\(\)\[\]\_\-\:\,\.\'\"\{\}\=\+]//gi;
+        $hashref->{$_} =~ s/[^ραινσϊ\w\d\!\@\*\#\%\(\)\[\]\_\-\:\,\.\'\"\{\}\=\+\ ]//gi;
         print STDOUT ($_, "\t", $hashref->{$_}, "\n");
     }
     my ($track,$garbage) = split(/\//,$hashref->{'track'});

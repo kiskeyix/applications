@@ -1,7 +1,7 @@
 #!/bin/sh
-# $Revision: 1.11 $
+# $Revision: 1.12 $
 # luis mondesi <lemsx1@hotmail.com>
-# Last modified: 2003-Dec-19
+# Last modified: 2003-Dec-22
 #
 # DESCRIPTION:  a simple Gnome 2 script for sysadmins to 
 #		set a bunch of gnome defaults. Remember 
@@ -217,7 +217,7 @@ set_int_mandatory "/apps/metacity/general/num_workspaces" "$NUMBER_OF_WORKSPACES
 set_mandatory "/apps/panel/global/run_key" "$RUN_KEY"
 
 # gnome 2.4
-set_mandatory "/apps/metacity/global_keybindings/panel_main_menu" "$RUN_KEY"
+set_mandatory "/apps/metacity/global_keybindings/panel_run_dialog" "$RUN_KEY"
 
 # menu key
 set_mandatory "/apps/panel/global/menu_key" "$MENU_KEY"

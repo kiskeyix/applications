@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.73 $
+# $Revision: 1.74 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -290,6 +290,7 @@ my $THUMBSONLY=0;
 my $CUT_DIRS=0;
 my $NOINDEX=0;
 my $HELP=0;
+my $PVERSION=0;
 # progressbar stuff here:
 # initialization:
 my $GAUGE = new FileHandle;
@@ -308,9 +309,13 @@ my $NEW_MENU_NAME="";
 # others
 my $menu_str="";
 
+my $revision = "Pixdir2html v1.7 
+Luis Mondesi <lemsx1\@hotmail.com> | LatinoMixed.com)\n";
+
 # get options
 GetOptions(
     # flags
+    'v|version'         =>  \$PVERSION,
     'n|no-menu'         =>  \$NOMENU,
     'f|force'           =>  \$FORCE,
     'h|help'            =>  \$HELP,
@@ -332,6 +337,7 @@ GetOptions(
 );
 
 die $USAGE if $HELP;
+if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
 
 # Xdialog is a better implementation than gdialog. 
 # Zenity is better than all so far... but
@@ -419,12 +425,6 @@ my $LOGFILE = new FileHandle;
 
 my $THUMBNAILSDIR="$ROOT_DIRECTORY/$THUMBNAIL";
 my $HTMLSDIR="$ROOT_DIRECTORY/$HTMLDIR";
-
-warn << "__EOF__";
-Pixdir2html v\$Revision: 1.73 $
-Luis Mondesi <lemsx1\@hotmail.com> / LatinoMixed.com)
-(Running with Perl $] on $Config{'archname'}) \n \n
-__EOF__
 
 main();
 

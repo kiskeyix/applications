@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.18 $
+# $Revision: 1.19 $
 # Luis Mondesi || lemsx1 at gmail !! com 
 # LICENSE: GPL (http://gnu.org/licenses/gpl.txt)
 # 
@@ -139,7 +139,7 @@ if ( $ISOLIMIT > 0 ) # deal with non-zero positive numbers only
 print STDOUT ("ISO Limit: $ISOLIMIT\n") if ( $DEBUG > 0 );
 sleep(5) if ( $DEBUG > 0 ); # give a chance to stop the script
 
-if ( $ARGV[1] && $ARGV[1] eq "dvd" ) 
+if ( $DVD > 0 ) 
 {
     die("** Directory is not valid DVD tree. Missing $folder/VIDEO_TS") if ( !-d "$folder/VIDEO_TS");
     mkdir("$folder/AUDIO_TS") if ( ! -d "$folder/AUDIO_TS" ); 

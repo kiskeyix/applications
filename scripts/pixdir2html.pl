@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.14 $
+# $Revision: 1.15 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE:
@@ -26,21 +26,29 @@
 # file named .pixdir2htmlrc in the directory containing the
 # pictues. This file has the form:
 # 
+# uri=http://absolute.path.com/images # must be absolute. no trailing /
+# header=
 # percent=30% #size of the thumbnails for this folder
-# title=Title
+# title=
+# meta=
+# stylesheet=
 # html_msg=<h1>Free form using HTML tags</h1> 
 # body=<body bgcolor='#000000'>
 # p=<p>
 # table=<table border='0'>
 # td=<td valign='left'>
 # tr=<tr>
+# new=http://absolute.path.com/images/new.png # for dirs with .new files
 # footer=<a href='#'>A footer here</a>
+# nomenuheader_footer=0
 # 
 # These are the only tags that you can customize for now :-)
 # Required: linux/UNIX "convert" command (to convert images from
 #	    one format to another or sizes, etc...)
 # 
 # BUGS:
+#   * when having multiple directories with pictures, the "back"
+#     and "forward" fails for "back" button sometimes... 
 #   * links are not counted right yet... look for a way to "know"
 #     when a directory is actually a link (other than checking for
 #     -f .nopixdir2htmlrc || !-f $_/index.(php|html|whatever) ...
@@ -484,16 +492,18 @@ sub thumb_html_files {
         #print STDOUT $BASE."\n";
 
         if ( $BASE !~ m/$tmp_BASE/ ) {
-            print LOGFILE "reading config for $BASE\n";
+            print LOGFILE "+ Reading config for $BASE\n";
             # read specific config file for this directory
-            %myconfig = init_config($BASE);
-            # construct PATH for html directory
-            $HTMLSDIR = "$BASE/$HTMLDIR";
+            %myconfig = init_config($BASE);            
         } 
         # update flag
         $tmp_BASE = $BASE;
         next if ( -f "$BASE/.nopixdir2htmlrc" );
+        
+        # construct PATH for html directory
+        $HTMLSDIR = "$BASE/$HTMLDIR";
 
+        #print STDOUT $HTMLSDIR."\n";
         if (!-d "$HTMLSDIR") { 
             print LOGFILE ("making html files directory in $BASE\n");
             mkdir("$HTMLSDIR",0755);
@@ -506,7 +516,7 @@ sub thumb_html_files {
             print LOGFILE "WARNING: overriding $current_html_file\n";
         } # end if not current_html_file
 
-        print LOGFILE ("\ncreating html file into $current_html_file\n");
+        print LOGFILE ("\n= creating html file into $current_html_file\n");
         # TODO routine for creating file should be called here...
         open(FILE, "> $current_html_file") || 
         die "Couldn't write file $current_html_file";
@@ -519,10 +529,12 @@ sub thumb_html_files {
         print FILE ("<tr><td>\n");
 
         # image here
+         
         print FILE ("<img src='../$pix_name'>\n");
         print FILE ("</td></tr>\n<tr><td valign='bottom' align='center'><div align='center'>\n");
 
         # back link here
+        
         if ( -f $last_html_file && ($BASE =~ m/$LAST_BASE/) ) {
             print FILE ("<a href='$last_link'>&lt;==</a>\n"); 
         } else {
@@ -532,12 +544,14 @@ sub thumb_html_files {
         # home link here
         print FILE (" | <a href='../$FILE_NAME'>HOME</a> | \n");
         # next link here
-        # calculate next base
-        $next_pix_name = basename($ls[$i+1]);
-        # get next base directory
-        ( $NEXT_BASE = $ls[$i+1] ) =~ s/(.*)\/$next_pix_name$/$1/g;
+        if ( -f $ls[$i+1] ) {
+            # calculate next base
+            $next_pix_name = basename($ls[$i+1]);
+            # get next base directory
+            ( $NEXT_BASE = $ls[$i+1] ) =~ s/(.*)\/$next_pix_name$/$1/g;
+        }
  
-        if ( -f $ls[$i+1] && ( $BASE =~ m/$NEXT_BASE/ ) ) {
+        if ( $BASE =~ m/$NEXT_BASE/ ) {
             ($next_file_name = $next_pix_name) =~ s/$EXT_INCL_EXPR//g;
             print FILE ("<a href='$next_file_name.$EXT'>==&gt;</a>\n");
         } else {
@@ -547,6 +561,7 @@ sub thumb_html_files {
             #print FILE (" <a href='../$next_file_name.$EXT'> |=&gt;&gt;</a> \n");
 
         }
+
         print FILE ("</div></td></tr>\n");
         print FILE ("</table>\n");
 
@@ -822,7 +837,7 @@ sub menu_file {
                     ($ts = $ls[$i]) =~ s/(.*)\/$FILE_NAME/$1/gi;
                     $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='$myconfig{new}' alt='new'>":""; # if .new file
                     $ts = ucfirst($ts);
-                    $MENU_STR .= "<a href='$myconfig{uri}/../$ls[$i]' target='_top'>$IMG $ts</a>\n";
+                    $MENU_STR .= "<a href='$myconfig{uri}/$ls[$i]' target='_top'>$IMG $ts</a>\n";
                 } else {
                     $MENU_STR .= "&nbsp;";
                 }

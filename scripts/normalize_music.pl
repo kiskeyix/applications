@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.12 $
+# $Revision: 1.13 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2004-Dec-07
 #
@@ -136,7 +136,7 @@ sub _rename
     # tracks are not that essential:
     if ( $hashref->{'track'} =~ m/^\s*$/ )
     {
-        $hashref->{'track'}="xx/yy";
+        $hashref->{'track'}="00/00";
     }
     foreach(@TAGS)
     {

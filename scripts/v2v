@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.55 $
+# $Revision: 1.56 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -1143,11 +1143,12 @@ sub get_audio_channel
 
 sub readuserconf
 {
-    if ( -e $HOME."/.V2divxrc" ) {
-        open (USERCONF,"<$HOME/.V2divxrc");
+    if ( -f $userconfigfile ) {
+        open (USERCONF,"<$userconfigfile");
     } else {
         open (USERCONF,"<$HOME/.vob2divxrc");
     }
+
     while (<USERCONF>)
     {
         chomp;
@@ -1160,17 +1161,19 @@ sub readuserconf
         next unless length; #  If our line is empty, we ignore it
         s/^\$//;
         s/\;$//;
-        s/^\s+//;           #  whitespace before value 
-        s/\s+$//;           #  whitespace after value
         s/["']+//g;         # remove all quotes
         my ($var_name, $value) = split(/\s*=\s*/, $_);
-        print "WARNING : ~/.V2divxrc variable $var_name value not used, set to $$var_name\n".$NORM  if ( defined $$var_name && $var_name ne DEBUG && $var_name ne INFO);
-       $$var_name = $value if ( ! defined $$var_name  );
+        print "WARNING : $userconfigfile variable $var_name ".
+        "value not used, set to $$var_name\n".$NORM  
+        if ( defined $$var_name 
+        && $var_name ne "DEBUG" 
+        && $var_name ne "INFO");
+        $$var_name = $value if ( ! defined $$var_name  );
     }
     close (USERCONF);
 
     $DIVX="ffmpeg" if ( ! defined ($DIVX));
-    if ( ! defined ( $DIVX_OPT))
+    if ( ! defined ( $DIVX_OPT ))
     {    
         $DIVX_OPT="";
         $DIVX_OPT="-F mpeg4" if ( $DIVX eq "ffmpeg");  
@@ -1178,9 +1181,11 @@ sub readuserconf
         print USERCONF "# Add your encoder specifics options \n\$DIVX_OPT=$DIVX_OPT ; #for example '-F mpeg4' for divx ffmpeg output";
         close(USERCONF);
     }
+
+    # BUG: this keeps printing AO=mp3 to the $userconfigfile ??
     if ( ! defined ( $AO ))
     {
-        $AO=mp3;
+        $AO="mp3";
         open (USERCONF,">>$userconfigfile");
         print USERCONF "\n# This is the output Audio format\n# allowed formats are : mp3 or ogg (if ogmtools are installed )\n\$AO=$AO;";
         close(USERCONF);
@@ -1209,7 +1214,7 @@ sub readuserconf
         $EXTSUB="0:0:255";
     } 
 
-    print $DEBUG " <--- readuserconf\n";
+print $DEBUG " <--- readuserconf\n";
 } # END readuserconf
 
 sub printinfo

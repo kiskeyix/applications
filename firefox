@@ -20,6 +20,6 @@ check_running() {
 if [ `check_running` -eq 1 ]; then
     exec $MOZ_CLIENT_PROGRAM -a firefox "openURL($@,new-tab)"
 else
-    echo "Falling back"
+    #echo "Falling back"
     exec $BROWSER $@
 fi

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2004-Oct-31
 #
@@ -13,8 +13,9 @@ $|++;
 my $file = shift;
 
 # we unset sudo variables and then set mkisofs path:
-$ENV{"SUDO_COMMAND"} = "" if $ENV{"SUDO_COMMAND"} ne "";
-$ENV{"MKISOFS"} = "/usr/bin/mkisofs" if $ENV{"MKISOFS"} ne "";
+$ENV{"SUDO_COMMAND"} = "";# if $ENV{"SUDO_COMMAND"} ne "";
+$ENV{"MKISOFS"} = "/usr/bin/mkisofs";# if $ENV{"MKISOFS"} ne "";
+$ENV{"PATH"} = "/bin:/usr/bin:/usr/local/bin";
 
 my $dvd = "/dev/dvd";
 my $cmd="";
@@ -38,15 +39,15 @@ sub prompt
 }
 
 # If environmental variable DVD exists, use this device
-if ( $ENV{"DVD"} =~ /\/dev\// and -b $ENV{"DVD"} )
-{
-    $dvd = $ENV{"DVD"}; 
-    perror("Using dvd drive $dvd");
-}
+#if ( $ENV{"DVD"} =~ /\/dev\// and -b $ENV{"DVD"} )
+#{
+#    $dvd = $ENV{"DVD"}; 
+#    perror("Using dvd drive $dvd");
+#}
 
 if ( $file =~ /\.iso$/i )
 {
-    $cmd = "growisofs -dvd-compat -Z /dev/dvd=$file";
+    $cmd = "/usr/bin/growisofs -dvd-compat -Z /dev/dvd=$file";
     system( $cmd );
     if ( $? != 0 )
     {
@@ -57,7 +58,7 @@ if ( $file =~ /\.iso$/i )
     if ( -d "$file/VIDEO_TS" )
     {
         # see man mkisofs for -r -J
-        $cmd = "growisofs -dvd-compat -Z /dev/dvd -r -J $file";
+        $cmd = "/usr/bin/growisofs -dvd-compat -Z /dev/dvd -r -J $file";
         system( $cmd );
         if ( $? != 0 )
         {
@@ -68,7 +69,7 @@ if ( $file =~ /\.iso$/i )
         my $ret = prompt("Do you want to make a backup of this directory? [y/N]");
         if ( $ret == "y" )
         {
-            $cmd = "growisofs -Z /dev/dvd -r -J $file";
+            $cmd = "/usr/bin/growisofs -Z /dev/dvd -r -J $file";
             system( $cmd );
             if ( $? != 0 )
             {

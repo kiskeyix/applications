@@ -1,7 +1,7 @@
 #!/bin/sh
-# $Revision: 1.10 $
+# $Revision: 1.11 $
 # luis mondesi <lemsx1@hotmail.com>
-# Last modified: 2003-Oct-23
+# Last modified: 2003-Dec-19
 #
 # DESCRIPTION:  a simple Gnome 2 script for sysadmins to 
 #		set a bunch of gnome defaults. Remember 
@@ -38,6 +38,8 @@ GCONFTOOL="/usr/bin/gconftool-2"
 SHOW_SPLASH=1   # 1 -> true, 0 -> false
 DEFAULT_THEME=1 # would you like all users to use your specified 
                 # themes only? see below. 1 -> true, 0 -> false
+                # 2003-12-19 18:25 EST updated to "defaults" not
+                # "mandatory" as before
 DEFAULT_BACKGROUND=0 # would you like a background as the only choice?
                      # see below for background path. 1 -> true, 0 -> false
 DEFAULT_FONT=1  # set a given font. see below. 1 -> true, 0 -> false 
@@ -79,8 +81,8 @@ NUMBER_OF_WORKSPACES=2
 MENU_KEY="Super_L"
 RUN_KEY="Super_R"
 GTK_THEME="Nuvola"
-METACITY_THEME=$GTK_THEME
-ICON_THEME="Nuvola"
+METACITY_THEME="$GTK_THEME"
+ICON_THEME="$GTK_THEME"
 BACKGROUND="/usr/share/wallpapers/All-Good-People-1.jpg"
 SPLASH_IMAGE="/usr/share/pixmaps/splash/gnome-splash.png"
 BACKGROUND_ORIENTATION="wallpaper" # wallpaper,centered,scaled,strecthed
@@ -225,9 +227,14 @@ set_mandatory "/apps/metacity/global_keybindings/panel_main_menu" "$MENU_KEY"
 
 # themes
 if [ $DEFAULT_THEME != 0 ]; then
-    set_mandatory "/desktop/gnome/interface/gtk_theme" "$GTK_THEME"
-    set_mandatory "/desktop/gnome/interface/icon_theme" "$ICON_THEME"
-    set_mandatory "/apps/metacity/general/theme" "$METACITY_THEME"
+    # unset mandatory
+    unset_mandatory "/desktop/gnome/interface/gtk_theme"
+    unset_mandatory "/desktop/gnome/interface/icon_theme"
+    unset_mandatory "/apps/metacity/general/theme"
+    # set defaults
+    set_defaults "/desktop/gnome/interface/gtk_theme" "$GTK_THEME"
+    set_defaults "/desktop/gnome/interface/icon_theme" "$ICON_THEME"
+    set_defaults "/apps/metacity/general/theme" "$METACITY_THEME"
 fi
 
 # background

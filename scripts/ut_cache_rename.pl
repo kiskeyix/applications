@@ -1,9 +1,9 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2002-Sep-03
+# Last modified: 2004-Feb-01
 # 
 # Description: this script renames the files
-# found in your Cache directory according to
+# found in your ~/.loki/ut/Cache directory according to
 # the cache.ini
 # basically the cache.ini has the form:
 #
@@ -19,6 +19,8 @@
 use strict;
 $|++;
 
+my $ut_dir = "$ENV{'HOME'}/.loki/ut/Cache";
+chdir("$ut_dir") or die("Could not change to dir $ut_dir");
 
 open (my_file,"cache.ini");
 

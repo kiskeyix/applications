@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.74 $
+# $Revision: 1.75 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -714,9 +714,13 @@ sub mkindex {
                 # open a new row
                 # this row doesn't need bgcolor
                 if ( $config{"$this_base"}{"tr"} =~ m/\%+bgcolor\%+/i ) {
-                    ($config{"$this_base"}{"tr"} = $config{"$this_base"}{"tr"}) =~ s/\%+bgcolor\%+//i;
+                    my $tmp_tr = "";
+                    ( $tmp_tr = $config{"$this_base"}{"tr"} ) 
+                        =~ s/\%+bgcolor\%+//i;
+                    print FILE ($tmp_tr);
+                } else {
+                    print FILE ($config{"$this_base"}{"tr"}."\n");
                 }
-                print FILE ($config{"$this_base"}{"tr"}."\n");
             } 
             print FILE ("\t".$config{"$this_base"}{"td"}."\n");
             ($file_name = $this_file) =~ s/$EXT_INCL_EXPR//gi;
@@ -1216,7 +1220,7 @@ sub menu_file {
             if ($config{"$ROOT_DIRECTORY"}{"tr"}=~m/\%+bgcolor\%+/i){
                 # alternate colors for TR?
                 if (($j % 2) == 0){
-                    ($tmp_tr = $config{"$ROOT_DIRECTORY"}{"tr"}) =~ s/\%+bgcolor\%+/bgcolor=#efefef/i;
+                    ($tmp_tr = $config{"$ROOT_DIRECTORY"}{"tr"}) =~ s/\%+bgcolor\%+/bgcolor="#efefef"/i;
                 } else {
                     ($tmp_tr = $config{"$ROOT_DIRECTORY"}{"tr"}) =~ s/\%+bgcolor\%+//i;
                 }
@@ -1333,13 +1337,11 @@ sub menu_file {
                     if ( $MENUONLY > 0 ) {
                         if ($config{"$ROOT_DIRECTORY"}{"tr"}=~m/\%+bgcolor\%+/i){
                             if (($j % 2) == 0){
-                                ($tmp_tr = $config{"$ROOT_DIRECTORY"}{"tr"}) =~ s/\%+bgcolor\%+/bgcolor=#efefef/i;
+                                ($tmp_tr = $config{"$ROOT_DIRECTORY"}{"tr"}) =~ s/\%+bgcolor\%+/bgcolor="#efefef"/i;
                             } else {
                                 ($tmp_tr = $config{"$ROOT_DIRECTORY"}{"tr"}) =~ s/\%+bgcolor\%+//i;
                             }
-
                             print FILE ($tmp_tr."\n");
-
                         } else {
                             print FILE ($config{"$ROOT_DIRECTORY"}{"tr"}."\n");
                         }
@@ -1388,7 +1390,7 @@ sub menu_file {
                         # TODO cleanup
                         if ($config{"$ROOT_DIRECTORY"}{"tr"}=~m/\%+bgcolor\%+/i){
                             if (($j % 2) == 0){
-                                ($tmp_tr = $config{"$ROOT_DIRECTORY"}{"tr"}) =~ s/\%+bgcolor\%+/bgcolor=#efefef/i;
+                                ($tmp_tr = $config{"$ROOT_DIRECTORY"}{"tr"}) =~ s/\%+bgcolor\%+/bgcolor="#efefef"/i;
                             } else {
                                 ($tmp_tr = $config{"$ROOT_DIRECTORY"}{"tr"}) =~ s/\%+bgcolor\%+//i;
                             }

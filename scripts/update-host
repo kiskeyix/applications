@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.13 $
+# $Revision: 1.14 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2005-Jan-21
+# Last modified: 2005-Feb-28
 #
 # DESCRIPTION: A simple script to update my settings in $HOME
 # USAGE: $0 [--remove|--verbose]
@@ -68,11 +68,11 @@ if ( $MASTER )
         if ( $MASTER_HOST =~ m/^http:/i && -f "$i" )
         {
             # wget is not too smart when using http
-            print STDERR ("Deleting $i\n") if ( $DEBUG );
+            debug("Deleting $i");
             unlink($i); # silently delete old copies
         }
         print STDOUT "\n";
-        printf STDOUT ("%20s","wGetting $MASTER_HOST/$i ");
+        printf STDOUT ("%20s","Downloading $MASTER_HOST/$i ");
         system("wget $WGET_ARGS $MASTER_HOST/$i ".$silent);
         print STDOUT ( $? ) ? " failed": " done";
     }
@@ -82,7 +82,16 @@ if ( $MASTER )
     {
         $j++;
         print STDOUT "\r"; 
-        my $cmd = "command tar x".$VERBOSE_ARGS."jf '$LOCAL_PATH/$i'";
+        my $cmd = "";
+        if ( -x which("bzcat") )
+        {
+            $cmd = "command bzcat '$LOCAL_PATH/$i' | command tar x".$VERBOSE_ARGS."f - ";
+        } else {
+            # assume tar can decompress on the fly
+            debug("Falling back to tar...");
+            $cmd = "command tar x".$VERBOSE_ARGS."jf '$LOCAL_PATH/$i'";
+        }
+
         system($cmd.$silent);
         printf STDOUT ("%20s","localhost"); # host padded
         if ( ! $? ) 
@@ -154,7 +163,7 @@ foreach my $h ( @hosts )
         print STDOUT "\n";
     } else {
         # debugging 
-        print "*** SKIPPED $h\n" if ( $DEBUG );
+        debug("*** SKIPPED $h");
     }
 }
 print "\n";
@@ -184,6 +193,31 @@ sub is_alive
     }
     # 0 when good
     # 256 when not good
-    print ("*** pinging $host returned $?\n") if ( $DEBUG );
+    debug ("*** pinging $host returned $?");
     return ( $? ) ? 0:1; # return the opposite of ping's return output
 }
+
+sub which
+{
+    # @param 0 string := binary to find in $ENV{PATH}
+    # returns binary path or -1 if not found
+    my $binary = shift;
+    my $path = "-1"; # holds string to return when found. 
+    foreach my $binary_path ( split(/:/,$ENV{"PATH"}) )
+    {
+        next if ( -x "$path" ); # a quick way out. after finding
+        # first binary in $ENV{PATH}
+        if ( -x "$binary_path"."/$binary")
+        {
+            $path = "$binary_path"."/$binary";
+        }
+    }
+    return $path; # -1 means not found
+}
+
+sub debug
+{
+    my $msg = "@_";
+    print STDERR ("$RED $msg $NORM\n")  if ( $DEBUG );
+}
+

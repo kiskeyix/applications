@@ -1,5 +1,6 @@
 #!/usr/bin/perl 
-# $Revision: 1.10 $
+# $Revision: 1.11 $
+# vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
 #               Dominique CARON <domiATlpm.univ-montp2.fr> 
 #		Tom ROTH <tomATtomroth.de>
@@ -584,45 +585,51 @@ sub chk_wdir
         $i++;
         print $INFO "File $i: $file\n";
     }
-    mydie "Only ONE AVI, DV  or QT file is allowed to transcode at a time.\n Please merge those $i avi (dv or qt ) files\n"  if (( $in_video_magic eq divx || $in_video_magic eq mov || $in_video_magic eq mpeg2  || $in_video_magic eq 'dv'  ) && $i > 1 );
+    mydie "Only ONE AVI, DV  or QT file is allowed to transcode at a time.\n Please merge those $i avi (dv or qt ) files\n"  if (( $in_video_magic eq divx || 
+    $in_video_magic eq mov || 
+    $in_video_magic eq mpeg2  || 
+    $in_video_magic eq 'dv'  ) && 
+    $i > 1 );
     $sample = $files[floor($i / 2)];
     print $DEBUG "Sample : $sample\n";
     $lastvob = $files[$i-1];
     print $DEBUG "Last file : $lastvob\n";
-    ( -f "$vobpath/$sample" and -f "$vobpath/$lastvob" ) or mydie "Unable to find samples files in \"$vobpath\" (files MUST be have the same Video format)";
+    ( -f "$vobpath/$sample" and -f "$vobpath/$lastvob" ) or 
+    mydie "Unable to find samples files in \"$vobpath\" ".
+    "(files MUST be have the same Video format)";
 
-#  Vrfy probe.rip
-if ( -e "tmp/probe.rip")
-{
-    #  We need to verify if user has not remove some file(s) since the rip
-    print $INFO "\t Number of vob files:$i\n";
-    closedir(VOB);
-    open (PROBE,"<tmp/probe.rip");
-    while(<PROBE>)
+    #  Vrfy probe.rip
+    if ( -e "tmp/probe.rip")
     {
-        if ( $_=~ m,Number of vob files:(\d+),)
+        #  We need to verify if user has not remove some file(s) since the rip
+        print $INFO "\t Number of vob files:$i\n";
+        closedir(VOB);
+        open (PROBE,"<tmp/probe.rip");
+        while(<PROBE>)
         {
-            if ( "$i" ne "$1" )
+            if ( $_=~ m,Number of vob files:(\d+),)
             {
-                #  If user has remove some files we cannot use probe.rip anymore
-                print $RED."Number of vob files in probe.rip is not exact, V2divx will create extract.txt \n".$NORM;
-                system ("touch tmp/probe.rip-BAD");
+                if ( "$i" ne "$1" )
+                {
+                    #  If user has remove some files we cannot use probe.rip anymore
+                    print $RED."Number of vob files in probe.rip is not exact, V2divx will create extract.txt \n".$NORM;
+                    system ("touch tmp/probe.rip-BAD");
+                }
+                $flag=0; last;
+            } else {
+                $flag=1;
             }
-            $flag=0; last;
-        } else {
-            $flag=1;
         }
+        close(PROBE);
+        print $RED."Oups...no number of Vob files in the probe.rip file!\n".$NORM if ( $flag eq 1 );
     }
-    close(PROBE);
-    print $RED."Oups...no number of Vob files in the probe.rip file!\n".$NORM if ( $flag eq 1 );
-}
 
-if ( ! defined($dvdtitle) && -e "tmp/dvdtitle")
-{
-    $dvdtitle=`cat tmp/dvdtitle`;
-    chomp($dvdtitle);
-}
-print $DEBUG "<--- chk_wdir\n";
+    if ( ! defined($dvdtitle) && -e "tmp/dvdtitle")
+    {
+        $dvdtitle=`cat tmp/dvdtitle`;
+        chomp($dvdtitle);
+    }
+    print $DEBUG "<--- chk_wdir\n";
 } # End Check Working directories
 
 sub get_audio_channel
@@ -772,7 +779,8 @@ sub printinfo
     }
 
     print $v2d."   V:\tLogo file name:\t\t(1)| $LOGO\n";
-    if ( ( $addlogo && $CLUSTER eq "NO" ) || ( $addlogo ne 0 && $addlogo <= 300 && $CLUSTER ne NO))
+    if ( ( $addlogo && $CLUSTER eq "NO" ) || 
+    ( $addlogo ne 0 && $addlogo <= 300 && $CLUSTER ne NO))
     {
         $start_frames_logo=floor(($deb_sec+$beginlogo)*$FPS);
         $end_frames_logo=floor($addlogo*$FPS+$start_frames_logo);

@@ -1,7 +1,7 @@
 #!/bin/sh
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Oct-29
+# Last modified: 2003-Oct-30
 #
 # DESCRIPTION: Opens a dialog and asks user how to mount an image
 # INSTALL: needs zenity (or another graphical dialog replacement) 
@@ -47,38 +47,114 @@ SU="gksu --disable-grab "       # xsu|gnome-sudo. graphical representation of "s
 DIALOG="zenity" # gdialog|xdialog. dialog replacement for Gnome
 MOUNT="mount"   # mount command
 
-# booleans
-IS_ENC="no"     # is the filesystem encrypted? will ask later
-LOOPSETUP="no"  # don't mind this... 
+# Messages
+TIT_ENCRYPTED[en]="Encryption"
+MSG_ENCRYPTED[en]="Is this an encrypted image?"
+
+TIT_MOUNT[en]="Mount Image"
+MSG_MOUNTED[en]="already mounted"
+
+TIT_FORMAT[en]="Select filesystem type"
+TIT_CYPHER[en]="Select Cypher"
+
+# spanish
+TIT_ENCRYPTED[es]="Cifrado"
+MSG_ENCRYPTED[es]="¿Este es un archivo cifrado?"
+
+TIT_MOUNT[es]="Montar Imagen"
+MSG_MOUNTED[es]="ya está montado"
+
+TIT_FORMAT[es]="Selecciona el tipo de formato"
+TIT_CYPHER[es]="Selecciona Cifrado"
+
+# determine language to use:
+if [ -n $LANG ]; then
+    if [ "`echo $LANG | grep \"^en\"`" ]; then
+        echo "Using English"
+        LANG="en"
+    elif [ "`echo $LANG | grep \"^es\"`" ]; then
+        echo "Using Spanish"
+        LANG="es"
+    else
+        echo "Using default language"
+        LANG="en"
+    fi
+else
+    echo "Using default language"
+    LANG="en"
+fi
 
 # utilities
+ask_cypher()
+{
+    TMP=""
+
+    TMP=$($DIALOG --list \
+            --title="${TIT_CYPHER[$LANG]}" \
+            --radiolist --editable \
+            --column="Selected" --column="Cypher" $CYPHERS)
+    if [ -z $TMP ]; then
+        # what we do when user presses cancel
+        TMP="$DCYPHER"
+    fi
+
+    echo "$TMP"
+}
+
+ask_filesystem()
+{
+
+    TMP=""
+
+    TMP=$($DIALOG --list \
+    --title="${TIT_FORMAT[$LANG]}" \
+    --radiolist --editable \
+    --column="Selected" --column="Filetype" $FORMATS)
+
+    if [ -z $TMP ]; then
+        # what we do when user presses cancel
+        TMP="iso9660"
+    fi
+    
+    echo "$TMP"
+}
+
+is_encrypted()
+{
+    $DIALOG --title="${TIT_ENCRYPTED[$LANG]}" --question --text="${MSG_ENCRYPTED[$LANG]}"
+    RET=$?
+    if [ $RET -eq 0 ];then
+        echo "yes"
+    else
+        echo "no"
+    fi
+}
+
 lmount()
 {
     # @arg1 ftype
     # @arg2 loopdev
     # @arg3 path
     if [ -b $2 ];then
-        $SU -u $SUSER -t "Mount Image" "$MOUNT -t $1 $2 $3"
-        if [ "`df | grep \"$3\"`" ]; then
-            MOUNTED="yes"
-            return 1
+        $SU -u $SUSER -t "${TIT_MOUNT[$LANG]}" "$MOUNT -t $1 $2 $3"
+        if [ "`mount | grep \"$3\"`" ]; then
+            echo "yes"
         else
-            return 0
+            echo "no"
         fi
     else
         # for convenience. $2 is not a block device, try to mount it
         # letting mount find a block device for us
-        $SU -u $SUSER -t "Mount Image" "$MOUNT -o loop -t $1 $2 $3"
-        if [ "`df | grep \"$3\"`" ]; then
-            MOUNTED="yes"
-            return 1
+        $SU -u $SUSER -t "${TIT_MOUNT[$LANG]}" "$MOUNT -o loop -t $1 $2 $3"
+        if [ "`mount | grep \"$3\"`" ]; then
+            echo "yes"
         else
-            return 0
+            echo "no"
         fi
     fi
 
     # we should never reach this
-    return 0
+    echo "no"
 }
 
 unmount()
@@ -86,9 +162,9 @@ unmount()
     # @arg1 path
     $SU -u $SUSER -t "Unmount Filesystem" "umount $1"
     if [ $? -eq 0 ]; then
-        return 1
+        echo "yes"
     else
-        return 0
+        echo "no"
     fi
 }
 
@@ -99,18 +175,18 @@ setup_loop()
     if [ -b $1 ]; then
         $SU -u $SUSER -t "Setup Loopback $1" "$LO $1 $2"
         if [ $? -eq 0 ]; then
-            return 1
+            echo "yes"
         else 
             error "Setting loopback failed"
-            return 0
+            echo "no"
         fi
     else
         error "Wrong block device $1"
-        return 0
+        echo "no"
     fi
 
     # we should never get here
-    return 0
+    echo "no"
 }
 
 setup_enloop()
@@ -121,18 +197,18 @@ setup_enloop()
     if [ -b $1 ]; then
         $SU -u $SUSER -t "Setup Loopback $1" "$LO -e $3 $1 $2"
         if [ $? -eq 0 ]; then
-            return 1
+            echo "yes"
         else 
             error "Setting Encrypted loopback failed"
-            return 0
+            echo "no"
         fi
     else
         error "Wrong block encrypted device $1"
-        return 0
+        echo "no"
     fi
 
     # we should never get here
-    return 0
+    echo "no"
 }
 
 
@@ -142,17 +218,17 @@ unset_loop()
     if [ -b $1 ]; then
         $SU -u $SUSER -t "Unsetting Loopback $1" "$LO -d $1"
         if [ $? -eq 0 ]; then
-            return 1
+            echo "yes"
         else 
-            return 0
+            echo "no"
         fi
     else
         error "Wrong block device $1"
-        return 0
+        echo "no"
     fi
 
     # we should never get here
-    return 0
+    echo "no"
 }
 
 error()
@@ -167,7 +243,8 @@ do
     file_type=$(file "${arg}")
 
     # if already mounted continue
-    if [ "`df | grep \"${arg}\"`" ]; then
+    if [ "`mount | grep \"${arg}\"`" ]; then
+        echo "$arg ${MSG_MOUNTED[$LANG]}"
         continue
     fi
 
@@ -193,29 +270,18 @@ do
     mkdir -p $USERMOUNTDIR
 
     # try mounting the filesystem with what we know so far
-    MOUNTED="no"
-    lmount $mtype $arg $USERMOUNTDIR
 
-    if [ $MOUNTED = "yes" ]; then 
+    if [ "`lmount $mtype $arg $USERMOUNTDIR`" = "yes" ]; then 
         nautilus $USERMOUNTDIR
     else
         # if mount failed, ask about encryption and filetype
-        # TODO make utility function...
-       
-        IS_ENC=`$DIALOG --title="Encryption" --question --text="Is this an encrypted image?"`
-
-        echo "Is it encrypted? [$IS_ENC]"
         
-        if [ $IS_ENC ]; then
-
+        if [ "`is_encrypted`" = "yes" ]; then
             echo "Encryption is used"
-
+            
             # choose encryption type
             echo "Asking about cypher"
-            CYPHER=$($DIALOG --list \
-            --title="Select Cypher" \
-            --radiolist --editable \
-            --column="Selected" --column="Cypher" "$CYPHERS")
+            CYPHER=$(ask_cypher)
 
             if [ -z $CYPHER ]; then
                 # what we do when user presses cancel
@@ -224,28 +290,10 @@ do
 
             # choose format type
             echo "Asking about filesystem type"
-            mtype=$($DIALOG --list \
-            --title="Select filesystem type" \
-            --radiolist --editable \
-            --column="Selected" --column="Filetype" $FORMATS)
+            mtype=$(ask_filesystem)
 
-            if [ -z $mtype ]; then
-                # what we do when user presses cancel
-                mtype="iso9660"
-            fi
-
-            # try to setup the encrypted loop
-            if [ "`setup_enloop $CYPHER $LOOPDEV ${arg}`" ]; then
-                SETUPLOOP="yes"
-            else
-                SETUPLOOP="no"
-            fi
-
-            if [ $SETUPLOOP = "yes" ]; then
-                # loop device setup, now mount
-                MOUNTED="no"
-                lmount $mtype $LOOPDEV $USERMOUNTDIR
-                if [ $MOUNTED = "yes" ]; then
+            if [ "`setup_enloop $CYPHER $LOOPDEV ${arg}`" = "yes" ]; then
+                if [ "`lmount $mtype $LOOPDEV $USERMOUNTDIR`" = "yes" ]; then
                     nautilus $USERMOUNTDIR
                 else
                     error "Could not mount $LOOPDEV in $USERMOUNTDIR"
@@ -262,21 +310,16 @@ do
             # image is not encrypted... ask about filesystem format
             # and mount
             echo "Encryption is not used"
+
             echo "Asking about filesystem type"
-            mtype=$($DIALOG --list \
-            --title="Select filesystem type" \
-            --radiolist --editable \
-            --column="Selected" --column="Filetype" $FORMATS)
+            mtype=$(ask_filesystem)
 
             if [ -z $mtype ]; then
                 # what we do when user presses cancel
                 mtype="iso9660"
             fi
 
-            MOUNTED="no"
-            lmount $mtype $arg $USERMOUNTDIR
-
-            if [ $MOUNTED = "yes"  ]; then
+            if [ "`lmount $mtype $arg $USERMOUNTDIR`" = "yes" ]; then
                 nautilus $USERMOUNTDIR
             else
                 error "Could not mount $arg in $USERMOUNTDIR"
@@ -285,8 +328,5 @@ do
             fi
         fi
     fi
-    # reset variables
-    IS_ENC="no"
-    LOOPSETUP="no"
 done
 

@@ -5,7 +5,8 @@
 #   - ensuring that one copy of this script is running
 #   - run setiathome in a tight loop that gives time for
 #     seti to cleanup after itself
-#   - conditionally stop setiathome if the load of the system is high
+#   - conditionally stop setiathome if the load of the system is higher
+#     than the user defined MAXLOAD (defaults to 5)
 #   - automatically detect if old copies of this script had been
 #     improperly killed and attempt to cleanup and start a new script
 #   - all options are configurable in a startsetirc shell source
@@ -16,29 +17,30 @@
 #     this can easily be modified, but it's usually the case.
 #
 # USAGE: startseti.sh [start|stop|constop] &
-#   start       - starts seti if LOAD is less than 5
+#   start       - starts seti if LOAD is less than MAXLOAD
 #   stop        - stops seti unconditionally
-#   condstop    - stops seti if LOAD is greater than 5
+#   condstop    - stops seti if LOAD is greater or equal to MAXLOAD
 #
 # TIPS: 
 # Usually is better to start from a cron job like the following:
 # # minute hour dayofmonth month dayofweek user    command
-# 00 03 * * 1-5 ~/bin/startseti.sh start &
-# 00 08 * * *   ~/bin/startseti.sh condstop
+# 00 */4 * * 1-5 ~/bin/startseti.sh start &
+# */12 * * * *   ~/bin/startseti.sh condstop
+# 
+# This will start seti everyday 4 hours, if not already running,
+# from monday through friday
+# and kill it if the load is higher than 5 every 12 minutes,
+# but leave it running through the weekend (saturday & sunday).
 #
-# This will start seti everyday from monday through friday at 3am
-# and kill it at 8am but leave it running through the weekend 
-# (saturday & sunday).
-#
-# Note that "ps ax" is not fool proof as it will detect anything that
-# has "startseti" in it :-) that includes processes like: vim startseti.
-# Which obviously might have nothing to do with this ;-) This is why
-# this script uses /bin/pidof (usually part of killall5) to detect 
-# process ids and pkill to kill processes by automatically determining
-# their process ids.
+# You don't have to edit this script. You can simply copy the variables
+# in a file called "startsetirc" inside your seti directory as suggested
+# below.
 #
 # TODO:
 #   - determine if the temperature of the CPU/motherboard is too high
+#     using "sensors"
+
+DEBUG=0 # set to anything other than zero to see debugging messages
 
 # =========================== BEGIN ================================= #
 # We allow our path to include the current directory
@@ -47,24 +49,35 @@ PATH=/usr/bin:/bin:.
 # copy them to a file named "startsetirc" inside your $SETI directory
 NICE=19
 # work load average at which point we would stop seti momentarily
-MAXLOAD=5 
-SLEEP=3 #4400 # 4 hours
+MAXLOAD=5
+SLEEP=7200                      # 2 hours sleep
 SETI="$HOME/Develop/seti"
-PIDF="$SETI/.startseti.pid" # process id file
-PROCESS="setiathome" # name of the seti binary
-PKILL="/usr/bin/pkill -U $UID" # pkill is smart about process names and -U for the processes run by a given user
-CAT="/bin/cat"          # std unix command
-PIDOF="/bin/pidof"      # returns process id of "process_name":
-                        # i.e: pidof vim. yields PID number of vim processes
-                        # and pidof -x startseti.sh yields the process
-                        # of this script.
+PIDF="$SETI/.startseti.pid"     # process id file
+PROCESS="setiathome"            # name of the seti binary
+PKILL="/usr/bin/pkill -U $UID"  # pkill is smart about process names 
+                                # and -U for the processes run by a 
+                                # given user.
+CAT="/bin/cat"                  
+PIDOF="/bin/pidof"              # pidof returns process id 
+                                # of "process_name". i.e:
+                                #   pidof vim
+                                # yields PID number of vim processes
+                                # and:
+                                #   pidof -x startseti.sh 
+                                # yields the process ID of this script.
 
 ######################################################################
 #                           END CONFIG                               #
 ######################################################################
 
 CPID=$$ # current process id is saved
-EXIT=1 # always assume we will need to exit, unless we are doing condstop
+EXIT=1  # always assume we will need to exit, 
+        # unless we are doing condstop
+
+if [ ! $1 ]; then
+    echo "Usage: $0 start|stop|condstop"
+    exit 1
+fi
 
 #
 # Functions
@@ -78,7 +91,9 @@ function _exit()        # function to run upon exit of shell
     if [ $EXIT -ne 0 ]; then
         rm -f $PIDF # removes PID file of this script
         $PKILL $PROCESS # kill all seti processes by me
-        echo "Hasta la vista seti" 
+        if [ $DEBUG -ne 0 ]; then
+            echo "Hasta la vista seti"
+        fi
         # reenable signals
         trap EXIT HUP TERM INT
         exit 0
@@ -90,7 +105,9 @@ trap _exit EXIT HUP TERM INT
 
 function killold ()
 {
-    echo "Called killold"
+    if [ $DEBUG -ne 0 ]; then
+        echo "Called killold"
+    fi
     SUCCESS=0 # assume we will fail
     MPID=$($PIDOF -x $0)
     for i in $MPID; do
@@ -104,8 +121,8 @@ function killold ()
             echo "Murdering $0 number $i"
             kill -9 $i &&\
             SUCCESS=1
-        else
-            echo "Not killing $i [We are $CPID]"
+        elif [ $DEBUG -ne 0 ]; then
+            echo "Not killing $i [because we are $CPID]"
         fi
     done
     if [ $SUCCESS ]; then
@@ -118,14 +135,22 @@ function killold ()
 cd $SETI || exit 1
 [ -f startsetirc ] && . startsetirc # load defaults for this system
 
-#echo "Started Seti: `date`" > startseti.log
-
 # set LOAD to 0 if you want to disable this check
 LOAD=$(uptime|sed -e "s/.*: \([^,]*\).*/\1/" -e "s/ //g" -e "s/^\([0-9]\+\)\..*/\1/" )
 
 # are we stopping? 
 # LOAD > MAXLOAD and condstop are set, we stop OR stop was passed to us
-if [ $LOAD -gt $MAXLOAD -a x$1 = "xcondstop" -o x$1 = "xstop" ]; then
+if [ $LOAD -ge $MAXLOAD -a x$1 = "xcondstop" ]; then
+    # stop setiathome but leave startseti.sh running
+    EXIT=0 # do not kill previous startseti.sh
+    echo -n "Load is high stopping $PROCESS "
+    $PKILL $PROCESS &&\
+        echo "[ok]" &&\
+        exit 0
+    # else
+    echo "[failed]" && exit 1
+elif [ x$1 = "xstop" ]; then
+    # completely stop seti and startseti.sh
     echo -n "Stopping $PROCESS " 
     # cleanup startseti.sh processes if any...
     $PKILL $PROCESS && \
@@ -135,7 +160,10 @@ if [ $LOAD -gt $MAXLOAD -a x$1 = "xcondstop" -o x$1 = "xstop" ]; then
     echo "[failed]" && exit 1
 elif [ x$1 = "xcondstop" ]; then
     # load is not high enough, exit
-    EXIT=0 # do not exit
+    if [ $DEBUG -ne 0 ]; then
+        echo "Load no high enough [$LOAD < $MAXLOAD]"
+    fi
+    EXIT=0 # do not kill previous startseti.sh
     exit 0
 fi
 
@@ -152,11 +180,13 @@ else
     MPID=$($PIDOF -x $0)
     for i in $MPID; do
         if [ x`$CAT $PIDF` = x$i ]; then
-            echo "$0 is already running"
+            if [ $DEBUG -ne 0 ]; then
+                echo "$0 is already running"
+            fi
             RUNNING=1
         fi
     done
-    if [ $RUNNING -eq 0 -a $LOAD -lt 5 ]; then
+    if [ $RUNNING -eq 0 -a $LOAD -lt $MAXLOAD ]; then
         # $0 is not running, so, we update the PID file
         # and try to launch a new $PROCESS later
         echo $CPID > $PIDF
@@ -166,12 +196,17 @@ else
     fi
 fi
 
-if [ $LOAD -lt 5 -a x$1 = "xstart" ]; then
-    echo "Starting seti [ok]" # assume seti will work...
+echo -n "Starting seti "
+if [ $LOAD -lt $MAXLOAD -a x$1 = "xstart" ]; then
+    echo "[ok]" # assume seti will work...
     while true; do
         # seti is smart enough to know if it's already running
         nohup ./$PROCESS -nice $NICE > /dev/null 2>&1 &
         sleep $SLEEP
     done
+else
+    # we should never reach here
+    echo "[failed]"
+    echo "Load $LOAD is not less than $MAXLOAD"
 fi
 

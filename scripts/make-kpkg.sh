@@ -1,8 +1,8 @@
 #!/bin/bash
 # vim: ft=sh:columns=80 :
-# $Revision: 1.32 $
+# $Revision: 1.33 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Oct-15
+# Last modified: 2004-Nov-08
 #
 # LICENSE: GPL (http://www.gnu.org/licenses/gpl.txt)
 #
@@ -39,8 +39,8 @@ DISTCC=`command -v distcc`
 
 if [[ -x "$CCACHE" && -x "$DISTCC" ]]; then
     echo "Setting up distcc with ccache"
-    export MAKEFLAGS="CCACHE_PREFIX=$DISTCC";
-    export CCACHE_PREFIX="$DISTCC"
+    MAKEFLAGS="CCACHE_PREFIX=distcc" # this can't be full path
+    CCACHE_PREFIX="distcc" # this can't be full path
     if [[ -L "/usr/local/bin/gcc" ]]; then
         readlink "/usr/local/bin/gcc" | grep ccache && \
             echo "ccache is correctly setup" &&
@@ -53,9 +53,9 @@ if [[ -f "$HOME/.distcc/hosts" ]];then
     # the format of this file is: 
     #   host1 host2 ... hostN-1 hostN
     echo "Reading $HOME/.distcc/hosts"
-    export DISTCC_HOSTS=`cat "$HOME/.distcc/hosts"`
+    DISTCC_HOSTS=`cat "$HOME/.distcc/hosts"`
 else
-    export DISTCC_HOSTS="localhost"
+    DISTCC_HOSTS="localhost"
 fi 
 
 CONCURRENCY_LEVEL=5                 # use more than one thread for make
@@ -78,6 +78,8 @@ ALL_PATCH_DIR="../kernel-patches/"  # patches are located before
 IMAGE_TOP="../"                     # where to save the resulting 
                                     # .deb files
 
+KPKG_ARCH="i386"                    # kernel architecture we default too. Allows users to pass arguments from .make-kpkg.rc for cross-compilation
+
 # read local variables and override defaults:
 if [[ -f "$HOME/.make-kpkg.rc" ]]; then
     # read user settings for the variables given above
@@ -87,7 +89,9 @@ fi
 # sets all variables:
 export IMAGE_TOP ALL_PATCH_DIR PATCH_THE_KERNEL 
 export MODULE_LOC NO_UNPATCH_BY_DEFAULT 
-export CONCURRENCY_LEVEL
+export KPKG_ARCH
+export CCACHE_PREFIX DISTCC_HOSTS
+export MAKEFLAGS CONCURRENCY_LEVEL
 
 ## get arguments. if --help, print USAGE
 if [[ ! -z $1 && "$1" != "--help" ]]; then

@@ -6,4 +6,4 @@ Terminal=false
 MultipleArgs=false
 Type=Application
 Icon=/usr/share/pixmaps/other/vmware.png
-Categories=Application;Accessories;
+Categories=Application;Accessories;Utility;

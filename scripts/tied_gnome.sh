@@ -1,7 +1,7 @@
 #!/bin/sh
-# $Revision: 1.12 $
+# $Revision: 1.13 $
 # luis mondesi <lemsx1@hotmail.com>
-# Last modified: 2003-Dec-22
+# Last modified: 2004-Feb-11
 #
 # DESCRIPTION:  a simple Gnome 2 script for sysadmins to 
 #		set a bunch of gnome defaults. Remember 
@@ -90,7 +90,7 @@ MONOSPACE_FONT_NAME="Sans Bold 12"
 FONT_NAME="Sans Bold 11"
 DESKTOP_FONT="Sans Bold 14" # nautilus
 TITLE_BAR_FONT="Sans Bold 10" # only if DEFAULT_TITLEBAR_FONT is 0
-BROWSER="mozilla-firebird"
+BROWSER="firefox"
 
 ### end defaults ###
 

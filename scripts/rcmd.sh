@@ -10,7 +10,7 @@
 #
 
 # TODO add hostname ( \2 )
-HOSTS="`sed 's/^\([0-9\.]\+\) \([a-zA-Z\.]\).*/\1/' ~/.remote-hosts`"
+HOSTS="`sed 's/^\([0-9\.]\+[0-9]\+\).*/\1/' ~/.remote-hosts`"
 RSH=ssh
 
 R_CMD="$@"

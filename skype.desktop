@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Skype
+Comment=Skype Instant Messenger
+Exec=skype %U
+Terminal=false
+MultipleArgs=false
+Type=Application
+Icon=/usr/local/skype/icons/skype_48_32.png
+Categories=Application;Network

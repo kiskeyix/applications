@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
 #               Dominique CARON <domiATlpm.univ-montp2.fr> 
 #		Tom ROTH <tomATtomroth.de>
@@ -652,13 +652,12 @@ sub get_audio_channel
         {
             #print $DEBUG "-a DIGIT found \n ";
             $achannels[$number_of_ac]=$1;
-            print $INFO "\t -a $achannels[$number_of_ac]\n" ;
+            print $INFO "\t + Channel: $achannels[$number_of_ac]\n" ;
             $number_of_ac++;
             $tmp=$line[$number_of_ac];
             $flag_ac_detected = 1;
 
-        } elsif ( $tmp =~ m,no audio track,)
-        {	 
+        } elsif ( $tmp =~ m,no audio track,) {	 
             $number_of_ac++;
             $tmp=$line[$number_of_ac];
             $number_of_ac--;

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.35 $
+# $Revision: 1.36 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2005-Jan-25
+# Last modified: 2005-Mar-13
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
 #               or a user specified command archiver ( tar? )
@@ -275,7 +275,7 @@ if ( ! -f $TMP_LOCK ) {
         $TMP_EXCLUDES .= "'";
 
         # construct our main command
-        $COMMAND = sprintf("%s cf - %s  xxFILESxx 2> /dev/null &",
+        $COMMAND = sprintf("%s cf - %s  xxFILESxx 2> /dev/null ",
             $CONFIG{"TAR"},
             $TMP_EXCLUDES
         );
@@ -305,7 +305,7 @@ if ( ! -f $TMP_LOCK ) {
         # with backup
         # emit an audible alert
         system("/usr/bin/flite -t 'Starting backup process at ".
-            $hour." ".$min."'");
+            $hour." ".$min."' &");
     }
 
     # System backup
@@ -330,7 +330,7 @@ if ( ! -f $TMP_LOCK ) {
             # put files and tar file name in place holders
             ( $TMP_COMMAND = $COMMAND) =~ s/xxFILESxx/$TMP_FILE_LIST/;
 
-            $SYSTEM_COMMAND = sprintf("%s > %s",
+            $SYSTEM_COMMAND = sprintf("%s > %s &",
                 $TMP_COMMAND,
                 $TMP_FILE_NAME);
 
@@ -409,7 +409,7 @@ if ( ! -f $TMP_LOCK ) {
             # put files and tar file name in place holders
             ( $TMP_COMMAND = $COMMAND) =~ s/xxFILESxx/$TMP_FILE_LIST/;
 
-            $SYSTEM_COMMAND = sprintf("%s > %s",
+            $SYSTEM_COMMAND = sprintf("%s > %s &",
                 $TMP_COMMAND,
                 $TMP_FILE_NAME);
 
@@ -466,7 +466,7 @@ if ( ! -f $TMP_LOCK ) {
             # put files and tar file name in place holders
             ( $TMP_COMMAND = $COMMAND) =~ s/xxFILESxx/$TMP_FILE_LIST/;
 
-            $SYSTEM_COMMAND = sprintf("%s > %s",
+            $SYSTEM_COMMAND = sprintf("%s > %s &",
                 $TMP_COMMAND,
                 $TMP_FILE_NAME);
 
@@ -506,7 +506,7 @@ if ( ! -f $TMP_LOCK ) {
         # this is a debian system
         # create a selections file
         my $sel = $CONFIG{"NAME"}."-selections.txt";
-        system("dpkg --get-selections \\* > $sel");
+        system("dpkg --get-selections \\* > $sel &");
         if ( $? == 0 ) {
             print STDOUT "Debian selections file created as:".
             " $sel.\n ".

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.47 $
+# $Revision: 1.48 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -165,9 +165,22 @@ $GREEN="\033[0;32m";
 $NORM="\033[0;39m";
 $MAJOR=0;
 $MINOR=6;
-$VideoNorm="PAL";   # Default video format
+$VIDEONORM="PAL";   # Default video format
 
 #  Functions Declarations
+
+# interactive
+sub ask_filesize;
+sub ask_ntsc;
+sub ask_logo;
+sub ask_clust;
+# utilities
+sub pinfo;
+sub perror;
+sub pwarn;
+sub smily;
+sub get_fps;
+# system
 sub mydie;
 sub config;
 sub makelogo;
@@ -185,11 +198,8 @@ sub cluster;
 sub merge;
 sub twoac;
 sub finish;
-sub ask_filesize;
 sub ripdvd;
 sub readconf;
-sub ask_logo;
-sub ask_clust;
 sub zooming;
 sub findclip;
 sub interlaced;
@@ -197,14 +207,10 @@ sub get_audio_channel;
 sub readuserconf;
 sub printinfo;
 sub chk_wdir;
-sub smily;
 sub audiorescale;
 sub srt_subrip;
 sub format_date;
 sub sec_to_hour;
-sub pinfo;
-sub perror;
-sub pwarn;
 sub tv_recorder;
 sub ogmerge;
 sub check_system;
@@ -214,7 +220,6 @@ system("clear");
 my $start_time = time;
 my $f_start_time = format_date($start_time);
 pinfo("Start Time: $f_start_time \n");
-
 
 # Read or create the user configuration file
 # we kept .vob2divxrc for backward compatibility
@@ -234,7 +239,7 @@ if ( -f $userconfigfile )
 }
 
 # Check tools,lib etc .... on system
-    check_system;
+check_system;
 
 $urldvdtitle=$GREEN."\t V2divx is unable to find dvdtitle in your PATH.\n\t Code Sources of dvdtitle are available at : \n\t http://www.lpm.univ-montp2.fr/~domi/V2divx/dvdtitle.tgz\n ".$NORM."\n";
 
@@ -369,8 +374,6 @@ Enter '$0 --help|-h ' to have a small help
 # it's used to estimate the image size of the encoded clip
 $bpp=0.18;   # This value =  bitrate x 1000 / ( fps x height x width ) 
 
-
-
 #********************* MAIN () **************************
 
 if ($ARGV[1] eq "config")
@@ -384,7 +387,8 @@ if ( $RUNCLUST )
 {
     if (defined($ARGV[0]))
     {
-    # $ARGV[0] is the dir where user is working on the master (NOT the $VOBPATH)
+    # $ARGV[0] is the dir where user is 
+    # working on the master (NOT the $VOBPATH)
     $wdir=$ARGV[0];
     chdir($wdir) or mydie $wdir." does not exist or isn't a directory";
     # We are on a cluster node all needed parameters ARE known via -->
@@ -432,7 +436,6 @@ if ( $TVREC )
     tv_recorder;
 }
 
-
 # Make subtitle in a separate file (.srt)
 if ( $SRTSUBRIP )
 {
@@ -441,7 +444,6 @@ if ( $SRTSUBRIP )
     srt_subrip($1,$2) if ( $sub_title =~ m,SRT_(\d+)_(.*),);
     exit(0);
 }
-
 
 # help or bad V2divx parameters
 if (
@@ -487,10 +489,37 @@ if (1)
     exit(1);
 }
 
+######################## FUNCTIONS #########################
 
+sub get_fps {
+    # returns a string with number of frames per second
+    # and sets a global $FPS
+    $info=`transcode -i $VOBPATH -c 1-2 2> /dev/null` 
+        or mydie "Problem when running \'transcode -i $VOBPATH \'";
+    $info =~ m,V:\s+encoding\s+fps.*\|\s+(\d+\.\d+),;
+    $FPS = chomp($1);
+    return $FPS;
+}
 
-############# FUNCTIONS #########################
+sub ask_ntsc {
+    # @param str $FPS
+    # ask user a yes or no question about whether
+    # NTSC is needed and sets proper parameters
+    # accordingly.
+    #
+    # Also, we assume NTSC (no telecine) if FPS
+    # is 29.970 (pass as argument)
+    #
+    # example: ask_ntsc($FPS);
+    my $FPS = shift;
 
+    print(" Is this Movie a NTSC TELECINE movie".
+    " (MPlayer is your friend to know that)? [y|N]");
+    my $rep=<STDIN>;
+    chomp($rep);
+    $TELECINE=1 if ( $rep eq "y" || $rep eq "Y" );
+    $VIDEONORM="NTSC" if ( $FPS =~ m,2[39]\.9, );
+} # end ask_ntsc()
 
 sub check_system
 {
@@ -852,10 +881,10 @@ sub makelogo
     }
     pinfo("$v2d\t Making Logo\n");
     $fparams="$params -c $from_frames-$synclogo";
-#    $fparams =$fparams." -M 2 --psu_mode --nav_seek tmp/file.nav --no_split " if ( $VideoNorm eq "NTSC" );
-    $fparams =$fparams." -M 2 " if ( $VideoNorm eq "NTSC" );
-#     $fparams =$fparams." -M 0 -f 23.976 --psu_mode --nav_seek tmp/file.nav --no_split " if ( $deintl =~ m,ivtc,);
-     $fparams =$fparams." -M 0 -f 23.976 " if ( $deintl =~ m,ivtc,);
+    #    $fparams =$fparams." -M 2 --psu_mode --nav_seek tmp/file.nav --no_split " if ( $VIDEONORM eq "NTSC" );
+    $fparams =$fparams." -M 2 " if ( $VIDEONORM eq "NTSC" );
+    #     $fparams =$fparams." -M 0 -f 23.976 --psu_mode --nav_seek tmp/file.nav --no_split " if ( $deintl =~ m,ivtc,);
+    $fparams =$fparams." -M 0 -f 23.976 " if ( $deintl =~ m,ivtc,);
     $add_logo="logo=file=$LOGO:posdef=$poslogo:rgbswap=$RGBSWAP:range=$start_frames_logo-$end_frames_logo,";
     $filter=$deint.$add_logo.$sub_title."hqdn3d,";
     my($AO)="" if ( $AO eq "mp3");
@@ -1220,7 +1249,7 @@ sub printinfo
         print "Normal"  if ( $qual==2);
         print $NORM."\n";
     } else {
-        print $v2d."   V:\tVideo input Norm:\t   | $VideoNorm \n";
+        print $v2d."   V:\tVideo input Norm:\t   | $VIDEONORM \n";
     }
     print $v2d."   V:\tVideo Output format:\t(1)| $DIVX\n";
     print $v2d."   V:\tVideo Input interlaced:\t   | ";
@@ -1429,6 +1458,8 @@ sub ask_clust
         }
         if ( $rep eq "y" || $rep eq "Y" || $rep eq "o" || $rep eq "0")
         {	
+            # first find out number of FPS and then create_nav
+            ask_ntsc( get_fps() if ( ! defined($FPS) ) );
             create_nav ;
             my $stream_units=`tail -1 tmp/file.nav | awk '{print \$1}'`;
             chomp($stream_units);
@@ -1690,7 +1721,8 @@ sub cluster
 sub create_nav
 {
     return()  if (  -f "tmp/filenav-ok" &&  -f "tmp/file.nav" );
-    my $demux=" -M 2" if ( $VideoNorm eq "NTSC" );
+    # BUG VIDEONORM is not known the first time create_nav is called
+    my $demux=" -M 2" if ( $VIDEONORM eq "NTSC" );
     pinfo("$v2d\t Creating File Navigation:\t\t   | tmp/file.nav\n");
     my $pid = fork();
     mydie "couldn't fork [function: create_nav]\n" unless defined $pid;
@@ -1698,7 +1730,9 @@ sub create_nav
     {
         $sys = "cat $VOBPATH/* | tcdemux $demux -W > tmp/file.nav";
         print $INFO $sys."\n";
-        system ("nice -$nice $sys") == 0  or ( system ("touch tmp/filenav.finish")== 0 and mydie "Unable to create file nav" );
+        system ("nice -$nice $sys") == 0  
+            or ( system ("touch tmp/filenav.finish")== 0 
+            and mydie "Unable to create file nav" );
         system("touch tmp/filenav.finish");	
         wait;
         system("touch tmp/filenav-ok");
@@ -1715,21 +1749,17 @@ sub create_extract
     get_audio_channel if ( ! defined($audio_channel));
     $audio_format=audioformat("-a $audio_channel") if ( $NOAUDIO != 1 );	
     a_bitrate if ( ! defined($audio_bitrate));
-    $info=`transcode -i $VOBPATH -c 1-2 2> /dev/null` 
-        or mydie "Problem when running \'transcode -i $VOBPATH \'";
-    $info =~ m,V:\s+encoding\s+fps.*\|\s+(\d+\.\d+),;
-    my($FPS)=$1;
+    
+    $FPS = get_fps();
+    
     if ( $FPS =~ m,29\.97, )
     {
-        print(" Is this Movie a NTSC TELECINE movie".
-            " (MPlayer is your friend to know that)?[y|N]");
-        my $rep=<STDIN>;
-        chomp($rep);
-        $TELECINE=1 if ( $rep eq "y" || $rep eq "Y" );
-    }
-    $VideoNorm="NTSC" if ( $FPS =~ m,2[39]\.9, );
-    #    create_nav if ( $VideoNorm eq "NTSC");
-
+        # since 29.970 is the detected frames per second
+        # ask user whether this is a NTSC movie and set variables
+        # accordingly
+        ask_ntsc($FPS);
+    } 
+    #    create_nav if ( $VIDEONORM eq "NTSC");
     if ( $NOAUDIO == 1  || $need_time == 1 )  
     {
         # || $in_video_magic eq 'mpeg2'(OK V=mpeg2,A=mp3.mpg)  
@@ -1824,7 +1854,8 @@ sub calculate_nbrframe
         $info = `cat tmp/probe.rip`;
         $LOG="tmp/probe.rip";
     } else {
-        create_extract if (! -f "tmp/extract-ok" || ! -f "tmp/extract.text" );
+        create_extract if (! -f "tmp/extract-ok" 
+        || ! -f "tmp/extract.text" );
         $info = `cat tmp/extract.text`;
         $LOG="tmp/extract.text";
     }
@@ -1833,19 +1864,13 @@ sub calculate_nbrframe
         or mydie "Unable to find number of frames to encode in $LOG" ;
     $tot_frames = $1;
 
-    $info=`transcode -i $VOBPATH -c 1-2 2> /dev/null` or mydie "Problem when running \'transcode -i $VOBPATH\'";
-    $info =~ m,V: encoding fps[^\|]*\| (\d+\.\d+).*,;
-    $FPS=$1;
-    if ( $FPS =~ m,29.97, && ! defined $TELECINE )
+    $FPS=get_fps() if ( ! defined($FPS) );
+
+    if ( $FPS =~ m,29\.97, && ! defined($TELECINE) )
     {
-        print(" Is this Movie a NTSC TELECINE movie".
-            " (MPlayer is your friend to know that)?[y|N]");
-        my $rep=<STDIN>;
-        chomp($rep);
-        $TELECINE=1; 
-   }
-    $VideoNorm="NTSC" if ( $FPS =~ m,2[39]\.9, );
-    #    create_nav if ( $VideoNorm eq "NTSC");
+        ask_ntsc($FPS);
+    }
+    #    create_nav if ( $VIDEONORM eq "NTSC");
 
     $nbr_frames= floor($tot_frames - ($deb_sec+$last_sec)*$FPS);
     print $DEBUG "Number of frames: $nbr_frames\n";
@@ -2005,10 +2030,10 @@ sub aviencode
         $audio_format="" if ( $audio_format eq pcm );
         $audio_format="vob" if ( $in_video_codec eq vob );
         # Add NTSC demuxer opts
-        $fparams =$fparams." -M 2 " if ( $VideoNorm eq "NTSC" && ! ($deintl =~ m,ivtc,));
+        $fparams =$fparams." -M 2 " if ( $VIDEONORM eq "NTSC" && ! ($deintl =~ m,ivtc,));
         $fparams =$fparams." -M 0 -f 23.976" if ( $deintl =~ m,ivtc,);
-        # $fparams =$fparams." --psu_mode --nav_seek tmp/file.nav --no_split " if ( $CLUSTER eq "NO" && $VideoNorm eq "NTSC" );
-        $clust_percent=" --a52_dolby_off " if ( $VideoNorm eq "NTSC" && $CLUSTER eq "NO" );
+        # $fparams =$fparams." --psu_mode --nav_seek tmp/file.nav --no_split " if ( $CLUSTER eq "NO" && $VIDEONORM eq "NTSC" );
+        $clust_percent=" --a52_dolby_off " if ( $VIDEONORM eq "NTSC" && $CLUSTER eq "NO" );
         my($AO)=$AO;
         $AO="" if ( $AO eq mp3 );;
         my($audio_format)=$audio_format;
@@ -2506,8 +2531,8 @@ sub get_params
     if ( defined($ac2) ) {
         print CONF "#ac2:$ac2\n";
     }
-    if ( defined($VideoNorm) ) {
-        print CONF "#VideoNorm:$VideoNorm\n";
+    if ( defined($VIDEONORM) ) {
+        print CONF "#VIDEONORM:$VIDEONORM\n";
     }
     if ( defined($TELECINE) ) {
         print CONF "#TELECINE:$TELECINE\n";
@@ -2677,7 +2702,6 @@ sub ask_filesize
     close(CONF);
 }
 
-
 sub ask_logo
 {
     $LG=`transcode -J logo=help -c 9-11  2>&1 | grep rgbswap`;
@@ -2743,7 +2767,7 @@ sub zooming
     print $DEBUG "---> Enter Zooming\n";
     # We need the Bitrate to calculate new image Size for the bpp
     calculate_bitrate;
-    #       We need also the Frame rate $FPS
+    #   We need also the Frame rate $FPS
     calculate_nbrframe if ( ! defined ($nbr_frames));
 
     $probe = `tcprobe -i  "$VOBPATH/$sample" 2> /dev/null `
@@ -3265,7 +3289,7 @@ sub config
     open (CONF,">>tmp/V2divx.conf");
     print CONF "#dvdtitle:$dvdtitle # DO NOT MODIFY THIS LINE\n";
     print CONF "#TELECINE:$TELECINE# DO NOT MODIFY THIS LINE\n";
-    print CONF "#VideoNorm:$VideoNorm# DO NOT MODIFY THIS LINE\n";
+    print CONF "#VIDEONORM:$VIDEONORM# DO NOT MODIFY THIS LINE\n";
     close(CONF);
 
 }   # END Config 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.35 $
+# $Revision: 1.36 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -26,7 +26,7 @@
 use POSIX;
 use Env qw(HOME);
 use FileHandle;
-use File::Temp qw/ tempfile tempdir /; # Perl 5.6.1: 
+use File::Temp qw/ tempfile  /;     # Perl 5.6.1: 
                                     # used to get secured temp file
 STDOUT->autoflush(1);
 
@@ -1255,18 +1255,17 @@ sub cluster
     # Open a secure temporary file in /tmp/ to 
     # rebuild cluster config file
     # which contain ONLY available nodes
-    
+   
+    # returns a filehandle and filename
     my $s_file = new File::Temp(
-                                "TEMPLATE"  => "XXXXX",
+                                "UNLINK"    => 0, # do not unlink
+                                "TEMPLATE"  => "XXXXXXXXX",
                                 "DIR"       => "tmp", # NFS
                                 "SUFFIX"    => ".txt"
                             );
-
     # FIXME
     print $DEBUG "\nfile +++++++> $s_file <----- file\n\n";
     
-    open(GOODNODE,"> $s_file");
-
     # $node_counter is the counter of AVAILABLE nodes
     my $node_counter=`grep -v "^[[:space:]]*#" $CLUSTER_CONFIG | grep -v '^[[:space:]]*$$' | wc -l`;
 
@@ -1327,7 +1326,7 @@ sub cluster
                     $P=$chost[1];
                     chomp($P);
                     # This node is OK we print it in the good nodes temporary file
-                    print GOODNODE "$rhost:$P\n";
+                    print $s_file "$rhost:$P\n";
                     $poweron = $poweron + $P;
                 }
             } else { 
@@ -1335,7 +1334,7 @@ sub cluster
                 $P=$chost[1];
                 chomp($P);
                 print $DEBUG "+ Host : ".$chost[0]." , Pow = $P\n";
-                print GOODNODE "$rhost:$P\n";
+                print $s_file "$rhost:$P\n";
                 $poweron = $poweron + $P;
             }
         }
@@ -1344,11 +1343,10 @@ sub cluster
         # more than requested
         $addpower = $poweroff / $node_counter;
 
-        # closing the file deletes it...
-        #close(GOODNODE); 
         # FIXME
         print $DEBUG "\n++++++> Sleeping ... \n";
         sleep(10);
+        close($s_file);
     } else {
         # we don't need cluster-mode?
         print $DEBUG "\n+++++> Unlinking file $s_file";
@@ -1376,7 +1374,7 @@ sub cluster
         my  $max=0;	
         $i=0;
         @allnodes=`cat $s_file`;
-        unlink("$s_file"); # unlink() or close() would do...
+        unlink("$s_file"); 
 
         foreach $node (@allnodes )     
         { 

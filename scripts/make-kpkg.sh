@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jul-14
 #
@@ -37,8 +37,6 @@ PATCH_THE_KERNEL="YES"              # always patch the kernel
 ALL_PATCH_DIR="../kernel-patches/"  # patches are located before 
                                     # this directory
                                      
-INITRD="YES"                        # do not warn about initrd creation
-
 IMAGE_TOP="../"                     # where to save the resulting 
                                     # .deb files
 

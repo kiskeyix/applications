@@ -3,9 +3,9 @@
 # Title="Mount Image"
 # Title[es]="Montar Imagen"
 #
-# $Revision: 1.10 $
+# $Revision: 1.11 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Nov-07
+# Last modified: 2004-Jun-09
 #
 # DESCRIPTION: Opens a dialog and asks user how to mount an image
 # INSTALL: needs zenity (or another graphical dialog replacement) 
@@ -36,6 +36,8 @@ CYPHERS="TRUE serpent FALSE aes FALSE twofish FALSE blowfish FALSE des FALSE xor
 
 # filetype formats
 FORMATS="TRUE ext2 FALSE ext3 FALSE iso9660 FALSE udf FALSE reiserfs FALSE jfs FALSE xfs FALSE minix FALSE ntfs FALSE msdos FALSE vfat FALSE efs"
+DBITS="256" # default keybits for cyphers
+BITS="TRUE 256 FALSE 512 FALSE 1024"
 
 # paths
 MOUNTDIR="$HOME/mnt"
@@ -140,6 +142,23 @@ ask_cypher()
     echo "$TMP"
 }
 
+ask_bits()
+{
+    TMP=""
+
+    TMP=`$DIALOG --list \
+    --title="${TIT_CYPHER} bits" \
+    --radiolist --editable \
+    --column="Selected" --column="Cypher Bits" $BITS`
+
+    if [ -z $TMP ]; then
+        # what we do when user presses cancel
+        TMP="$DBITS"
+    fi
+    
+    echo "$TMP"
+}
+
 ask_filesystem()
 {
 
@@ -228,12 +247,13 @@ setup_enloop()
     # @arg1 loop device
     # @arg2 image
     # @arg3 encryption cypher
+    # @arg4 bits
     if [ -b $1 ]; then
         # ask user password for encryption
         PASSWORD=""
         PASSWORD="`ask_passwd \"$MSG_PASSWORD\"`"
 
-        $SU -u $SUSER -t "$SETLO $1" "echo $PASSWORD | $LO -p0 -e $3 $1 $2"
+        $SU -u $SUSER -t "$SETLO $1" "echo $PASSWORD | $LO -k $4 -p0 -e $3 $1 $2"
         if [ $? -eq 0 ]; then
             echo "yes"
         else 
@@ -333,12 +353,21 @@ do
                 CYPHER="$DCYPHER"
             fi
 
+            # choose encryption bits
+            echo "Asking about cypher bits"
+            CYPHERBITS="`ask_bits`"
+
+            if [ -z $CYPHERBITS ]; then
+                # what we do when user presses cancel
+                CYPHERBITS="$DBITS"
+            fi
+
             # choose format type
             echo "Asking about filesystem type"
             mtype="`ask_filesystem`"
 
             if [ "`setup_enloop $LOOPDEV $arg $CYPHER`" = "yes" ]; then
-                if [ "`lmount $mtype $LOOPDEV $USERMOUNTDIR`" = "yes" ]; then
+                if [ "`lmount $mtype $LOOPDEV $USERMOUNTDIR $CYPHERBITS`" = "yes" ]; then
                     $NAUTILUS $USERMOUNTDIR
                 else
                     error "$MSG_EMOUNT $LOOPDEV --> $USERMOUNTDIR"

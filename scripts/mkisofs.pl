@@ -74,7 +74,7 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
 
     foreach my $f (@files)
     {
-        $size += get_size("$f"); # gets size in megabytes
+        $size += get_size("$f"); # gets size in bytes
         print STDOUT ("Current file $f \nCurrent Size $size\n") 
             if ( $DEBUG > 0 );
         
@@ -104,7 +104,7 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
         $new_f = catfile($nbasedir,$new_f);
         symlink("$f","$new_f") or die "Symlink failed:\n  '$f -> $new_f'\n $! \n";
         do_log("$new_f -> $f");
-        if ( $size >= $ISOLIMIT )
+        if ( POSIX::ceil(($size / 1024)/1024) >= $ISOLIMIT )
         {
             print STDOUT ("Making CD ISO of size ".$size."MB\n");
             m_system("$nice mkisofs -f -J -r -v -o '../$name' -V '$volumeid' '$nfolder' ",1);
@@ -188,9 +188,9 @@ sub get_size
 {
     my $file = shift;
     my $stat = stat("$file");
-    my $mb = POSIX::ceil(($stat->size / 1024)/1024); 
-    #print STDOUT ($stat->size." = ".$mb." ".$file."\n");
-    return $mb;
+    # to conver to MB do something like:
+    #$mb = POSIX::ceil(($stat->size / 1024)/1024); 
+    return $stat->size;
 }
 
 sub do_log

@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.22 $
+# $Revision: 1.23 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jul-16
+# Last modified: 2003-Sep-30
 #
 # DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
 #               or a user specified command archiver ( tar? )
@@ -458,8 +458,12 @@ sub init_config {
         close(CONFIG);
 
     } else {
-        print STDERR "Could not open $CONFIG_FILE";
-        return "-1";
+        print STDERR "Could not open $CONFIG_FILE\n";
+        my $response = prompt("Do you want to continue? [y/N] ");
+        if ($response ne 'y') 
+        {
+            die "Bailing out\n";
+        }
     }
     
     return %config_tmp;
@@ -515,3 +519,17 @@ sub clean {
     $_[0] =~ s/([;<>\*\|`&\$!#\(\)\[\]\{\}:'"\ ])/\\$1/g;
     return @_;
 }
+
+# This subroutine prompts a user for a response
+# which is then returned to the original caller
+# my $var = prompt("string");
+sub prompt {
+    # promt user and return input     my($string) = shift;
+    my($input) = "";                                                                                 
+    print ($string."\n");
+    chomp($input = <STDIN>);
+    # chomp is the same as:
+    # $input =~ s/\n//g; # remove lineend
+    return $input;
+} # ends prompt
+

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.75 $
+# $Revision: 1.76 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -1060,7 +1060,7 @@ sub thumb_html_files {
              || $config{"$BASE"}{"menutype"} eq "modern" 
          )
          {
-            print FILE ("<a class='pdlink' href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/".$MENU_NAME.".".$config{"$BASE"}{"ext"}."'>&lt;&lt;</a>\n");
+            print FILE ("<a class='pdlink' href='".$config{"$BASE"}{"uri"}."/".$MENU_NAME.".".$config{"$BASE"}{"ext"}."'>&lt;&lt;</a>\n");
         }
         # backward link here
         if ( $last_html_file ne "this_is/dummy\string" 

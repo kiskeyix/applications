@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.20 $
+# $Revision: 1.21 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE:
@@ -13,14 +13,14 @@
 # DESCRIPTION:
 # 
 # Use this non-interactive script in Nautilus to create HTML files
-# with their proper thumbnails for pictures (.jpeg or .gif)
+# with their proper thumbnails for pictures (.jpeg, .gif or .png)
 # 
 # Make this file executable and put it in:
 # ~/.gnome/nautilus-scripts
 # or 
 # ~/.gnome2/nautilus-scripts
 # 
-# Then run it from from the File::Scripts::script_name menu
+# Then run it from from the File::Scripts::script_name menu in Nautilus
 # 
 # You could customize each directory differently by having a
 # file named .pixdir2htmlrc in the directory containing the
@@ -50,10 +50,6 @@
 #     as it's used for the index files
 #
 # BUGS:
-#   * force copying the config recursively fails...
-#   * when having multiple directories with pictures, the "back"
-#     and "forward" fails for "back" button sometimes... 
-#     and puts an extra "forward" other times... 
 #   * links are not counted right yet... look for a way to "know"
 #     when a directory is actually a link (other than checking for
 #     -f .nopixdir2htmlrc || !-f $_/index.(php|html|whatever) ...
@@ -61,17 +57,11 @@
 #     lines.
 #   * config file should not contain double quotes (") without
 #     escaping them first (\")
-#   * if a directory has a .nopixdir2htmlrc file, it will be skipped
-#     even if there are subdirectories inside which might need thumbnails
-#     created. Either do not put a .nopixdir2htmlrc file in these directories
-#     or mv the subdirectories parallel to this directory. Will deal with
-#     this issue later when menu_file subroutine is completed and completely
-#     recursive
 # 
 # TIPS:
 # 
 # Put a .nopixdir2htmlrc file in directories for which you do not want
-# thumbnails and/or index.html to be written
+# thumbnails and/or index.EXT to be written
 #
 
 use File::Copy;
@@ -462,7 +452,9 @@ sub mkthumb {
             # change of base, reset two-dimensional array counter
             print LOGFILE "+ Reading config for $BASE\n";
             # read specific config file for this directory
-            %myconfig = init_config($BASE);
+            if (! -f "$BASE/.nopixdir2htmlrc" ) {
+                %myconfig = init_config($BASE);
+            }
             $total_directories++;
         } 
         # update flag
@@ -560,7 +552,9 @@ sub thumb_html_files {
         if ( $BASE !~ m/$tmp_BASE/ ) {
             print LOGFILE "+ Reading config for $BASE\n";
             # read specific config file for this directory
-            %myconfig = init_config($BASE);            
+            if (! -f "$BASE/.nopixdir2htmlrc" ) {
+                %myconfig = init_config($BASE);
+            }
         } 
         # update flag
         $tmp_BASE = $BASE;

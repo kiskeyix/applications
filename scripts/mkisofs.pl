@@ -104,7 +104,7 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
         if ( $size >= $ISOLIMIT )
         {
             print STDOUT ("Making CD ISO of size ".$size."MB\n");
-            m_system("$nice mkisofs -f -J -r -v -o '$name' -V '$volumeid' '$folder' ",1);
+            m_system("$nice mkisofs -f -J -r -v -o '$name' -V '$volumeid' '$nfolder' ",1);
             $size = 0; # reset size
             $i++;
             $nfolder = $folder."$i";
@@ -122,7 +122,7 @@ if ( $ARGV[1] && $ARGV[1] eq "dvd" )
         if ( $res eq "y" )
         {
             print STDOUT ("Making CD ISO of size ".$size."MB\n");
-            m_system("$nice mkisofs -f -J -r -v -o '$name' -V '$volumeid' '$folder' ",1);
+            m_system("$nice mkisofs -f -J -r -v -o '$name' -V '$volumeid' '$nfolder' ",1);
         }
     }
     # cleanup

@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.68 $
+# $Revision: 1.69 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -41,72 +41,16 @@ STDOUT->autoflush(1);
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
 
-# get options
-# declare empty variables
 # flags
-my ($HELP,$VERSION,$RUNCLUST,$SRTSUBRIP,$OKCLUSTER,$TEST) = 0;
-# others
-my $SVIDEO_FORMAT="";
-my $ROOT_DIRECTORY = "";
-my $TVREC=0;
-# userconf
-my $nice="";
-my $DIVX="";
-my $DIVX_OPT="";
-my $XV="";
-my $XINE="";
-my $CLUSTER_CONFIG="";
-my $XTERM="";
-my $RMCMD="";
-my $AVIPLAY="";
-my $LOGO="";
-my $POSLOGO="";
-my $STARTLOGO="";
-my $TIMELOGO="";
-my $LANGUAGE="";
-my $DEF_AUDIOCHANNEL="";
-my $AO="";
-my $DEBUG=0;
-my $INFO=0;
-my $EXTSUB ="";
-my $Res_DIVX_OPT=0;
-GetOptions(
-    # flags
-    'h|help'                    =>  \$HELP,
-    'v|version'                 =>  \$VERSION,
-    'runclust'                  =>  \$RUNCLUST,
-    'srtsubrip'                 =>  \$SRTSUBRIP,
-    'tv'                        =>  \$TVREC,
-    'd|debug!'                  =>  \$DEBUG,
-    'i|info!'                   =>  \$INFO,
-    'c|with-cluster'            =>  \$OKCLUSTER,
-    't|test'                    =>  \$TEST,
-    # strings
-    'D|directory=s'             => \$ROOT_DIRECTORY,
-    's|source-video-format=s'   => \$SVIDEO_FORMAT,
-    'x|x_video=s'               => \$DIVX,
-    'F|x_video_opts=s'          => \$DIVX_OPT,
-    'o|output_audio=s'          => \$AO,
-    'V|video_player=s'          => \$XINE,
-    'A|avi_player=s'            => \$AVIPLAY,
-    'I|image_viewer=s'          => \$XV,
-    'C|cluster_config=s'        => \$CLUSTER_CONFIG,
-    'r|remote_cmd=s'            => \$RMCMD,
-    'L|logo=s'                  => \$LOGO, 
-    'l|lang|language=s'         => \$LANGUAGE, 
-    'S|SUB_TITLE_opts=s'        => \$EXTSUB,
-    # numbers
-    'a|default_audio_channel=i' => \$DEF_AUDIOCHANNEL ,
-    'n|nice=i'                  => \$nice
-);
-# reset DIVX_OPT if DIVX is pass as parameter and not DIVX_OPT
-$Res_DIVX_OPT=1 if ( $DIVX ne "" && $DIVX_OPT eq "" );
-
-# set debugging or info mode
-#
+my ($HELP,$VERSION,$RUNCLUST,$SRTSUBRIP,$OKCLUSTER,$TEST,
+    $DVD9TO5,$TVREC,$DEBUG,$INFO,$Res_DIVX_OPT) = 0;
+# strings
+my ($SVIDEO_FORMAT,$ROOT_DIRECTORY,$nice,$DIVX,$DIVX_OPT,
+    $XV,$XINE,$CLUSTER_CONFIG,$XTERM,$RMCMD,$AVIPLAY,$LOGO,
+    $POSLOGO,$STARTLOGO,$TIMELOGO,$LANGUAGE,$DEF_AUDIOCHANNEL,
+    $AO,$EXTSUB) = "";
 
 my $userconfigfile="$HOME/.V2divxrc";
-
 my $userconfig="
 #		This file is use by V2divx to read your default parameters
 #
@@ -236,12 +180,11 @@ my $NVREC=0; # By default NVREC is not here
 my $OGMTOOL=0; # By default ogmmerge is not here
 my $SUBRIP=0; # By default srtsubrip is not here
 
-my $urldvdtitle=$GREEN."\t V2divx is unable to find dvdtitle in your PATH.\n\t Code Sources of dvdtitle are available at : \n\t http://www.lpm.univ-montp2.fr/~domi/V2divx/dvdtitle.tgz\n ".$NORM."\n";
+my $urldvdtitle="$GREEN\t V2divx is unable to find dvdtitle in your PATH.\n\t Code Sources of dvdtitle are available at : \n\t http://www.lpm.univ-montp2.fr/~domi/V2divx/dvdtitle.tgz\n $NORM\n";
 
 my $warnclust = "\n ERROR: cluster mode. Please see README file\n\n";
 
-my $usage =
-$RED."            *****  Warning  *****$NORM
+my $usage = "$RED            *****  Warning  *****$NORM
 Please note that you are only allowed to use this program according to fair-use laws which vary from country to country. You are not allowed to redistribute 
 copyrighted material. Also note that you have to use this software at your own risk.
 
@@ -277,6 +220,10 @@ This will ask all what it need to make the movie you want ;-)
 % V2divx /path/to/moviefiles --tv
 (where /path/to/moviefiles is a directory where V2divx will keep the temporaries movies files.
 
+4) DVD-9 format to DVD-5\n
+% V2divx /path/to/dir --dvd9-to-dvd5
+(where /path/to/dir can be a directory containing .VOB files extracted previously from a DVD or a device /dev/dvd from which to extract a streaming video and audio to create, hopefully, a video.mpeg file of size 4.4GB in the current directory)
+
 ------------\n
 V2divx options (override ~/.V2divxrc variables)
 \t -h|--help          show this Help
@@ -298,7 +245,7 @@ V2divx options (override ~/.V2divxrc variables)
 \t -S|--SUB_TITLE_opts 'value'          use 'value' as extsub transcode filter option
 \t -a|--default_audio_channel 'int'     use 'int' as default audiochannel
 \t -o|--output_audio 'value'            use 'value' as output audio format (ogg or mp3)
-
+\t -d9d5|--dvd9-to-dvd5                 converts the VOB files from the directory passed to the script to a 4.4GB MPEG-2 file that can be used in dvdauthor to create a DVD. Will use dvdauthor directly later to setup a simple movie
 
 You can interrupt the program anytime. To continue encoding, just run the script
 without parameters in the same directory.\n$RED\t You MUST NOT run V2divx from the /path/to/vobs directory.\n$NORM
@@ -338,26 +285,19 @@ use sigtrap qw(handler mydie normal-signals error-signals) ;
 sub pinfo
 {
     # takes a string a prints a green message:
-   print STDOUT $GREEN."@_".$NORM ;
-}
-
-sub myperror
-{
-    # takes a string and prints a red error message
-    print $RED."@_".$NORM  if ( $DEBUG );
+   print STDOUT $GREEN."@_\n".$NORM ;
 }
 
 sub pdebug 
-{   # prints a string only if $DEBUG is true
-    print " + @_ \n" if ( $DEBUG );
+{   
+    # prints a string only if $DEBUG is true
+    print STDERR " + @_ \n" if ( $DEBUG );
 }
 
 sub pwarn
 {
-    my $red="\033[1;31m";
-    my $norm="\033[0;39m";
     # takes a string and prints a red warn message
-    print STDOUT $red."@_".$norm;
+    print STDOUT $RED."@_\n".$NORM;
 }
 
 sub smily
@@ -429,7 +369,7 @@ sub chk_wdir
         if ( $i == 0 )
         {
             $tmp=$in_video_codec;
-            pinfo("$v2d\t Video Input Format:\t\t\t   | $in_video_codec\n");
+            pinfo("$v2d\t Video Input Format:\t\t\t   | $in_video_codec");
             mydie "$VOBPATH/$file has not a valid video format" if ( $in_video_codec eq "null" );
         }
         mydie "$VOBPATH/$file is not a valid file. All $VOBPATH files (except dvdtitle and/or probe.rip) MUST have the same format" if ( $tmp ne $in_video_codec );
@@ -578,7 +518,7 @@ sub check_system
             "the \$DIVX variable in your $userconfigfile\n");
         exit(0);
     }
-    pinfo("$v2d\t Transcode detected release:\t\t   | $Vers[0].$Vers[1].$Vers[2]\n");
+    pinfo("$v2d\t Transcode detected release:\t\t   | $Vers[0].$Vers[1].$Vers[2]");
 
     # Do not check tools on cluster nodes
     if  ( ! $RUNCLUST )
@@ -754,7 +694,7 @@ sub create_extract
         close(EXTRACT);
         system("touch tmp/extract-ok");
     } else {
-        pinfo("$v2d\t Creating :\t\t\t\t   | tmp/extract.text\n");
+        pinfo("$v2d\t Creating :\t\t\t\t   | tmp/extract.text");
         my $pid = fork();
         mydie "couldn't fork" unless defined $pid;
         if ($pid)
@@ -810,7 +750,7 @@ sub create_extract
     print "\n";
     my $duree=`cat tmp/extract.text`;
     $duree =~ m,estimated clip length=(\d+.\d+) seconds,;
-    pinfo("$v2d\t Estimated Clip Length:\t\t\t   | $1 sec\n");
+    pinfo("$v2d\t Estimated Clip Length:\t\t\t   | $1 sec");
     pdebug ("<--- create_extract");
 } # end create_extract
 
@@ -932,6 +872,7 @@ sub printinfo
     }
 
     print $v2d."   V:\tLogo file name:\t\t(1)| $LOGO\n";
+    $ADDLOGO = ($ADDLOGO !~ /\d+/) ? 0 : $ADDLOGO; # suppress warning
     if ( ( $ADDLOGO && $CLUSTER eq "NO" ) || 
         ( $ADDLOGO != 0 && $ADDLOGO <= 300 && $CLUSTER ne "NO"))
     {
@@ -1194,7 +1135,7 @@ sub tv_recorder
     if ( $QUALITY==1 )
     {
         $sys=sprintf("transcode -i $VOBPATH/only_video.mpeg -p $VOBPATH/only_audio.avi -x yuv4mpeg,mp3 -R 1,tmp/Video.log  -y $DIVX $DIVX_OPT -w %d,250 -o /dev/null -u 100 -J $DEINTL,32detect=force_mode=3,dnr,$add_logo",$BITRATE);
-        pinfo("\t\tEncoding  Pass One \n");
+        pinfo("\t\tEncoding  Pass One ");
         if ( -e "tmp/pass1_done" )
         {   pwarn("\tHigh Quality Pass One already encoded, remove \"tmp/pass1_done\" to reencode \n");
         } else {
@@ -1204,10 +1145,10 @@ sub tv_recorder
             system ("touch tmp/pass1_done");
         }
         $sys=sprintf("transcode -i $VOBPATH/only_video.mpeg -p $VOBPATH/only_audio.avi -b $AUDIO_BITRATE,0 -x yuv4mpeg,mp3 -R 2,tmp/Video.log  -y $DIVX $DIVX_OPT -w %d,250 -o movie.avi -u 100 -J dnr,yuvdenoise,32detect=force_mode=3,$add_logo",$BITRATE);
-        pinfo("\t\t Pass Two \n");
+        pinfo("\t\t Pass Two ");
     } else {
         $sys="transcode -i $VOBPATH/only_video.avi -p $VOBPATH/only_audio.avi -P 1 -b $AUDIO_BITRATE,0 -o movie.avi -y raw";
-        pinfo("\t\t Merging Audio+Video\n");
+        pinfo("\t\t Merging Audio+Video");
     }
     if ( -e "tmp/pass2_done" )
     {   pwarn(" Pass Two already encoded, remove \"tmp/pass2_done\" to reencode \n");
@@ -1279,12 +1220,12 @@ sub srt_subrip
     {
         umask(000); # resets current umask values. Luis Mondesi 
         mkdir ("$HOME/.V2divx_db",01777);
-        pinfo("$v2d\t PGM2txt database created:\t\t   | ${RED}${HOME}/.V2divx_db\n");
+        pinfo("$v2d\t PGM2txt database created:\t\t   | ${RED}${HOME}/.V2divx_db");
     }
     if ( ! -e "db")
     {
         system("ln -s $HOME/.V2divx_db db");
-        pinfo("$v2d\t PGM2txt database ${RED}db${GREEN} linked to \$HOME/.V2divx_db\n");
+        pinfo("$v2d\t PGM2txt database ${RED}db${GREEN} linked to \$HOME/.V2divx_db");
     } 
     if ( ! -f "tmp/srtpgm_done")
     {
@@ -1292,7 +1233,7 @@ sub srt_subrip
         my @def_grey=('255,255,0,255','255,255,255,0','255,0,255,255','0,255,255,255');
         my $i=0;
         my $rep="NO";
-        pinfo("$v2d\t In this Terminal we will prepare your subtitle file\n");
+        pinfo("$v2d\t In this Terminal we will prepare your subtitle file");
         print " As the grey levels of subtitles varied, I first make only one subtitle image.\n"
             ." Subtitle image is good when the background is WHITE and the foreground is BLACK.\n"
             ." Take a look on this subtitle image\n Press Enter ->";
@@ -1317,7 +1258,7 @@ sub srt_subrip
         mydie "couldn't fork" unless defined $pid;
         if ($pid)
         {
-            pinfo("$v2d\t Making subtitle images. This may take a while...\n");
+            pinfo("$v2d\t Making subtitle images. This may take a while...");
             # try different positions for zero  when output is not optimal (default  255,255,0,255)
             my $sys="cat $VOBPATH/* | tcextract -x ps1 -t vob -a 0x2$_[0] | "
                 ."subtitle2pgm -c $def_grey[$i] -C 15 -o tmp/$TITLE";
@@ -1385,7 +1326,7 @@ sub makelogo
     # of merged stream units (made by merge())
     if ( ! -e "tmp/cutoff.finish")
     {
-        pinfo("$v2d\t  Cut off the beginning to be replaced by Logo\n");
+        pinfo("$v2d\t  Cut off the beginning to be replaced by Logo");
         my ($in_video_magic,$in_video_codec)=videoformat("$VOBPATH/$SAMPLE");
         my ($in2_video_magic)=videoformat("tmp/2-$TITLE.$EXT");
         my $to_frames=$TOT_FRAMES-$END_SEC*$FPS;
@@ -1427,7 +1368,7 @@ sub makelogo
     
     # Then we make the logo parts itself
     # Then logo parts is encoded WITHOUT audio (this will be make by merge())
-    pinfo("$v2d\t Making Logo\n");
+    pinfo("$v2d\t Making Logo");
     $end_frames_logo++;
     my $final_params="$PARAMS -c 0-$end_frames_logo";
     #$final_params=$final_params." -M 2 --psu_mode --nav_seek tmp/file.nav --no_split " if ( $VIDEONORM eq "NTSC" );
@@ -1486,7 +1427,7 @@ sub makelogo
     }
     
     # And finally merge logo and withoutlogo parts
-    pinfo("$v2d\t Merging Logo and 'withoutlogo' parts \n");
+    pinfo("$v2d\t Merging Logo and 'withoutlogo' parts ");
     my $sys = "avimerge -i tmp/$TITLE-logo.$EXT tmp/$TITLE-withoutlogo.$EXT -o tmp/2-${TITLE}.$EXT";
     print "$sys \n"  if ( $INFO);
     system("nice -$nice $sys")==0 or mydie "Failed to execute: $sys";;
@@ -1538,7 +1479,7 @@ sub get_audio_channel
             chomp;
             if ( $_ =~ m,(?:ac3|mpeg2ext|lpcm|dts|mp3) ([^\s]+) ,)
             {
-                pinfo("$v2d\t Language of audio stream $i:\t\t   | $1\n") if ( ! defined($_[0]) && $FLAG_GAC); 
+                pinfo("$v2d\t Language of audio stream $i:\t\t   | $1") if ( ! defined($_[0]) && $FLAG_GAC); 
                 $findaudio_channel=$i if ( $1 eq $LANGUAGE && ! defined($findaudio_channel));
                 $i++;
             }
@@ -1588,12 +1529,12 @@ sub get_audio_channel
             mydie "Unable to get audio track info ?\n";
         }
     }
-    pinfo("$v2d\t Number of audio channels detected:\t   | $number_of_ac\n") if ($FLAG_GAC);
+    pinfo("$v2d\t Number of audio channels detected:\t   | $number_of_ac") if ($FLAG_GAC);
     $number_of_ac--;
     if ( $findaudio_channel ne "" )
     {
         $audio_channel=$findaudio_channel;
-        pinfo("$v2d\t Audio channel for $RED$LANGUAGE$GREEN language:\t\t   | $audio_channel\n\t (You may modify your \$LANGUAGE variable in your $userconfigfile)\n") if ($FLAG_GAC);
+        pinfo("$v2d\t Audio channel for $RED$LANGUAGE$GREEN language:\t\t   | $audio_channel\n\t (You may modify your \$LANGUAGE variable in your $userconfigfile)") if ($FLAG_GAC);
     } else {
         pwarn("$v2d\t Unable to find your Language ($LANGUAGE) in:\t   | tmp/probe.rip \n") if ($FLAG_GAC) ;
         pinfo("$v2d\t Default audio channel is set to ") if ($FLAG_GAC);
@@ -1619,7 +1560,7 @@ sub readuserconf
     } else {
         open (USERCONF,"<$HOME/.vob2divxrc");
     }
-
+    no warnings; # suppress warnings for now
     while (<USERCONF>)
     {
         chomp;
@@ -1739,7 +1680,7 @@ sub interlaced
     {
         ( $is_interlaced =~  m,interlaced = (no),) or mydie "Unable to Detect Interlacing in $VOBPATH/$SAMPLE";
         $is_interlaced="no";
-        pinfo("NO\n");
+        pinfo("NO");
     } else {
         $is_interlaced="yes";
         pwarn("YES\n");
@@ -1799,7 +1740,7 @@ sub findclip
         system("/bin/rm autoclip*.pgm");
         $tb=$clip[0];
         $lr=$clip[1];
-        pinfo("-j $tb,$lr\n");
+        pinfo("-j $tb,$lr");
     } else {
         pwarn("$v2d\t pgmfindclip in your PATH:\t\t   | NO\n");
         print "You may find pgmfindclip at http://www.lallafa.de/bp/pgmfindclip.html\n" if ( $INFO );
@@ -1836,7 +1777,7 @@ sub twoac
     { 	 
         unlink("tmp/finish") if ( -e "tmp/finish");
         unlink("tmp/audiochannel2.finish" ) if ( -e "tmp/audiochannel2.finish" );
-        pinfo("$v2d\t Extracting and encoding the second audio channel\n");
+        pinfo("$v2d\t Extracting and encoding the second audio channel");
         $sys="transcode -i \"$vobpath\" -x null,$audio_format -s $audio_rescale -b $AUDIO_BITRATE ".
             "-g 0x0 -y raw,$AO -a $AC2 $ac2_output -u 50";
         print "$sys \n" if ( $INFO);
@@ -1847,7 +1788,7 @@ sub twoac
     if ( ! -e "tmp/audiochannel2.finish" )
     {
         unlink("tmp/finish") if ( -e "tmp/finish");
-        pinfo("$v2d\t Merging the second audio channel\n");
+        pinfo("$v2d\t Merging the second audio channel");
         $sys="avimerge -i tmp/2-${TITLE}_sync.$EXT -o tmp/3-${TITLE}_2ac.$EXT"
             ."  -p add-on-AC2.$EXT";
         $sys="ogmmerge -o tmp/3-${TITLE}_2ac.$EXT tmp/2-${TITLE}_sync.$EXT"
@@ -1873,7 +1814,7 @@ sub merge
         unlink("tmp/sync.finish"); 
         unlink("tmp/finish");
         unlink("tmp/cutoff.finish");
-        pinfo("$v2d\t Merging the sequence units\n");
+        pinfo("$v2d\t Merging the sequence units");
         my $pid = fork();
         mydie "couldn't fork" unless defined $pid;
         if ($pid)
@@ -1885,7 +1826,7 @@ sub merge
             # $CLUSTER  is known because we've pass through aviencode before
             for ( $i=$CLUSTER ; $i >= 0 ; $i-- )
             { 	
-                pinfo("$v2d\t Seq. unit :\t\t\t   | $i\n");
+                pinfo("$v2d\t Seq. unit :\t\t\t   | $i");
                 $sys = "avimerge -i tmp/2-*_$i.$EXT -o tmp/tmp_movie_$i.$EXT";
                 print "$sys \n" if ( $INFO);
                 system("nice -$nice $sys 1> /dev/null");
@@ -1957,12 +1898,12 @@ sub merge
                 $sys = "transcode -q 0 -i \"$vobpath\" $audio_params -b $AUDIO_BITRATE ".
                     "-c 0-$to_frames -s $audio_rescale  -y raw,ogg ".
                     "-m tmp/ac1.${TITLE}.ogg";
-                pinfo("$v2d\t Extracting Ogg Audio (this can be long)\n");
+                pinfo("$v2d\t Extracting Ogg Audio (this can be long)");
             } else {
                 $sys = "transcode -q 0 -p \"$vobpath\" $audio_params -b $AUDIO_BITRATE ".
                     "-c 0-$to_frames -s $audio_rescale -i tmp/2-$TITLE.$EXT ".
                     "-P 1 -x $in2_video_magic,$audio_format -y raw -o tmp/2-${TITLE}_sync.$EXT -u 50";
-                pinfo("$v2d\t Merging Video and Audio stream\n");
+                pinfo("$v2d\t Merging Video and Audio stream");
             }
             my $pid = fork();
             mydie "couldn't fork" unless defined $pid;
@@ -1978,7 +1919,7 @@ sub merge
 
             if ( $AO eq "ogg" )
             {
-                pinfo("$v2d\t Merging Video and Ogg Audio stream\n");
+                pinfo("$v2d\t Merging Video and Ogg Audio stream");
                 ogmerge("tmp/2-$TITLE.$EXT","tmp/ac1.$TITLE.ogg");
                 rename("tmp/2-$TITLE.$EXT","tmp/2-${TITLE}_sync.$EXT");
             }
@@ -2014,7 +1955,7 @@ sub finish
             # or end credits or begin credits are
             # longer than 5 minutes (aviencode has no encode it)
             #
-            pinfo("$v2d\t Renaming tmp/2-${TITLE}_sync.$EXT $TITLE.$EXT\n");
+            pinfo("$v2d\t Renaming tmp/2-${TITLE}_sync.$EXT $TITLE.$EXT");
             rename("tmp/2-${TITLE}_sync.$EXT","$TITLE.$EXT");
         } else {
             # If the movie is 2 Hours long and you want to cut from
@@ -3592,11 +3533,94 @@ sub ripdvd
     pinfo("$v2d\t Video files are in:\t\t   | $VOBPATH\n");
     print " You may now run V2divx with yours arguments to encode the vob file(s)\n\n";
     exit(0);
-} # END ripdvd
+} # END ripidvd
+
+sub dvd9to5
+{
+    # @param 0 directory := string path to directory or device holding VOBs
+    # output will be a video.mpeg file in the current directory
+    # the audio and video files will be kept
+    my $dir = shift;
+  
+    # flags
+    my $AUDIO = 0; # indicates audio was extracted successfully
+    my $VIDEO = 0; # indicates video was extracted successfully
+    # files
+    my $audio = "audio.0";
+    my $video = "video.m2v";
+
+    # do all DVD have AC3 sound?
+    if ( !-f "$audio" )
+    {
+        if ( -b "$dir" )
+        {
+            # this is a DVD device /dev/dvd (?)
+            system("tccat -i $dir -T1,-1 -P | tcextract -t vob -x ac3 -a0 > $audio");
+            if ( $? == 0)
+            {
+                $AUDIO = 1;
+            }
+        } elsif ( -d "$dir" )
+        {
+            system("tccat -i $dir -P | tcextract -t vob -x ac3 -a0 > $audio");
+            if ( $? == 0)
+            {
+                $AUDIO = 1;
+            }
+
+        } else {
+            pwarn("No DVD device or Directory given as argument for audio extraction.");
+        }
+    } else {
+        pwarn("Audio file $audio exists. Not extracting new sound.");
+    }
+    if (!-f "$video")
+    {
+        if ( -b "$dir" )
+        {
+            # this is a DVD device /dev/dvd (?)
+            system("tccat -i $dir -T1,-1 -P | tcextract -t vob -x mpeg2 | tcrequant -o $video -f 1.57122151287947");
+            if ( $? == 0)
+            {
+                $VIDEO = 1;
+            }
+        } elsif ( -d "$dir" )
+        {
+            system("tccat -i $dir -P | tcextract -t vob -x mpeg2 | tcrequant -o $video -f 1.57122151287947");
+            if ( $? == 0)
+            {
+                $VIDEO = 1;
+            }
+        } else {
+            pwarn("No DVD device or Directory given as argument for video extraction.");
+        }
+    } else {
+        pwarn("Video file $video exists. Not extracting new video.");
+    }
+    # multiplex audio and video
+    if ( ($AUDIO > 0 && $VIDEO > 0) || (-f "$audio" && -f "$video"))
+    {
+        # join sound+video in file video.mpeg in current directory
+        # and add navigational information for dvdauthor
+        system("mplex -S4400 -f 8 -o video.mpeg $video $audio");
+    } else {
+        if ( !-f "$audio") { pwarn("Audio file $audio missing"); }
+        if ( !-f "$video") { pwarn("Video file $video missing"); }
+        pdebug("Audio=$AUDIO. Video=$VIDEO.");
+    }
+
+    # a few things one might want to do:
+    #mkdir -f test
+    #dvdauthor -o test -c 00:00:00.000,00:03:58.640,00:11:03.880,00:11:47.560,00:13:51.760,00:16:47.600,00:19:28.760,video.mpeg
+    #dvdauthor -T -o test
+    # However, some users might use their video.mpeg with DVDAuthor or
+    # other GUIs to master their DVDs with menus and other widgets
+}
 
 # ************ End of Functions Declarations *********** #
 
 # ********************* MAIN () ************************ #
+
 system("clear");
 
 # Read or create the user configuration file
@@ -3616,8 +3640,45 @@ if ( -f $userconfigfile )
     readuserconf;
 }
 
+# command line options override those in the config file
+GetOptions(
+    # flags
+    'h|help'                    =>  \$HELP,
+    'v|version'                 =>  \$VERSION,
+    'runclust'                  =>  \$RUNCLUST,
+    'srtsubrip'                 =>  \$SRTSUBRIP,
+    'tv'                        =>  \$TVREC,
+    'd|debug'                   =>  \$DEBUG,
+    'i|info'                    =>  \$INFO,
+    'c|with-cluster'            =>  \$OKCLUSTER,
+    't|test'                    =>  \$TEST,
+    'd9d5|dvd9-to-dvd5'         =>  \$DVD9TO5,
+    # strings
+    'D|directory=s'             => \$ROOT_DIRECTORY,
+    's|source-video-format=s'   => \$SVIDEO_FORMAT,
+    'x|x_video=s'               => \$DIVX,
+    'F|x_video_opts=s'          => \$DIVX_OPT,
+    'o|output_audio=s'          => \$AO,
+    'V|video_player=s'          => \$XINE,
+    'A|avi_player=s'            => \$AVIPLAY,
+    'I|image_viewer=s'          => \$XV,
+    'C|cluster_config=s'        => \$CLUSTER_CONFIG,
+    'r|remote_cmd=s'            => \$RMCMD,
+    'L|logo=s'                  => \$LOGO, 
+    'l|lang|language=s'         => \$LANGUAGE, 
+    'S|SUB_TITLE_opts=s'        => \$EXTSUB,
+    # numbers
+    'a|default_audio_channel=i' => \$DEF_AUDIOCHANNEL ,
+    'n|nice=i'                  => \$nice
+);
+# reset DIVX_OPT if DIVX is pass as parameter and not DIVX_OPT
+$Res_DIVX_OPT=1 if ( $DIVX ne "" && $DIVX_OPT eq "" );
+
+# let the time begin
 my $f_start_time = format_date($start_time);
 pinfo("Start Time: $f_start_time \n");
+
+#------------ Execution Starts Here ---------------#
 
 if ( defined $ARGV[1] &&  $ARGV[1] eq "config")
 {
@@ -3690,6 +3751,13 @@ if ( $SRTSUBRIP )
     pdebug ("$0 called with --srtsubrip");
     readconf;
     srt_subrip($1,$2) if ( $SUB_TITLE =~ m,SRT_(\d+)_(.*),);
+    exit(0);
+}
+
+# Convert from DVD9 format to DVD5
+if ($DVD9TO5 > 0)
+{
+    dvd9to5($ARGV[0]);
     exit(0);
 }
 

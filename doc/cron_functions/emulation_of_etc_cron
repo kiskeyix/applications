@@ -1,0 +1,6 @@
+# m h dom mon dow user  command
+17 *    * * *   nice run-parts --report ~/Applications/etc/cron.hourly
+25 6    * * *   nice run-parts --report ~/Applications/etc/cron.daily
+47 6    * * 7   nice run-parts --report ~/Applications/etc/cron.weekly
+52 6    1 * *   nice run-parts --report ~/Applications/etc/cron.monthly
+

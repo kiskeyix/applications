@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.72 $
+# $Revision: 1.73 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -33,6 +33,8 @@ use Env qw(HOME);
 use FileHandle;
 use File::Temp qw/ tempfile  /;     # Perl 5.6.1: 
                                     # used to get secured temp file
+use File::Basename; # basename();
+
 STDOUT->autoflush(1);
 
 # get options. Most of the V2divxrc options (if not all)
@@ -193,12 +195,44 @@ my $QUALITY=2;
 my $NVREC=0; # By default NVREC is not here
 my $OGMTOOL=0; # By default ogmmerge is not here
 my $SUBRIP=0; # By default srtsubrip is not here
+my $MULTIPLEXER="tcmplex"; # By default use this multiplexer
 
 my $urldvdtitle="$GREEN\t V2divx is unable to find dvdtitle in your PATH.\n\t Code Sources of dvdtitle are available at : \n\t http://www.lpm.univ-montp2.fr/~domi/V2divx/dvdtitle.tgz\n $NORM\n";
 
 my $warnclust = "\n ERROR: cluster mode. Please see README file\n\n";
 
-my $usage="\n V2divx /path/to/vob SIZE\n See README file.\n";
+my $usage="
+    # flags
+    '-h|--help'                     Help
+    '-v|--version'                  Print Version and exit
+    '-srtsubrip'                    Subtitle rip (?)
+    '-tv'                           Record TV
+    '-d|--debug'                    Debug Script
+    '-i|--info'                     Print Informational Messages
+    '-c|--with-cluster'             Run in Cluster mode
+    '-t|--test'                     Do a minor test with movie
+    '-dvd9-to-dvd5'                 Convert from DVD-9 to DVD-5
+    '--avi-to-vcd'                  Create VCD Image from AVI
+    # strings
+    '-D|--directory=s'              Use this directory as WORK DIR
+    '-s|--source-video-format=s'    Video Format of the Source
+    '-x|--x_video=s'                Video codec [ffmpeg]
+    '-F|--x_video_opts=s'           Video codec options [-F mpeg4]
+    '-o|--output_audio=s'           Audio output options
+    '-V|--video_player=s'           Use this to play video [xine]
+    '-A|--avi_player=s'             Use this to play AVI video [aviplay]
+    '-I|--image_viewer=s'           Use this as Image Viewer [xv]
+    '-C|--cluster_config=s'         Use this file as Cluster Configuration
+    '-r|--remote_cmd=s'             Remote command [ssh]
+    '-L|--logo=s'                   Logo image file
+    '-l|--lang|--language=s'        Use this language [fr,en,es,...]
+    '-S|--SUB_TITLE_opts=s'         Subtitle Options
+    '-multiplex=s'                  Use this multiplexer [tcmplex,mplex]
+    # numbers
+    '-a|--default_audio_channel=i'  Number of Audio Channels
+    '-titleset=i'                   Rip this TitleSet for DVD-9 to DVD-5
+    '-n|--nice=i'                   Nice level (UNIX) [+5]
+    \n V2divx /path/to/vob SIZE\n See README file.\n";
 
 # You may Modify the Next value but take care
 # (see the transcode man pages - about Bits per Pixel)
@@ -3490,10 +3524,29 @@ sub dvd9to5
     my $dir = shift;
     my $title = shift;
 
+    my $TCMPLEX = qx/which tcmplex/;
+    my $MPLEX = qx/which mplex/;
+    chomp($TCMPLEX);
+    chomp($MPLEX);
+
     $title = ($title =~ /\d+/) ? $title : 1;
     # files
     my $audio = "audio.ac3";
     my $video = "video.m2v";
+    my $multiplex_config = "multiplexer.cfg";
+  
+    # flag
+    my $UNLINK_CONFIG=0; # if we created this file, unlink it
+    
+    # respect user configurations for this directory
+    if ( !-f $multiplex_config )
+    {
+        $UNLINK_CONFIG=1;
+        # profile:
+        open(PROFILE,">$multiplex_config") or die("Could not open file. $!");
+        print PROFILE "maxFileSize = 4400"; # 4.4GB
+        close(PROFILE);
+    }
 
     if ( !-f "$audio" )
     {
@@ -3509,61 +3562,74 @@ sub dvd9to5
         }
     } else {
         pwarn("Audio file $audio exists. Not extracting new sound.");
-    }
-    if (!-f "$video")
+    } # end if not $audio
+    if ( !-f "$video" )
     {
-        # my $TCREQUANT=1.13924050632911392405
+        # my $TCREQUANT=1.13924050632911392405;
+        my $TCREQUANT=1.57122151287947; # has proven to work best so far
         if ( -b "$dir" )
         {
             # this is a DVD device /dev/dvd (?)
-            system("tccat -i $dir -T$title,-1 -P | tcextract -t vob -x mpeg2 | tcrequant -o $video -f 1.57122151287947");
+            system("tccat -i $dir -T$title,-1 -P | tcextract -t vob -x mpeg2 | tcrequant -o $video -f $TCREQUANT");
         } elsif ( -d "$dir" )
         {
-            system("tccat -i $dir -P | tcextract -t vob -x mpeg2 | tcrequant -o $video -f 1.57122151287947");
+            system("tccat -i $dir -P | tcextract -t vob -x mpeg2 | tcrequant -o $video -f $TCREQUANT");
         } else {
             pwarn("No DVD device or Directory given as argument for video extraction.");
         }
     } else {
         pwarn("Video file $video exists. Not extracting new video.");
-    }
+    } # end if not $video
     # multiplex audio and video
-    if (-f "$audio" and -f "$video")
+    if ( -f "$audio" and -f "$video" )
     {
         no warnings; # suppress warnings here
         my $VERBOSITY = ( $DEBUG == 0 ) ? 0 : 2;
         # join sound+video in file video.mpeg in current directory
         # and add navigational information for dvdauthor
-        my $TCMPLEX = qx/which tcmplex/;
-        my $MPLEX = qx/which mplex/;
-        chomp($TCMPLEX);
-        chomp($MPLEX);
-        if ( -x $TCMPLEX ) 
+        # although tcmplex is default, we give mplex a try
+        if ( basename("$MULTIPLEXER") eq "tcmplex" || !-x $MPLEX )
         {
-            # favor tcmplex over mplex. mplex chokes on some movies
-            my $fps = get_fps("$video"); # can't pass fps to tcmplex
-            my $args = ""; # extra options for TCMPLEX
-            if ( $fps !~ /^25\.0/ ) { $args .= " -N" ;} # NTSC
-            # -D 0 # dont correct sync
-            # -m d # DVD mode
-            my $sys = "$TCMPLEX $args -d $VERBOSITY -D 0 -o video.mpeg -i video.m2v -p audio.ac3 -m d";
-            pinfo("$sys") if ( $DEBUG );
-            system("$sys");
-        } elsif ( -x $MPLEX ) {
-            # -S 4400 # split at 4.4GB
-            # -f 8 # produce dvdauthor compliant/navigational MPEG-2
-            my $sys = "$MPLEX -v $VERBOSITY -S 4400 -f 8 -o 'video\%d.mpeg' $video $audio";
-            pinfo("$sys") if ( $DEBUG );
-            system("$sys");
+            if ( -x $TCMPLEX ) 
+            {
+                # favor tcmplex over mplex. mplex chokes on some movies
+                my $fps = get_fps("$video"); # can't pass fps to tcmplex
+                my $args = ""; # extra options for TCMPLEX
+                if ( $fps !~ /^25\.0/ ) { $args .= " -N" ;} # NTSC
+                # -D 0 # dont correct sync
+                # -m d # DVD mode
+                my $sys = "$TCMPLEX $args -d $VERBOSITY -D 0 -o video.mpeg -i video.m2v -p audio.ac3 -F $multiplex_config -m d";
+                pinfo("$sys") if ( $DEBUG );
+                system("$sys");
+            } else {
+                pwarn("tcmplex not found");
+            } # end if tcmplex
+        } elsif ( basename("$MULTIPLEXER") eq "mplex" || !-x $TCMPLEX )
+        {
+            if ( -x $MPLEX )
+            {
+                # -S 4400 # split at 4.4GB
+                # -f 8 # produce dvdauthor compliant/navigational MPEG-2
+                my $sys = "$MPLEX -v $VERBOSITY -S 4400 -f 8 -o 'video\%d.mpeg' $video $audio";
+                pinfo("$sys") if ( $DEBUG );
+                system("$sys");
+            } else {
+                pwarn("mplex not found");
+            } # end if mplex
         } else {
             pwarn("No multiplex application found in your PATH. Tried tcmplex [$TCMPLEX] and mplex [$MPLEX]");
-        }
+        } # end if/elsif/else $multiplexer
     } else {
         if ( !-f "$audio") { pwarn("Audio file $audio missing"); }
         if ( !-f "$video") { pwarn("Video file $video missing"); }
-    }
+    } # end if $video and $audio
 
+    if ( $UNLINK_CONFIG )
+    {
+        unlink($multiplex_config) or warn("Could not remove file. $!");
+    }
     say_end();
-    # a few things one might want to do:
+    # a few things one might want to do, maybe if passed a --create-dvd-iso:
     #tcprobe -i /dev/dvd -T 1 -H 10 2>&1 | egrep "\[Chapter ..\] " |\
     #cut -d " " -f 4 | perl -pi -e 's/\n/,/' |  \
     #perl -pi -e 's/,$//' >chap.list
@@ -3582,7 +3648,7 @@ sub avitovcd
     # @param 0 file := string filename .avi
     # output will be a video.mpeg file in the current directory
     my $file = shift;
-    
+
     my $video = "video.mpeg"; # output
     my $VERBOSITY = ( $DEBUG == 0 ) ? 0 : 2;
     # and add navigational information for dvdauthor
@@ -3592,56 +3658,58 @@ sub avitovcd
     chomp($vcdimager);
     chomp($TCMPLEX);
     chomp($MPLEX);
+    
+    my $multiplex_config = "multiplexer.cfg";
+  
+    # flag
+    my $UNLINK_CONFIG=0; # if we created this file, unlink it
+    
+    # respect user configurations for this directory
+    if ( !-f $multiplex_config )
+    {
+        $UNLINK_CONFIG=1;
+        # profile:
+        open(PROFILE,">$multiplex_config") or die("Could not open file. $!");
+        print PROFILE "maxFileSize = 895"; # 700MB media as VCD
+        close(PROFILE);
+    }
 
     if (!-f "$video")
     {
-        # -E 44100 sample rate 44.1khz
-        # -b 224 audio bit rate 224kb/s
-        # -V use YUV internally (instead of RGB)
-        # -y videocodec,audiocodec mpeg2enc is faster doing video
-        # -F standard VCD profile for mpeg2enc
-        # -M2 use 2 threads
-        # -Z resize output
-        # -i input
-        #-Y -6,-12 -Z 328x228
-        # This  adds a 6 pixel  border to the  top and bottom, and  a 12
-        #  pixel border to the sides. Because you're most likely watching the VCD
-        #  on  a  TV,  there's  a certain  amount  of  overscan. Especially  with
-        #  subtitles, the overscan can cause important  things to go off the edge
-        #  of the screen and this fixes  it. The output is still 352x240, but the
-        #  border has to be subtracted from the  size you give to -Z, because the
-        #  resizing is done before the border is added.  
-        #  -J fps --export_frc=4
-        #    This uses  the fps filter, which converts the  frame rate, and
-        #  selects  the output  frame  rate code  4, which  is  29.97 frames  per
-        #  second. Every player I have seen  will actually convert the frame rate
-        #  for you  during playback, however they  often flicker a lot,  and this
-        #  will fix  that. You should select either  code 4 (NTSC, 29.97  fps) or
-        #  code 1 (FILM, 23.976 fps), which  are the VCD standard frame rates. Of
-        #  course, if  the input file  is already one  of those two  rates, don't
-        #  bother with these options.
         my $sys = "transcode -E 44100 -b 224 -V -y mpeg2enc,mpeg -F 1,-M2 -Z 352x240 -i $file";
         system("$sys");
     } else {
         pwarn("Video file $video exists. Not extracting new video.");
-    }
+    } # end if/else $video file found
 
-    if ( -x $TCMPLEX ) 
+    # although tcmplex is default, we give mplex a try
+    if ( basename("$MULTIPLEXER") eq "tcmplex" || !-x $MPLEX )
     {
-        # favor tcmplex over mplex. mplex chokes on some movies
-        my $args = ""; # extra options for TCMPLEX
-        # -m v standard VCD mode
-        my $sys = "$TCMPLEX $args -d $VERBOSITY -o $video -i $video.m1v -p $video.mpa -m v";
-        pinfo("$sys") if ( $DEBUG );
-        system("$sys");
-    } elsif ( -x $MPLEX ) {
-        my $sys = "$MPLEX -f 1 -V -s 2324 -p 1 -o $video $video.mpa $video.m1v";
-        pinfo("$sys") if ( $DEBUG );
-        system("$sys");
+        if ( -x $TCMPLEX ) 
+        {
+            # favor tcmplex over mplex. mplex chokes on some movies
+            my $args = ""; # extra options for TCMPLEX
+            # -m v standard VCD mode
+            my $sys = "$TCMPLEX $args -d $VERBOSITY -o $video -i $video.m1v -p $video.mpa -m v";
+            pinfo("$sys") if ( $DEBUG );
+            system("$sys");
+        } else {
+            pwarn("tcmplex not be found");
+        } # end if/else tcmplex
+    } elsif ( basename("$MULTIPLEXER") eq "mplex" || !-x $TCMPLEX ) 
+    {
+        if ( -x $MPLEX )
+        {
+            my $sys = "$MPLEX -f 1 -V -s 2324 -p 1 -o $video $video.mpa $video.m1v";
+            pinfo("$sys") if ( $DEBUG );
+            system("$sys");
+        } else {
+            pwarn("mplex not found");
+        } # end if/else mplex
     } else {
         pwarn("No multiplex application found in your PATH. Tried tcmplex [$TCMPLEX] and mplex [$MPLEX]");
-    }
-    
+    } # end if/elsif/else $multiplexer
+
     if ( -x $vcdimager )
     {
         my $sys = "$vcdimager -c file.cue -b file.bin $video";
@@ -3649,6 +3717,10 @@ sub avitovcd
         system("$sys");
     } else {
         pwarn("Could not find vcdimager in your PATH");
+    } # end if/else $vcdimager
+    if ( $UNLINK_CONFIG )
+    {
+        unlink($multiplex_config) or warn("Could not remove file. $!");
     }
     pinfo("Use 'cdrdao write --device /dev/sg0 file.cue' to burn the image");
     say_end();
@@ -3703,6 +3775,7 @@ GetOptions(
     'L|logo=s'                  => \$LOGO, 
     'l|lang|language=s'         => \$LANGUAGE, 
     'S|SUB_TITLE_opts=s'        => \$EXTSUB,
+    'multiplex=s'               => \$MULTIPLEXER,
     # numbers
     'a|default_audio_channel=i' => \$DEF_AUDIOCHANNEL,
     'titleset=i'                => \$TITLESET,

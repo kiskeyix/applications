@@ -1,7 +1,7 @@
 #!/bin/bash
-# $Revision: 1.21 $
+# $Revision: 1.22 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Nov-23
+# Last modified: 2003-Dec-05
 #
 # DESCRIPTION:  an interactive wrapper to Debian's "make-kpkg"
 #               to build a custom kernel package.
@@ -60,18 +60,8 @@ ALL_PATCH_DIR="../kernel-patches/"  # patches are located before
 IMAGE_TOP="../"                     # where to save the resulting 
                                     # .deb files
 
-INITRD_OK="YES"
-
 export IMAGE_TOP ALL_PATCH_DIR PATCH_THE_KERNEL 
-export MODULE_LOC NO_UNPATCH_BY_DEFAULT INITRD_OK
-
-# Should we build an initrd image?
-if [ $INITRD_OK="YES" ]; then
-    echo "Initrd support enabled"
-    INITRD=" --initrd"
-else
-    INITRD=""
-fi
+export MODULE_LOC NO_UNPATCH_BY_DEFAULT 
 
 if [ $1 -a $1 != "--help" ]; then
 
@@ -91,6 +81,24 @@ if [ $1 -a $1 != "--help" ]; then
             makeit=1
         ;;
     esac
+    # ask about initrd 
+    yesno="No"
+    read -p "Do you want to enable initrd support? [y/N] " yesno
+    case $yesno in
+        y* | Y*)
+            echo "Initrd support enabled"
+            BUILD_INITRD=" --initrd"
+            INITRD="YES"
+            INITRD_OK="YES"
+        ;;
+        *)
+            echo "Initrd support disabled"
+            BUILD_INITRD=" "
+            INITRD="NO"
+            INITRD_OK="NO"
+        ;;
+    esac
+    export INITRD_OK INITRD
 
     # ask about making the kernel headers
     yesno="No"
@@ -111,7 +119,7 @@ if [ $1 -a $1 != "--help" ]; then
         --config oldconfig \
         --append-to-version -custom.$1 \
         --revision $REVISION \
-        $INITRD \
+        $BUILD_INITRD \
         kernel_image $KERNEL_HEADERS
     fi
 
@@ -123,7 +131,7 @@ if [ $1 -a $1 != "--help" ]; then
         --config oldconfig \
         --append-to-version -custom.$1 \
         --revision $REVISION \
-        $INITRD \
+        $BUILD_INITRD \
         $KERNEL_HEADERS
     fi
 
@@ -146,7 +154,7 @@ if [ $1 -a $1 != "--help" ]; then
         --config oldconfig \
         --append-to-version -custom.$1 \
         --revision $REVISION \
-        $INITRD \
+        $BUILD_INITRD \
         modules_image
     fi
 else

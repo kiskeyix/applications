@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.77 $
+# $Revision: 1.78 $
 # Luis Mondesi  <lemsx1@hotmail.com>
 # 
 # REQUIRED: ImageMagick's Perl module and a dialog 
@@ -535,7 +535,7 @@ sub mkthumb {
         $thisFile = basename($_);
         next if ($thisFile =~ m/$EXCEPTION_LIST/);
         next if ($_ =~ m/\b$THUMBNAIL\b/i);
-        next if ($thisFile !~ m/$EXT_INCL_EXPR/i);
+        next if ($thisFile !~ m/$EXT_INCL_EXPR$/i);
         push @ls,$_;
         #$TOTAL++;
     } #end images array creation
@@ -559,7 +559,7 @@ sub mkthumb {
     {
         $pix_name = basename($_);
         # strip extension from file name
-        ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR//gi;
+        ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR$//gi;
         # get base directory
         ( $BASE = $_ ) =~ s/(.*)\/$pix_name$/$1/g;
         # BASE is blank if we are already inside the directory
@@ -720,7 +720,7 @@ sub thumb_html_files {
         $thisFile = basename($_);
         next if ($thisFile =~ m/$EXCEPTION_LIST/);
         next if ($_ =~ m/\/$THUMBNAIL\/.*$EXT_INCL_EXPR$/i);
-        next if ($thisFile !~ m/$EXT_INCL_EXPR/i);
+        next if ($thisFile !~ m/$EXT_INCL_EXPR$/i);
         push @ls,$_;
     } #end images array creation
 
@@ -743,7 +743,7 @@ sub thumb_html_files {
     for ( $i=0; $i <= $#ls; $i++) {
         $pix_name = basename($ls[$i]);
         # strip extension from file name
-        ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR//gi;
+        ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR$//gi;
         # get base directory
         ( $BASE = $ls[$i] ) =~ s/(.*)\/$pix_name$/$1/g;
         # BASE is blank if we are already inside the directory
@@ -828,7 +828,7 @@ sub thumb_html_files {
         # forward link here
         if ( -f $ls[$i+1] && ($BASE eq $NEXT_BASE) ) {
             $next_file_name = "";
-            ($next_file_name = $next_pix_name) =~ s/$EXT_INCL_EXPR//gi;
+            ($next_file_name = $next_pix_name) =~ s/$EXT_INCL_EXPR$//gi;
             #print FILE ("==&gt;");
             print FILE ("<a class='pdlink' href='$next_file_name.".$config{"$BASE"}{"ext"}."'>==&gt;</a> \n");
         } else {

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.63 $
+# $Revision: 1.64 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -57,6 +57,7 @@
 # menuheader_footer=0
 # ext=php
 # menutype=classic
+# albumpix=album.png # full path to a picture which will be used as the background image for the album icons. album's thumbnails must be exactly the same size for this to look good.
 # 
 # These are the only tags that you can customize for now :-)
 #
@@ -700,7 +701,7 @@ sub mkindex {
 
         # FILE_NAME is a global
         open(FILE, "> ".$this_base."/".$FILE_NAME.".".$config{"$this_base"}{"ext"}) || 
-        die "Couldn't write file $FILE_NAME.".$config{"$this_base"}{"ext"}." to $this_base";
+        mydie("Couldn't write file $FILE_NAME.".$config{"$this_base"}{"ext"}." to $this_base","mkindex");
 
         # start HTML
         print FILE ($config{"$this_base"}{"header"}."\n");
@@ -1036,7 +1037,7 @@ sub thumb_html_files {
         print $LOGFILE ("= Creating html file into $current_html_file\n");
         # TODO routine for creating file should be called here...
         open(FILE, "> $current_html_file") || 
-        die "Couldn't write file $current_html_file";
+        mydie("Couldn't write file $current_html_file","thumb_html_files");
 
         # start HTML
         print FILE ($config{$BASE}{"header"}."\n");
@@ -1181,8 +1182,8 @@ sub menu_file {
     {
         # create modern menu 
         # modern menu is a file, no --menu-only needed here
-        open(FILE, "> ".$ROOT_DIRECTORY."/".$MENU_NAME.".".$config{$ROOT_DIRECTORY}{"ext"}) ||
-        die "Couldn't write file $MENU_NAME.".$config{$ROOT_DIRECTORY}{"ext"}." to $ROOT_DIRECTORY";
+        open(FILE, "> ".$ROOT_DIRECTORY."/".$MENU_NAME.".".$config{$ROOT_DIRECTORY}{"ext"}) 
+        or mydie("Couldn't write file $MENU_NAME.".$config{$ROOT_DIRECTORY}{"ext"}." to $ROOT_DIRECTORY","menu_file");
         print FILE ($config{"$ROOT_DIRECTORY"}{"header"}."\n");
         print FILE ($config{"$ROOT_DIRECTORY"}{"table"}."\n");
         # loop
@@ -1199,9 +1200,14 @@ sub menu_file {
                 }
                 print FILE ($tmp_tr."\n");
             } else {
-                print FILE ($config{$ROOT_DIRECTORY}{"tr"}."\n");
+                print FILE ($config{"$ROOT_DIRECTORY"}{"tr"}."\n");
             }
-            print FILE ("\t".$config{$ROOT_DIRECTORY}{"td"}."\n");
+            if ( -f $config{"$ROOT_DIRECTORY"}{"albumpix"} )
+            {
+                print FILE ("\t<td background='".$config{"$ROOT_DIRECTORY"}{"albumpix"}."' align='center'>\n");
+            } else {
+                print FILE ("\t".$config{"$ROOT_DIRECTORY"}{"td"}."\n");
+            }
             if ( $ls[$i] ne "" ) {
                 # if link exists, otherwise leave it blank
                 # TODO there is a better way to do this... find it...
@@ -1215,8 +1221,21 @@ sub menu_file {
                 my $tmp_ts = basename("$ts");
                 $tmp_ts = str_truncate($tmp_ts); # truncate up to $STR_LIMIT
                 $tmp_ts = ucfirst($tmp_ts); # uppercase first letter
-                # TODO we need one thumbnail here
-                print FILE ("<a href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/$ls[$i]' target='_top'>$IMG $tmp_ts</a>\n");
+                my $image = "";
+                if ( -d "$ts/$THUMBNAIL" )
+                {
+                    # We need one thumbnail here. hackish? you bet!
+                    my $pwd = qx/pwd/; chomp($pwd); # TODO don't use `pwd`... Perl?
+                    chdir("$ts/$THUMBNAIL") 
+                        or mydie("Could not change to dir $ts/$THUMBNAIL. $!\n","menu_file 2");
+                    my @glob_ary = glob("t*.???"); # get all files starting with 't' and ending in .??? (3 characters); they might or might not be picture files, but... we are trusting they are for now
+                    chdir($pwd) or mydie("Could not go back to $pwd. $!\n","menu_file 3"); # go back to our original directory
+                    $image = $glob_ary[rand(@glob_ary)];
+                    if ( $image !~ /$EXT_INCL_EXPR$/i ) { print LOGFILE "$image is not an IMAGE file\n"; }
+                } else {
+                    print LOGFILE "$ts has no thumbnail [$THUMBNAIL] directory. Have you executed $0 without --menu-only or --menu-type='modern' yet?";
+                }
+                print FILE ("<a href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/$ls[$i]' target='_top'><img src='$ts/$THUMBNAIL/$image' border=0 alt='$tmp_ts album'></a></td>".$config{"$ROOT_DIRECTORY"}{"td"}."<a href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/$ls[$i]' target='_top'>$IMG $tmp_ts</a>\n");
                 print FILE ("\t</td>\n</tr>\n");
                 $i++;
                 $x--;
@@ -1237,8 +1256,8 @@ sub menu_file {
 
 
         if ( $MENUONLY > 0 ) {
-            open(FILE, "> ".$ROOT_DIRECTORY."/".$MENU_NAME.".".$config{$ROOT_DIRECTORY}{"ext"}) ||
-            die "Couldn't write file $MENU_NAME.".$config{"$ROOT_DIRECTORY"}{"ext"}." to $ROOT_DIRECTORY";
+            open(FILE, "> ".$ROOT_DIRECTORY."/".$MENU_NAME.".".$config{$ROOT_DIRECTORY}{"ext"}) 
+            or mydie("Couldn't write file $MENU_NAME.".$config{"$ROOT_DIRECTORY"}{"ext"}." to $ROOT_DIRECTORY","menu_file 4");
         }
 
         # menus are now part of the index.EXT...
@@ -1582,3 +1601,13 @@ sub dict_sort
         } @$aryref;
     }
 } # end dict_sort()
+
+sub mydie
+{
+    # @param 0 string := message to log
+    # @param 1 string := function which called us
+    my $msg = $_[0];
+    my $fun = $_[1];
+    print LOGFILE "$msg";
+    die("Stopping execution $fun");
+}

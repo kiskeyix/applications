@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.36 $
+# $Revision: 1.37 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Mar-13
 #
@@ -210,7 +210,7 @@ my ($k, $v) = "";
 
 foreach my $hashref ( \%MY_CONFIG, \%TMP_CONFIG ) {
     while (($k, $v) = each %$hashref) {
-        if ( $DEBUG != 0 && exists $CONFIG{$k}) {
+        if ( $DEBUG && exists $CONFIG{$k}) {
             print STDERR "Warning: $k seen twice.  Using the second definition.\n";
             # next;
         }
@@ -219,7 +219,7 @@ foreach my $hashref ( \%MY_CONFIG, \%TMP_CONFIG ) {
 }
 
 # DEBUG: print content of hash
-if ( $DEBUG != 0 ) {
+if ( $DEBUG ) {
     foreach ( \%CONFIG ) {
         while (($k,$v) = each %$_) {
             print "$k -> $v \n";
@@ -279,7 +279,7 @@ if ( ! -f $TMP_LOCK ) {
             $CONFIG{"TAR"},
             $TMP_EXCLUDES
         );
-    } elsif ( exists $CONFIG{"TAR"} && $DEBUG !=0 ) {
+    } elsif ( exists $CONFIG{"TAR"} && $DEBUG ) {
         print STDERR "Tar was given but not found! \n";
     }
 
@@ -293,7 +293,7 @@ if ( ! -f $TMP_LOCK ) {
             $COMMAND,
             $CONFIG{"COMPRESS_DO"},
             $CONFIG{"COMPRESS_LEVEL"});
-    } elsif ( exists $CONFIG{"COMPRESS_DO"} && $DEBUG !=0 ) {
+    } elsif ( exists $CONFIG{"COMPRESS_DO"} && $DEBUG ) {
         print STDERR "Compress utility not found! \n";
     }
 
@@ -334,11 +334,13 @@ if ( ! -f $TMP_LOCK ) {
                 $TMP_COMMAND,
                 $TMP_FILE_NAME);
 
-            print STDOUT "+ exec: $SYSTEM_COMMAND \n" if ($DEBUG > 0);
-
-            system($SYSTEM_COMMAND);
-            if ( $? !=0 ) {
-                die_with_msg("Command '$SYSTEM_COMMAND' failed terribly! $!\n");
+            print STDOUT "+ exec: $SYSTEM_COMMAND \n" if ($DEBUG );
+            if ( !$DEBUG )
+            {
+                system($SYSTEM_COMMAND);
+                if ( $? !=0 ) {
+                    die_with_msg("Command '$SYSTEM_COMMAND' failed terribly! $!\n");
+                }
             }
         } else {
 
@@ -380,10 +382,7 @@ if ( ! -f $TMP_LOCK ) {
     }
 
     # DEBUG: print content of %user hash
-    if ( $DEBUG != 0 ) { 
-        print STDOUT join("\n",%user)."\n"; 
-    }
-
+    print STDOUT join("\n",%user)."\n" if ( ! $DEBUG ); 
 
     # Users backup
     print STDOUT "Backing up users files... \n";
@@ -413,10 +412,13 @@ if ( ! -f $TMP_LOCK ) {
                 $TMP_COMMAND,
                 $TMP_FILE_NAME);
 
-            print STDOUT "+ users exec: $SYSTEM_COMMAND \n" if ($DEBUG > 0);
-            system($SYSTEM_COMMAND);
-            if ( $? !=0 ) {
-                die_with_msg("Command '$SYSTEM_COMMAND' failed terribly! $!\n");
+            print STDOUT "+ users exec: $SYSTEM_COMMAND \n" if ($DEBUG);
+            if ( !$DEBUG )
+            {
+                system($SYSTEM_COMMAND);
+                if ( $? !=0 ) {
+                    die_with_msg("Command '$SYSTEM_COMMAND' failed terribly! $!\n");
+                }
             }
         } else {
             if ( -d $v ) {
@@ -470,11 +472,13 @@ if ( ! -f $TMP_LOCK ) {
                 $TMP_COMMAND,
                 $TMP_FILE_NAME);
 
-            print STDOUT "+ others exec: $SYSTEM_COMMAND \n" if ($DEBUG > 0);
-
-            system($SYSTEM_COMMAND);
-            if ( $? !=0 ) {
-                die_with_msg ("Command '$SYSTEM_COMMAND' failed terribly! $!\n");
+            print STDOUT "+ others exec: $SYSTEM_COMMAND \n" if ($DEBUG);
+            if ( !$DEBUG )
+            {
+                system($SYSTEM_COMMAND);
+                if ( $? !=0 ) {
+                    die_with_msg ("Command '$SYSTEM_COMMAND' failed terribly! $!\n");
+                }
             }
         } else {
             foreach ( @tmp_dirs ) {

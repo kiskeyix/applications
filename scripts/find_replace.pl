@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Jul-03
+# Last modified: 2003-Jul-06
 #
 # BUGS: if replacement string contains invalid characters
 #       nothing gets done. Have to find a way to escape
@@ -17,7 +17,7 @@ $|++;
 
 my $DEBUG = 0;
 
-my $EXCEPTION_LIST = "\.soc|\.sock";
+my $EXCEPTION_LIST = "\.soc\$|\.sock\$|\.so\$|\.o\$";
 
 # -------------------------------------------------------------------
 #           NO NEED TO MODIFY ANYTHING PASS THIS LINE               #
@@ -26,7 +26,8 @@ my $EXCEPTION_LIST = "\.soc|\.sock";
 my $modified = 0;
 
 my $usage = "Usage: \n \
-find_replace.pl \"string\" \"replacement\" \"filename_regex\"\n";
+find_replace.pl \"string\" \"replacement\" [\"FILE_REGEX\"]\n \
+NOTE use quotes to avoid the shell expanding your REGEX";
 
 my $thisFile = "";      # general current file
 my @new_file = ();      # lines to be printed in new file
@@ -38,6 +39,11 @@ if (!$ARGV[0] || !$ARGV[1] ) {
 }
 
 my ($this_string,$that_string,$f_pattern) = @ARGV;
+
+if ( $f_pattern =~ m(^\.) ) {
+    print "WARNING: using a dot in file pattern can match too many files. Escape dots with '\.'.\n Waiting 5 seconds before continuing\n Press CTRL+C to abort script execution\n" ;
+    sleep(5);
+}
 
 # was there a third argument?
 if (!$ARGV[2]) {
@@ -131,9 +137,9 @@ sub process_file {
     my $base_name = basename($_);
     #print STDERR "$_\n";
     if ( 
+        $_ =~ m($f_pattern) &&
         -f $_ && 
-        $_ =~ m/^($f_pattern)$/ &&
-        $base_name !~ m/^($EXCEPTION_LIST)$/
+        $base_name !~ m($EXCEPTION_LIST)
     ) {
         s/^\.\/*//g;
         push @ls,$_;

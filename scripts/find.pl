@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.10 $
+# $Revision: 1.11 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2003-Jul-06
 #
@@ -23,7 +23,7 @@ my $EXCEPTION_LIST = "\.soc\$|\.sock\$|\.so\$|\.o\$";
 #           NO NEED TO MODIFY ANYTHING PASS THIS LINE               #
 # -------------------------------------------------------------------
 
-my $usage = "Usage: find_infile.pl \"string\" [\"FILE_REGEX\"]\n";
+my $usage = "Usage: find_infile.pl \"string\" [\"FILE_REGEX\"]\n NOTE use quotes to avoid the shell expanding your REGEX";
 
 my $thisFile = "";      # general current file
 my @new_file = ();      # lines to be printed in new file
@@ -35,6 +35,11 @@ if (!$ARGV[0]) {
 }
 
 my ($this_string,$f_pattern) = @ARGV;
+
+if ( $f_pattern =~ m(^\.) ) {
+    print "WARNING: using a dot in file pattern can match too many files. Escape dots with '\.'.\n Waiting 5 seconds before continuing\n Press CTRL+C to abort script execution\n" ;
+    sleep(5);
+}
 
 if (!$ARGV[1]) {
     print STDERR "All files chosen\n";
@@ -108,7 +113,7 @@ sub process_file {
     if ( 
         $_ =~ m($f_pattern) &&
         -f $_ && 
-        $base_name !~ m/$EXCEPTION_LIST/
+        $base_name !~ m($EXCEPTION_LIST)
     ) {
         s/^\.\/*//g;
         push @ls,$_;

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.95 $
+# $Revision: 1.96 $
 # Luis Mondesi  <lemsx1@hotmail.com>
 # 
 # REQUIRED: ImageMagick's Perl module and a dialog 
@@ -62,6 +62,8 @@ my $EXT_INCL_EXPR = "\.(jpg|png|jpeg|gif)";
 # dont worry if you don't have a log rotation facility...
 # just leave it as is
 my $SAVELOG = "/usr/bin/savelog";
+my $SKIP_DIR_FILE=".nopixdir2htmlrc"; # filename to flag directories to skip
+
 #**************************************************************#
 ###        Nothing below this line should be changed.        ###
 #**************************************************************#
@@ -456,11 +458,11 @@ sub mkindex {
     my @files = ();
 
     foreach $this_base ( sort keys %$hashref ) {
-        next if ( -f "$this_base/.nopixdir2htmlrc" );
+        next if ( -f "$this_base/$SKIP_DIR_FILE" );
         my ($my_bgcolor,$file_name) = ""; 
         $i = 0;
         # read specific config file for this directory
-        if ( ! -f "$this_base/.nopixdir2htmlrc" 
+        if ( ! -f "$this_base/$SKIP_DIR_FILE" 
             && !-f "$this_base/$CONFIG_FILE") {
             # oops, missing config file copying from root dir
             if ( 
@@ -625,7 +627,7 @@ sub mkthumb {
         { 
             $BASE = "."; 
         }
-        next if ( -f "$BASE/.nopixdir2htmlrc" );
+        next if ( -f "$BASE/$SKIP_DIR_FILE" );
         next if ($BASE eq $THUMBNAIL); 
         if ( $BASE gt ""
             && $BASE ne $tmp_BASE )
@@ -769,7 +771,7 @@ sub mkthumb_files {
             print $LOGFILE "+ mkthumb_files changed based $BASE to .\n";
             $BASE = "."; 
         }
-        next if ( -f "$BASE/.nopixdir2htmlrc" );
+        next if ( -f "$BASE/$SKIP_DIR_FILE" );
         next if ($BASE eq $THUMBNAIL);
         $pix_name = basename($ls[$i]);
         # strip extension from file name
@@ -914,12 +916,12 @@ sub menu_file {
     my @uniq = grep(!$seen{$_}++,@ary);
 
     # for e/a directory here
-    # check if a .nopixdir2htmlrc file exists
+    # check if a $SKIP_DIR_FILE file exists
     # if it does, then skip it and do the next one.
     # if it doesn't, then assume this will contain
     # a index.$EXT file and add it to the menu. 
     foreach my $directory (@uniq){
-        next if (-f "$directory/.nopixdir2htmlrc");
+        next if (-f "$directory/$SKIP_DIR_FILE");
         # remove ./ from begining of names
         $directory =~ s,^\./*,,g;
         # note that @ls holds the HTML links...
@@ -1268,6 +1270,7 @@ sub process_dir {
     my $base_name = basename ($_);
     if  ( 
         -d $_ 
+        && ! -f "$_/$SKIP_DIR_FILE"
         && $base_name !~ m/^($EXCEPTION_LIST)$/
         && $base_name !~ m/\b$THUMBNAIL\b/
         && $base_name !~ m/\b$HTMLDIR\b/
@@ -1306,7 +1309,7 @@ sub process_file {
     my $dir_name = dirname ($_);
     if  ( 
         -f $_
-        && ! -f "$dir_name/.nopixdir2htmlrc"
+        && ! -f "$dir_name/$SKIP_DIR_FILE"
         && $base_name =~ m/$EXT_INCL_EXPR$/i # only pictures please
         && $base_name !~ m/^($EXCEPTION_LIST)$/
         && $base_name !~ m/\b$THUMBNAIL\b/

@@ -3,4 +3,4 @@
 # Luis Mondesi < lemsx1@hotmail.com >
 # 
 # need this command too much...
-ps ax | grep -v myproc | grep -v grep | grep -i $1 
+ps ax | grep -v myproc | grep -v grep | grep  "$1"

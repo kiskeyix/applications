@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.19 $
+# $Revision: 1.20 $
 # Luis Mondesi < lemsx1@gmail.com >
-# Last modified: 2005-Feb-02
+# Last modified: 2005-Feb-19
 #
 # DESC: finds a string in a set of files
 #
@@ -17,6 +17,8 @@
 
 use File::Find;     # find();
 use File::Basename; # basename();
+use Getopt::Long;
+Getopt::Long::Configure('bundling');
 
 use strict;
 $|++;
@@ -36,30 +38,37 @@ my $thisFile = "";      # general current file
 my @new_file = ();      # lines to be printed in new file
 my @ls = ();            # array of files
 
-#if (!$ARGV[0]) {
-#    print STDERR $usage;
-#    exit 1;
-#}
-
 my ($this_string,$that_string,$f_pattern) = "";
-#@ARGV;
 
-if ( defined $f_pattern && $f_pattern =~ m(^\.) ) {
+GetOptions(
+    # flags
+    #'v|version'         =>  \$PVERSION,
+    #'h|help'            =>  \$HELP,
+    'D|debug'           =>  \$DEBUG,
+    # strings
+    'r|replace=s'      =>   \$that_string
+) and $this_string = shift and $f_pattern = shift;
+
+if ( defined $f_pattern && $f_pattern =~ m(^\.) )
+{
     print "WARNING: using a dot in file pattern can match too many files. Escape dots with '\.'.\n Waiting 5 seconds before continuing\n Press CTRL+C to abort script execution\n" ;
     sleep(5);
 }
 
-#if (!$ARGV[1]) {
-#    print STDERR "All files chosen\n";
-#    $f_pattern = ".*";
-#}
+if (!$f_pattern) {
+    print STDERR "All files chosen\n";
+    $f_pattern = ".*";
+}
 
-print "s: '$this_string' f: '$f_pattern'\n" if ($DEBUG != 0);
+if ( $DEBUG > 0 )
+{
+    print "s: '$this_string' r: '$that_string' f: '$f_pattern'\n";
+    print STDERR "DEBUG in place... pausing for 10 seconds\n";
+    sleep(10);
+}
 
 if ($this_string =~ /\w/) {
-
     my $i =0;
-    
     @ls = do_file_ary("."); # start at current directory
     
     for (@ls) {
@@ -82,7 +91,7 @@ if ($this_string =~ /\w/) {
         $modified = 0; # clear flag
 
         open (FILE,"<$thisFile") or die "could not open $thisFile. $!\n";
-        if ( $that_string qt "" )
+        if ( $that_string gt "" )
         {
             while(<FILE>) {
                 $i++;

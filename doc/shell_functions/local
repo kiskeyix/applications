@@ -1,0 +1,83 @@
+#!/bin/sh
+#
+# local     Settings for Tuxy (latinomixed.com). Use to setup stuff
+#           needed by Tuxy workstation.
+#
+#           Written by Luis Mondesi <lemsx1@hotmail.com>.
+#
+# CHANGELOG
+# * 2003-11-01 23:33 EST fixed tests... this script might be innecessary...
+#
+# 2003-09-28 15:42 EDT Luis M <lemsx1@hotmail.com>
+
+PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
+NAME="local"
+HDPARM="/sbin/hdparm"
+HDPARMARGS=" -A1a128d1u1k1 -X udma5 " # dma on and ultra dma 5 mode
+                                        # k1 -> keep settings on soft-reset
+INSMOD="/sbin/insmod"
+
+set -e # exit if a program ends in non-zero status ( $? )
+
+# if the via82cxxx module is there, then let's set
+# our UDMA 5:
+
+VIA82CXXX="`/bin/lsmod | /bin/egrep -i \"^via82cxxx\" | /usr/bin/cut -d\" \" -f1`"
+
+case "$1" in
+    start)
+    echo "Starting 'local' settings "
+    if [ x$VIA82CXXX = "xvia82cxxx" ]; then
+        echo -n "Starting hdparm settings "
+        $HDPARM $HDPARMARGS /dev/hda #> /dev/null
+        RETHDA=$?
+        $HDPARM $HDPARMARGS /dev/hdb #> /dev/null
+        RETHDB=$?
+        if [ $RETHDA -eq 0 -a $RETHDB -eq 0 ]; then
+            echo -n " [sucessfull] "
+        else
+            echo -n " [failed] "
+        fi
+        echo "."
+    else
+        echo -n "Loading module via82cxxx "
+        # try loading the module and test again
+        $INSMOD via82cxxx
+        if [ $? -eq 0 ]; then
+            echo " [successful] "
+            echo -n "Starting hdparm settings "
+            $HDPARM $HDPARMARGS /dev/hda #> /dev/null
+            RETHDA=$?
+            $HDPARM $HDPARMARGS /dev/hdb #> /dev/null
+            RETHDB=$?
+            if [ $RETHDA -eq 0 -a $RETHDB -eq 0 ]; then
+                echo -n " [sucessfull] "
+            else
+                echo -n " [failed] "
+            fi
+            echo "."
+        else
+            echo -n " [failed] "
+            echo "."
+        fi
+    fi
+    ;;
+    stop)
+        # no need to stop anything here sir
+    ;;
+    reload)
+        # no need to reload anything here sir
+    ;;
+    restart|force-reload)
+        $0 stop
+        $0 start
+    ;;
+    *)
+        N=/etc/init.d/$NAME
+    # echo "Usage: $N {start|stop|restart|reload|force-reload}" >&2
+        echo "Usage: $N {start|stop|restart|force-reload}" >&2
+        exit 1
+    ;;
+esac
+
+exit 0

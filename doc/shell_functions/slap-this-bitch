@@ -9,6 +9,8 @@
 # it adds it to the 
 # 
 # /etc/firestarter/blocked-hosts
+# or
+# /etc/firestarter/outbound/deny-to
 # 
 # file and then reloads the 
 # 
@@ -28,10 +30,18 @@
 # sshd ssh: ALL : spawn ( /path/to/slap-this-bitch %h %d ) & : DENY
 #
 #
+# TODO add per service blocks since firestarter now supports it
+#
 
 if [ x$1 != "x" ]; then
-    echo $1 >> /etc/firestarter/blocked-hosts \
-    && /etc/firestarter/firewall.sh 
+    if [ -f "/etc/firestarter/outbound/deny-to" ]; then
+        # firestarter format changed to: $IP,$Desc\n
+        echo "$1,dropped" >> /etc/firestarter/outbound/deny-to \
+        && /etc/firestarter/firestarter.sh reload-outbound-policy
+    else
+        echo $1 >> /etc/firestarter/blocked-hosts \
+        && /etc/firestarter/firewall.sh 
+    fi
 
     if [ x$2 != "x" ]; then
         echo "Host has been blocked for life [ tried to use $2 ]: $1."\
@@ -43,7 +53,7 @@ if [ x$1 != "x" ]; then
 
 else
 
-    echo "Wrong arguments sent to $0"\
+    echo "Wrong arguments sent to $0: $*"\
     | /usr/bin/mail -s "Wrong arguments" root
 
 fi

@@ -51,9 +51,9 @@ NICE=19
 # work load average at which point we would stop seti momentarily
 MAXLOAD=5
 SLEEP=7200                      # 2 hours sleep
-SETI="$HOME/Develop/seti"
+SETI="$HOME/Develop/boinc"
 PIDF="$SETI/.startseti.pid"     # process id file
-PROCESS="setiathome"            # name of the seti binary
+PROCESS="boinc"            # name of the seti binary
 PKILL="/usr/bin/pkill -U $UID"  # pkill is smart about process names 
                                 # and -U for the processes run by a 
                                 # given user.
@@ -201,7 +201,8 @@ if [ $LOAD -lt $MAXLOAD -a x$1 = "xstart" ]; then
     echo "[ok]" # assume seti will work...
     while true; do
         # seti is smart enough to know if it's already running
-        nohup ./$PROCESS -nice $NICE > /dev/null 2>&1 &
+        nohup ./$PROCESS > /dev/null 2>&1 &
+        # old setiathome: -nice $NICE
         sleep $SLEEP
     done
 else

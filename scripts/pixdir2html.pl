@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.68 $
+# $Revision: 1.69 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -1255,8 +1255,17 @@ sub menu_file {
                         or mydie("Could not change to dir $ts/$THUMBNAIL. $!\n","menu_file 2");
                     my @glob_ary = glob("t*.???"); # get all files starting with 't' and ending in .??? (3 characters); they might or might not be picture files, but... we are trusting they are for now
                     chdir($pwd) or mydie("Could not go back to $pwd. $!\n","menu_file 3"); # go back to our original directory
-                    $image = $glob_ary[rand(@glob_ary)];
-                    if ( $image !~ /$EXT_INCL_EXPR$/i ) { print LOGFILE "$image is not an IMAGE file\n"; }
+                    my $attempts = 3; # number of tries to get an image
+                    IMAGE:
+                        $image = $glob_ary[rand(@glob_ary)];
+                        if ( 
+                            $image !~ /$EXT_INCL_EXPR$/i 
+                            && $attempts != 0
+                        ) { 
+                            print LOGFILE "$image is not an IMAGE file\n"; 
+                            $attempts--;
+                            goto IMAGE;
+                        }
                 } else {
                     print LOGFILE "$ts has no thumbnail [$THUMBNAIL] directory. Have you executed $0 without --menu-only or --menu-type='modern' yet?";
                 }

@@ -1,5 +1,6 @@
 #!/bin/sh
 # Luis Mondesi < lemsx1@hotmail.com >
+# $Revision: 1.2 $
 # DESCRIPTION:
 #   it uses vim to replace a given string for 
 #   another in a  number of files
@@ -11,10 +12,12 @@ if [ $1 -a $2 -a $3 ]; then
     for i in `find . -name "$1" -type f | xargs grep -l $2`; do
         # how do search and replace
         # the screen might flicker... vim opening and closing...
-        vim -c ":%s/$2/$3/g" -c ":wq" $i
+        # when using the @ symbol, users must escape it \@
+        # for replacing strings ($3) and/or finding them ($2)
+        vim -c ":%s@$2@$3@g" -c ":wq" $i
     done
     exit 0
 fi
 # I should never reach here
-echo -e "USAGE: find_replace.sh file 'string' 'replace' \n\n"
+echo -e "\tUSAGE: find_replace.sh file 'string' 'replace' \n\n"
 exit 1

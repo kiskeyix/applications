@@ -4,7 +4,7 @@ use Gaim;
 $tab = "&nbsp;" x 4;
 $nl = "<br>";
 $seconds = 30;
-$max = 1020;
+$max = 512;
 $command = "fortune -sn $max | recode -q ISO-8859-1..utf-8 ";
 
 %PLUGIN_INFO = (

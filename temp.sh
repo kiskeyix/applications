@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # 
 # DESC: close program given by "list" if temperature
 #       is higher than "limit"
@@ -13,7 +13,8 @@ LIST="setiathome"
 # command to cleanup the temperature
 # it gets the CPU line out of the output
 # of "sensors" and then cleans it up
-TEMP=`sensors | grep CPU | cut -d" " -f4 | sed "s/\..*//g" | sed "s/[\+\.cC]//g"`
+# -m ("max line matches") -i ("insensitive")
+TEMP=`sensors | grep -m 1 -i "CPU temp" | cut -d" " -f4 | sed "s/\..*//g" | sed "s/[\+\.cC]//g"`
 
 # this is the real deal
 if [ $TEMP -gt $LIMIT ]; then

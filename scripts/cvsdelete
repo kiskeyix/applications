@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Luis Mondesi <lemsx1@hotmail.com>
 # Use this to delete a file from CVS in one shot!
 # Usage: cvsdelete.sh filename

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.37 $
+# $Revision: 1.38 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -36,6 +36,8 @@
 # tr=<tr>
 # new=http://absolute.path.com/images/new.png # for dirs with .new files
 # footer=<a href='#'>A footer here</a>
+# # set this to 1 to avoid printing a header
+# # or footer in the menu file menu.$EXT
 # menuheader_footer=0
 # ext=php
 # 
@@ -62,22 +64,44 @@
 # thumbnails and/or index.EXT to be written
 #
 
-use File::Copy;
-use Getopt::Long;
-Getopt::Long::Configure('bundling');
-
-use File::Find;     # find();
-use File::Basename; # basename();
-
-use Image::Magick;
-
+# standard modules
 use strict;
 use vars qw( $VERSION @INC );
 use Config;
 
-my $VERSION="1.01";
+use Getopt::Long;
+Getopt::Long::Configure('bundling');
 
-$|++; # disable buffer
+use File::Copy;
+use File::Find;     # find();
+use File::Basename; # basename();
+
+# for progressbar
+use FileHandle;
+
+# non-standard modules:
+eval "use Image::Magick";
+if ($@) 
+{
+    print STDERR "\nERROR: Could not load the Image::Magick module.\n" .
+    "       Please install this module before continuing\n".
+    "       Use: perl -e shell -MCPAN to install it.\n".
+    "       On Debian just: apt-get install perlmagic \n\n";
+    exit 1;
+}
+
+# borrowed ideas from UDPM.pm for the progressbar.
+# didn't use it because it's too bloated for what
+# I needed, and it created an extra module that
+# users would have to install... nice work though
+#
+#eval "use UDPM";
+
+# end of loading needed modules
+
+my $VERSION="1.3";
+
+$|++; # disable buffer (autoflush)
 
 my $USAGE = "pixdir2html.pl [-n|--nomenu] 
 [-N|--noindex]
@@ -112,7 +136,10 @@ pixdir2html -E html
 
 my $nautilus_root = "";
 
-if ( $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} =~ m#^file:///# ) {
+if ( exists $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} 
+    && $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} =~ m#^file:///# 
+) 
+{
     ($nautilus_root = $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} ) =~ s#%([0-9A-Fa-f]{2})#chr(hex($1))#ge;
     ($nautilus_root = $nautilus_root ) =~ s#^file://##g;
 }
@@ -171,6 +198,56 @@ my $THUMBSONLY=0;
 my $NOINDEX=0;
 my $HELP=0;
 
+# progressbar stuff here:
+# initialization:
+my $GAUGE = new FileHandle;
+
+#my $tty = qx/tty/; # this returns text from system("tty")
+my $MODE = "text";
+my $DIA = "";
+
+if ( exists $ENV{"NAUTILUS_SCRIPT_CURRENT_URI"} )
+#|| $tty =~ m,.*pts.*|.*ttyp.*, && $ENV{"TERM"} !~ m/term/ )
+{
+    $MODE = "x";
+
+    print STDOUT "Using X\n";
+
+    if ( 
+        -x "/usr/bin/xdialog" 
+        || -x "/usr/local/bin/xdialog"
+        || -x "/usr/X11R6/bin/xdialog"
+    ) 
+    {
+        $DIA = "xdialog";
+    } elsif ( -x "/usr/bin/gdialog" || -x "/usr/local/bin/gdialog" ) 
+    {
+        $DIA = "gdialog";
+    } elsif ( -x "/usr/bin/kdialog" || -x "/usr/local/bin/kdialog" ) 
+    {
+        $DIA = "kdialog";
+    } else {
+        print STDERR ("(X|G|K)Dialog was not found. Please install any of those programs\n");
+        exit 1;
+    }
+
+}  else {
+
+    if ( -x "/usr/bin/dialog" || -x "/usr/local/bin/dialog" ) 
+    {
+        $DIA = "dialog";
+    } elsif ( -x "/usr/bin/cdialog" || -x "/usr/local/bin/cdialog" ) 
+    {
+        $DIA = "cdialog";
+    } elsif ( -x "/usr/bin/whiptail" || -x "/usr/local/bin/whiptail" ) 
+    {
+        $DIA = "whiptail";
+    }  else {
+        print STDERR ("[c]Dialog or Whiptail was not found. Please install any of those programs\n");
+        exit 1;
+    }
+}
+
 # get options
 GetOptions(
     # flags
@@ -192,14 +269,17 @@ my $FILE_NAME="index";
 my $MENU_NAME="menu";
 my $menu_str="";
 
+my $LOGFILE = new FileHandle;
+
 my $THUMBNAILSDIR="$ROOT_DIRECTORY/$THUMBNAIL";
 my $HTMLSDIR="$ROOT_DIRECTORY/$HTMLDIR";
 
 warn << "__EOF__";
-Perl PixDir2HTML v$VERSION 
+Perl pixdir2html v$VERSION 
 (Luis Mondesi <lemsx1\@hotmail.com> / LatinoMixed.com) 
 (running with Perl $] on $Config{'archname'}) \n \n
 __EOF__
+
 
 main();
 
@@ -207,23 +287,34 @@ main();
 #                     FUNCTIONS                   #
 #-------------------------------------------------#
 sub main {
+    
+    $LOGFILE->open("> $LOG");
+    $LOGFILE->autoflush(1);
 
-    open (LOGFILE,"> $LOG");
+    $GAUGE->open("| $DIA --backtitle 'Picture Directory to HTML' --title 'Picture Progress' --gauge 'Thumbnails Creation' 8 120 0 2>&1");
+    $GAUGE->autoflush(1);
+
+    # which progressbar are we using?
+    print $LOGFILE ("Mode $MODE\n");
 
     # are we creating a menu file only?
     if ( $MENUONLY > 0 ) {
-        print LOGFILE ("= Creating menu file\n");
+        print $LOGFILE ("= Creating menu file\n");
         menu_file();
         return 0;
     }
 
-    print LOGFILE "= Start directory $ROOT_DIRECTORY \n";
+    print $LOGFILE "= Start directory $ROOT_DIRECTORY \n";
 
-    #die "Missing main $CONFIG_FILE. Please create one first before continuing \n" if ( ! -f "$CONFIG_FILE" ) ;
+    if ( ! -f "$ROOT_DIRECTORY/$CONFIG_FILE" )
+    {
+        print $LOGFILE ( "Missing main $CONFIG_FILE. Creating one for you \n");
+        init_config($ROOT_DIRECTORY,"true");
+    }	
 
     # get menu string
     unless ( $NOMENU == 1 ) {
-        print LOGFILE ("= Creating menu string\n");
+        print $LOGFILE ("= Creating menu string\n");
         $menu_str = menu_file();
     }
 
@@ -239,12 +330,21 @@ sub main {
     # make all supporting HTML files
     thumb_html_files($ROOT_DIRECTORY);
 
-    close(LOGFILE);
+    # close GAUGE
+    #print $GAUGE "\x04";
+    #print $GAUGE "\x00";
+    #print $GAUGE "EOF";
+    $GAUGE->close();
+    #undef($GAUGE);
+
+    # close log
+    print $LOGFILE ("$total_directories directories.\n Read log $LOG for details. \n");
+    $LOGFILE->close();
+
     if ( -x $SAVELOG ) {
         system("$SAVELOG $LOG > /dev/null 2>&1");
     }
 
-    print STDOUT "$total_directories directories.\n Read log $LOG for details. \n";
     return 0;
 } # endmain
 
@@ -252,13 +352,34 @@ sub init_config {
     # Takes one argument:
     # ROOT = directory from which we will take the config file   
 
-    my %config_tmp = "";
+    my %config_tmp = ();
 
     my $ROOT = shift;
+    my $create_config = shift;
 
     my $line="";
 
-    if (open(CONFIG, "<$ROOT/$CONFIG_FILE")){
+    # some defaults:
+
+    $config_tmp{"percent"}=$PERCENT;
+    $config_tmp{"title"}="Images";
+    $config_tmp{"meta"}="<meta http-equiv='content-type' content='text/html;charset=iso-8859-1'>";
+    $config_tmp{"stylesheet"}="<link rel='stylesheet' href='../styles.css' type='text/css'>";
+    $config_tmp{"html_msg"}="<h1>Free form HTML</h1>";
+    $config_tmp{"body"}="<body bgcolor='#000000' text='#ffffff'>";
+    $config_tmp{"p"}="<p>";
+    $config_tmp{"table"}="<table border='0'>";
+    $config_tmp{"td"}="<td valign='top' align='left'>";
+    $config_tmp{"tr"}="<tr>";
+    $config_tmp{"header"}="";
+    $config_tmp{"footer"}="";
+    $config_tmp{"ext"}=$EXT;
+
+    if ( -f "$ROOT/$CONFIG_FILE" )
+    {
+        open(CONFIG, "<$ROOT/$CONFIG_FILE");
+        # suppress warnings for now... 
+        no warnings; 
         while ( defined($line = <CONFIG>) ) {
             next if /^\s*#/;
             chomp $line;
@@ -279,25 +400,25 @@ sub init_config {
    Could not find $ROOT/$CONFIG_FILE 
 __EOF__
 
-        $config_tmp{"percent"}="20%";
-        $config_tmp{"title"}="Images";
-        $config_tmp{"meta"}="<meta http-equiv='content-type' content='text/html;charset=iso-8859-1'>";
-        $config_tmp{"stylesheet"}="<link rel='stylesheet' href='../styles.css' type='text/css'>";
-        $config_tmp{"html_msg"}="<h1>Free form HTML</h1>";
-        $config_tmp{"body"}="<body bgcolor='#000000' text='#ffffff'>\n";
-        $config_tmp{"p"}="<p>";
-        $config_tmp{"table"}="<table border='0'>";
-        $config_tmp{"td"}="<td valign='top' align='left'>";
-        $config_tmp{"tr"}="<tr>";
-        $config_tmp{"footer"}="";
-        $config_tmp{"ext"}=$EXT;
-
+        if ( $create_config =~ /true/ ) 
+        {
+            if (open(CONFIG, ">$ROOT/$CONFIG_FILE")) {
+                foreach my $key ( keys %config_tmp ) {
+                    print CONFIG "$key=" . $config_tmp{"$key"}."\n";
+                }
+            } else {
+                print STDERR "Could not write $ROOT/$CONFIG_FILE. Check permissions?";
+            }
+        }
     }
 
     #construct a header if it doesn't yet exist:
-    if ( $config_tmp{"header"} eq "" ) {
+    if ( exists $config_tmp{"header"} 
+        && $config_tmp{"header"} eq "" 
+    ) 
+    {
 
-        print LOGFILE (": Blank header. Generating my own ... \n");
+        print $LOGFILE (": Blank header. Generating my own ... \n");
 
         $config_tmp{"header"}="<html>
         <head>
@@ -346,73 +467,73 @@ sub mkindex {
 
     # TODO see why this doesn't work as expected
     foreach $this_base ( sort keys %$hashref ) {
-    my ($my_bgcolor,$file_name) = ""; 
-    $i = 0;
+        my ($my_bgcolor,$file_name) = ""; 
+        $i = 0;
 
-    # read specific config file for this directory
-    if ( -f "$this_base/$CONFIG_FILE" && ! -f "$this_base/.nopixdir2htmlrc" ) {
-    %myconfig = init_config($this_base);
-    } elsif ( ! -f "$this_base/.nopixdir2htmlrc" ) {
-    # oops, missing config... getting base file
-    if ( 
-    copy("$ROOT_DIRECTORY/$CONFIG_FILE", 
-    "$this_base/$CONFIG_FILE") 
-    ) {
-    print LOGFILE (": Copied ".
-    " $ROOT_DIRECTORY/$CONFIG_FILE ".
-    "==> $this_base/$CONFIG_FILE \n");
-    }
-    # now read the config file
-    %myconfig = init_config($this_base);
-    }
-    my @files = @{$$hashref{$this_base}};
+        # read specific config file for this directory
+        if ( -f "$this_base/$CONFIG_FILE" && ! -f "$this_base/.nopixdir2htmlrc" ) {
+            %myconfig = init_config($this_base);
+        } elsif ( ! -f "$this_base/.nopixdir2htmlrc" ) {
+            # oops, missing config... getting base file
+            if ( 
+                copy("$ROOT_DIRECTORY/$CONFIG_FILE", 
+                    "$this_base/$CONFIG_FILE") 
+            ) {
+                print $LOGFILE (": Copied ".
+                    " $ROOT_DIRECTORY/$CONFIG_FILE ".
+                    "==> $this_base/$CONFIG_FILE \n");
+            }
+            # now read the config file
+            %myconfig = init_config($this_base);
+        }
+        my @files = @{$$hashref{$this_base}};
 
-    # FILE_NAME is a global
-    open(FILE, "> ".$this_base."/".$FILE_NAME.".".$myconfig{"ext"}) || 
-    die "Couldn't write file $FILE_NAME.".$myconfig{"ext"}." to $this_base";
+        # FILE_NAME is a global
+        open(FILE, "> ".$this_base."/".$FILE_NAME.".".$myconfig{"ext"}) || 
+        die "Couldn't write file $FILE_NAME.".$myconfig{"ext"}." to $this_base";
 
-    # start HTML
-    print FILE ($myconfig{"header"}."\n");
+        # start HTML
+        print FILE ($myconfig{"header"}."\n");
 
-    # print menu (if any)
-    print FILE ("$MENU_STR");
+        # print menu (if any)
+        print FILE ("$MENU_STR");
 
-    # start table
-    print FILE ($myconfig{"table"}."\n");
+        # start table
+        print FILE ($myconfig{"table"}."\n");
 
-    #print all picts now
-    foreach(@files){
+        #print all picts now
+        foreach(@files){
 
-    $this_file = basename($_);
+            $this_file = basename($_);
 
-    if ($i == 0) {
-    # open a new row
-    # this row doesn't need bgcolor
-    if ( $myconfig{"tr"} =~ m/\%+bgcolor\%+/i ) {
-        ($myconfig{"tr"} = $myconfig{"tr"}) =~ s/\%+bgcolor\%+//i;
-    }
+            if ($i == 0) {
+                # open a new row
+                # this row doesn't need bgcolor
+                if ( $myconfig{"tr"} =~ m/\%+bgcolor\%+/i ) {
+                    ($myconfig{"tr"} = $myconfig{"tr"}) =~ s/\%+bgcolor\%+//i;
+                }
 
-    print FILE ($myconfig{"tr"}."\n");
-} 
-print FILE ("\t".$myconfig{"td"}."\n");
+                print FILE ($myconfig{"tr"}."\n");
+            } 
+            print FILE ("\t".$myconfig{"td"}."\n");
 
-($file_name = $this_file) =~ s/$EXT_INCL_EXPR//gi;
+            ($file_name = $this_file) =~ s/$EXT_INCL_EXPR//gi;
 
-($file_name = $file_name) =~ s/^$THUMB_PREFIX//; # removes prefix
+            ($file_name = $file_name) =~ s/^$THUMB_PREFIX//; # removes prefix
 
 # EXT is a global and so is THUMBNAIL
-print FILE ("<a href='$HTMLDIR/$file_name.".$myconfig{"ext"}."'>".
-    "<img src='$THUMBNAIL/"."$this_file'></a>\n");
+            print FILE ("<a href='$HTMLDIR/$file_name.".$myconfig{"ext"}."'>".
+                "<img src='$THUMBNAIL/"."$this_file'></a>\n");
 
-print FILE ("\t</td>\n");
+            print FILE ("\t</td>\n");
 
-if ($i<($TD-1)) {
-    $i++;
-} else {
-    # wrap and reset counter
-    print FILE ("</tr>\n");
-    $i = 0;
-}
+            if ($i<($TD-1)) {
+                $i++;
+            } else {
+                # wrap and reset counter
+                print FILE ("</tr>\n");
+                $i = 0;
+            }
 
         } # end for e/a @files
         # complete missing TD
@@ -456,14 +577,16 @@ sub mkthumb {
         $last_file_name,
         $current_link,
         $last_link,
-        $BASE,
-        $tmp_BASE,
         $LAST_BASE,
         $NEXT_BASE,
         $HTMLSDIR) = "";
 
+    # these two are special...
+    # init to some strange string...
+    my $BASE = ",/\trash";
+    my $tmp_BASE = ",\/more_trash";
 
-    print LOGFILE ("= Making thumbnails in $ROOT \n");
+    print $LOGFILE ("= Making thumbnails in $ROOT \n");
 
     #construct array of all image files
     my @ary = do_file_ary("$ROOT");
@@ -476,9 +599,22 @@ sub mkthumb {
         next if ($thisFile !~ m/$EXT_INCL_EXPR/i);
 
         push @ls,$_;
+        #$TOTAL++;
+
     } #end images array creation
 
-    foreach(@ls){
+    # progressbar stuff
+    # gauge message
+    my $MESSAGE = "Thumbnails Creation";
+    # initial values for gauge
+    # TOTAL -> number of elements in ls array
+    my ($PROGRESS,$TOTAL) = (0,$#ls);
+    progressbar_msg($MESSAGE);
+
+    print $LOGFILE ("= $TOTAL pictures \n");
+
+    foreach(@ls) 
+    {
         $pix_name = basename($_);
         # strip extension from file name
         ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR//gi;
@@ -486,13 +622,20 @@ sub mkthumb {
         ( $BASE = $_ ) =~ s/(.*)\/$pix_name$/$1/g;
         # BASE is blank if we are already inside the directory
         # for which to do thumbnails, thus:
-        if ( ! -d $BASE ) { 
+        if ( $BASE eq "" 
+            || ! -d $BASE ) 
+        { 
             $BASE = "."; 
         }
         next if ($BASE eq $THUMBNAIL);
         #print STDOUT $BASE."\n";
 
-        if ( $BASE !~ m/$tmp_BASE/ ) {
+        # this is just to clear up all 
+        # warnings from Perl.. 
+        if ( $BASE gt "" 
+            && $tmp_BASE gt ""
+            && $BASE !~ m/$tmp_BASE/ ) 
+        {
             if ( 
                 $FORCE > 0  && 
                 ! -f "$BASE/.nopixdir2htmlrc" 
@@ -501,7 +644,7 @@ sub mkthumb {
                     copy("$ROOT_DIRECTORY/$CONFIG_FILE", 
                         "$BASE/$CONFIG_FILE") 
                 ) {
-                    print LOGFILE (": Force copy ".
+                    print $LOGFILE (": Force copy ".
                         " $ROOT_DIRECTORY/$CONFIG_FILE ".
                         "==> $BASE/$CONFIG_FILE \n");
                 }
@@ -512,7 +655,7 @@ sub mkthumb {
                     copy("$ROOT_DIRECTORY/$CONFIG_FILE", 
                         "$BASE/$CONFIG_FILE") 
                 ) {
-                    print LOGFILE (": Copied ".
+                    print $LOGFILE (": Copied ".
                         " $ROOT_DIRECTORY/$CONFIG_FILE ".
                         "==> $BASE/$CONFIG_FILE \n");
                 }
@@ -521,7 +664,7 @@ sub mkthumb {
             # read specific config file for this directory
             if (! -f "$BASE/.nopixdir2htmlrc" ) {
                 # change of base, reset two-dimensional array counter
-                print LOGFILE "+ Reading config for $BASE\n";
+                print $LOGFILE "+ Reading config for $BASE\n";
                 %myconfig = init_config($BASE);
             }
             $total_directories++;
@@ -535,13 +678,13 @@ sub mkthumb {
 
         #print STDOUT $HTMLSDIR."\n";
         if (!-d "$THUMBNAILSDIR") { 
-            print LOGFILE ("= Making thumbnail directory in $BASE\n");
+            print $LOGFILE ("= Making thumbnail directory in $BASE\n");
             mkdir("$THUMBNAILSDIR",0755);
         }
 
         if ( !-f "$THUMBNAILSDIR/".$THUMB_PREFIX.$pix_name ){
 
-            print LOGFILE ("\n= Converting file $BASE/$pix_name into $THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name \n");
+            print $LOGFILE ("\n= Converting file $BASE/$pix_name into $THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name \n");
 
             my $image = Image::Magick->new;
 
@@ -556,10 +699,9 @@ sub mkthumb {
             #    die "ERROR: conversion failed\n $! ";
             #}
 
+            print $LOGFILE ("\n"); 
 
-            print LOGFILE ("\n"); 
-
-        }
+        } 
         # end if thumbnail file
 
         # save pixname for the index.html file
@@ -567,6 +709,11 @@ sub mkthumb {
 
         # update flags
         $LAST_BASE = $BASE;
+
+        # update progressbar
+        progressbar($PROGRESS,$TOTAL);
+        $PROGRESS++;
+        
     } #end foreach @ls
 
 
@@ -593,19 +740,21 @@ sub thumb_html_files {
         $next_pix_name,
         $next_file_name,
         $last_pix_name,
-        $last_html_file,
         $current_html_file,
         $last_file_name,
         $current_link,
         $last_link,
-        $BASE,
-        $tmp_BASE,
         $LAST_BASE,
         $NEXT_BASE,
         $HTMLSDIR) = "";
 
+    # TODO find a more elegant solution here
+    # init to dummy string:
+    my $BASE = "trash/\file";
+    my $tmp_BASE = "garbage\/file";
+    my $last_html_file = "this_is/dummy\string";
 
-    print LOGFILE ("= Making HTML files in $ROOT \n");
+    print $LOGFILE ("= Making HTML files in $ROOT \n");
 
     #construct array of all image files
     my @ary = do_file_ary("$ROOT");
@@ -619,6 +768,14 @@ sub thumb_html_files {
 
         push @ls,$_;
     } #end images array creation
+
+    # progressbar stuff
+    # gauge message
+    my $MESSAGE = "HTML Creation";
+    # initial values for gauge, note total
+    # is number of elements in array ;-) 
+    my ($PROGRESS,$TOTAL) = (0,$#ls);
+    progressbar_msg($MESSAGE);
 
     #print all picts now
     #foreach(@ls){
@@ -636,12 +793,14 @@ sub thumb_html_files {
         }
         next if ($BASE eq $THUMBNAIL);
 
-        #print STDOUT "Base: $BASE.\n";
+        # print STDOUT "Base: $BASE.\n";
 
-        if ( $BASE ne $tmp_BASE ) {
+        if ( $BASE gt ""
+            && $BASE ne $tmp_BASE ) 
+        {
             # read specific config file for this directory
             if (! -f "$BASE/.nopixdir2htmlrc" ) {
-                print LOGFILE "+ ThumbHtmlFiles Reading config for $BASE\n";
+                print $LOGFILE "+ ThumbHtmlFiles Reading config for $BASE\n";
                 %myconfig = init_config($BASE);
             }
         }
@@ -654,7 +813,7 @@ sub thumb_html_files {
         $HTMLSDIR = "$BASE/$HTMLDIR";
 
         if (!-d "$HTMLSDIR") { 
-            print LOGFILE ("= Making html files directory in $BASE\n");
+            print $LOGFILE ("= Making html files directory in $BASE\n");
             mkdir("$HTMLSDIR",0755);
         }
 
@@ -662,10 +821,10 @@ sub thumb_html_files {
         $current_link = "$file_name.".$myconfig{"ext"};
 
         if ( -f $current_html_file ){
-            print LOGFILE ": Overriding $current_html_file\n";
+            print $LOGFILE ": Overriding $current_html_file\n";
         } # end if not current_html_file
 
-        print LOGFILE ("= Creating html file into $current_html_file\n");
+        print $LOGFILE ("= Creating html file into $current_html_file\n");
         # TODO routine for creating file should be called here...
         open(FILE, "> $current_html_file") || 
         die "Couldn't write file $current_html_file";
@@ -683,7 +842,10 @@ sub thumb_html_files {
         print FILE ("</td></tr>\n<tr><td valign='bottom' align='center'><div align='center'>\n");
 
         # backward link here
-        if ( -f $last_html_file && ($BASE eq $LAST_BASE) ) {
+        if ( $last_html_file ne "this_is/dummy\string" 
+            && -f $last_html_file 
+            && ($BASE eq $LAST_BASE) ) 
+        {
             print FILE ("<a href='$last_link'>&lt;==</a>\n"); 
         } else {
             print FILE ("&lt;==");
@@ -736,7 +898,7 @@ sub thumb_html_files {
         close(FILE);
         # end HTML
 
-        print LOGFILE ("\n"); 
+        print $LOGFILE ("\n"); 
 
         # keep track of links
         $last_html_file = $current_html_file;
@@ -745,27 +907,15 @@ sub thumb_html_files {
         $LAST_BASE = $BASE;
         $NEXT_BASE = "";
         #$PRINT_NEXT_LINK = 0;
+
+        # update progressbar
+        progressbar($PROGRESS,$TOTAL);
+        $PROGRESS++;
+
+ 
     } #end foreach
 
-} # end sub
-
-sub prompt {
-    # promt user and return input 
-    # pass string when calling subroutine: $var = prompt("string");
-    my($string) = $_[0];#shift;
-    my($input) = "";
-
-    #if ($Suppress_readline) { 
-    print ("* ".$string."\n");
-    chomp($input = <STDIN>);
-    # chomp is the same as:
-    # $input =~ s/\n//g; # remove lineend
-    #} else {
-    # No readline support for now
-    #$input = $term->readline($string);
-    #}
-    return $input;
-}
+} # end thumb_html_files
 
 sub do_dir_ary {
     # uses find() to recur thru directories
@@ -918,139 +1068,144 @@ sub menu_file {
         print FILE ($myconfig{"header"}."\n");
     }
 
-    if ( $MENUONLY > 0 ) {
-        print FILE ($myconfig{"table"}."\n");
-    }
-    $MENU_STR .= $myconfig{"table"}."\n";
+    if ( $total_links > 1 )
+    {
+        if ( $MENUONLY > 0 ) 
+        {
+            print FILE ($myconfig{"table"}."\n");
+        }
+        $MENU_STR .= $myconfig{"table"}."\n";
 
-    # print all links now
+        # print all links now
 
-    my $tmp_tr = ""; # used to color the rows
+        my $tmp_tr = ""; # used to color the rows
 
-    while($x>0){
-        # temporarily turn off warnings
-        no warnings;
+        while($x>0){
+            # temporarily turn off warnings
+            no warnings;
 
-        # TODO
-        # menu only routine: prints to a file... should merge
-        # with the str portion (see else)
-        #
+            # TODO
+            # menu only routine: prints to a file... should merge
+            # with the str portion (see else)
+            #
+            if ( $MENUONLY > 0 ) {
+                if ($myconfig{"tr"}=~m/\%+bgcolor\%+/i){
+                    if (($j % 2) == 0){
+                        ($tmp_tr = $myconfig{"tr"}) =~ s/\%+bgcolor\%+/bgcolor=#efefef/i;
+                    } else {
+                        ($tmp_tr = $myconfig{"tr"}) =~ s/\%+bgcolor\%+//i;
+                    }
+
+                    print FILE ($tmp_tr."\n");
+
+                } else {
+                    print FILE ($myconfig{"tr"}."\n");
+                }
+                for ($y=1;$y<=$menu_td;$y++){
+                    # close the TD tags
+                    if ($y > 1) { 
+                        print FILE ("\t </td> \n"); 
+                    }   
+                    print FILE ("\t".$myconfig{"td"}."\n");
+
+                    if ( $ls[$i] ne "" ) {
+                        # if link exists, otherwise leave it blank
+                        # TODO there is a better way to do this... find it...
+
+                        ($ts = $ls[$i]) =~ s#(.*)/$FILE_NAME.$myconfig{"ext"}#$1#gi;
+
+                        # from nautilus one cannot pass arguments
+                        # "--menuonly" but... just to keep things
+                        # consistent...
+
+                        # if number of characters is greater than $STR_LIMIT
+                        # truncate $ts to a few characters.
+
+                        if ( $nautilus_root gt "" ) {
+                            ( $ls[$i] = $ls[$i] ) =~ s,$nautilus_root/,,g;
+                            ( $ts = $ts ) =~ s,$nautilus_root/*,,g;
+                        }
+
+                        my $tmp_ts = str_truncate($ts);
+
+                        $ts = ucfirst($tmp_ts);
+
+                        $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='".$myconfig{"new"}."' alt='new'>":""; # if .new file
+                        $ts = ucfirst($ts);
+                        print FILE ("<a href='".$myconfig{"uri"}."/$ls[$i]' target='_top'>$IMG $ts</a>\n");
+                    } else {
+                        print FILE ("&nbsp;");
+                    }
+                    $i++;
+                    $x--;
+                } # end for $y
+                print FILE ("</tr>\n");
+                $j++; # incr TR counter
+
+            } else {
+                # general menu routine
+                # TODO cleanup
+                if ($myconfig{"tr"}=~m/\%+bgcolor\%+/i){
+                    if (($j % 2) == 0){
+                        ($tmp_tr = $myconfig{"tr"}) =~ s/\%+bgcolor\%+/bgcolor=#efefef/i;
+                    } else {
+                        ($tmp_tr = $myconfig{"tr"}) =~ s/\%+bgcolor\%+//i;
+                    }
+
+                    $MENU_STR .= $tmp_tr."\n";
+
+                } else {
+                    $MENU_STR .= $myconfig{"tr"}."\n";
+                }
+
+                for ($y=1;$y<=$menu_td;$y++){
+                    # close the TD tags
+                    if ($y > 1) { 
+                        $MENU_STR .= "\t </td> \n";
+                    }   
+                    $MENU_STR .= "\t".$myconfig{"td"}."\n";
+
+                    # menu entries
+                    if ( $ls[$i] ne "" ) {
+                        # if link exists, otherwise leave it blank
+                        # TODO there is a better way to do this... find it...
+                        ( $ts = $ls[$i]) =~ s,(.*)/$FILE_NAME.$myconfig{"ext"},$1,gi;
+
+                        $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='".$myconfig{"new"}."' alt='new'>":""; # if .new file
+
+                        # if number of characters is greater than $STR_LIMIT
+                        # truncate $ts to a few characters.
+
+                        if ( $nautilus_root gt "" ) {
+                            ( $ls[$i] = $ls[$i] ) =~ s,$nautilus_root/,,g;
+                            ( $ts = $ts ) =~ s,$nautilus_root/*,,g;
+                        }
+
+                        my $tmp_ts = str_truncate($ts);
+
+                        $ts = ucfirst($tmp_ts);
+
+                        # $ls tends to hold the whole filename path+filename
+                        # we don't care about the whole path here...
+
+                        $MENU_STR .= "<a href='".$myconfig{"uri"}."/$ls[$i]' target='_top'>$IMG $ts</a>\n";
+
+                    } else {
+                        $MENU_STR .= "&nbsp;";
+                    }
+                    $i++;
+                    $x--;
+                } # end for $y
+                $MENU_STR .= "</tr>\n";
+                $j++; # incr TR counter
+            } # end if/else menuonly
+        }
         if ( $MENUONLY > 0 ) {
-            if ($myconfig{"tr"}=~m/\%+bgcolor\%+/i){
-                if (($j % 2) == 0){
-                    ($tmp_tr = $myconfig{"tr"}) =~ s/\%+bgcolor\%+/bgcolor=#efefef/i;
-                } else {
-                    ($tmp_tr = $myconfig{"tr"}) =~ s/\%+bgcolor\%+//i;
-                }
+            print FILE ("</table>\n");
+        }
+        $MENU_STR .= "</table>\n";
 
-                print FILE ($tmp_tr."\n");
-
-            } else {
-                print FILE ($myconfig{"tr"}."\n");
-            }
-            for ($y=1;$y<=$menu_td;$y++){
-                # close the TD tags
-                if ($y > 1) { 
-                    print FILE ("\t </td> \n"); 
-                }   
-                print FILE ("\t".$myconfig{"td"}."\n");
-
-                if ( $ls[$i] ne "" ) {
-                    # if link exists, otherwise leave it blank
-                    # TODO there is a better way to do this... find it...
-                    
-                    ($ts = $ls[$i]) =~ s#(.*)/$FILE_NAME.$myconfig{"ext"}#$1#gi;
-
-                    # from nautilus one cannot pass arguments
-                    # "--menuonly" but... just to keep things
-                    # consistent...
-                    
-                    # if number of characters is greater than $STR_LIMIT
-                    # truncate $ts to a few characters.
-                
-                    if ( $nautilus_root gt "" ) {
-                        ( $ls[$i] = $ls[$i] ) =~ s,$nautilus_root/,,g;
-                        ( $ts = $ts ) =~ s,$nautilus_root/*,,g;
-                    }
-
-                    my $tmp_ts = str_truncate($ts);
-
-                    $ts = ucfirst($tmp_ts);
-
-                    $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='".$myconfig{"new"}."' alt='new'>":""; # if .new file
-                    $ts = ucfirst($ts);
-                    print FILE ("<a href='".$myconfig{"uri"}."/$ls[$i]' target='_top'>$IMG $ts</a>\n");
-                } else {
-                    print FILE ("&nbsp;");
-                }
-                $i++;
-                $x--;
-            } # end for $y
-            print FILE ("</tr>\n");
-            $j++; # incr TR counter
-
-        } else {
-            # general menu routine
-            # TODO cleanup
-            if ($myconfig{"tr"}=~m/\%+bgcolor\%+/i){
-                if (($j % 2) == 0){
-                    ($tmp_tr = $myconfig{"tr"}) =~ s/\%+bgcolor\%+/bgcolor=#efefef/i;
-                } else {
-                    ($tmp_tr = $myconfig{"tr"}) =~ s/\%+bgcolor\%+//i;
-                }
-
-                $MENU_STR .= $tmp_tr."\n";
-
-            } else {
-                $MENU_STR .= $myconfig{"tr"}."\n";
-            }
-
-            for ($y=1;$y<=$menu_td;$y++){
-                # close the TD tags
-                if ($y > 1) { 
-                    $MENU_STR .= "\t </td> \n";
-                }   
-                $MENU_STR .= "\t".$myconfig{"td"}."\n";
-
-                # menu entries
-                if ( $ls[$i] ne "" ) {
-                    # if link exists, otherwise leave it blank
-                    # TODO there is a better way to do this... find it...
-                    ( $ts = $ls[$i]) =~ s,(.*)/$FILE_NAME.$myconfig{"ext"},$1,gi;
-
-                    $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='".$myconfig{"new"}."' alt='new'>":""; # if .new file
-                    
-                    # if number of characters is greater than $STR_LIMIT
-                    # truncate $ts to a few characters.
-
-                    if ( $nautilus_root gt "" ) {
-                        ( $ls[$i] = $ls[$i] ) =~ s,$nautilus_root/,,g;
-                        ( $ts = $ts ) =~ s,$nautilus_root/*,,g;
-                    }
-
-                    my $tmp_ts = str_truncate($ts);
-
-                    $ts = ucfirst($tmp_ts);
-
-                    # $ls tends to hold the whole filename path+filename
-                    # we don't care about the whole path here...
-
-                    $MENU_STR .= "<a href='".$myconfig{"uri"}."/$ls[$i]' target='_top'>$IMG $ts</a>\n";
-
-                } else {
-                    $MENU_STR .= "&nbsp;";
-                }
-                $i++;
-                $x--;
-            } # end for $y
-            $MENU_STR .= "</tr>\n";
-            $j++; # incr TR counter
-        } # end if/else menuonly
-    }
-    if ( $MENUONLY > 0 ) {
-        print FILE ("</table>\n");
-    }
-    $MENU_STR .= "</table>\n";
+    } # end if total_links
 
     # see previous notes on header
     if ( $MENUONLY > 0 && $myconfig{"menuheader_footer"} > 0) {
@@ -1061,7 +1216,10 @@ sub menu_file {
         close(FILE);
     }
 
-    print STDERR "$total_links links in menu.\n";
+    if ( $total_links > 1 ) {
+        print $LOGFILE "$total_links links in menu.\n";
+    }
+
     return $MENU_STR;
 }
 
@@ -1077,3 +1235,29 @@ sub str_truncate
     return $str;
 }
 
+
+
+sub progressbar
+{
+    my ($PROGRESS,$TOTAL)=@_;
+    
+    chomp($PROGRESS);
+    chomp($TOTAL);
+
+    my $current = 0;
+
+    # make sure we don't divide by 0
+    if ( $TOTAL > 0 ) 
+    {
+        $current = sprintf( "%02d",($PROGRESS/$TOTAL) * 100 );
+        print $GAUGE $current."\n";
+    }
+}
+
+sub progressbar_msg
+{
+    my ($MESSAGE) = @_;
+
+    chomp($MESSAGE);
+    print $GAUGE  "XXX\n".$MESSAGE."\nXXX\n";
+}

@@ -2,6 +2,11 @@
 # a quick nautilus script to make isos... 
 # Just select the directory you want and choose this script
 # from the nautilus script menu.
+#
+# from the command line you can do:
+# mkisofs.pl DIR
+# or
+# mkisofs.pl DIR dvd # to make a DVD image
 
 $DEBUG=0;
 
@@ -19,6 +24,15 @@ chomp($ARGV[0]); # remove end-line
 
 print "Argument: $ARGV[0] | Volume Name: $volumeid | FileName: $name\n" if $DEBUG == 1;
 sleep(5) if $DEBUG == 1;
-system("mkisofs -J -r -v -o '$name' -V '$volumeid' ".$ARGV[0]);
-
+if ( $ARGV[1] eq "dvd" ) 
+{
+    # fix permissions
+    system("chmod 0500 ".$ARG[0]);
+    system("find ".$ARG[0]." -type d -exec chmod 0500 {} \; ");
+    system("find ".$ARG[0]." -type f -exec chmod 0400 {} \; ");
+    # make iso
+    system("mkisofs -dvd-video -o '$name' -V '$volumeid' ".$ARGV[0]);
+} else {
+    system("mkisofs -J -r -v -o '$name' -V '$volumeid' ".$ARGV[0]);
+}
 #eof

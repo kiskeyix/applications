@@ -1,10 +1,11 @@
 #!/bin/bash
-# $Revision: 1.27 $
+# $Revision: 1.28 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2004-Feb-19
 #
 # DESCRIPTION:  an interactive wrapper to Debian's "make-kpkg"
-#               to build a custom kernel package.
+#               to build a custom kernel package using 
+#               Distributed CC (distcc) and ccache if available.
 #               
 # USAGE:    cd to /usr/src/linux (or the linux source tree)
 #           and then call:
@@ -144,7 +145,7 @@ if [ $1 -a $1 != "--help" ]; then
         make-kpkg clean
         make-kpkg   --rootcmd $FAKEROOT \
         --config oldconfig \
-        --append-to-version -custom.$1 \
+        --append-to-version $1 \
         --revision $REVISION \
         $BUILD_INITRD \
         kernel_image $KERNEL_HEADERS
@@ -156,7 +157,7 @@ if [ $1 -a $1 != "--help" ]; then
         echo -e "Building kernel headers only \n"
         make-kpkg   --rootcmd $FAKEROOT \
         --config oldconfig \
-        --append-to-version -custom.$1 \
+        --append-to-version $1 \
         --revision $REVISION \
         $BUILD_INITRD \
         $KERNEL_HEADERS
@@ -167,7 +168,7 @@ if [ $1 -a $1 != "--help" ]; then
         make-kpkg clean modules_clean
         make-kpkg   --rootcmd $FAKEROOT \
         --config oldconfig \
-        --append-to-version -custom.$1 \
+        --append-to-version $1 \
         --revision $REVISION \
         $BUILD_INITRD \
         modules_image

@@ -3,9 +3,9 @@
 # Title="Mount Image"
 # Title[es]="Montar Imagen"
 #
-# $Revision: 1.9 $
+# $Revision: 1.10 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2003-Oct-31
+# Last modified: 2003-Nov-07
 #
 # DESCRIPTION: Opens a dialog and asks user how to mount an image
 # INSTALL: needs zenity (or another graphical dialog replacement) 
@@ -35,7 +35,7 @@ DCYPHER="serpent"   # default cypher
 CYPHERS="TRUE serpent FALSE aes FALSE twofish FALSE blowfish FALSE des FALSE xor"
 
 # filetype formats
-FORMATS="TRUE ext2 FALSE ext3 FALSE iso9660 FALSE ntfs FALSE msdos FALSE fat FALSE efs"
+FORMATS="TRUE ext2 FALSE ext3 FALSE iso9660 FALSE udf FALSE reiserfs FALSE jfs FALSE xfs FALSE minix FALSE ntfs FALSE msdos FALSE vfat FALSE efs"
 
 # paths
 MOUNTDIR="$HOME/mnt"

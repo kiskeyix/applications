@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.74 $
+# $Revision: 1.75 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -34,6 +34,7 @@ use FileHandle;
 use File::Temp qw/ tempfile  /;     # Perl 5.6.1: 
                                     # used to get secured temp file
 use File::Basename; # basename();
+use File::Find; # find()
 
 STDOUT->autoflush(1);
 
@@ -64,7 +65,7 @@ my $TITLESET=1; # default titleset when doing dvd9todvd5.
 my ($SVIDEO_FORMAT,$ROOT_DIRECTORY,$nice,$DIVX,$DIVX_OPT,
     $XV,$XINE,$CLUSTER_CONFIG,$XTERM,$RMCMD,$AVIPLAY,$LOGO,
     $POSLOGO,$STARTLOGO,$TIMELOGO,$LANGUAGE,$DEF_AUDIOCHANNEL,
-    $AO,$EXTSUB) = "";
+    $AO,$EXTSUB,$DVD) = "";
 
 my $userconfigfile="$HOME/.V2divxrc";
 my $userconfig="
@@ -196,6 +197,19 @@ my $NVREC=0; # By default NVREC is not here
 my $OGMTOOL=0; # By default ogmmerge is not here
 my $SUBRIP=0; # By default srtsubrip is not here
 my $MULTIPLEXER="tcmplex"; # By default use this multiplexer
+# end defaults #
+
+# TODO we create simple DVDs here, the user might want to pass a more
+# complicated .XML file fromt he command line... will provide a switch
+# for that later. For now, we generate our own:
+# XXXFILEXXX is in the form(s):
+## LH string will be replaced (s///) with RH string
+# XXXFILEXXX := <vob file="video.mpg" />
+# XXXFILEXXX := <vob file="video1.mpg" />\n<vob file="video2.mpg" />...
+my $DVDAUTHOR = "<dvdauthor>\n<vmgm />\n    <titleset>\n        <titles>\n            <pgc>\n                XXXFILEXXX\n            </pgc>\n        </titles>\n    </titleset>\n</dvdauthor>\n"; # xml file
+
+# global for do_file_ary
+my @ary_files = ();
 
 my $urldvdtitle="$GREEN\t V2divx is unable to find dvdtitle in your PATH.\n\t Code Sources of dvdtitle are available at : \n\t http://www.lpm.univ-montp2.fr/~domi/V2divx/dvdtitle.tgz\n $NORM\n";
 
@@ -227,7 +241,8 @@ my $usage="
     '-L|--logo=s'                   Logo image file
     '-l|--lang|--language=s'        Use this language [fr,en,es,...]
     '-S|--SUB_TITLE_opts=s'         Subtitle Options
-    '-multiplex=s'                  Use this multiplexer [tcmplex,mplex]
+    '-m|--multiplex=s'              Use this multiplexer [tcmplex,mplex]
+    '-M|--make-dvd=s'               Use this name to create a DVD iso
     # numbers
     '-a|--default_audio_channel=i'  Number of Audio Channels
     '-titleset=i'                   Rip this TitleSet for DVD-9 to DVD-5
@@ -535,6 +550,66 @@ sub say_end
     }
 
 } # end say_end()
+
+sub which 
+{
+    # @param 0 string := binary to find in $ENV{PATH}
+    # returns binary plus path found
+    my $binary = shift;
+    my $path = "-1"; # string to return when found
+    foreach my $binary_path ( split(/:/,$ENV{"PATH"}) )
+    {
+        next if ( -x "$path" ); # a quick way out. after finding
+                                # first binary in $ENV{PATH}
+        if ( -x "$binary_path"."/$binary")
+        {
+            $path = "$binary_path"."/$binary";
+        }
+    }
+    return $path; # -1 means not found
+}
+
+sub do_file_ary {
+    # @param 0 string := directory to start search
+    # uses find() to recur thru directories
+    # returns an array of files
+    # i.e. in directory "a" with the files:
+    # /a/file.txt
+    # /a/b/file-b.txt
+    # /a/b/c/file-c.txt
+    # /a/b2/c2/file-c2.txt
+    # 
+    # my @ary = &do_file_ary(".");
+    # 
+    # will yield:
+    # a/file.txt
+    # a/b/file-b.txt
+    # a/b/c/file-c.txt
+    # a/b2/c2/file-c2.txt
+    # 
+    my $ROOT = shift;
+    my %opt = (wanted => \&process_file, no_chdir=>1);
+    @ary_files = (); # reset array
+    find(\%opt,$ROOT);
+    return @ary_files;
+} # iend do_file_ary
+
+sub process_file {
+    # @param 0 string := filename
+    # checks whether filename passes some tests:
+    my $base_name = basename($_);
+    # TODO find a way to pass exceptions to this file. for now,
+    # they are hardcoded
+    if  ( 
+        -f $_ 
+        && $base_name !~ m/^\.[a-zA-Z0-9]+$/  # skip dot files
+        && $base_name =~ m/\.(vob|mpe{0,1}g)$/i # skip non-movie files
+        ) 
+    {
+        s/^\.\/*//g; # if dir is . (current), remove starting ./
+        push @ary_files,$_;
+    }
+} #end process_file
 
 # === Routines === #
 
@@ -3524,10 +3599,8 @@ sub dvd9to5
     my $dir = shift;
     my $title = shift;
 
-    my $TCMPLEX = qx/which tcmplex/;
-    my $MPLEX = qx/which mplex/;
-    chomp($TCMPLEX);
-    chomp($MPLEX);
+    my $TCMPLEX = which("tcmplex");
+    my $MPLEX = which("mplex"); #chomp($TCMPLEX);#chomp($MPLEX);
 
     $title = ($title =~ /\d+/) ? $title : 1;
     # files
@@ -3626,21 +3699,11 @@ sub dvd9to5
 
     if ( $UNLINK_CONFIG )
     {
-        unlink($multiplex_config) or warn("Could not remove file. $!");
+        unlink($multiplex_config) or pwarn("Could not remove file. $!");
     }
     say_end();
-    # a few things one might want to do, maybe if passed a --create-dvd-iso:
-    #tcprobe -i /dev/dvd -T 1 -H 10 2>&1 | egrep "\[Chapter ..\] " |\
-    #cut -d " " -f 4 | perl -pi -e 's/\n/,/' |  \
-    #perl -pi -e 's/,$//' >chap.list
-    #
-    #dvdauthor -t -a ac3+en -c `cat chap.list` -o dvd movie-new.vob
-    #
-    #dvdauthor -T -o dvd
-    #
-    #mkisofs -dvd-video -udf -o dvd.iso dvd
-    # However, some users might use their video.mpeg with DVDAuthor or
-    # other GUIs to master their DVDs with menus and other widgets
+    # ask to make DVD image
+    #make_dvd($dir); # $DVD name is chosen for us. we could use basename($dir)... but...
 } # end dvd9to5()
 
 sub avitovcd
@@ -3726,6 +3789,88 @@ sub avitovcd
     say_end();
 } # end avitovcd()
 
+sub make_dvd
+{
+    #@param 0 string := directory containing .VOB or .MP[E]{0,1}G (case insensitive)
+    #@param 1 string := name for DVD (tmp/NAME.iso and name of DVD). Defaults to "V2VDVD"
+    
+    my $dir = shift;
+    my $name = shift;
+
+    my $VOLIDMAXLENGTH=32; # max name for this DVD
+    my $UNLINK_CONFIG=0; # will be useful later
+
+    $name = ($name ne "") ? $name : "V2DVD";
+    # cleanup $name
+    ($name = $name) =~ s,[\s]+,_,g; # replace whitespaces with _
+    ($name = $name) =~ y/[A-Z]/[a-z]/; #uppercase $name
+    $name = substr($name,0,$VOLIDMAXLENGTH); # limit no. of characters
+
+    my $dvdauthor = which("dvdauthor");
+    if ( !-x $dvdauthor )
+    {
+        # no need to continue
+        perror("dvdauthor not found in PATH=". $ENV{'PATH'}."!");
+        exit(1);
+    } else {
+        # mk tmp directory
+        mkdir("tmp",oct(1777)) or die ("Could not create tmp directory. $!");
+    }
+    pinfo("$v2d DVD name : $name");
+
+    # make DVD
+
+    my @files = do_file_ary("$dir");
+
+    my $files = ""; # strings for XML
+    my $mfiles = ""; # $dir+movie files. serialize
+
+    foreach my $file (@files) # maybe there is a simpler way to do this
+    {
+        $files .= " <vob file=\"$file\" />\n";
+        $mfiles .= " $dir/$file ";
+    }
+    
+    ($DVDAUTHOR = $DVDAUTHOR) =~ s/XXXFILEXXX/$files/g;
+
+    open(XML,">tmp/dvdauthor.xml") 
+        or die ("Could not create file tmp/dvdauthor.xml. $!");
+    $UNLINK_CONFIG=1; # will be useful when users pass their .xml files
+    print XML "$DVDAUTHOR"; 
+    close(XML);
+  
+    if ( -d "tmp/$name" )
+    {
+        pwarn("Directory 'tmp/$name' exists.".
+        " Please remove this directory first to ensure ".
+        "that DVD will be playable. ".
+        "I assume that you know what you are doing");
+    }
+
+    system("$dvdauthor -o 'tmp/$name' -x 'tmp/dvdauthor.xml' $mfiles ") 
+        or die("Could not create DVD directory at tmp. $!\n");
+
+    # remove XML file
+    unlink("tmp/dvdauthor.xml") if ( $UNLINK_CONFIG );
+    
+    # make DVD Image
+    my $mkisofs = which("mkisofs");
+    if ( !-x $mkisofs )
+    {
+        # we make the dvd, but warn about the image
+        perror("mkisofs not found in PATH=".$ENV{'PATH'}."! The DVD directory will be created in tmp anyway. You will need to run 'cd tmp && mkisofs -dvd-video -udf -o '$name.iso' -V '$name' '$name' ");
+    } else {
+        pinfo("$v2d Image Path : $dir/tmp/$name.iso");
+        chdir("tmp"); # makes things simpler
+        # fix permissions. TODO use find() later to avoid system()
+        chmod(oct(0555),$name); # oct() changes to oct-based numbers
+        system("find '$name' -type d -exec chmod 0555 {} \\; ") or pwarn("Could not update permissions for directories. $!\n");
+        system("find '$name' -type f -exec chmod 0444 {} \\; ") or pwarn("Could not update permissions for files. $!\n");
+        # make iso
+        system("$mkisofs -dvd-video -udf -o '$name.iso' -V '$name' '$name'"); #-dvd-video implies UDF, but...
+    }
+} # end make_dvd()
+
 # ************ End of Functions Declarations *********** #
 
 # ********************* MAIN () ************************ #
@@ -3775,7 +3920,8 @@ GetOptions(
     'L|logo=s'                  => \$LOGO, 
     'l|lang|language=s'         => \$LANGUAGE, 
     'S|SUB_TITLE_opts=s'        => \$EXTSUB,
-    'multiplex=s'               => \$MULTIPLEXER,
+    'm|multiplex=s'             => \$MULTIPLEXER,
+    'M|make-dvd=s'              => \$DVD,
     # numbers
     'a|default_audio_channel=i' => \$DEF_AUDIOCHANNEL,
     'titleset=i'                => \$TITLESET,
@@ -3878,7 +4024,13 @@ if ( $SRTSUBRIP )
 # Convert from DVD9 format to DVD5
 if ($DVD9TO5 > 0)
 {
-    dvd9to5($ARGV[0],$TITLESET);
+    dvd9to5($ARGV[0],$TITLESET); # calls make_dvd()
+    exit(0);
+}
+
+if ( defined($DVD) && $DVD !~ m/^\s+$/i && -d $ARGV[0] )
+{
+    make_dvd($ARGV[0],$DVD);
     exit(0);
 }
 

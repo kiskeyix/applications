@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Jan-20
 #
@@ -14,6 +14,8 @@ $|++;
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
 
+my $MASTER_HOST = "http://lems1.kiskeyix.org";
+my $LOCAL_PATH  = "$ENV{'HOME'}/Shared/software/settings";
 my $REMOTE_HOSTS_FILE = "$ENV{'HOME'}/.remote-hosts";
 # path to temporary directory
 my $TMP="tmp";
@@ -29,31 +31,59 @@ my @hosts; # global variable to hold hosts
 my $VERBOSE=0;
 my $DEBUG=0;
 my $REMOVE_FILES=0;
+my $MASTER=0; # update current host from $MASTER_HOST
 
 my $VERBOSE_ARGS="";
-my $WGET_ARGS="";
+my $WGET_ARGS="--continue --timestamping";
 
 ## GET OPTIONS ##
 GetOptions(
     # flags
     'debug'         =>  \$DEBUG,
     'remove'        =>  \$REMOVE_FILES,
-    'verbose'       =>  \$VERBOSE
+    'verbose'       =>  \$VERBOSE,
+    'master'        =>  \$MASTER
 );
 ## START SCRIPT ##
+
 if ( $VERBOSE )
 {
     $VERBOSE_ARGS="v";
 } else {
-    $WGET_ARGS="-nv ${WGET_ARGS}";
+    $WGET_ARGS="-nv $WGET_ARGS";
 }
 
 ## main ##
-slurp_hosts($REMOTE_HOSTS_FILE);
 my $j =0;
-
 my $n_files = $#FILES+1;
 my $silent = ( ! $VERBOSE ) ? " > /dev/null 2>&1" : "";
+
+# update master and exit
+if ( $MASTER )
+{
+    chdir($LOCAL_PATH) or die ("$LOCAL_PATH $!");
+    foreach my $i ( @FILES )
+    {
+        print STDOUT "\n";
+        printf STDOUT ("%20s","wGetting $MASTER_HOST/$i");
+        system("wget $WGET_ARGS $MASTER_HOST/$i");
+        print STDOUT ( $? ) ? " failed": " done";
+    }
+    chdir("$ENV{'HOME'}");
+    foreach my $i ( @FILES )
+    {
+        $j++;
+        print STDOUT "\r";
+        printf STDOUT ("%20s","localhost"); # host padded
+        printf STDOUT ("|%-".$n_files."s|", "#" x $j); # progress
+        my $cmd = "command tar x".$VERBOSE_ARGS."jf '$LOCAL_PATH/$i'";
+        system($cmd.$silent);
+    }
+    print STDOUT "\n";
+    exit(0);
+}
+
+slurp_hosts($REMOTE_HOSTS_FILE);
 
 #print "\e[H\e[J"; # clear the screen
 
@@ -67,7 +97,7 @@ foreach my $h ( @hosts )
     {
         if ( ! is_alive($h) )
         {
-            print STDOUT ("$h is dead\n");
+            printf STDOUT ("%20s","$h is dead\n");
             next;
         }
         $j=0;
@@ -82,7 +112,7 @@ foreach my $h ( @hosts )
             print STDOUT "\r";
             printf STDOUT ("%20s",$h); # host padded
             printf STDOUT ("|%-".$n_files."s|", "#" x $j); # progress
-            system("scp ~/Shared/software/settings/$i $h:$TMP/ ".$silent); 
+            system("scp $LOCAL_PATH/$i $h:$TMP/ ".$silent); 
             my $cmd = "ssh $h command tar x".$VERBOSE_ARGS."jf '$TMP/$i'";
             system($cmd.$silent);
             if ( $REMOVE_FILES )

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.29 $
+# $Revision: 1.30 $
 # Luis Mondesi  <lemsx1@hotmail.com> 2002-01-17
 # 
 # USAGE: 
@@ -661,9 +661,9 @@ sub thumb_html_files {
         if ( $myconfig{footer} eq "" ) {
             print FILE ($myconfig{footer}."\n");
             print FILE ("</center></body>\n");
-            print FILE ("</HTML>");
+            print FILE ("</HTML>\n");
         } else {
-            print FILE ($myconfig{footer});
+            print FILE ($myconfig{footer}."\n");
         }            
         close(FILE);
         # end HTML

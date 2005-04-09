@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.22 $
+# $Revision: 1.23 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -145,7 +145,7 @@ Sets $MASTER_HOST to URL
 
 Comma separated list of files to get/upgrade instead of the defaults at @FILES.
 
-=item --host-file FILE
+=item --hosts-file FILE
 
 Uses FILE instead of ~/.remote-hosts as our hosts file. This file is in the same format as /etc/hosts.
 

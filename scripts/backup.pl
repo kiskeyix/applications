@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.38 $
+# $Revision: 1.39 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Mar-13
 #
@@ -275,7 +275,7 @@ if ( ! -f $TMP_LOCK ) {
         $TMP_EXCLUDES .= "'";
 
         # construct our main command
-        $COMMAND = sprintf("%s cf - %s  xxFILESxx 2> /dev/null ",
+        $COMMAND = sprintf("%s -clps --same-owner --atime-preserve -f - %s  xxFILESxx 2> /dev/null ",
             $CONFIG{"TAR"},
             $TMP_EXCLUDES
         );

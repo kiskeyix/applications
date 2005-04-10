@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.37 $
+# $Revision: 1.38 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Mar-13
 #
@@ -382,7 +382,7 @@ if ( ! -f $TMP_LOCK ) {
     }
 
     # DEBUG: print content of %user hash
-    print STDOUT join("\n",%user)."\n" if ( ! $DEBUG ); 
+    print STDOUT join("\n",%user)."\n" if ( $DEBUG ); 
 
     # Users backup
     print STDOUT "Backing up users files... \n";

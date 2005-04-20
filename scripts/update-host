@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.24 $
+# $Revision: 1.25 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -405,8 +405,22 @@ sub update_host
         $j++;
         print STDOUT "\r";
         printf STDOUT ("%20s",$h); # host padded
-        system("scp $LOCAL_PATH/$i $h:$TMP/ ".$silent); 
+        system("scp $LOCAL_PATH/$i $h:$TMP/ ".$silent);
+
+        # TODO find a way to get the path to *zcat on remote host?
+        my $_zcat = ( $i =~ /\.bz2$/i ) ? "bzcat" : "zcat"; # zcat or bzcat?
+        my $_tar_arg = ( $i =~ /\.bz2$/i ) ? "j" : "z"; # gzip or bzip2?
+        my $tar = "tar";
+        if ( -x $_zcat )
+        {
+            $cmd = "ssh $h command $_zcat '$TMP/$i' | command $tar x".$VERBOSE_ARGS."f - ";
+        } else {
+            # assume tar can decompress on the fly
+            debug("Falling back to $tar...");
+            $cmd = "command $tar x".$VERBOSE_ARGS.$_tar_arg." f '$TMP/$i'";
+        }
         my $cmd = "ssh $h command tar x".$VERBOSE_ARGS."jf '$TMP/$i'";
+
         system($cmd.$silent);
         if ( ! $? ) 
         {

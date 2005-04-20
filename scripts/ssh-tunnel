@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Id: ssh-tunnel,v 1.1 2005-04-04 19:52:57 luigi Exp $
+# $Id: ssh-tunnel,v 1.2 2005-04-20 19:16:22 luigi Exp $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: creates a tunnel between 2 servers through ssh
@@ -9,7 +9,7 @@ USAGE="USAGE: $0 [USER@]SERVER [PORT]"
 
 LOCALHOST="127.0.0.1"
 # ssh arguments
-ARG=" -X "
+ARG=" -c blowfish -X "
 
 if [ x$2 != "x" ]; then
     ssh $ARG -L $2:$LOCALHOST:$2 "$1"

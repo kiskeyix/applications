@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.23 $
+# $Revision: 1.24 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -239,13 +239,17 @@ if ( $MASTER )
         $j++;
         print STDOUT "\r"; 
         my $cmd = "";
-        if ( -x which("bzcat") )
+        my $_zcat = ( $i =~ /\.bz2$/i ) ? which("bzcat") : which("zcat"); # zcat or bzcat?
+        my $_tar_arg = ( $i =~ /\.bz2$/i ) ? "j" : "z"; # gzip or bzip2?
+
+        my $tar = which("tar");
+        if ( -x $_zcat )
         {
-            $cmd = "command bzcat '$LOCAL_PATH/$i' | command tar x".$VERBOSE_ARGS."f - ";
+            $cmd = "command $_zcat '$LOCAL_PATH/$i' | command $tar x".$VERBOSE_ARGS."f - ";
         } else {
             # assume tar can decompress on the fly
-            debug("Falling back to tar...");
-            $cmd = "command tar x".$VERBOSE_ARGS."jf '$LOCAL_PATH/$i'";
+            debug("Falling back to $tar...");
+            $cmd = "command $tar x".$VERBOSE_ARGS.$_tar_arg." f '$LOCAL_PATH/$i'";
         }
 
         system($cmd.$silent);

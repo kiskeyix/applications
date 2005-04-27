@@ -1,12 +1,14 @@
 #!/usr/bin/perl -w
-# $Revision: 1.24 $
+# $Revision: 1.25 $
 # Luis Mondesi < lemsx1@gmail.com >
-# Last modified: 2005-Mar-01
+#
+# URL: http://www.kiskeyix.org/downloads/find.pl.gz
 #
 # DESC: finds a string in a set of files
 #
 # USAGE: 
-#   find_infile.pl "string" ".*\.html"
+#   find.pl "string" ".*\.html"
+#   find.pl --replace="bar" "foo"
 #
 # BUGS: if replacement string contains invalid characters
 #       nothing gets done. Have to find a way to escape

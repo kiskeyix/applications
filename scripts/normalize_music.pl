@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.15 $
+# $Revision: 1.16 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2004-Dec-07
 #
@@ -70,6 +70,7 @@ if ( defined ($FILE) and -f $FILE )
     {
         print STDERR _rename($_),"\n";
     }
+    # TODO remove empty directories if --remove-empty-dirs
 }
 
 # support functions

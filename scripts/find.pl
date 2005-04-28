@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.25 $
+# $Revision: 1.26 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # URL: http://www.kiskeyix.org/downloads/find.pl.gz
@@ -47,7 +47,9 @@ my $thisFile = "";      # general current file
 my @new_file = ();      # lines to be printed in new file
 my @ls = ();            # array of files
 
-my ($this_string,$that_string,$f_pattern) = "";
+my $this_string=undef;
+my $that_string=undef;
+my $f_pattern = undef;
 
 GetOptions(
     # flags
@@ -58,13 +60,15 @@ GetOptions(
     'r|replace=s'      =>   \$that_string
 ) and $this_string = shift and $f_pattern = shift;
 
-if ( defined $f_pattern && $f_pattern =~ m(^\.) )
+die ( "Sorry. Can't search for (nul)" ) if ( defined($this_string) and $this_string =~ m/^\s*$/ );
+
+if ( defined($f_pattern) and $f_pattern =~ m(^\.) )
 {
     print "WARNING: using a dot in file pattern can match too many files. Escape dots with '\.'.\n Waiting 5 seconds before continuing\n Press CTRL+C to abort script execution\n" ;
     sleep(5);
 }
 
-if (!$f_pattern) {
+if (! defined($f_pattern) ) {
     print STDERR "All files chosen\n";
     $f_pattern = ".*";
 }
@@ -100,7 +104,7 @@ if ($this_string =~ /\w/) {
         $modified = 0; # clear flag
 
         open (FILE,"<$thisFile") or die "could not open $thisFile. $!\n";
-        if ( $that_string )
+        if ( defined($that_string) )
         {
             while(<FILE>) {
                 $i++;

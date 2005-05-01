@@ -1,5 +1,5 @@
 #!/bin/sh
-LOCKFILE="/tmp/.apt-move.lck"
+LOCKFILE="/dev/shm/apt-move.lck"
 DEBUG=0     # should debugging messages be displayed? $0 0 1 see $1
 VERBOSE=0   # should informational messages be displayed? $0 1 see $2
 ARCH="i386" # default arch for this script
@@ -15,25 +15,25 @@ set -e
 function debug()
 {
     if [ $DEBUG -eq 1 ]; then
-        echo "DEBUG: $1"
+        echo "DEBUG: $@"
     fi
 }
 
 function info()
 {
     if [ $VERBOSE -eq 1 ]; then
-        echo "DEBUG: $1"
+        echo "INFO: $@"
     fi
 }
 
 function move_deb_from_tmp()
 {
     debug "Entering move_deb_from_tmp()"
-    for i in `/bin/ls /tmp/*.deb /home/Shared/tmp/*.deb 2> /dev/null`; do
+    for i in `/bin/ls /tmp/*.deb /home/Shared/tmp/*.deb /var/tmp/*.deb 2> /dev/null`; do
         # move new packages into archives directory
         /bin/mv -u "$i" $CACHEDIR
         if [ -f "$i" ]; then
-            # if old package, remove it from /tmp /home/Shared/tmp
+            # if old package, remove it from tmp dirs
             debug "Removing $i"
             rm -f "$i";
         fi
@@ -48,7 +48,7 @@ if [ $2 ]; then
 fi
 
 if [ -f "$LOCKFILE" ]; then
-    echo "Another instance running ... exiting "
+    echo "Another instance of $0 running ... exiting "
     exit 0
 fi
 # create lock with timestamp

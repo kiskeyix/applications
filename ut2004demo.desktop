@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Encoding=UTF-8
+Name=ut2004demo
+Comment=
+Exec=/usr/local/games/ut2004demo/ut2004demo
+Terminal=false
+Icon=/usr/local/games/ut2004demo/ut2004demo.xpm
+Type=Application
+Categories=Application;Game;3DGame;
+Name[en_US]=Unreal Tournament 2004

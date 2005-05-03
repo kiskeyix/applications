@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.16 $
+# $Revision: 1.17 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2004-Dec-07
 #
@@ -35,6 +35,7 @@ my @ls=();
 my $PVERSION=0;
 my $HELP=0;
 my $DEBUG=0;
+my $VERBOSE=0;
 
 my $FILE=undef;
 
@@ -44,6 +45,8 @@ GetOptions(
     'v|version'         =>  \$PVERSION,
     'h|help'            =>  \$HELP,
     'D|debug'           =>  \$DEBUG,
+    'V|verbose'         =>  \$VERBOSE,
+
     # strings
     #'o|option=s'       =>  \$NEW_OPTION,
     # numbers
@@ -63,12 +66,12 @@ if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
 #main
 if ( defined ($FILE) and -f $FILE )
 {
-   print STDERR _rename($FILE),"\n";  # print error if any
+   print STDERR (_rename($FILE),"\n");  # print error if any
 } else {
     my $aryref = do_file_ary(".");
     foreach(@$aryref)
     {
-        print STDERR _rename($_),"\n";
+        print STDERR (_rename($_),"\n");
     }
     # TODO remove empty directories if --remove-empty-dirs
 }
@@ -133,8 +136,8 @@ sub _rename
     my $mp3 = MP3::Tag->new($this_file);
     my $hashref = $mp3->autoinfo();
     no warnings;
-    print STDOUT ("_"x69,"\n");
-    print STDOUT "file\t$this_file\n";
+    print STDOUT ("_"x69,"\n") if ( $VERBOSE );
+    print STDOUT ("file\t$this_file\n") if ( $VERBOSE );
     # tracks,artist,album are not that essential:
     #'song','track','artist','album'
     if ( $hashref->{'track'} =~ m/^\s*$/ )
@@ -154,7 +157,7 @@ sub _rename
         return "$_ missing. Bailing out" if ( $hashref->{$_} =~ m/^\s*$/ );
         # clean chars that might not be good for filenames
         $hashref->{$_} =~ s/[^ραινσϊ\w\d\!\@\*\#\%\(\)\[\]\_\-\:\,\.\'\"\{\}\=\+\ ]//gi;
-        print STDOUT ($_, "\t", $hashref->{$_}, "\n");
+        print STDOUT ($_, "\t", $hashref->{$_}, "\n") if ( $VERBOSE );
     }
     my ($track,$garbage) = split(/\//,$hashref->{'track'});
     $track =~ s/^(\d{1,2}).*$/$1/g;
@@ -162,7 +165,7 @@ sub _rename
     print STDERR ("DEBUG: EXT $1\n") if ( $DEBUG );
     my $path = lc( catdir($hashref->{'artist'},$hashref->{'album'}) );
     my $file = lc( catfile($path,$track."-".$hashref->{'song'}.$1) );
-    print STDOUT ("to file\t$file\n");
+    print STDOUT ("to file\t$file\n") if ( $VERBOSE );
     # silently bail out if we have done this file before
     return "" if ( $file eq $this_file );
     if ( ! -f "$file" )
@@ -171,10 +174,10 @@ sub _rename
         _mkdir($path) if ( ! -d "$path" );
         if ( ! rename ( "$this_file","$file" ) )
         {
-            print STDOUT ("Renaming $this_file to $file failed. Do you have permissions to write in $path?\n");
+            print STDERR ("Renaming $this_file to $file failed. Do you have permissions to write in $path?\n");
         }
     } else {
-        print STDOUT ("$file skipped\n"); # we'll never reach here
+        print STDERR ("$file skipped\n") if ( $DEBUG );
     }
 }
 

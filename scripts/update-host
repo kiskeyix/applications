@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.26 $
+# $Revision: 1.27 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -414,7 +414,7 @@ sub update_host
         my $tar = "tar";
         #if ( -x $_zcat )
         #{
-            $cmd = "ssh $h command $_zcat '$TMP/$i' | command $tar x".$VERBOSE_ARGS."f - ";
+            $cmd = "ssh $h 'command $_zcat '$TMP/$i' | command $tar x".$VERBOSE_ARGS."f -' ";
         #} else {
             # assume tar can decompress on the fly
         #    debug("Falling back to $tar...");

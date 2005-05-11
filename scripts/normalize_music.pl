@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.17 $
+# $Revision: 1.18 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2004-Dec-07
 #
@@ -36,16 +36,18 @@ my $PVERSION=0;
 my $HELP=0;
 my $DEBUG=0;
 my $VERBOSE=0;
+my $SHOW_DUPS=0;
 
 my $FILE=undef;
 
 # get options
 GetOptions(
     # flags
-    'v|version'         =>  \$PVERSION,
-    'h|help'            =>  \$HELP,
-    'D|debug'           =>  \$DEBUG,
-    'V|verbose'         =>  \$VERBOSE,
+    'v|version'             =>  \$PVERSION,
+    'h|help'                =>  \$HELP,
+    'D|debug'               =>  sub { $DEBUG++; $VERBOSE++; $SHOW_DUPS++; },
+    'V|verbose'             =>  sub { $VERBOSE++; $SHOW_DUPS++; },
+    'S|show-duplicatets'    =>  \$SHOW_DUPS,
 
     # strings
     #'o|option=s'       =>  \$NEW_OPTION,
@@ -66,12 +68,12 @@ if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
 #main
 if ( defined ($FILE) and -f $FILE )
 {
-   print STDERR (_rename($FILE),"\n");  # print error if any
+   _rename($FILE);
 } else {
     my $aryref = do_file_ary(".");
     foreach(@$aryref)
     {
-        print STDERR (_rename($_),"\n");
+        _rename($_);
     }
     # TODO remove empty directories if --remove-empty-dirs
 }
@@ -135,28 +137,28 @@ sub _rename
     my $this_file=shift;
     my $mp3 = MP3::Tag->new($this_file);
     my $hashref = $mp3->autoinfo();
-    no warnings;
     print STDOUT ("_"x69,"\n") if ( $VERBOSE );
     print STDOUT ("file\t$this_file\n") if ( $VERBOSE );
     # tracks,artist,album are not that essential:
     #'song','track','artist','album'
-    if ( $hashref->{'track'} =~ m/^\s*$/ )
+    if ( ! defined($hashref->{'track'}) or $hashref->{'track'} =~ m/^\s*$/ )
     {
         $hashref->{'track'}="00/00";
     }
-    if ( $hashref->{'artist'} =~ m/^\s*$/ )
+    if ( ! defined($hashref->{'artist'}) or $hashref->{'artist'} =~ m/^\s*$/ )
     {
         $hashref->{'artist'} = "noartist";
     }
-    if ( $hashref->{'album'} =~ m/^\s*$/ )
+    if ( ! defined($hashref->{'album'}) or $hashref->{'album'} =~ m/^\s*$/ )
     {
         $hashref->{'album'} = "noalbum";
     }
     foreach(@TAGS)
     {
-        return "$_ missing. Bailing out" if ( $hashref->{$_} =~ m/^\s*$/ );
+        return "$_ missing. Bailing out" if ( ! defined($hashref->{$_}) or $hashref->{$_} =~ m/^\s*$/ );
         # clean chars that might not be good for filenames
-        $hashref->{$_} =~ s/[^ραινσϊ\w\d\!\@\*\#\%\(\)\[\]\_\-\:\,\.\'\"\{\}\=\+\ ]//gi;
+        #ρ|α|ι|ν|σ|ϊ|
+        $hashref->{$_} =~ s/([^[:alnum:]\!\@\*\#\%\(\)\[\]\_\-\:\,\.\'\"\{\}\=\+])//gi;
         print STDOUT ($_, "\t", $hashref->{$_}, "\n") if ( $VERBOSE );
     }
     my ($track,$garbage) = split(/\//,$hashref->{'track'});
@@ -167,7 +169,11 @@ sub _rename
     my $file = lc( catfile($path,$track."-".$hashref->{'song'}.$1) );
     print STDOUT ("to file\t$file\n") if ( $VERBOSE );
     # silently bail out if we have done this file before
-    return "" if ( $file eq $this_file );
+    if ( $file eq $this_file )
+    {
+        print ("$file is a duplicate of $this_file") if ( $SHOW_DUPS );
+        return;
+    }
     if ( ! -f "$file" )
     {
         print STDERR ("DEBUG: use path $path\n") if ( $DEBUG );
@@ -175,6 +181,7 @@ sub _rename
         if ( ! rename ( "$this_file","$file" ) )
         {
             print STDERR ("Renaming $this_file to $file failed. Do you have permissions to write in $path?\n");
+            return;
         }
     } else {
         print STDERR ("$file skipped\n") if ( $DEBUG );
@@ -192,6 +199,8 @@ normalize_music.pl - normalize_music script for Perl by Luis Mondesi <lemsx1@gma
 B<normalize_music.pl>  [-v,--version]
                 [-D,--debug] 
                 [-h,--help]
+                [-V,--verbose]
+                [-S,--show-duplicates]
 
 =head1 DESCRIPTION 
 
@@ -213,6 +222,14 @@ enables debug mode
 =item -h,--help
 
 prints this help and exits
+
+=item -V,--verbose
+
+print all tags about each file
+
+=item -S,--show-duplicates
+
+print files which have the same id3 tags but on different locations
 
 =cut
 

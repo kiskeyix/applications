@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2002-Nov-18
-# $Id: etodo.pl,v 1.9 2002-11-18 16:16:17 luigi Exp $
+# $Id: etodo.pl,v 1.10 2005-05-15 01:04:49 luigi Exp $
 #
 # DESC:
 #   This script takes your tasks.ics file from Evolution
@@ -59,7 +59,7 @@ use CGI qw(:standard);
 # 
 my $debugging = 0;
 
-my $vtask = $ENV{'HOME'}."/evolution/local/Tasks/tasks.ics";
+my $vtask = $ENV{'HOME'}."/.evolution/tasks/local/system/tasks.ics";
 # output to this HTML file
 my $ohtml = $ENV{'HOME'}."/public_html/tasks.html";
 
@@ -193,7 +193,7 @@ sub get_fields(){
 
 sub print_fields {
 
-    open (OFILE,"> $ohtml") || die ("Could not open output file");
+    open (OFILE,"> $ohtml") || die ("Could not open output file: $!");
 
     if ( $SHOW_TIME == 1 ) {
         $date = localtime;

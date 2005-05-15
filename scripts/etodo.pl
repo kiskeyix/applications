@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2002-Nov-18
-# $Id: etodo.pl,v 1.11 2005-05-15 01:27:51 luigi Exp $
+# $Id: etodo.pl,v 1.12 2005-05-15 01:49:12 luigi Exp $
 #
 # DESC:
 #   This script takes your tasks.ics file from Evolution
@@ -59,6 +59,7 @@ use CGI qw(:standard);
 # 
 my $debugging = 0;
 
+# path of file in evolution 2
 my $vtask = $ENV{'HOME'}."/.evolution/tasks/local/system/tasks.ics";
 # output to this HTML file
 my $ohtml = $ENV{'HOME'}."/public_html/tasks.html";
@@ -67,13 +68,15 @@ my $ohtml = $ENV{'HOME'}."/public_html/tasks.html";
 #************************************************************
 my $HIDE_COMPLETED = 0;
 my $SHOW_TIME = 0;
-my $user_name = "none";
+my $USER_NAME = "none";
+my $EMAIL = "none\@none.com";
 my $SECONDS_TO_RUN = 0;
 my $date = "";
+my $HELP=0;
 
-while ( $_ = ( $ARGV[0] ) ? $ARGV[0] : "" , /^-/) {
-    shift;
-    last if /^--$/;
+use Getopt::Long;
+Getopt::Long::Configure('bundling');
+
 #   * add switch to hide completed tasks ( -hc or --hide-completed )
 #   * add the date and a optional switch to put the date in the title
 #     of the HTML file ( -t or --time )
@@ -83,22 +86,21 @@ while ( $_ = ( $ARGV[0] ) ? $ARGV[0] : "" , /^-/) {
 #     would be no need to run it from a cron job
 #   * add a switch for displaying the help ( --help or -h )
 #
-    if (/^-+hc/) { $HIDE_COMPLETED = 1; } 
-    elsif (/^-+t/) { $SHOW_TIME = 1; }
-    elsif (/^-+u[ser]*[=]*(.+)/) { $user_name = $1; }
-    elsif (/^-+d[aemon]*(=| )([0-9]+)/) { $SECONDS_TO_RUN=$2; }
-    elsif (/^-+h|^-+help/) { 
-        print  STDOUT  "USAGE: etodo.pl [options] \n 
+GetOptions(
+    'H|hide-completed'      => \$HIDE_COMPLETED,
+    't|show-time'           => \$SHOW_TIME,
+    'u|user=s'              => \$USER_NAME,
+    'e|email=s'             => \$EMAIL,
+    'd|daemon=i'            => \$SECONDS_TO_RUN,
+    'h|help'                => \$HELP
+) and $ohtml = shift;
+
+print  STDOUT  "USAGE: etodo.pl [options] \n 
         -u\"USER\",--user=\"user\" \t display this for the title 
-        \n \t -t \t show time (title)
+        \n \t -t,--show-time \t show time (title)
         \n \t -d,--daemon \t non interactive 
         \n \t -hc \t hide completed tasks 
-        \n \t -o,--output= \t output file to output to\n";
-    exit(0); 
-    }
-}
-
-#my $user_name = ( $ARGV[1] ) ? $ARGV[1] : "none";
+        \n \t -o,--output= \t output file to output to\n" if ($HELP);
 my @ary;
 
 my $i = 0; # counter
@@ -190,18 +192,24 @@ sub get_fields(){
 # @completed;
 # @dtdue;
 
-
 sub print_fields
 {
-    open (OFILE,"> $ohtml") or (warn ("Could not open output file: $!\nPrinting to STDOUT instead") and *OFILE = *STDOUT );
+    # yep, perl can be made to look weird...
+    # this means: 
+    # if the user passed a file name from the command line, 
+    # then create a handle for it, 
+    # else print a warning to STDERR and use STDOUT as our file handle
+    ( defined($ohtml) and open (OFILE,"> $ohtml") ) 
+        or ( print STDERR ("Could not open output file: $!\nPrinting to STDOUT instead\n\n") 
+            and *OFILE = *STDOUT );
 
     if ( $SHOW_TIME == 1 ) {
         $date = localtime;
     } 
     
     print OFILE start_html( 
-        -title=>"Evolution Tasks [$user_name] $date",
-        -author=>"$user_name",
+        -title=>"Evolution Tasks [$USER_NAME] $date",
+        -author=>"$USER_NAME <$EMAIL>",
         -dtd=>"html",
         -lang=>"en_US",
         -encoding=>"iso-8859-1",

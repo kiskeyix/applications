@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2002-Nov-18
-# $Id: etodo.pl,v 1.10 2005-05-15 01:04:49 luigi Exp $
+# $Id: etodo.pl,v 1.11 2005-05-15 01:27:51 luigi Exp $
 #
 # DESC:
 #   This script takes your tasks.ics file from Evolution
@@ -191,9 +191,9 @@ sub get_fields(){
 # @dtdue;
 
 
-sub print_fields {
-
-    open (OFILE,"> $ohtml") || die ("Could not open output file: $!");
+sub print_fields
+{
+    open (OFILE,"> $ohtml") or (warn ("Could not open output file: $!\nPrinting to STDOUT instead") and *OFILE = *STDOUT );
 
     if ( $SHOW_TIME == 1 ) {
         $date = localtime;
@@ -237,16 +237,18 @@ sub print_fields {
             #number
             print OFILE td($i);
             #date start
-            print OFILE td($ary[$i]->{dtstart});
+            my $d_start = ( exists($ary[$i]->{dtstart}) ) ? $ary[$i]->{dtstart} : 0;
+            print OFILE td($d_start);
             #date due
-            print OFILE td($ary[$i]->{dtdue});
+            my $d_due = ( exists($ary[$i]->{dtdue}) ) ? $ary[$i]->{dtdue} : 0;
+            print OFILE td($d_due);
             #summary
             {
                 # this is a block for which we do not need
                 # to see warnings!
                 # this line temporarily turns off warnings
                 no warnings;          
-                if ( $ary[$i]->{description} gt "" ) {
+                if ( exists($ary[$i]->{description}) ) {
                     # should we clean the strings first?
                     # we should at least remove " (quotes)
                     # from the description...
@@ -265,6 +267,7 @@ sub print_fields {
                 for ($k=0; $k <= $limit ; $k++) {
                     $hash_tmp .= "#";
                 } # end for k
+                $ary[$i]->{progress}=~s/(\n|\r)//;
                 print OFILE td("$hash_tmp ($ary[$i]->{progress}/100)");
             }
             #priority

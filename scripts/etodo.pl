@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2002-Nov-18
-# $Id: etodo.pl,v 1.12 2005-05-15 01:49:12 luigi Exp $
+# $Id: etodo.pl,v 1.13 2005-05-15 01:52:42 luigi Exp $
 #
 # DESC:
 #   This script takes your tasks.ics file from Evolution
@@ -92,15 +92,16 @@ GetOptions(
     'u|user=s'              => \$USER_NAME,
     'e|email=s'             => \$EMAIL,
     'd|daemon=i'            => \$SECONDS_TO_RUN,
+    'o|output=s'            => \$ohtml,
     'h|help'                => \$HELP
 ) and $ohtml = shift;
 
-print  STDOUT  "USAGE: etodo.pl [options] \n 
-        -u\"USER\",--user=\"user\" \t display this for the title 
+print  STDOUT  "USAGE: etodo.pl [options] [output_filename]\n 
+        -u,--user \"user\" \t display this for the title 
         \n \t -t,--show-time \t show time (title)
-        \n \t -d,--daemon \t non interactive 
-        \n \t -hc \t hide completed tasks 
-        \n \t -o,--output= \t output file to output to\n" if ($HELP);
+        \n \t -d,--daemon SECONDS \t non interactive ( TODO: implement )
+        \n \t -H,--hide-completed \t hide completed tasks 
+        \n \t -o,--output \"filename\" \t output file to output to. Unless passed from command line as last argument\n" if ($HELP);
 my @ary;
 
 my $i = 0; # counter

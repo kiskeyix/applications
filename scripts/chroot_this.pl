@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: set up a chroot environment for a binary
@@ -73,20 +73,24 @@ foreach my $bin ( @ARGV )
             my $libchrootedpath = "";
             $lib =~ s/\s*\(0x[0-9a-fA-F]+\)\s*$//;              # cleaned: (0x00000da)
             my ($libname,$libpath) = split(/\s*=>\s*/,$lib);    # splitted by =>
-            ($libchrootedpath = $libpath) =~ s,^/,,;            # cleaned first /
-            $libname =~ s/\s+//g;                               # cleaned spaces
-            _mkdir(dirname($libchrootedpath));                  # recursively makes needed dirs
-            if ( ! -f "$libchrootedpath/$libname" )
+            if ( -r $libpath ) # can we read this library name?
             {
-                if ( copy($libpath,$libchrootedpath) )
+                ($libchrootedpath = $libpath) =~ s,^/,,;            # cleaned first /
+
+                $libname =~ s/\s+//g;                               # cleaned spaces
+                _mkdir(dirname($libchrootedpath));                  # recursively makes needed dirs
+                if ( ! -f "$libchrootedpath/$libname" )
                 {
-                    _success($libchrootedpath);
+                    if ( copy($libpath,$libchrootedpath) )
+                    {
+                        _success($libchrootedpath);
+                    } else {
+                        print STDERR "*** Copying $libpath to $libchrootedpath failed! ***\n";
+                        print STDERR "$!\n";
+                    }
                 } else {
-                    print STDERR "*** Copying $libpath to $libchrootedpath failed! ***\n";
-                    print STDERR "$!\n";
+                    print STDERR "$libchrootedpath already exists\n";
                 }
-            } else {
-                print STDERR "$libchrootedpath already exists\n";
             }
         }
     } else {

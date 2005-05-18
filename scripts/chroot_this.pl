@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: set up a chroot environment for a binary
@@ -151,7 +151,8 @@ foreach my $bin ( @ARGV )
             my $libchrootedpath = "";
             $lib =~ s/\s*\(0x[0-9a-fA-F]+\)\s*$//;              # cleaned: (0x00000da)
             my ($libname,$libpath) = split(/\s*=>\s*/,$lib);    # splitted by =>
-            if ( $libpath !~ /^\s*$/ and -r $libpath ) # can we read this library name?
+            next if ( ! defined($libpath) or $libpath !~ /^\s*$/ );
+            if ( -r $libpath ) # can we read this library name?
             {
                 ($libchrootedpath = $libpath) =~ s,^/,,;            # cleaned first /
 
@@ -172,12 +173,13 @@ foreach my $bin ( @ARGV )
                     print STDERR "$libchrootedpath already exists\n";
                 }
             } else {
-                print STDERR "library '$libpath' is not valid from ldd $bin\n";
-                print STDERR "try copying this file by hand or its name might simply be '$libname'; like /lib/ld-linux.so.[0-9]*\n";
+                no warnings;
+                print STDERR "library '$libpath' is not valid from 'ldd $bin'\n";
+                print STDERR "try copying this file by hand.\n";
             }
         }
     } else {
-        print STDERR $usage,"\n","Non-executable\n";
+        print STDERR $usage,"\n","'$bin' Non-executable\n";
     }
 }
 # @desc implements `mkdir -p`

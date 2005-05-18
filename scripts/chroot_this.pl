@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: set up a chroot environment for a binary
@@ -127,18 +127,20 @@ my $usage = "From the chrooted directory do: chroot_this.pl /path/to/binary";
 
 foreach my $bin ( @ARGV )
 {
-    if ( -x $bin )
+    print STDERR "DEBUG: now doing: $bin \n " if ( $DEBUG );
+    if ( ! -d $bin and -x $bin )
     {
         umask(0222);                            # make binaries executable and not writable
         my $binchrootedpath = dirname($bin);
         $binchrootedpath =~ s,^/,,;             # removes first /
         _mkdir($binchrootedpath);               # recursively makes needed dirs
-        if ( copy($bin,"$binchrootedpath/".basename($bin)) )
+        my $binchrootedpathnamed = "$binchrootedpath/".basename($bin);
+        if ( copy($bin,$binchrootedpathnamed) )
         {
-            chmod (0555,"$binchrootedpath/".basename($bin));
-            _success("$binchrootedpath/".basename($bin));
+            chmod (0555,$binchrootedpathnamed);
+            _success($binchrootedpathnamed);
         } else {
-            die ("Could not copy $bin to $binchrootedpath/".basename($bin));
+            warn ("*** Could not copy $bin to $binchrootedpathnamed ***");
         }
 
         # get dependencies
@@ -159,6 +161,8 @@ foreach my $bin ( @ARGV )
                 {
                     if ( copy($libpath,$libchrootedpath) )
                     {
+                        # surprisingly, in linux libraries must be exec also
+                        chmod (0555,"$libchrootedpath/$libname");
                         _success($libchrootedpath);
                     } else {
                         print STDERR "*** Copying $libpath to $libchrootedpath failed! ***\n";

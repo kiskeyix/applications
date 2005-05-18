@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: set up a chroot environment for a binary
@@ -16,11 +16,11 @@
 # chrooted on Fedora (with privilege separation):
 #
 # * /bin/{cp, ls, mkdir, mv, rm, rmdir, sh}: for i in cp ls mkdir mv rm rmdir sh; do chroot_this.pl /bin/$i; done
-# * /usr/libexec/sftp-server: chroot_this.pl /usr/libexec/sftp-server
+# * /usr/libexec/sftp-server: chroot_this.pl /usr/libexec/openssh/sftp-server
 # * pam: mkdir -p etc/pam.d; cp -r /etc/pam.d/* etc/pam.d/
 # * libpam: cp -r /lib/libpam* lib
 # - cp /lib/libnss_files* lib
-# - mkdir -p lib/security; cp -r /lib/security/* lib/security
+# - mkdir -p lib/security; chroot_this.pl `find /lib/security/ -depth`
 # - mkdir -p etc/security; cp -r /etc/security/*.conf etc/security
 # * ssh: mkdir -p etc/ssh; cp -a /etc/ssh/* etc/ssh/
 # * /etc/nsswitch.conf: mkdir etc; cat > etc/nsswitch.conf <<-FIN

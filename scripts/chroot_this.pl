@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.9 $
+# $Revision: 1.10 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: set up a chroot environment for a binary
@@ -30,7 +30,7 @@
 #   FIN
 # * /etc/{passwd,shadow,group}:
 #   mkdir etc; cat > $CHROOTDIR/etc/passwd <<-FIN
-#        root:x:0:0:Root:/:/bin/bash
+#        root:x:0:0:Root:/root:/bin/bash
 #        nobody:x:65534:65534:nobody:/:/bin/false
 #        sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin
 #    FIN

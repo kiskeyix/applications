@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: set up a chroot environment for a binary
@@ -145,13 +145,13 @@ foreach my $bin ( @ARGV )
 
         # get dependencies
         my $linked_deps = qx/ldd $bin/;
-
+        #print STDERR "DEBUG: dependancies for: $bin \n $linked_deps\n" if ( $DEBUG );
         foreach my $lib ( split(/\n/,$linked_deps) )
         {
             my $libchrootedpath = "";
             $lib =~ s/\s*\(0x[0-9a-fA-F]+\)\s*$//;              # cleaned: (0x00000da)
             my ($libname,$libpath) = split(/\s*=>\s*/,$lib);    # splitted by =>
-            next if ( ! defined($libpath) or $libpath !~ /^\s*$/ );
+            next if ( ! defined($libpath) or $libpath =~ /^\s*$/ );
             if ( -r $libpath ) # can we read this library name?
             {
                 ($libchrootedpath = $libpath) =~ s,^/,,;            # cleaned first /
@@ -167,7 +167,7 @@ foreach my $bin ( @ARGV )
                         _success($libchrootedpath);
                     } else {
                         print STDERR "*** Copying $libpath to $libchrootedpath failed! ***\n";
-                        print STDERR "$!\n";
+                        print STDERR "$libpath: $!\n";
                     }
                 } else {
                     print STDERR "$libchrootedpath already exists\n";

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: set up a chroot environment for a binary
@@ -123,7 +123,7 @@ if ( $HELP ) {
 
 if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
 
-my $usage = "From the chrooted directory do: chroot_this.pl /path/to/binary";
+my $usage = "usage: cd /path/to/chroot && chroot_this.pl /path/to/binary";
 
 foreach my $bin ( @ARGV )
 {

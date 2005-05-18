@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: set up a chroot environment for a binary
@@ -37,7 +37,7 @@
 #    cat > etc/shadow <<-FIN
 #        root:*:11142:0:99999:7:::
 #        nobody:*:11142:0:99999:7:::
-#        sshd:x:74:74:Privilege-separated SSH:/var/empty/sshd:/sbin/nologin
+#        sshd:!!:12871:0:99999:7:::
 #    FIN
 #    cat > etc/group <<-FIN
 #        root:x:0
@@ -61,7 +61,7 @@
 #   - mkdir -p etc/rc.d; cd etc/rc.d; ln -s ../init.d init.d
 #
 # * Assorted utilities:
-#   - /sbin/initlog: chroot_this.pl /sbin/initlog
+#   - /sbin/initlog: chroot_this.pl /sbin/initlog; cp /etc/initlog.conf etc/
 #   - /usr/bin/reset: chroot_this.pl /usr/bin/reset
 #   - /sbin/nologin: chroot_this.pl /sbin/nologin
 # * Assorted libraries:
@@ -80,6 +80,7 @@
 # From a different shell/system, use "ssh -v -v user@server_or_ip" to test the client
 # REFERENCES:
 # * http://chrootssh.sourceforge.net/docs/chrootedsftp.html
+# * http://www.bpfh.net/simes/computing/chroot-break.html
 
 use strict;
 $|++;

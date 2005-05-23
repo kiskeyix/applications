@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.19 $
-# $Date: 2005-05-23 18:59:50 $
+# $Revision: 1.20 $
+# $Date: 2005-05-23 19:02:25 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to rename Music files in a consistent manner
@@ -65,7 +65,9 @@ if ( $HELP ) {
 
 if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
 
-#main
+# main
+umask(0022); # fix anal permissions
+
 if ( defined ($FILE) and -f $FILE )
 {
    _rename($FILE);

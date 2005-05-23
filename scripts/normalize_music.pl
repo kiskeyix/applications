@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.18 $
+# $Revision: 1.19 $
+# $Date: 2005-05-23 18:59:50 $
 # Luis Mondesi < lemsx1@gmail.com >
-# Last modified: 2004-Dec-07
 #
 # DESCRIPTION: A simple script to rename Music files in a consistent manner
 # USAGE: cd ~/Music; normalize_music.pl
@@ -70,12 +70,21 @@ if ( defined ($FILE) and -f $FILE )
 {
    _rename($FILE);
 } else {
-    my $aryref = do_file_ary(".");
+    # are we running from Nautilus?
+    # Get Nautilus current working directory, if under Natilus:
+    my $_root = ".";
+    if ( exists $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} and $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} =~ m#^file:///# ) 
+    {
+        $_root = $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'};
+        $_root =~ s#%([0-9A-Fa-f]{2})#chr(hex($1))#ge; # fixes %20 and other URL thingies
+        $_root =~ s#^file://##g;
+    }
+    my $aryref = do_file_ary($_root);
     foreach(@$aryref)
     {
         _rename($_);
     }
-    # TODO remove empty directories if --remove-empty-dirs
+# TODO remove empty directories if --remove-empty-dirs
 }
 
 # support functions

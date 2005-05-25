@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: simple way to generate user info to copy+paste in a etc/passwd and etc/shadow file
@@ -36,8 +36,7 @@ GetOptions(
 if ( $HELP or !defined($UNAME) or !defined($PASSWD) ) { 
     use Pod::Text;
     my $parser = Pod::Text->new (sentence => 0, width => 78);
-    $parser->parse_from_file(File::Spec->catfile("$0"),
-			   \*STDOUT);
+    $parser->parse_from_file("$0",\*STDOUT);
     exit 0;
 }
 
@@ -70,7 +69,7 @@ adduser-passwd.pl - Luis Mondesi <lemsx1@gmail.com>
 
 =head1 SYNOPSIS
 
-B<skeleton.pl>  [-v,--version]
+B<adduser-passwd.pl>  [-v,--version]
                 [-D,--debug] 
                 [-h,--help]
                 username

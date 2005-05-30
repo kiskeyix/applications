@@ -1,7 +1,7 @@
 #!/bin/bash
 # vim: ft=sh:columns=80 :
-# $Revision: 1.42 $
-# $Date: 2005-05-30 13:52:14 $
+# $Revision: 1.43 $
+# $Date: 2005-05-30 13:53:06 $
 #
 # Luis Mondesi < lemsx1@gmail.com >
 #
@@ -93,7 +93,9 @@ if [[ -f "$HOME/.make-kpkg.rc" ]]; then
     source  "$HOME/.make-kpkg.rc"
 fi
 
-echo "Using hosts: $DISTCC_HOSTS"
+if [[ ! -z "$DISTCC_HOSTS" ]]; then
+    echo "Using hosts: $DISTCC_HOSTS"
+fi
 
 # sets all variables:
 export IMAGE_TOP ALL_PATCH_DIR PATCH_THE_KERNEL 

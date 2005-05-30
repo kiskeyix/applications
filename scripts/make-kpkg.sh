@@ -1,7 +1,8 @@
 #!/bin/bash
 # vim: ft=sh:columns=80 :
-# $Revision: 1.41 $
-# $Date: 2005-03-11 20:08:43 $
+# $Revision: 1.42 $
+# $Date: 2005-05-30 13:52:14 $
+#
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # LICENSE: GPL (http://www.gnu.org/licenses/gpl.txt)
@@ -59,7 +60,7 @@ if [[ -f "$HOME/.distcc/hosts" ]];then
     # the format of this file is: 
     #   host1 host2 ... hostN-1 hostN
     echo "Reading $HOME/.distcc/hosts"
-    DISTCC_HOSTS=`cat "$HOME/.distcc/hosts"`
+    DISTCC_HOSTS=$(< $HOME/.distcc/hosts )
 else
     DISTCC_HOSTS="localhost"
 fi 
@@ -91,6 +92,8 @@ if [[ -f "$HOME/.make-kpkg.rc" ]]; then
     # read user settings for the variables given above
     source  "$HOME/.make-kpkg.rc"
 fi
+
+echo "Using hosts: $DISTCC_HOSTS"
 
 # sets all variables:
 export IMAGE_TOP ALL_PATCH_DIR PATCH_THE_KERNEL 

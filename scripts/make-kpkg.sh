@@ -1,7 +1,7 @@
 #!/bin/bash
 # vim: ft=sh:columns=80 :
-# $Revision: 1.43 $
-# $Date: 2005-05-30 13:53:06 $
+# $Revision: 1.44 $
+# $Date: 2005-05-30 14:25:15 $
 #
 # Luis Mondesi < lemsx1@gmail.com >
 #
@@ -186,8 +186,9 @@ if [[ ! -z "$1" && "$1" != "--help" ]]; then
 
     if [[ $makeit -eq 1 ]]; then
         echo -e "Building kernel [ initrd opts: $BUILD_INITRD ] \n"
-        $FAKEROOT make-kpkg clean
-        $FAKEROOT make-kpkg \
+        make-kpkg --rootcmd $FAKEROOT clean
+        make-kpkg \
+        --rootcmd $FAKEROOT \
         --config oldconfig \
         --append-to-version "$1" \
         --revision $REVISION \
@@ -200,7 +201,8 @@ if [[ ! -z "$1" && "$1" != "--help" ]]; then
     
     if [[ x$KERNEL_HEADERS != "x" && $makeit -eq 0  ]]; then
         echo -e "Building kernel [$KERNEL_HEADERS] only \n"
-        $FAKEROOT make-kpkg \
+        make-kpkg \
+        --rootcmd $FAKEROOT \
         --config oldconfig \
         --append-to-version "$1" \
         --revision $REVISION \
@@ -210,9 +212,10 @@ if [[ ! -z "$1" && "$1" != "--help" ]]; then
   
     # make the modules
     if [[ $mmakeit -eq 1 ]]; then
-        $FAKEROOT make-kpkg clean
-        $FAKEROOT make-kpkg modules_clean
-        $FAKEROOT make-kpkg \
+        make-kpkg --rootcmd $FAKEROOT clean
+        make-kpkg --rootcmd $FAKEROOT modules_clean
+        make-kpkg \
+        --rootcmd $FAKEROOT \
         --config oldconfig \
         --append-to-version "$1" \
         --revision $REVISION \

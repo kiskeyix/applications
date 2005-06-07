@@ -1,4 +1,5 @@
 #!/bin/sh
+PATH=/bin:/usr/bin:/sbin:/usr/sbin
 LOCKFILE="/dev/shm/apt-move.lck"
 DEBUG=0     # should debugging messages be displayed? $0 0 1 see $1
 VERBOSE=0   # should informational messages be displayed? $0 1 see $2
@@ -9,6 +10,7 @@ MAKELOCALMIRROR=1
 CACHEDIR="/var/cache/apt/archives/"
 LOCALMIRROR="/home/Shared/debian" # apt-ftparchive
 LOCALRELEASE="local" # name of the local release... see below (is just a directory)
+TMPDIRS="/tmp /home/Shared/tmp /var/tmp" # path to look for deb's for apt-move (will be moved to $CACHEDIR
 
 set -e
 
@@ -26,17 +28,22 @@ function info()
     fi
 }
 
+function movefiles()
+{
+    mv -u "$1" $CACHEDIR
+    if [ -f "$1" ]; then
+        # if old package, remove it from tmp dirs
+        debug "Removing $1"
+        rm -f "$1";
+    fi
+}
+
 function move_deb_from_tmp()
 {
     debug "Entering move_deb_from_tmp()"
-    for i in `/bin/ls /tmp/*.deb /home/Shared/tmp/*.deb /var/tmp/*.deb 2> /dev/null`; do
+    for i in $TMPDIRS; do
         # move new packages into archives directory
-        /bin/mv -u "$i" $CACHEDIR
-        if [ -f "$i" ]; then
-            # if old package, remove it from tmp dirs
-            debug "Removing $i"
-            rm -f "$i";
-        fi
+        find $i -maxdepth 1 -name '*.deb' -o -name '*.udeb' | movefiles
     done
 }
 
@@ -77,6 +84,7 @@ if [ $MAKELOCALMIRROR -eq 1 ]; then
     mkdir -p dists/$LOCALRELEASE/main/source
 
     if [ -d "incoming" ]; then
+        # TODO use find here also (and movefiles-like function)
         for j in `/bin/ls incoming/*.deb 2> /dev/null`; do
             mv $j dists/$LOCALRELEASE/main/binary-$ARCH > /dev/null 2>&1
         done

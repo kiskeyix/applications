@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: prints character that represents hex number
@@ -21,6 +21,7 @@ my $HELP=0;
 my $DEBUG=0;
 my $URL_ENCODE=0;
 my $URL_DECODE=0;
+my $STR=undef;
 
 # get options
 GetOptions(

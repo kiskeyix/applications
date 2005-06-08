@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: prints character that represents hex number
@@ -71,7 +71,7 @@ sub urldecode
     my $str = shift;
     return "" if ( !defined($str) );
     $str =~ tr/+/ /;
-    $str =~ s/%([a-f0-9][a-f0-9])/pack("c",$1)/egi;
+    $str =~ s/%([a-f0-9][a-f0-9])/pack("c",hex($1))/egi;
     return $str;
 }
 

@@ -30,12 +30,14 @@ function info()
 
 function movefiles()
 {
-    mv -u "$1" $CACHEDIR
-    if [ -f "$1" ]; then
-        # if old package, remove it from tmp dirs
-        debug "Removing $1"
-        rm -f "$1";
-    fi
+    while read i; do
+        mv -u "$i" $CACHEDIR
+        if [ -f "$i" ]; then
+            # if old package, remove it from tmp dirs
+            debug "Removing $i"
+            rm -f "$i";
+        fi
+    done
 }
 
 function move_deb_from_tmp()
@@ -55,7 +57,7 @@ if [ $2 ]; then
 fi
 
 if [ -f "$LOCKFILE" ]; then
-    echo "Another instance of $0 running ... exiting "
+    echo "Another instance of $0 running ... exiting. Please remove $LOCKFILE if no $0 running."
     exit 0
 fi
 # create lock with timestamp

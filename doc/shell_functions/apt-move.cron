@@ -44,8 +44,10 @@ function move_deb_from_tmp()
 {
     debug "Entering move_deb_from_tmp()"
     for i in $TMPDIRS; do
-        # move new packages into archives directory
-        find $i -maxdepth 1 -name '*.deb' -o -name '*.udeb' | movefiles
+        if [ -d $i ]; then
+            # move new packages into archives directory
+            find $i -maxdepth 1 -name '*.deb' -o -name '*.udeb' | movefiles
+        fi
     done
 }
 

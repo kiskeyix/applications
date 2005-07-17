@@ -3,7 +3,7 @@
 # Title="Mount Image"
 # Title[es]="Montar Imagen"
 #
-# $Revision: 1.13 $
+# $Revision: 1.14 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2004-Jun-09
 #
@@ -292,7 +292,7 @@ info()
 
 for arg in $@
 do
-
+    USERMOUNTDIR="$MOUNTDIR/$arg"
     file_type="`file \"${arg}\"`"
 
     # if already mounted continue
@@ -325,8 +325,6 @@ do
 
     # try to mount the file system
     # make directory for this image
-    USERMOUNTDIR="$MOUNTDIR/$arg"
-
     # directory doesn't exist?
     mkdir -p $USERMOUNTDIR
 

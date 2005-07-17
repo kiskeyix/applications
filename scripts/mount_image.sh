@@ -3,7 +3,7 @@
 # Title="Mount Image"
 # Title[es]="Montar Imagen"
 #
-# $Revision: 1.11 $
+# $Revision: 1.12 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2004-Jun-09
 #
@@ -62,12 +62,12 @@ TIT_ENCRYPTED="Encryption"
 MSG_ENCRYPTED="Is this an encrypted image?"
 
 TIT_MOUNT="Mount Image"
-MSG_MOUNTED="already mounted"
-MSG_EMOUNT="Could not mount"
+MSG_MOUNTED="Image already mounted"
+MSG_EMOUNT="Could not mount image"
 
-MSG_UMOUNTED="unmounted successfully"
-MSG_NOTUMOUNTED="Could not unmount"
-TIT_UMOUNT="Unmount Filesystem"
+TIT_UMOUNT="Eject Image"
+MSG_UMOUNTED="Ejected successfully"
+MSG_NOTUMOUNTED="Could not eject image"
 
 TIT_FORMAT="Select filesystem type"
 TIT_CYPHER="Select Cypher"
@@ -305,6 +305,8 @@ do
     if [ "`mount | grep \"${arg}\"`" ]; then
         if [ "`unmount "$arg ${MSG_MOUNTED}" "$arg"`" = "yes" ]; then
             info "$arg $MSG_UMOUNTED"
+            rmdir $USERMOUNTDIR
+            rmdir $MOUNTDIR
         else
             error "$MSG_NOTUMOUNTED $arg"
             # TODO find where is mounted and open with nautilus
@@ -338,6 +340,7 @@ do
 
     if [ "`lmount $mtype $arg $USERMOUNTDIR`" = "yes" ]; then 
         $NAUTILUS $USERMOUNTDIR
+        info "$arg $MSG_MOUNTED"
     else
         # if mount failed, ask about encryption and filetype
         
@@ -369,6 +372,7 @@ do
             if [ "`setup_enloop $LOOPDEV $arg $CYPHER`" = "yes" ]; then
                 if [ "`lmount $mtype $LOOPDEV $USERMOUNTDIR $CYPHERBITS`" = "yes" ]; then
                     $NAUTILUS $USERMOUNTDIR
+                    info "$arg $MSG_MOUNTED"
                 else
                     error "$MSG_EMOUNT $LOOPDEV --> $USERMOUNTDIR"
                     
@@ -401,6 +405,7 @@ do
 
             if [ "`lmount $mtype $arg $USERMOUNTDIR`" = "yes" ]; then
                 $NAUTILUS $USERMOUNTDIR
+                info "$arg $MSG_MOUNTED"
             else
                 error "$MSG_EMOUNT $arg --> $USERMOUNTDIR"
                 rmdir $USERMOUNTDIR

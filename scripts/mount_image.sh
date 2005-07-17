@@ -3,7 +3,7 @@
 # Title="Mount Image"
 # Title[es]="Montar Imagen"
 #
-# $Revision: 1.12 $
+# $Revision: 1.13 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2004-Jun-09
 #
@@ -63,6 +63,7 @@ MSG_ENCRYPTED="Is this an encrypted image?"
 
 TIT_MOUNT="Mount Image"
 MSG_MOUNTED="Image already mounted"
+MSG_SMOUNTED="Image mounted successfully"
 MSG_EMOUNT="Could not mount image"
 
 TIT_UMOUNT="Eject Image"
@@ -86,12 +87,13 @@ set_spanish()
     MSG_ENCRYPTED="¿Este es un archivo cifrado?"
 
     TIT_MOUNT="Montar imagen"
-    MSG_MOUNTED="ya está montado"
-    MSG_EMOUNT="No pude montar"
+    MSG_MOUNTED="Imagen ya está montado"
+    MSG_SMOUNTED="Imagen montada exitósamente"
+    MSG_EMOUNT="No pude montar la imagen"
 
-    MSG_UMOUNTED="desmontado exitósamente"    
-    MSG_NOTUMOUNTED="No pude desmontar"
     TIT_UMOUNT="Desmontar la imagen"
+    MSG_UMOUNTED="Imagen desmontada exitósamente"
+    MSG_NOTUMOUNTED="No pude desmontar la imagen"
 
     TIT_FORMAT="Selecciona el tipo de formato"
     TIT_CYPHER="Selecciona módulo cifrado"
@@ -120,61 +122,53 @@ ask_passwd()
     # @arg1 text to display
     # asks the password to use when 
     # mounting encrypted filesystems
-    TMP=""
-    TMP="`$DIALOG --entry --hide-text --text=\"$1\"`"
-    echo $TMP
+    TMP_MSG="`$DIALOG --entry --hide-text --text=\"$1\"`"
+    echo $TMP_MSG
 }
 
 ask_cypher()
 {
-    TMP=""
-
-    TMP=`$DIALOG --list \
+    TMP_MSG=`$DIALOG --list \
     --title="${TIT_CYPHER}" \
     --radiolist --editable \
     --column="Selected" --column="Cypher" $CYPHERS`
 
-    if [ -z $TMP ]; then
+    if [ -z $TMP_MSG ]; then
         # what we do when user presses cancel
-        TMP="$DCYPHER"
+        TMP_MSG="$DCYPHER"
     fi
 
-    echo "$TMP"
+    echo $TMP_MSG
 }
 
 ask_bits()
 {
-    TMP=""
-
-    TMP=`$DIALOG --list \
+    TMP_MSG=`$DIALOG --list \
     --title="${TIT_CYPHER} bits" \
     --radiolist --editable \
     --column="Selected" --column="Cypher Bits" $BITS`
 
-    if [ -z $TMP ]; then
+    if [ -z $TMP_MSG ]; then
         # what we do when user presses cancel
-        TMP="$DBITS"
+        TMP_MSG="$DBITS"
     fi
     
-    echo "$TMP"
+    echo $TMP_MSG
 }
 
 ask_filesystem()
 {
-
-    TMP=""
-
-    TMP=`$DIALOG --list \
+    TMP_MSG=`$DIALOG --list \
     --title="${TIT_FORMAT}" \
     --radiolist --editable \
     --column="Selected" --column="Filetype" $FORMATS`
 
-    if [ -z $TMP ]; then
+    if [ -z $TMP_MSG ]; then
         # what we do when user presses cancel
-        TMP="iso9660"
+        TMP_MSG="iso9660"
     fi
     
-    echo "$TMP"
+    echo $TMP_MSG
 }
 
 is_encrypted()
@@ -340,7 +334,7 @@ do
 
     if [ "`lmount $mtype $arg $USERMOUNTDIR`" = "yes" ]; then 
         $NAUTILUS $USERMOUNTDIR
-        info "$arg $MSG_MOUNTED"
+        info "$arg $MSG_SMOUNTED"
     else
         # if mount failed, ask about encryption and filetype
         
@@ -372,7 +366,7 @@ do
             if [ "`setup_enloop $LOOPDEV $arg $CYPHER`" = "yes" ]; then
                 if [ "`lmount $mtype $LOOPDEV $USERMOUNTDIR $CYPHERBITS`" = "yes" ]; then
                     $NAUTILUS $USERMOUNTDIR
-                    info "$arg $MSG_MOUNTED"
+                    info "$arg $MSG_SMOUNTED"
                 else
                     error "$MSG_EMOUNT $LOOPDEV --> $USERMOUNTDIR"
                     
@@ -405,7 +399,7 @@ do
 
             if [ "`lmount $mtype $arg $USERMOUNTDIR`" = "yes" ]; then
                 $NAUTILUS $USERMOUNTDIR
-                info "$arg $MSG_MOUNTED"
+                info "$arg $MSG_SMOUNTED"
             else
                 error "$MSG_EMOUNT $arg --> $USERMOUNTDIR"
                 rmdir $USERMOUNTDIR

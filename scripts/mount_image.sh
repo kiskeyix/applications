@@ -3,7 +3,7 @@
 # Title="Mount Image"
 # Title[es]="Montar Imagen"
 #
-# $Revision: 1.14 $
+# $Revision: 1.15 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2004-Jun-09
 #
@@ -289,9 +289,9 @@ info()
     --text="$1"
 }
 
-
 for arg in $@
 do
+    arg = "`basename ${arg}`"
     USERMOUNTDIR="$MOUNTDIR/$arg"
     file_type="`file \"${arg}\"`"
 

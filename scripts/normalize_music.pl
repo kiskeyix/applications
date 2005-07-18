@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.20 $
-# $Date: 2005-05-23 19:02:25 $
+# $Revision: 1.21 $
+# $Date: 2005-07-18 04:36:33 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to rename Music files in a consistent manner
@@ -145,11 +145,11 @@ sub _mkdir
 
 sub _rename
 {
-    my $this_file=shift;
-    my $mp3 = MP3::Tag->new($this_file);
+    my $orig_filename=shift;
+    my $mp3 = MP3::Tag->new($orig_filename);
     my $hashref = $mp3->autoinfo();
     print STDOUT ("_"x69,"\n") if ( $VERBOSE );
-    print STDOUT ("file\t$this_file\n") if ( $VERBOSE );
+    print STDOUT ("file\t$orig_filename\n") if ( $VERBOSE );
     # tracks,artist,album are not that essential:
     #'song','track','artist','album'
     if ( ! defined($hashref->{'track'}) or $hashref->{'track'} =~ m/^\s*$/ )
@@ -174,28 +174,28 @@ sub _rename
     }
     my ($track,$garbage) = split(/\//,$hashref->{'track'});
     $track =~ s/^(\d{1,2}).*$/$1/g;
-    $this_file =~ m/(\.[a-zA-Z0-9]{1,5})$/; # catches the extension in $1
+    $orig_filename =~ m/(\.[a-zA-Z0-9]{1,5})$/; # catches the extension in $1
     print STDERR ("DEBUG: EXT $1\n") if ( $DEBUG );
     my $path = lc( catdir($hashref->{'artist'},$hashref->{'album'}) );
-    my $file = lc( catfile($path,$track."-".$hashref->{'song'}.$1) );
-    print STDOUT ("to file\t$file\n") if ( $VERBOSE );
+    my $new_filename = lc( catfile($path,$track."-".$hashref->{'song'}.$1) );
+    print STDOUT ("to file\t$new_filename\n") if ( $VERBOSE );
     # silently bail out if we have done this file before
-    if ( $file eq $this_file )
+    if ( $new_filename eq $orig_filename )
     {
-        print ("$file is a duplicate of $this_file") if ( $SHOW_DUPS );
         return;
     }
-    if ( ! -f "$file" )
+    if ( ! -f "$new_filename" )
     {
         print STDERR ("DEBUG: use path $path\n") if ( $DEBUG );
         _mkdir($path) if ( ! -d "$path" );
-        if ( ! rename ( "$this_file","$file" ) )
+        if ( ! rename ( "$orig_filename","$new_filename" ) )
         {
-            print STDERR ("Renaming $this_file to $file failed. Do you have permissions to write in $path?\n");
+            print STDOUT ("Renaming $orig_filename to $new_filename failed. Do you have permissions to write in $path?\n");
             return;
         }
     } else {
-        print STDERR ("$file skipped\n") if ( $DEBUG );
+        print STDOUT ("$orig_filename is a duplicate of $new_filename\n")
+            if ( $SHOW_DUPS );
     }
 }
 

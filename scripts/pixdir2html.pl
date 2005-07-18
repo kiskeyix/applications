@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.96 $
+# $Revision: 1.97 $
 # Luis Mondesi  <lemsx1@hotmail.com>
 # 
 # REQUIRED: ImageMagick's Perl module and a dialog 
@@ -1355,20 +1355,20 @@ sub dict_sort
     #open(UNSORTED,">unsorted.txt");
     #print UNSORTED join(' ', @$aryref), "\n";
     #close(UNSORTED);
-    
+
     my $da;
     my $db;
 
     if ( $ignore ne "" )
     {
         # TODO what's the best way to ignore this pattern?
-    #        my @local_ls;
-    #        my $i = 0;
-    #        foreach( @$aryref )
-    #        {
-    #            ( $local_ls[$i] = $_ ) =~ s/$ignore//g;
-    #            $i++;
-    #        }
+        #        my @local_ls;
+        #        my $i = 0;
+        #        foreach( @$aryref )
+        #        {
+        #            ( $local_ls[$i] = $_ ) =~ s/$ignore//g;
+        #            $i++;
+        #        }
         @$aryref = sort { 
             # TODO ignore here?
             ($da = lc $a) =~ s/[\W_]+//g;

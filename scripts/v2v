@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.96 $
+# $Revision: 1.97 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -52,6 +52,7 @@ my $SRTSUBRIP=0;
 my $OKCLUSTER=0;
 my $TEST = 0;
 my $DVD9TO5 = 0;
+my $DVD5SIZE = 4700000000; # bytes
 my $DVDBACKUP = 0;
 my $MPLAYER = 0;
 my $TOVCD = 0;
@@ -341,6 +342,13 @@ sub pwarn
     print STDOUT "$RED @_ $NORM\n";
 }
 
+sub perror
+{
+    # takes a string and dies printing a red message
+    print STDERR ("$RED @_ $NORM\n");
+    exit(1);
+}
+
 sub format_date 
 {
     # returns a nicely formatted string:
@@ -521,7 +529,7 @@ sub ask_logo
         if ( -r $LOGO )
         {       
             my $rep = prompt(" Do you want to add the Logo $LOGO at the beginning of this movie (Y/n)? ");
-            if ( $rep ne "N" && $rep ne "n" )
+            if ( $rep !~ /^n$/i )
             {
                 my $rep=prompt(" How many seconds after the movie beginning must be your Logo displayed (MAX=$RUNTIME - see your $userconfigfile for [default:$STARTLOGO]): ");
                 $STARTLOGO=$rep if ( $rep ne  ""  ) ;
@@ -538,10 +546,9 @@ sub ask_logo
                 }
                 pwarn("\t**** WARNING *****\t As your logo timing is > 300 sec., ".
                     "it will NOT be encoded in CLUSTER mode !!!\n") if ( $ADDLOGO > 300 );
-                print " Where must appear your Logo (1=TopLeft,2=TopRight,3=BotLeft,".
-                    "4=BotRight,5=Center, see your $userconfigfile for [default:$POSLOGO]): ";
-                $rep=<STDIN>;
-                chomp($rep);
+                $rep = "";
+                $rep = prompt(" Where must appear your Logo (1=TopLeft,2=TopRight,3=BotLeft,".
+                    "4=BotRight,5=Center, see your $userconfigfile for [default:$POSLOGO]): ");
                 $POSLOGO=$rep if ( $rep =~ m,[12345], );
             } else {
                 $ADDLOGO=0;
@@ -1693,7 +1700,6 @@ sub readuserconf
         next unless length; #  If our line is empty, we ignore it
         s/^\$//;
         s/\;$//;
-        # Please Luis DO NOT REMOVE the next two lines .
         # sometimes users can have $VAR= value ; # comment
         # We need to remove the white space before and after value 
         s/^\s+//;           #  whitespace before value 
@@ -3486,8 +3492,7 @@ sub ripdvd
     # *************** RIP A DVD ***********************
     my ($angle,$angles,$chapter,$chapters)=1;
     my (@titleSet,@titleLen,$sys,$vob,$sec,$hour,$min,$dvd)="";
-    $VOBPATH = ( -e $ARGV[0] ) ? $ARGV[0] : 
-    prompt("Enter directory to hold ripped DVD [/scratch_disk/DVD]: ");
+    $VOBPATH = ( -e $ARGV[0] ) ? $ARGV[0] : prompt("Enter directory to hold ripped DVD [/scratch_disk/DVD]: ");
     # sanity check:
     ( -e $VOBPATH )
         or mydie("Directory \"$VOBPATH\" does not exist \n Sorry");
@@ -3642,29 +3647,74 @@ sub ripdvd
     exit(0);
 } # END ripidvd
 
+sub video_requant
+{
+    # @desc a simple function to requantize a given video file. we need the audio file
+    # also to calculate a propper requantization factor
+    # @param $video video stream file (m2v format)
+    # @param $audio audio stream format (ac3 format)
+    # @return requantization factor. $video will be modified
+    my $video = shift;
+    my $audio = shift;
+    perror("Cannot read file $video for requantization") if ( ! -r $video );
+    perror("Cannot read file $audio for requantization") if ( ! -r $audio );
+    # $tcrequant = (1.05 * video_size) / (4700 - (audio_size + 10)) for a 4.4GB DVD
+    my $video_size = (stat($video))[7]; # size in bytes, just like UNIX stat -c %s $file
+    my $audio_size = (stat($audio))[7];
+    my $s_size = 10000000; # we add 10mb for e/a title we are ripping. for now is just one main title
+    my $tcrequant = (1.05 * $video_size) / ($DVD5SIZE - ($audio_size - $s_size));
+
+    system( "nice -$nice tcrequant -i $video -d 0 -o shrunk.$video -f $tcrequant" );
+    rename( "shrunk.$video",$video );
+
+    return $tcrequant;
+} # end video_requant
+
 sub dvd9to5
 {
-    # @param 0 directory := string path to directory or device holding VOBs
-    # @param 1 integer := title to rip from DVD. Defaults to 1
-    # output will be a video.mpeg file in the current directory
+    # @param $dir directory := string path to directory or device holding VOBs
+    # @param $title integer := title to rip from DVD. Defaults to 1
+    # @return output will be a video.mpeg file in the current directory
     # the audio and video files will be kept
     my $dir = shift;
     my $title = shift;
 
-    my $TCMPLEX = which("tcmplex");
-    my $MPLEX = which("mplex");
-
+    perror("No DVD device or Directory given as argument for video extraction.") 
+        if ( ! defined($dir) or ! -e $dir );
     $title = ($title =~ /\d+/) ? $title : 1;
+
+    my $TCMPLEX = which("tcmplex");
+    my $TCMPLEXARGS = "";
+    my $MPLEX = which("mplex");
+    my $MPLEXARGS = "";
+
+    # supporting variables
+    my @fifo_files = ();
+
     # files
+    my $mpg_file = "video.mpeg"; # final output
     my $audio = "audio.ac3";
+    my $audio_fifo = "audio.fifo";
     my $video = "video.m2v";
+    my $video_fifo = "video.fifo";
     my $multiplex_config = "multiplexer.cfg";
-  
+    my $subtitle = "subtitle.sub";
+    my $subtitle_fifo = "subtitle.fifo";
+     
     # flag
     my $UNLINK_CONFIG=0; # if we created this file, unlink it
     
+    # extra arguments to pass to tccat 
+    # different for dirs and special files (blocks)
+    my $TCCAT_EXTRA_ARGS = ( -b $dir ) ? " -T$title,-1 -L ":"";  
+   
+    # clean up old FIFOs
+    unlink($video_fifo) if ( -e $video_fifo );
+    unlink($audio_fifo) if ( -e $audio_fifo );
+    unlink($subtitle_fifo) if ( -e $subtitle_fifo );
+
     # respect user configurations for this directory
-    if ( !-f $multiplex_config )
+    if ( ! -f $multiplex_config )
     {
         $UNLINK_CONFIG=1;
         # profile:
@@ -3672,81 +3722,90 @@ sub dvd9to5
         print PROFILE "maxFileSize = 4400"; # 4.4GB
         close(PROFILE);
     }
- 
-    if ( !-f "$audio" )
+
+    # audio:
+    system("mkfifo $audio_fifo > /dev/null 2>&1");
+    perror("Failed to create named pipe $audio_fifo") if ( ! -e $audio_fifo );
+    push(@fifo_files,$audio_fifo);
+    if ( ! -f $audio )
     {
-        if ( -b "$dir" )
-        {
-            # this is a DVD device /dev/dvd (?)
-            system("tccat -i $dir -T$title,-1 -P | tcextract -t vob -x ac3 -a0 > $audio");
-        } elsif ( -d "$dir" ) {
+        # TODO add a switch to turn this on (off by default)
+        # For now, it's just on :-)
+        # this will be useful when video is out of sync
+        if ( -d $dir ) {
             foreach my $file (glob("$dir/*.[VvOoBb]")) # .vob too...
             {
-                # TODO add a switch to turn this on (off by default)
-                # For now, it's just on :-)
-                # this will be useful when video is out of sync
                 system("tcprobe -H 500 -i $file > $file.txt");
             }
-            # TODO make sure the directory contains only .VOB files...
-            system("tccat -i $dir -P | tcextract -t vob -x ac3 -a0 > $audio");
-        } else {
-            pwarn("No DVD device or Directory given as argument for audio extraction.");
         }
+        # TODO what if we don't want audio channel 0? use value from CONFIG file
+        system("tcextract -i $audio_fifo -t vob -x ac3 -a 0 > $audio &");
     } else {
         pwarn("Audio file $audio exists. Not extracting new sound.");
     } # end if not $audio
-    if ( !-f "$video" )
+
+    # video:
+    system("mkfifo $video_fifo > /dev/null 2>&1");
+    perror("Failed to create named pipe $video_fifo") if ( ! -e $video_fifo );
+    push(@fifo_files,$video_fifo);
+    if ( ! -f $video )
     {
-        # my $TCREQUANT=1.13924050632911392405;
-        # TODO calculate tcrequant:
-        # 1.05 * ( video_size / (4700 - audio_size)) for a 4.4GB DVD
-        # audio size can be calculated from all .ac3 files
-        my $TCREQUANT=1.57122151287947; # has proven to work best so far
-        if ( -b "$dir" )
-        {
-            # this is a DVD device /dev/dvd (?)
-            system("tccat -i $dir -T$title,-1 -P | tcextract -t vob -x mpeg2 | tcrequant -o $video -f $TCREQUANT");
-        } elsif ( -d "$dir" )
-        {
-            system("tccat -i $dir -P | tcextract -t vob -x mpeg2 | tcrequant -o $video -f $TCREQUANT");
-        } else {
-            pwarn("No DVD device or Directory given as argument for video extraction.");
-        }
+        system("nice -$nice tcextract -i $video_fifo -o $video -t vob -x mpeg2 &");
     } else {
         pwarn("Video file $video exists. Not extracting new video.");
     } # end if not $video
-    # multiplex audio and video
-    if ( -f "$audio" and -f "$video" )
+
+    # subtitles:
+    system("mkfifo $subtitle_fifo > /dev/null 2>&1");
+    perror("Failed to create named pipe $subtitle_fifo") if ( !-e $subtitle_fifo);
+    push(@fifo_files,$subtitle_fifo);
+    if ( ! -f $subtitle )
     {
+        system("tcextract -i $subtitle_fifo -a 0 -x ps1 -t vob > $subtitle &");
+    } else {
+        pwarn("Subtitle file $subtitle exists. Not extracting new subtitle.");
+    } # end if not $subtitle
+   
+    my $named_pipes = join(" ",@fifo_files);
+    system("nice -$nice tccat -i $dir $TCCAT_EXTRA_ARGS -P | tee $named_pipes");
+
+    unlink(@fifo_files);
+    
+    # multiplex audio, video 
+    if ( -f $audio and -f $video )
+    {
+        video_requant($video,$audio);
+
         no warnings; # suppress warnings here
         my $VERBOSITY = ( $DEBUG == 0 ) ? 0 : 2;
-        # join sound+video in file video.mpeg in current directory
+        # join sound+video in file $mpg_file in current directory
         # and add navigational information for dvdauthor
         # although tcmplex is default, we give mplex a try
-        if ( basename("$MULTIPLEXER") eq "tcmplex" || !-x $MPLEX )
+        if ( basename($MULTIPLEXER) eq "tcmplex" || ! -x $MPLEX )
         {
             if ( -x $TCMPLEX ) 
             {
-                # favor tcmplex over mplex. mplex chokes on some movies
-                my $fps = get_fps("$video"); # can't pass fps to tcmplex
-                my $args = ""; # extra options for TCMPLEX
-                if ( $fps !~ /^25\.0/ ) { $args .= " -N" ;} # NTSC
+                # we favor tcmplex over mplex. mplex chokes on some movies
+                my $fps = get_fps($video); # can't pass fps to tcmplex
+                if ( $fps !~ /^25\.0/ ) { $TCMPLEXARGS .= " -N " ;} # NTSC
                 # -D 0 # dont correct sync
                 # -m d # DVD mode
-                my $sys = "$TCMPLEX $args -d $VERBOSITY -o video.mpeg -i video.m2v -p audio.ac3 -F $multiplex_config -m d $MULTIPLEXARGS";
-                pinfo("$sys") if ( $DEBUG );
-                system("$sys");
+                my $sys = "$TCMPLEX $TCMPLEXARGS -d $VERBOSITY -o $mpg_file -i $video -p $audio -F $multiplex_config -m d $MULTIPLEXARGS";
+                pinfo($sys) if ( $DEBUG );
+                system($sys);
             } else {
                 pwarn("tcmplex not found");
             } # end if tcmplex
-        } elsif ( basename("$MULTIPLEXER") eq "mplex" || !-x $TCMPLEX ) {
+        } elsif ( basename($MULTIPLEXER) eq "mplex" || !-x $TCMPLEX ) {
             if ( -x $MPLEX )
             {
+                # 
                 # -S 4400 # split at 4.4GB
                 # -f 8 # produce dvdauthor compliant/navigational MPEG-2
-                my $sys = "$MPLEX $MULTIPLEXARGS -v $VERBOSITY -S 4400 -f 8 -o 'video\%d.mpeg' $video $audio";
-                pinfo("$sys") if ( $DEBUG );
-                system("$sys");
+                # TODO test for sync problems and pass -0 NNms argument to mplex
+                my $sys = "$MPLEX $MPLEXARGS $MULTIPLEXARGS -v $VERBOSITY -S 4400 -f 8 -o $mpg_file $video $audio";
+                pinfo($sys) if ( $DEBUG );
+                system($sys);
             } else {
                 pwarn("mplex not found");
             } # end if mplex
@@ -3756,7 +3815,12 @@ sub dvd9to5
     } else {
         if ( !-f "$audio") { pwarn("Audio file $audio missing"); }
         if ( !-f "$video") { pwarn("Video file $video missing"); }
-    } # end if $video and $audio
+    } # end if $video, $audio
+
+    # deal with mux'ing subtitles: 
+    # if ( !-f "$subtitle") { pwarn("Subtitle file $subtitle missing"); }
+    # nice -$nice subtitle2pgm -i $subtitle -o SUBPGM/$PROJNAME -X$TVRES -g 5 -t 1
+    # nice -$nice spumux spumux.xml < $video > $video.muxed.mpeg
 
     if ( $UNLINK_CONFIG )
     {
@@ -4143,6 +4207,75 @@ if ( $TEST )
 
     # Then to put them back together
     #tcmplex -o ./tmp/VTS_01_1.vob -i ./tmp/VTS_01_1.m2v -p ./tmp/VTS_01_1 -m d 
+   
+    my $i=0; # counter
+    my $TCCAT_EXTRA_ARGS = ( -b $dir ) ? " -T$TITLESET,-1 -L ":"";
+
+    # let's rip 5 seconds of video and put it in test.vob
+    system("tccat -i ".$ARGV[0]." $TCCAT_EXTRA_ARGS > test.vob &");
+
+    print STDOUT ("tccat running as $$\n");
+
+    while(1)
+    {
+        sleep(1); # sleep one second
+        last if ( $i == 5 ); # end loop when 5 iterations are completed
+        $i++;
+    }
+    my $uid = qx/id -u/;
+    chomp($uid);
+    system("pkill -2 tccat -U $uid"); # send signal 2 to all tccat running under my user id. This is dangerous! TODO find a way to get the PID of the tccat that we started
+    perror( "Failed to create video file test.vob" ) if ( !-f "test.vob");
+
+    # attempt a dummy multiplexing
+    system("mkfifo test_audio.fifo");
+    system("mkfifo test_video.fifo");
+    system("mkfifo test_subtitle.fifo");
+ 
+    system("tcextract -i test_video.fifo -t vob -x mpeg2 -o test.m2v &");
+    system("tcextract -i test_audio.fifo -t vob -x ac3 -a 0 -o test.ac3 &");
+    system("tcextract -i test_subtitle.fifo -t vob -x ps1 -a 0 -o test.sub &");
+
+    # rip it:
+    system("nice -$nice tccat -i $dir $TCCAT_EXTRA_ARGS -P | tee test_video.fifo test_audio.fifo test_subtitle.fifo ");
+
+    # report findings:
+    # requant video and report factor
+    pinfo ("Video Requant Factor: ",video_requant("test.m2v","test.ac3"));
+    # check if audio/video needs synchronization
+    my $sync_ms = check_sync("test.m2v","test.ac3");
+    pinfo ( "Video Sync Factor: ",$sync_ms,"ms");
+
+    # try replex'ing the files
+    my $mplex = which("mplex");
+    my $tcmplex = which("tcmplex");
+
+    my $VERBOSITY = ( $DEBUG == 0 ) ? 0 : 2;
+
+    if ( (basename($MULTIPLEXER) eq "tcmplex" and -x $tcmplex) || ! -x $mplex )
+    {
+        # we favor tcmplex over mplex. mplex chokes on some movies
+        my $fps = get_fps($video); # can't pass fps to tcmplex
+        if ( $fps !~ /^25\.0/ ) { $TCMPLEXARGS .= " -N " ;} # NTSC
+        # -D 0 # dont correct sync
+        # -m d # DVD mode
+        my $sys = "$tcmplex -d $VERBOSITY -o test.mpeg -i test.m2v -p test.ac3 -m d $MULTIPLEXARGS";
+        pinfo($sys) if ( $DEBUG );
+        system($sys);
+    } elsif ( (basename($MULTIPLEXER) eq "mplex" and -x $mplex) || ! -x $tcmplex ) {
+        my $MPLEXARGS = ( $sync_ms ) ? " -O $sync_ms"."ms ":"";
+        my $sys = "$mplex $MPLEXARGS $MULTIPLEXARGS -v $VERBOSITY -S 4400 -f 8 -o test.mpeg test.m2v test.ac3";
+        pinfo($sys) if ( $DEBUG );
+        system($sys);
+    } else {
+        pwarn("Could not find any replex'ing utility. Try installing mjpegtools and/or transcode");
+    }
+    # clean up
+    unlink("test_video.fifo","test_audio.fifo","test_subtitle.fifo");
+
+    # launch Video player?
+    my $rep = prompt("Launch $XINE to view test.mpeg now? [y/n] ");
+    system("$XINE test.mpeg") if ( $rep =~ /^y$/i );
 }
 
 if ( defined $ARGV[1] &&  $ARGV[1] eq "config")

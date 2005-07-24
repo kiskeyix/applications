@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.97 $
+# $Revision: 1.98 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -3646,6 +3646,21 @@ sub ripdvd
     pinfo(" You may now run V2divx with yours arguments to encode the vob file(s)\n\n");
     exit(0);
 } # END ripidvd
+
+sub check_sync
+{
+    # @desc simple function to check whether a given video and audio have sync'ing problem
+    # @param $video video file to check (m2v format)
+    # @param $audio audio file to check (ac3 format)
+    # @return number of milliseconds needed to correct sync'ing problem
+
+    my $video = shift;
+    my $audio = shift;
+
+    my $n_ms = 0; # assume we don't need any sync'ing
+
+    return $n_ms;
+}
 
 sub video_requant
 {

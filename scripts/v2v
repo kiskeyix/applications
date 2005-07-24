@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.102 $
+# $Revision: 1.103 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -139,6 +139,10 @@ my $userconfig="
 
 # EXT SUBTITLE FILTER 5 LAST OPTIONS (here we just use 3) ...See the docs 8-(
 \$EXTSUB=0:0:255;
+
+# multiplexer used when converting DVDs from DVD9 to DVD5 or in general
+\$MULTIPLEXER=mplex;
+
 ";
 
 #################### GLOBAL VARIABLES ###################
@@ -214,7 +218,7 @@ my $MULTIPLEXARGS=""; # extra arguments for whichever multiplexer you choose, se
 ## LH string will be replaced (s///) with RH string
 # XXXFILEXXX := <vob file="video.mpg" />
 # XXXFILEXXX := <vob file="video1.mpg" />\n<vob file="video2.mpg" />...
-my $DVDAUTHOR = "<dvdauthor>\n<vmgm />\n    <titleset>\n        <titles>\n            <pgc>\nXXXFILEXXX\n            </pgc>\n        </titles>\n    </titleset>\n</dvdauthor>\n"; # xml file
+my $DVDAUTHOR = "<dvdauthor dest='XXXDIRXXX'>\n<vmgm />\n    <titleset>\n        <titles>\n            <pgc>\nXXXFILEXXX\n            </pgc>\n        </titles>\n    </titleset>\n</dvdauthor>\n"; # xml file
 
 # global for do_file_ary
 my @ary_files = ();
@@ -757,7 +761,6 @@ sub readconf
             next unless length; #  If our line is empty, we ignore it
             my ($var_name, $value) = split(/:/, $_, 2);
 
-
             _debug (" + $var_name  = $value");
             $VOBPATH=$value if ($var_name eq "VOBPATH");
             $END_SEC=$value if ($var_name eq "END_SEC");
@@ -780,6 +783,7 @@ sub readconf
             $TV_RUNTIME=$value if ($var_name eq "TV_RUNTIME");
             $TVREC=$value if ($var_name eq "TVREC");
             $QUALITY=$value if ($var_name eq "QUALITY");
+            $MULTIPLEXER=$value if ($var_name eq "MULTIPLEXER");
 
         #    $$var_name = $value;
         #    _debug (" \$$var_name = $value");
@@ -790,7 +794,6 @@ sub readconf
     # We need to retest $AO in case user has change
     # in tmp/V2divx.conf so we recall check_sys
     check_system;
-
 } # end readconf
 
 sub a_bitrate
@@ -1686,7 +1689,7 @@ sub get_audio_channel
 sub readuserconf
 {
     if ( -f $userconfigfile ) {
-        open (USERCONF,"<$userconfigfile");
+        open (USERCONF,"<$userconfigfile") || open (USERCONF,"<".lc($userconfigfile)); 
     } else {
         open (USERCONF,"<$HOME/.vob2divxrc");
     }
@@ -1729,6 +1732,8 @@ sub readuserconf
         $DEF_AUDIOCHANNEL=($var_name eq "DEF_AUDIOCHANNEL" && $DEF_AUDIOCHANNEL eq "" )?$value:$DEF_AUDIOCHANNEL;
         $AO=($var_name eq "AO" && $AO eq "" )?$value:$AO;
         $EXTSUB=($var_name eq "EXTSUB" && $EXTSUB eq "" )?$value:$EXTSUB;
+        $MULTIPLEXER=$value if ($var_name eq "MULTIPLEXER");
+
         _debug ("$var_name  = $value");
         _warn("-- WARNING --\n  \$DEBUG variable ignored, use $0 --debug instead.\n") if ( $var_name eq "DEBUG");
         _warn("-- WARNING --\n \$INFO variable ignored, use $0 --info instead.\n") if ( $var_name eq "INFO");
@@ -1750,6 +1755,7 @@ sub readuserconf
     $LANGUAGE="fr"  if ( $LANGUAGE eq "" );
     $STARTLOGO=2 if ( $STARTLOGO eq "" );
     $nice=10 if ( $nice eq "" );
+    $MULTIPLEXER="tcmplex" if ($MULTIPLEXER eq "");
 
     $DIVX="ffmpeg" if ( $DIVX eq "" );
     if ( $DIVX_OPT  eq "" )
@@ -3726,7 +3732,7 @@ sub dvd9to5
     # extra arguments to pass to tccat 
     # different for dirs and special files (blocks)
     my $TCCAT_EXTRA_ARGS = ( -b $dir ) ? " -T$title,-1 -L ":"";  
-   
+  
     # clean up old FIFOs
     unlink($video_fifo) if ( -e $video_fifo );
     unlink($audio_fifo) if ( -e $audio_fifo );

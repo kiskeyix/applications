@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.100 $
+# $Revision: 1.101 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -4220,13 +4220,6 @@ _info("Start Time: $f_start_time \n") unless ( $HELP == 1 );
 
 if ( $TEST ) 
 {
-    # work in progress... this is how a test should work:
-    # get 2 minutes of video
-    #transcode -q 1 -a 0 -x vob,ac3 -i $ARGV[0] -w 6800 -V -M 1 -F "8,-q 1 -g 15 -G 15 -d" -A -N 0x2000 -E 48000 -b 384 -y mpeg2enc,raw -o ./tmp/VTS_01_1 -J cut=00:01:00.0-00:02:00.0,extsub=1 --print_status 100,1
-
-    # Then to put them back together
-    #tcmplex -o ./tmp/VTS_01_1.vob -i ./tmp/VTS_01_1.m2v -p ./tmp/VTS_01_1 -m d 
-   
     my $i=0; # counter
     my $dir = $ARGV[0];
 

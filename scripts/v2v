@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.101 $
+# $Revision: 1.102 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -3786,7 +3786,7 @@ sub dvd9to5
     } # end if not $subtitle
    
     my $named_pipes = join(" ",@fifo_files);
-    system("nice -$nice tccat -i $dir $TCCAT_EXTRA_ARGS -P | tee $named_pipes");
+    system("nice -$nice tccat -i $dir $TCCAT_EXTRA_ARGS -P | tee $named_pipes  > /dev/null 2> /dev/null");
 
     unlink(@fifo_files);
     

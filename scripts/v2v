@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.98 $
+# $Revision: 1.99 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -1137,15 +1137,18 @@ sub printinfo
 }
 
 sub tcsync
-{   # Return the sync fine tunning suggested by tcprobe
-    # Regex must be deeper tested
+{   
+    # @param $file_or_path file/path to probe
+    # @param $what what should we return: 1. option to sync audio/video -D; 2. number of ms that we need in order to fine tune audio/video sync
+    # @return the sync fine tunning suggested by tcprobe
+    my $file_or_path = shift;
+    my $what = shift; # are we returning -D or --av_fine_ms ?
     my $fine_sync="";
-    my $sync=`tcprobe -i $VOBPATH 2>&1`;
-    my @nsync=split /@_/,$sync;
-    $nsync[1]=~m,-D ([^\(]*)\(frame,;
-    # WARNING THIS IS NOT ALWAYS VERY GOOD !!!
-    $fine_sync="-D $1" if ( $VIDEONORM ne "PAL" ) ;
-    return($fine_sync);
+    my $sync=`tcprobe -i $file 2>&1`;
+    $sync =~ m|-D (\d+) --av_fine_ms (\d+) \(frames \& ms\) \[(\d+)\] \[(\d+)\]|;
+    $fine_sync=$1 if ($what == 1)
+    $fine_sync=$2 if ($what == 2)
+    return $fine_sync;
 }
 
 sub get_tail 
@@ -2560,7 +2563,7 @@ sub aviencode
         my ($aogg_output)="";
         $aogg_output="-m tmp/ac1.$TITLE.ogg" if ( $AO eq "ogg" );
         my $fine_sync="";
-        $fine_sync=tcsync($audio_params) if ( $CLUSTER eq "NO");
+        $fine_sync=tcsync($VOBPATH,1,$audio_params) if ( $CLUSTER eq "NO");
         pdebug ("Fine sync =  $fine_sync");
         # experimental.. but work if only ONE vob file :-(
         #if ( $CLUSTER ne "NO" && $VIDEONORM eq "NTSC" )
@@ -2575,6 +2578,7 @@ sub aviencode
             unlink("tmp/2-${TITLE}${node}_${i}.finish");
             unlink ("tmp/1-${TITLE}${node}.PB");
             pinfo("$v2d\t Encode: $vobpath Pass One ....\n");
+            $fine_sync = " -D $fine_sync" if ( $fine_sync >= 0 and $VIDEONORM ne "PAL" );
             $sys = "transcode -i \"$vobpath\" $stream_opt $fine_sync $clust_percent $final_params -w $BITRATE,$keyframes".
                 " --export_fps 25.0 ".
                 " -J ${filter}astat=\"tmp/astat\" -y $DIVX,null $DIVX_OPT -x ".
@@ -3650,15 +3654,15 @@ sub ripdvd
 sub check_sync
 {
     # @desc simple function to check whether a given video and audio have sync'ing problem
-    # @param $video video file to check (m2v format)
-    # @param $audio audio file to check (ac3 format)
+    # @param $video video file to check (vob format)
     # @return number of milliseconds needed to correct sync'ing problem
 
     my $video = shift;
-    my $audio = shift;
-
+    perror("Cannot read file $video to test for synchronization issues") if ( ! -r $video );
+    
     my $n_ms = 0; # assume we don't need any sync'ing
-
+    $n_ms = tcsync($video,2);
+    pdebug("check_sync returns $n_ms");
     return $n_ms;
 }
 
@@ -3750,7 +3754,7 @@ sub dvd9to5
         if ( -d $dir ) {
             foreach my $file (glob("$dir/*.[VvOoBb]")) # .vob too...
             {
-                system("tcprobe -H 500 -i $file > $file.txt");
+                system("tcprobe -H 50 -i $file > $file.txt");
             }
         }
         # TODO what if we don't want audio channel 0? use value from CONFIG file

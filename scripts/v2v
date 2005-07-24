@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.103 $
+# $Revision: 1.104 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -3689,7 +3689,9 @@ sub video_requant
     my $s_size = 10000000; # we add 10mb for e/a title we are ripping. for now is just one main title
     my $tcrequant = (1.05 * $video_size) / ($DVD5SIZE - ($audio_size - $s_size));
 
-    system( "nice -$nice tcrequant -i $video -d 0 -o shrunk.$video -f $tcrequant" );
+    my $sys = "nice -$nice tcrequant -i $video -d 0 -o shrunk.$video -f $tcrequant";
+    _info( $sys );
+    system( $sys );
     rename( "shrunk.$video",$video );
 
     return $tcrequant;
@@ -3816,7 +3818,7 @@ sub dvd9to5
                 # -D 0 # dont correct sync
                 # -m d # DVD mode
                 my $sys = "$TCMPLEX $TCMPLEXARGS -d $VERBOSITY -o $mpg_file -i $video -p $audio -F $multiplex_config -m d $MULTIPLEXARGS";
-                _info($sys) if ( $DEBUG );
+                _info($sys);
                 system($sys);
             } else {
                 _warn("tcmplex not found");
@@ -3824,12 +3826,11 @@ sub dvd9to5
         } elsif ( basename($MULTIPLEXER) eq "mplex" || !-x $TCMPLEX ) {
             if ( -x $MPLEX )
             {
-                # 
                 # -S 4400 # split at 4.4GB
                 # -f 8 # produce dvdauthor compliant/navigational MPEG-2
                 # TODO test for sync problems and pass -0 NNms argument to mplex
                 my $sys = "$MPLEX $MPLEXARGS $MULTIPLEXARGS -v $VERBOSITY -S 4400 -f 8 -o $mpg_file $video $audio";
-                _info($sys) if ( $DEBUG );
+                _info($sys);
                 system($sys);
             } else {
                 _warn("mplex not found");
@@ -4280,7 +4281,7 @@ if ( $TEST )
         # we favor tcmplex over mplex. mplex chokes on some movies
         my $fps = get_fps("test.m2v"); # can't pass fps to tcmplex
         $TCMPLEXARGS .= " -N " if ( $fps !~ /^25\.0/ ); # NTSC
-        $TCMPLEXARGS .= " -D 1 --av_fine_ms $sync_ms " if ( $sync_ms > 0 );
+        $TCMPLEXARGS .= " -D 1,$sync_ms " if ( $sync_ms > 0 );
         # -D 0 # dont correct sync
         # -m d # DVD mode
         my $sys = "$tcmplex $TCMPLEXARGS -d $VERBOSITY -o test.mpeg -i test.m2v -p test.ac3 -m d $MULTIPLEXARGS";
@@ -4288,7 +4289,14 @@ if ( $TEST )
         system($sys);
     } elsif ( (basename($MULTIPLEXER) eq "mplex" and -x $mplex) || ! -x $tcmplex ) {
         my $MPLEXARGS = ( $sync_ms ) ? " -O $sync_ms"."ms ":"";
-        my $sys = "$mplex $MPLEXARGS $MULTIPLEXARGS -v $VERBOSITY -S 4400 -f 8 -o test.mpeg test.m2v test.ac3";
+        # -S This option specifies the maximum size of output files in MBytes
+        # (2^10)  When  the  limit is reached a  new file is started.  The
+        # default is (0) unlimited.
+        # -V Set variable bit rate multiplexing
+        # -M When splitting a long stream in files based on -S mplex  does  a
+        #  certain  amount  of  careful  "running  out" to prevent a GOP or
+        #  audio frame being split
+        my $sys = "$mplex $MPLEXARGS $MULTIPLEXARGS -v $VERBOSITY -S 4400 -M -V -f 8 -o test.mpeg test.m2v test.ac3";
         _info($sys) if ( $DEBUG );
         system($sys);
     } else {

@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.104 $
+# $Revision: 1.105 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -52,7 +52,7 @@ my $SRTSUBRIP=0;
 my $OKCLUSTER=0;
 my $TEST = 0;
 my $DVD9TO5 = 0;
-my $DVD5SIZE = 4700000000; # bytes
+my $DVD5SIZE = 4500000000; # bytes
 my $DVDBACKUP = 0;
 my $MPLAYER = 0;
 my $TOVCD = 0;
@@ -3683,7 +3683,7 @@ sub video_requant
     my $audio = shift;
     _error("Cannot read file $video for requantization") if ( ! -r $video );
     _error("Cannot read file $audio for requantization") if ( ! -r $audio );
-    # $tcrequant = (1.05 * video_size) / (4700 - (audio_size + 10)) for a 4.4GB DVD
+    # $tcrequant = (1.05 * video_size) / (4500000000 - (audio_size + 10)) for a 4.4GB DVD
     my $video_size = (stat($video))[7]; # size in bytes, just like UNIX stat -c %s $file
     my $audio_size = (stat($audio))[7];
     my $s_size = 10000000; # we add 10mb for e/a title we are ripping. for now is just one main title

@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.106 $
+# $Revision: 1.107 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -3697,6 +3697,15 @@ sub video_requant
     return $tcrequant;
 } # end video_requant
 
+sub create_fifo
+{
+    my $fifo = shift;
+    _error("Failed to create named pipe $fifo") if ( ! defined $fifo );
+
+    system("mkfifo $fifo > /dev/null 2>&1");
+    _error("Failed to create named pipe $fifo") if ( ! -e $fifo );
+}
+
 sub dvd9to5
 {
     # @param $dir directory := string path to directory or device holding VOBs
@@ -3710,6 +3719,7 @@ sub dvd9to5
         if ( ! defined($dir) or ! -e $dir );
     $title = ($title =~ /\d+/) ? $title : 1;
 
+    my $DISC_TITLE = "V2V"; # default title
     my $TCMPLEX = which("tcmplex");
     my $TCMPLEXARGS = "";
     my $MPLEX = which("mplex");
@@ -3719,7 +3729,9 @@ sub dvd9to5
     my $BUFFER_ARGS = " -s 64k -m 16m ";
 
     # supporting variables
-    my @fifo_files = ();
+    my @fifo_files = (); # FIFOs that tccat must know about
+    my @_extract = (); # array of tcextract commands we care
+    my $audio_opts = " -a ac3+en "; # audio options for dvdauthor
 
     # files
     my $mpg_file = "video.fifo.mpeg"; # final output
@@ -3729,7 +3741,7 @@ sub dvd9to5
     my $video_vob_fifo = "video.fifo.vob";
     my $multiplex_config = "multiplexer.cfg";
     my $subtitle = "subtitle.fifo.sub";
-    my $subtitle_fifo = "subtitle.fifo.sub";
+    my $subtitle_vob_fifo = "subtitle.fifo.vob";
      
     # flag
     my $UNLINK_CONFIG=0; # if we created this file, unlink it
@@ -3739,9 +3751,13 @@ sub dvd9to5
     my $TCCAT_EXTRA_ARGS = ( -b $dir ) ? " -T$title,-1 -L ":"";  
   
     # clean up old FIFOs
+    unlink($mpg_file) if ( -e $mpg_file );
     unlink($video_vob_fifo) if ( -e $video_vob_fifo );
+    unlink($video) if ( -e $video );
     unlink($audio_vob_fifo) if ( -e $audio_vob_fifo );
-    unlink($subtitle_fifo) if ( -e $subtitle_fifo );
+    unlink($audio) if ( -e $audio );
+    unlink($subtitle_vob_fifo) if ( -e $subtitle_vob_fifo );
+    unlink($subtitle) if ( -e $subtitle );
 
 # FIXME if we requant carefully, we won't need this...
 #    # respect user configurations for this directory
@@ -3755,11 +3771,12 @@ sub dvd9to5
 #    }
 
     # audio:
-    system("mkfifo $audio_vob_fifo > /dev/null 2>&1");
-    _error("Failed to create named pipe $audio_vob_fifo") if ( ! -e $audio_vob_fifo );
+    create_fifo($audio_vob_fifo);
+    create_fifo($audio);
     push(@fifo_files,$audio_vob_fifo);
-    if ( ! -f $audio )
-    {
+
+    #if ( ! -f $audio )
+    #{
         # TODO add a switch to turn this on (off by default)
         # For now, it's just on :-)
         # this will be useful when video is out of sync
@@ -3770,82 +3787,107 @@ sub dvd9to5
             }
         }
         # TODO what if we don't want audio channel 0? use value from CONFIG file
-        system("nice -$nice $BUFFER $BUFFER_ARGS -i $audio_vob_fifo | nice -$nice tcextract -t vob -x ac3 -a 0 > $audio &");
-    } else {
-        _warn("Audio file $audio exists. Not extracting new sound.");
-    } # end if not $audio
+        push(@_extract,"nice -$nice $BUFFER $BUFFER_ARGS -i $audio_vob_fifo | nice -$nice tcextract -t vob -x ac3 -a 0 > $audio &");
+        #} else {
+        #_warn("Audio file $audio exists. Not extracting new sound.");
+        #} # end if not $audio
 
     # video:
-    system("mkfifo $video_vob_fifo > /dev/null 2>&1");
-    _error("Failed to create named pipe $video_vob_fifo") if ( ! -e $video_vob_fifo );
+    create_fifo($video_vob_fifo);
+    create_fifo($video);
     push(@fifo_files,$video_vob_fifo);
-    if ( ! -f $video )
-    {
-        system("nice -$nice tcextract -i $video_vob_fifo -t vob -x mpeg2 > $video &");
-    } else {
-        _warn("Video file $video exists. Not extracting new video.");
-    } # end if not $video
+    #if ( ! -f $video )
+    #{
+        push(@_extract,"nice -$nice $BUFFER $BUFFER_ARGS -i $video_vob_fifo | nice -$nice tcextract -t vob -x mpeg2 > $video &");
+        #} else {
+        #_warn("Video file $video exists. Not extracting new video.");
+        #} # end if not $video
 
+    # FIXME subtitles need something more... 
     # subtitles:
-    system("mkfifo $subtitle_fifo > /dev/null 2>&1");
-    _error("Failed to create named pipe $subtitle_fifo") if ( !-e $subtitle_fifo);
-    push(@fifo_files,$subtitle_fifo);
-    if ( ! -f $subtitle )
-    {
-        system("tcextract -i $subtitle_fifo -a 0 -x ps1 -t vob > $subtitle &");
-    } else {
-        _warn("Subtitle file $subtitle exists. Not extracting new subtitle.");
-    } # end if not $subtitle
+#    create_fifo($subtitle);
+#    create_fifo($subtitle_vob_fifo);
+#    push(@fifo_files,$subtitle_vob_fifo);
    
-    my $named_pipes = join(" ",@fifo_files);
-    system("nice -$nice tccat -i $dir $TCCAT_EXTRA_ARGS -P | tee $named_pipes  > /dev/null 2> /dev/null");
-
-    unlink(@fifo_files);
-    
+    #if ( ! -f $subtitle )
+    #{
+    #system("nice -$nice $BUFFER $BUFFER_ARGS -i $subtitle_vob_fifo | nice -$nice tcextract -a 0 -x ps1 -t vob > $subtitle &");
+        #} else {
+        #_warn("Subtitle file $subtitle exists. Not extracting new subtitle.");
+        #} # end if not $subtitle
+   
     # multiplex audio, video 
-    if ( -f $audio and -f $video )
-    {
-        video_requant($video,$audio);
+    #if ( -f $audio and -f $video )
+    #{
+#        video_requant($video,$audio); FIXME
 
-        no warnings; # suppress warnings here
+    #no warnings; # suppress warnings here
         my $VERBOSITY = ( $DEBUG == 0 ) ? 0 : 2;
         # join sound+video in file $mpg_file in current directory
         # and add navigational information for dvdauthor
         # although tcmplex is default, we give mplex a try
-        if ( basename($MULTIPLEXER) eq "tcmplex" || ! -x $MPLEX )
-        {
-            if ( -x $TCMPLEX ) 
-            {
-                # we favor tcmplex over mplex. mplex chokes on some movies
-                my $fps = get_fps($video); # can't pass fps to tcmplex
-                if ( $fps !~ /^25\.0/ ) { $TCMPLEXARGS .= " -N " ;} # NTSC
-                # -D 0 # dont correct sync
-                # -m d # DVD mode
-                my $sys = "$TCMPLEX $TCMPLEXARGS -d $VERBOSITY -o $mpg_file -i $video -p $audio -F $multiplex_config -m d $MULTIPLEXARGS";
-                _info($sys);
-                system($sys);
-            } else {
-                _warn("tcmplex not found");
-            } # end if tcmplex
-        } elsif ( basename($MULTIPLEXER) eq "mplex" || !-x $TCMPLEX ) {
+#        if ( basename($MULTIPLEXER) eq "tcmplex" || ! -x $MPLEX )
+#        {
+#            if ( -x $TCMPLEX ) 
+#            {
+#                # we favor tcmplex over mplex. mplex chokes on some movies
+#                my $fps = get_fps($video); # can't pass fps to tcmplex
+#                if ( $fps !~ /^25\.0/ ) { $TCMPLEXARGS .= " -N " ;} # NTSC
+#                # -D 0 # dont correct sync
+#                # -m d # DVD mode
+#                my $sys = "$TCMPLEX $TCMPLEXARGS -d $VERBOSITY -o $mpg_file -i $video -p $audio -F $multiplex_config -m d $MULTIPLEXARGS";
+#                _info($sys);
+#                system($sys);
+#            } else {
+#                _warn("tcmplex not found");
+#            } # end if tcmplex
+#        } elsif ( basename($MULTIPLEXER) eq "mplex" || !-x $TCMPLEX ) {
             if ( -x $MPLEX )
             {
                 # -S 4400 # split at 4.4GB
                 # -f 8 # produce dvdauthor compliant/navigational MPEG-2
                 # TODO test for sync problems and pass -0 NNms argument to mplex
-                my $sys = "$MPLEX $MPLEXARGS $MULTIPLEXARGS -v $VERBOSITY -S 4400 -f 8 -o $mpg_file $video $audio";
+                create_fifo($mpg_file);
+                my $sys = "nice -$nice $MPLEX $MPLEXARGS $MULTIPLEXARGS -v $VERBOSITY -S 0 -f 8 -o $mpg_file $video $audio &";
                 _info($sys);
                 system($sys);
+                sleep(2);
+
+                # setup all tcextract FIFOs
+                foreach my $c (@_extract)
+                { 
+                    _info($c);
+                    system($c);
+                    sleep (2);
+                }
+                
+                my $named_pipes = join(" ",@fifo_files);
+                my $_tc_sys = "nice -$nice tccat -i $dir $TCCAT_EXTRA_ARGS -P | tee $named_pipes  > /dev/null &";
+                _info($_tc_sys);
+                system($_tc_sys);
+               
+                # Fake the chapters for now:
+                my @chapter = ("00:10:00.000","00:20:00.000","00:30:00.000","00:40:00.000","00:50:00.000","01:00:00.000","01:10:00.000","01:20:00.000","01:30:00.000","01:40:00.000","01:50:00.000","02:00:00.000");
+                my $chapters = "00:00:00.000";
+                for (my $l = 1; $l < (@chapter+0) - 1; ++$l)
+                { 
+                    $chapters .= "," . $chapter[$l];
+                }
+
+                system("mkdir -p $dir/$DISC_TITLE/dvd/");
+                my $_dvdauthor_sys = "nice -$nice dvdauthor -t $audio_opts -c $chapters -o $dir/$DISC_TITLE/dvd/ $mpg_file";
+                
+                unlink(@fifo_files);
             } else {
-                _warn("mplex not found");
+                _error("mplex not found");
             } # end if mplex
-        } else {
-            _warn("No multiplex application found in your PATH. Tried tcmplex [$TCMPLEX] and mplex [$MPLEX]");
-        } # end if/elsif/else $multiplexer
-    } else {
-        if ( !-f "$audio") { _warn("Audio file $audio missing"); }
-        if ( !-f "$video") { _warn("Video file $video missing"); }
-    } # end if $video, $audio
+#        } else {
+#            _warn("No multiplex application found in your PATH. Tried tcmplex [$TCMPLEX] and mplex [$MPLEX]");
+#        } # end if/elsif/else $multiplexer
+#    } else {
+#        if ( !-f "$audio") { _warn("Audio file $audio missing"); }
+#        if ( !-f "$video") { _warn("Video file $video missing"); }
+#    } # end if $video, $audio
 
     # deal with mux'ing subtitles: 
     # if ( !-f "$subtitle") { _warn("Subtitle file $subtitle missing"); }

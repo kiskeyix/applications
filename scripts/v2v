@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.105 $
+# $Revision: 1.106 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -3715,18 +3715,21 @@ sub dvd9to5
     my $MPLEX = which("mplex");
     my $MPLEXARGS = "";
 
+    my $BUFFER = which("buffer");
+    my $BUFFER_ARGS = " -s 64k -m 16m ";
+
     # supporting variables
     my @fifo_files = ();
 
     # files
-    my $mpg_file = "video.mpeg"; # final output
-    my $audio = "audio.ac3";
-    my $audio_fifo = "audio.fifo";
-    my $video = "video.m2v";
-    my $video_fifo = "video.fifo";
+    my $mpg_file = "video.fifo.mpeg"; # final output
+    my $audio = "audio.fifo.mpa";
+    my $audio_vob_fifo = "audio.fifo.vob";
+    my $video = "video.fifo.m2v";
+    my $video_vob_fifo = "video.fifo.vob";
     my $multiplex_config = "multiplexer.cfg";
-    my $subtitle = "subtitle.sub";
-    my $subtitle_fifo = "subtitle.fifo";
+    my $subtitle = "subtitle.fifo.sub";
+    my $subtitle_fifo = "subtitle.fifo.sub";
      
     # flag
     my $UNLINK_CONFIG=0; # if we created this file, unlink it
@@ -3736,24 +3739,25 @@ sub dvd9to5
     my $TCCAT_EXTRA_ARGS = ( -b $dir ) ? " -T$title,-1 -L ":"";  
   
     # clean up old FIFOs
-    unlink($video_fifo) if ( -e $video_fifo );
-    unlink($audio_fifo) if ( -e $audio_fifo );
+    unlink($video_vob_fifo) if ( -e $video_vob_fifo );
+    unlink($audio_vob_fifo) if ( -e $audio_vob_fifo );
     unlink($subtitle_fifo) if ( -e $subtitle_fifo );
 
-    # respect user configurations for this directory
-    if ( ! -f $multiplex_config )
-    {
-        $UNLINK_CONFIG=1;
-        # profile:
-        open(PROFILE,">$multiplex_config") or die("Could not open file. $!");
-        print PROFILE "maxFileSize = 4400"; # 4.4GB
-        close(PROFILE);
-    }
+# FIXME if we requant carefully, we won't need this...
+#    # respect user configurations for this directory
+#    if ( ! -f $multiplex_config )
+#    {
+#        $UNLINK_CONFIG=1;
+#        # profile:
+#        open(PROFILE,">$multiplex_config") or die("Could not open file. $!");
+#        print PROFILE "maxFileSize = 4400"; # 4.4GB
+#        close(PROFILE);
+#    }
 
     # audio:
-    system("mkfifo $audio_fifo > /dev/null 2>&1");
-    _error("Failed to create named pipe $audio_fifo") if ( ! -e $audio_fifo );
-    push(@fifo_files,$audio_fifo);
+    system("mkfifo $audio_vob_fifo > /dev/null 2>&1");
+    _error("Failed to create named pipe $audio_vob_fifo") if ( ! -e $audio_vob_fifo );
+    push(@fifo_files,$audio_vob_fifo);
     if ( ! -f $audio )
     {
         # TODO add a switch to turn this on (off by default)
@@ -3766,18 +3770,18 @@ sub dvd9to5
             }
         }
         # TODO what if we don't want audio channel 0? use value from CONFIG file
-        system("tcextract -i $audio_fifo -t vob -x ac3 -a 0 > $audio &");
+        system("nice -$nice $BUFFER $BUFFER_ARGS -i $audio_vob_fifo | nice -$nice tcextract -t vob -x ac3 -a 0 > $audio &");
     } else {
         _warn("Audio file $audio exists. Not extracting new sound.");
     } # end if not $audio
 
     # video:
-    system("mkfifo $video_fifo > /dev/null 2>&1");
-    _error("Failed to create named pipe $video_fifo") if ( ! -e $video_fifo );
-    push(@fifo_files,$video_fifo);
+    system("mkfifo $video_vob_fifo > /dev/null 2>&1");
+    _error("Failed to create named pipe $video_vob_fifo") if ( ! -e $video_vob_fifo );
+    push(@fifo_files,$video_vob_fifo);
     if ( ! -f $video )
     {
-        system("nice -$nice tcextract -i $video_fifo -t vob -x mpeg2 > $video &");
+        system("nice -$nice tcextract -i $video_vob_fifo -t vob -x mpeg2 > $video &");
     } else {
         _warn("Video file $video exists. Not extracting new video.");
     } # end if not $video

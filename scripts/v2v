@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.108 $
+# $Revision: 1.109 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -3876,8 +3876,15 @@ sub dvd9to5
 
                 system("mkdir -p $DISC_TITLE/dvd/");
                 my $_dvdauthor_sys = "nice -$nice dvdauthor -t $audio_opts -c $chapters -o $DISC_TITLE/dvd/ $mpg_file";
-                
-                unlink(@fifo_files);
+                _info($_dvdauthor_sys);
+                system($_dvdauthor_sys);
+                unlink($mpg_file,
+                    $audio,
+                    $audio_vob_fifo,
+                    $video,
+                    $video_vob_fifo,
+                    $subtitle,
+                    $subtitle_vob_fifo);
             } else {
                 _error("mplex not found");
             } # end if mplex

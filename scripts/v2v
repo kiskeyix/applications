@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.107 $
+# $Revision: 1.108 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -3874,8 +3874,8 @@ sub dvd9to5
                     $chapters .= "," . $chapter[$l];
                 }
 
-                system("mkdir -p $dir/$DISC_TITLE/dvd/");
-                my $_dvdauthor_sys = "nice -$nice dvdauthor -t $audio_opts -c $chapters -o $dir/$DISC_TITLE/dvd/ $mpg_file";
+                system("mkdir -p $DISC_TITLE/dvd/");
+                my $_dvdauthor_sys = "nice -$nice dvdauthor -t $audio_opts -c $chapters -o $DISC_TITLE/dvd/ $mpg_file";
                 
                 unlink(@fifo_files);
             } else {

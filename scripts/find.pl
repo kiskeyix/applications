@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.26 $
+# $Revision: 1.27 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # URL: http://www.kiskeyix.org/downloads/find.pl.gz
@@ -68,22 +68,28 @@ if ( defined($f_pattern) and $f_pattern =~ m(^\.) )
     sleep(5);
 }
 
-if (! defined($f_pattern) ) {
+if ( not defined($f_pattern) ) {
     print STDERR "All files chosen\n";
     $f_pattern = ".*";
 }
 
+$that_string = clean_string($that_string ) if ( defined($that_string) );
+$this_string = clean_string($this_string );
+
 if ( $DEBUG > 0 )
 {
-    print "s: '$this_string' r: '$that_string' f: '$f_pattern'\n";
-    print STDERR "$RED DEBUG in place... pausing for 10 seconds$NORM\n";
-    sleep(10);
+    print STDERR "s: '$this_string' ";
+    print STDERR "r: '$that_string' " if (defined($that_string));
+    print STDERR "f: '$f_pattern' " if (defined($f_pattern));
+    print STDERR "\n";
+    print STDERR "$RED DEBUG in place... pausing for 5 seconds$NORM\n";
+    sleep(5);
 }
 
 if ($this_string =~ /\w/) {
-    my $i =0;
+    my $i=0;
     @ls = do_file_ary("."); # start at current directory
-    
+    print STDERR ("File list: ",join(":",@ls),"\n") if ( $DEBUG ); 
     for (@ls) {
         # yes, this is a wrapper for a standard tip!
         #
@@ -92,7 +98,7 @@ if ($this_string =~ /\w/) {
         # if $that_string is set
         # and keep a backup .bak for e/a file modified
     
-        if ($DEBUG) {print STDERR "opening $_\n"; }
+        if ( $DEBUG ) { print STDERR "opening $_\n"; }
         
         #system("perl -e 'm/$this_string/g;' $_");
         # or 
@@ -108,38 +114,46 @@ if ($this_string =~ /\w/) {
         {
             while(<FILE>) {
                 $i++;
-                if ($_ =~ s($this_string)($that_string)g) {
+                # TODO make sure $this_string and $that_string don't contain |
+                if ($_ =~ s|$this_string|$that_string|g) {
                     print STDOUT "$GREEN $thisFile [$i]:$NORM $_"; 
                     $modified = 1;
                 }
                 push @new_file,$_;
             }
             close(FILE);
-
             if ($modified) {
                 open (NEWFILE,">$thisFile") 
                     or die "could not write to $thisFile. $!\n";
                 print NEWFILE @new_file;
                 close(NEWFILE);
             }
-
             # cleanup array
             @new_file = ();
-
         } else {
             while(<FILE>) { 
                 $i++; 
-                if ($_ =~ m($this_string)gi) {
+                if ($_ =~ m|$this_string|gi) {
                     print STDOUT "$thisFile [$i]: $_"; 
                 }
             }
             close(FILE);
-
         }
-
+        $thisFile = undef; # reset var
     } #end for
 } else {
     print $usage;
+}
+
+sub clean_string
+{
+    my $str = shift;
+    return undef if ( not defined $str );
+
+    $str =~ s,\|,\\|,g; # take care of |
+    $str =~ s/\\$//g; # take care of ending \
+
+    return $str;
 }
 
 sub do_file_ary {
@@ -172,64 +186,28 @@ sub is_binary
 {
     # returns 1 if true
     my $file = shift;
+    print STDERR ( "is_binary() called: $file\n" ) if ( $DEBUG );
     my $file_t = qx/file "$file"/;
-    if ( $file_t =~ m/(text\s+executable|\s+text\s+)/i )
+    if ( $file_t =~ m/(text\s+executable|\btext\b)/i )
     {
         return 0;
     }
+    print STDERR ( "binary file\n" ) if ( $DEBUG );
     return 1;
 }
 
 sub process_file {
+    print STDERR ("Processing : ",$_,"\n") if ( $DEBUG );
     my $base_name = basename($_);
     if ( 
-        $_ =~ m($f_pattern) &&
-        -f $_ && 
-        $base_name !~ m($EXCEPTION_LIST) &&
+        $_ =~ m($f_pattern) and
+        -f $_ and
+        $base_name !~ m($EXCEPTION_LIST) and
         ! is_binary ($_)
     ) {
         s/^\.\/*//g;
+        print STDERR ("Pushing : ",$_,"\n") if ( $DEBUG );
         push @ls,$_;
     }
 }
 
-# without using Find
-#sub file_ary {
-#    
-#    my $dir = $_[0];
-#    my @subdir = ();
-#
-#    if ($DEBUG) { print STDOUT "dir $dir\n"; }
-#    
-#    opendir (DIR,"$dir") || die "Couldn't open current directory. $!\n";
-#
-#    #construct array of all files and put in @ls
-#    while (defined($thisFile = readdir(DIR))) {
-#        next if ($thisFile !~ /\w/);
-#        if (-d "$dir/$thisFile") {
-#            # we don't care about directories . and ..
-#            next if ($thisFile =~ /^\.{1,2}$/);
-#            push @subdir,"$dir/$thisFile"; 
-#            next;
-#        }
-#        # is file a plain text (ASCII) file?
-#        next unless (-f "$dir/$thisFile" && -T "$dir/$thisFile");
-#       
-#        # do we want specific file extensions?
-#        no warnings;
-#        if ( $f_pattern gt "" ) {
-#            next if ($thisFile !~ m/$f_pattern/i);
-#        }
-#        
-#        if ($DEBUG) { print STDERR "this file $thisFile\n"; }
-#        
-#        push @ls, "$dir/$thisFile";
-#    }
-#    closedir(DIR);
-#
-#    # recur thru rest of directories
-#    # there is no limit in recursion. be careful!
-#    foreach(@subdir) {
-#        file_ary("$_");
-#    }
-#}

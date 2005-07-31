@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 # vi: wm=79:tw=79 :
-# 2004-09-22 21:57 EDT $Revision: 1.5 $ 
+# 2004-09-22 21:57 EDT $Revision: 1.6 $ 
 # Luis Mondesi <lemsx1@hotmail.com> 
 # Converts a bookmarks.html(firefox/mozilla/netscape) file 
 # to bookmarks.rss (1.0)
@@ -143,8 +143,9 @@ sub usage_die
 $CREATOR = $PUBLISHER if ( $CREATOR eq "" ); # not too smart but works :-)
 $PUBLISHER = $CREATOR if ( $PUBLISHER eq "" );
 $SITE = "public" if ( $SITE eq "" ); # hostname --long might be leaking too much info
-$LOCALE = $ENV{LANGUAGE} if ( $LOCALE eq "" ); 
-$LOCALE = $ENV{LANG} if ( $LOCALE eq "" );  # fallback in case $LANGUAGE was not set
+$LOCALE = $ENV{LANGUAGE} if ( $LOCALE eq "" and exists $ENV{LANGUAGE} ); 
+$LOCALE = $ENV{LANG} if ( $LOCALE eq "" and exists $ENV{LANG} );  # fallback in case $LANGUAGE was not set
+$LOCALE = "C" if ( $LOCALE eq "" ); # uff!
 
 POSIX::setlocale( &POSIX::LC_ALL, $LOCALE );
 $DATE = ctime(time) if ($DATE eq ""); # ctime format: Sat Nov 19 21:05:57 1994

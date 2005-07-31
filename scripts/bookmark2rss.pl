@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 # vi: wm=79:tw=79 :
-# 2004-09-22 21:57 EDT $Revision: 1.4 $ 
+# 2004-09-22 21:57 EDT $Revision: 1.5 $ 
 # Luis Mondesi <lemsx1@hotmail.com> 
 # Converts a bookmarks.html(firefox/mozilla/netscape) file 
 # to bookmarks.rss (1.0)
@@ -140,8 +140,8 @@ sub usage_die
 # First, setup our RDF "channel"
 
 # some defaults:
-$CREATOR = "$PUBLISHER" if ( $CREATOR eq "" ); # not too smart but works :-)
-$PUBLISHER = "$CREATOR" if ( $PUBLISHER eq "" );
+$CREATOR = $PUBLISHER if ( $CREATOR eq "" ); # not too smart but works :-)
+$PUBLISHER = $CREATOR if ( $PUBLISHER eq "" );
 $SITE = "public" if ( $SITE eq "" ); # hostname --long might be leaking too much info
 $LOCALE = $ENV{LANGUAGE} if ( $LOCALE eq "" ); 
 $LOCALE = $ENV{LANG} if ( $LOCALE eq "" );  # fallback in case $LANGUAGE was not set

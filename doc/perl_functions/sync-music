@@ -1,0 +1,58 @@
+#!/usr/bin/perl -w
+# $Revision: 1.1 $
+# Luis Mondesi < lemsx1@gmail.com >
+#
+# DESCRIPTION: syncs the music from my imac to this computer
+# LICENSE: GPL
+
+my $DEBUG = 0;
+my $host = $ARGV[0];
+my %hosts = ();
+my $RED = "\033[1;31m";
+my $NORM = "\033[0;39m";
+my $GREEN = "\033[0;32m";
+
+$host = "imac" if ( not defined $host );
+debug("host $host");
+
+if ( is_alive($host) )
+{
+    system("rsync -e ssh -auz --delete $host:/home/Shared/Music/ /home/Shared/Music/ > /tmp/sync-music.$$ 2>&1");
+}
+
+# @desc checks whether a given host is alive by pinging it. 
+#  pinging to a given host will be cached/saved for us so that we don't 
+#  have to test for a given host more than once.
+# @arg 1 $host string or ip representing a given host
+# @return 1 if true 0 if false
+sub is_alive
+{
+    my $host = shift;
+    my $ret = 0; # assume host is not alive
+
+#    no warnings;
+    if ( $host and exists ($hosts{$host}) and $hosts{$host}{alive} == -1  )
+    {
+        # send 1 package of 8 bytes to $host and wait 2 seconds before
+        # exiting
+        my $tmp_str = qx/ping -c 1 -w 2 -s 8 $host/;
+        # 0 when good
+        # 256 when not good
+        debug ("*** pinging $host returned $?");
+        # return the opposite of ping's return output
+        $ret = ( $? ) ? 0:1;
+        $hosts{$host}{alive} = $ret; # save for future reference
+    } elsif ( exists($hosts{$host}) and $hosts{$host}{alive} >= 0 ) {
+        debug ("*** no need to ping $host [".$hosts{$host}{alive}."]");
+        $ret = $hosts{$host}{alive};
+    }
+    #debug("is_alive returning $ret for $host");
+    return $ret;
+}
+
+# @desc prints colored messages
+sub debug
+{
+    my $msg = "@_";
+    print STDERR ("$RED $msg $NORM\n")  if ( $DEBUG );
+}

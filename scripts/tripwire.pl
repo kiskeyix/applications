@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
-# $Date: 2005-07-23 17:37:36 $
+# $Revision: 1.2 $
+# $Date: 2005-08-05 16:50:09 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to run tripwire interactively, and email the tripwire file and md5sum to a given email when done
@@ -62,7 +62,7 @@ if ( $HELP ) {
 
 if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
 # sanity checks
-my $UID = qx/id -u/;
+my $UID = $<;
 die ( "You must run this as root\n" ) if ( $UID != 0 );
 
 # globals

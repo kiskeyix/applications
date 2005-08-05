@@ -4,65 +4,50 @@
 # DESCRIPTION: use this script to untar, unzip, unrar, etc...,
 # a bunch of files with extensions: .tar.bz2, .tar.gz, .zip, .rar
 
+use strict;
 use File::Spec::Functions;
+
+my $DEBUG = 0;
 
 foreach my $i ( @ARGV )
 {
     if ( -r $i )
     {
         # simple CASE/ESAC:
-        ( $i =~ /(\.tar\.(g|b)z(ip2)*|\.t(g|b)z)$/i ) and untar($i) and next; # /bin/uncompress could take care of this but not bzip2 files
-        ( $i =~ /\.zip$/i ) and unzip($i) and next;
-        ( $i =~ /\.ra[[:alnum:]]+$/i ) and unrar($i) and next;
-        ( $i =~ /(\.gz|\-gz|\.z|\-z|\_z|.Z)$/i ) and ungzip($i) and next;
+        ( $i =~ /(\.tar\.(g|b)z(ip2)*|\.t(g|b)z)$/i ) and _uncompress($i,'tar') and next; # /bin/uncompress could take care of this but not bzip2 files
+        ( $i =~ /\.zip$/i ) and _uncompress($i,'unzip') and next;
+        ( $i =~ /\.ra[[:alnum:]]+$/i ) and _uncompress($i,'unrar') and next;
+        ( $i =~ /(\.gz|\-gz|\.z|\-z|\_z|.Z)$/i ) and _uncompress($i,'gunzip') and next;
     }
 }
 
-sub ungzip
+sub _uncompress
 {
     my $file = shift;
     return undef if ( not defined $file );
-    my $binary = which("gunzip");
+    my $bin = shift;
+    my $binary = which($bin);
     return undef if ( not defined $binary );
+    
+    my $args = "";
+    # special cases:
+    $args .= "xj" if ( $file =~ /(\.tar\.bz(ip2)*|\.tbz)$/i);
+    $args .= "xz" if ( $file =~ /(\.tar\.gz|\.tgz)$/i);
+    $args .= "f" if ( $file =~ /(\.tar\.(g|b)z(ip2)*|\.t(g|b)z)$/i);
 
-    system("$binary $file");
+    #SYSTEM:
+    $file = escape_nonshell($file);
+    print STDERR ($binary," ",$args," ",$file,"\n") if ( $DEBUG );
+    system("$binary $args $file");
     return $?;
 }
 
-
-sub unrar
+sub escape_nonshell
 {
-    my $file = shift;
-    return undef if ( not defined $file );
-    my $binary = which("unrar");
-    return undef if ( not defined $binary);
-
-    system("$binary $file");
-    return $?;
-}
-
-sub unzip
-{
-    my $file = shift;
-    return undef if ( not defined $file );
-    my $binary = which("unzip");
-    return undef if ( not defined $binary );
-
-    system("$binary $file");
-    return $?;
-}
-
-sub untar
-{
-    my $file = shift;
-    return undef if ( not defined $file );
-    my $binary = shift;
-    return undef if ( not defined $binary);
-
-    my $_util = ( $file =~ /bz/i) ? "j":"z";
-   
-    system("$binary x".$_util."f $file");
-    return $?;
+    my $str = shift;
+    return undef if ( not defined $str );
+    $str =~ s/([^[:alnum:]\_\-\.])/\\$1/g;
+    return $str;
 }
 
 sub which 

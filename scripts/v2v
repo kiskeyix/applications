@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.110 $
+# $Revision: 1.111 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -32,6 +32,7 @@ use strict;
 use POSIX; # getcwd() for `pwd` and others
 use Env qw(HOME);
 use FileHandle;
+use File::Spec::Functions;  # catfile()
 use File::Temp qw/ tempfile  /;     # Perl 5.6.1: 
                                     # used to get secured temp file
 use File::Basename; # basename();

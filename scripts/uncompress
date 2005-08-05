@@ -11,7 +11,7 @@ foreach my $i ( @ARGV )
     if ( -r $i )
     {
         # simple CASE/ESAC:
-        ( $i =~ /(\.tar\.(g|b)z(ip2)*|\.t(g|b)z)$/i ) and untar($i) and next;
+        ( $i =~ /(\.tar\.(g|b)z(ip2)*|\.t(g|b)z)$/i ) and untar($i) and next; # /bin/uncompress could take care of this but not bzip2 files
         ( $i =~ /\.zip$/i ) and unzip($i) and next;
         ( $i =~ /\.ra[[:alnum:]]+$/i ) and unrar($i) and next;
         ( $i =~ /(\.gz|\-gz|\.z|\-z|\_z|.Z)$/i ) and ungzip($i) and next;

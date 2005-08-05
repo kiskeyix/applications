@@ -11,11 +11,24 @@ foreach my $i ( @ARGV )
     if ( -r $i )
     {
         # simple CASE/ESAC:
-        ( $i =~ /\.tar\.(g|b)z(ip2)*$|\.t(g|b)z$/i ) and untar($i) and next;
+        ( $i =~ /(\.tar\.(g|b)z(ip2)*|\.t(g|b)z)$/i ) and untar($i) and next;
         ( $i =~ /\.zip$/i ) and unzip($i) and next;
         ( $i =~ /\.ra[[:alnum:]]+$/i ) and unrar($i) and next;
+        ( $i =~ /(\.gz|\-gz|\.z|\-z|\_z|.Z)$/i ) and ungzip($i) and next;
     }
 }
+
+sub ungzip
+{
+    my $file = shift;
+    return undef if ( not defined $file );
+    my $binary = which("gunzip");
+    return undef if ( not defined $binary );
+
+    system("$binary $file");
+    return $?;
+}
+
 
 sub unrar
 {

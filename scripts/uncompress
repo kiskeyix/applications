@@ -4,10 +4,13 @@
 # DESCRIPTION: use this script to untar, unzip, unrar, etc...,
 # a bunch of files with extensions: .tar.bz2, .tar.gz, .zip, .rar
 
+use File::Spec::Functions;
+
 foreach my $i ( @ARGV )
 {
     if ( -r $i )
     {
+        # simple CASE/ESAC:
         ( $i =~ /\.tar\.(g|b)z(ip2)*$|\.t(g|b)z$/i ) and untar($i) and next;
         ( $i =~ /\.zip$/i ) and unzip($i) and next;
         ( $i =~ /\.ra[[:alnum:]]+$/i ) and unrar($i) and next;
@@ -18,7 +21,10 @@ sub unrar
 {
     my $file = shift;
     return undef if ( not defined $file );
-    system("unrar $file");
+    my $binary = which("unrar");
+    return undef if ( not defined $binary);
+
+    system("$binary $file");
     return $?;
 }
 
@@ -26,7 +32,10 @@ sub unzip
 {
     my $file = shift;
     return undef if ( not defined $file );
-    system("unzip $file");
+    my $binary = which("unzip");
+    return undef if ( not defined $binary );
+
+    system("$binary $file");
     return $?;
 }
 
@@ -34,9 +43,25 @@ sub untar
 {
     my $file = shift;
     return undef if ( not defined $file );
+    my $binary = shift;
+    return undef if ( not defined $binary);
 
     my $_util = ( $file =~ /bz/i) ? "j":"z";
-    
-    system("tar x".$_util."f $file");
+   
+    system("$binary x".$_util."f $file");
     return $?;
+}
+
+sub which 
+{
+    # @param 0 string := binary to find in $ENV{PATH}
+    # @return binary path or undef
+    my $binary = shift;
+    my $path = undef;
+    foreach my $binary_path ( split(/:/,$ENV{"PATH"}) )
+    {
+        $path = File::Spec->catfile($binary_path,$binary);
+        last if ( -x $path );
+    }
+    return $path; # undef means not found
 }

@@ -1,0 +1,11 @@
+#!/bin/sh
+# $Revision: 1.1 $
+# Luis Mondesi < lemsx1@gmail.com >
+#
+# DESCRIPTION: Prints tcp and udp connections that are listening
+# similar to "netstat -l"
+if [ ! -z $1 ]; then
+    netstat -na | egrep -i "(tcp|udp)" | egrep -i $1
+else
+    netstat -na | egrep -i "(tcp|udp)"
+fi

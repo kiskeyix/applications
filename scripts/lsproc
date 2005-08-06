@@ -1,0 +1,10 @@
+#!/bin/sh
+# Luis Mondesi < lemsx1@gmail.com >
+# 
+# DESCRIPTION: a simple way to list running processes
+#
+if [ -z $1 ]; then
+    ps ax | grep -v lsproc | grep -v grep 
+else
+    ps ax | grep -v lsproc | grep -v grep | grep  $1
+fi

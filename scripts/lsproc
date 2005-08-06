@@ -3,8 +3,8 @@
 # 
 # DESCRIPTION: a simple way to list running processes
 #
-if [ -z $1 ]; then
-    ps ax | grep -v lsproc | grep -v grep 
-else
+if [ ! -z $1 ]; then
     ps ax | grep -v lsproc | grep -v grep | grep  $1
+else
+    ps ax | grep -v lsproc | grep -v grep 
 fi

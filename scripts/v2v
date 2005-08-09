@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.111 $
+# $Revision: 1.112 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -10,7 +10,7 @@
 # http://www.gnu.org/licenses/gpl.html
 #
 #
-# WEB :         http://v2divx.sourceforge.net
+# WEB :         http://v2v.sourceforge.net
 #
 # TODO:
 #   * remove all those prompts with prompt() ** hint: chomp($rep)
@@ -21,7 +21,7 @@
 #
 #  BUGS:
 #   * unable to encode in cluster mode if video input is NTSC vob.
-#   * due to keyframes and the V2divx method (transcode itself is unable
+#   * due to keyframes and the v2v method (transcode itself is unable
 #       to encode logo in cluster mode) the start time of logo in
 #       cluster mode is average. In fact this is the time of the removed
 #       begin (and end) credits which are average. So, if removed begin 
@@ -40,7 +40,7 @@ use File::Find; # find()
 
 STDOUT->autoflush(1);
 
-# get options. Most of the V2divxrc options (if not all)
+# get options. Most of the v2vrc options (if not all)
 # are overriden by this command line ones
 
 use Getopt::Long;
@@ -72,31 +72,31 @@ my ($SVIDEO_FORMAT,$ROOT_DIRECTORY,$nice,$DIVX,$DIVX_OPT,
     $POSLOGO,$STARTLOGO,$TIMELOGO,$LANGUAGE,$DEF_AUDIOCHANNEL,
     $AO,$EXTSUB,$DVD) = "";
 
-my $userconfigfile="$HOME/.V2divxrc";
+my $userconfigfile="$HOME/.v2vrc";
 my $userconfig="
-#		This file is use by V2divx to read your default parameters
+#		This file is use by v2v to read your default parameters
 #
 #		The nice level of transcode ( nice -\$nice transcode ....)
-\$nice=10;
+nice=10;
 #			Choose your preferred encoder
-\$DIVX=ffmpeg;	       # ffmpeg is the Transcode include divx encoder but you can use
+DIVX=ffmpeg;	       # ffmpeg is the Transcode include divx encoder but you can use
 #  divx4,divx5,xvid,xvid2,xvid3 .... if you have it#			Add your encoder specifics options
 
 #			Add your encoder specifics options
-\$DIVX_OPT=-F mpeg4 #  for example '-F mpeg4' for divx ffmpeg output 
+DIVX_OPT=-F mpeg4 #  for example '-F mpeg4' for divx ffmpeg output 
 
 #		Image Viewer
-\$XV=display;   # you may use \'xv\' 
+XV=display;   # you may use \'xv\' 
 
 #     		Video Player
-\$XINE=xine; # You may modify your Movie Viewer (xine for example) 
+XINE=xine; # You may modify your Movie Viewer (xine for example) 
 
 # 		DivX Player
-\$AVIPLAY=xine; # You may modify your DivX4 Viewer (mplayer) 
+AVIPLAY=xine; # You may modify your DivX4 Viewer (mplayer) 
 #
 
 #		Cluster config if you intend to use cluster mode
-\$CLUSTER_CONFIG=/path/to/.V2divxrc-cluster;  # YOU MUST MODIFY THIS LINE !!!
+CLUSTER_CONFIG=/path/to/.v2vrc-cluster;  # YOU MUST MODIFY THIS LINE !!!
 
 #               Xterm command (default is 'xterm \%s -e'). \%s is a 
 #               series of arguments that will be passed before the
@@ -106,49 +106,49 @@ my $userconfig="
 #               You can also set it to things like: gnome-terminal \%s -x, 
 #               konsole \%s -x, screen -d -m, etc...
 #
-\$XTERM=xterm \%s -e ;
+XTERM=xterm \%s -e ;
 
 # 		remote command if you intend to use cluster mode
-\$RMCMD=ssh; 			# change this to rsh if you need
+RMCMD=ssh; 			# change this to rsh if you need
 
 # 	Location of your Image Logo 
 # if this file exist the logo will be automatically include when 
-# running V2divx /path/to/vob file_size (alias Quick mode ) 
-\$LOGO=/where/is/your/logo.img;
+# running v2v /path/to/vob file_size (alias Quick mode ) 
+LOGO=/where/is/your/logo.img;
 
 #      Your Default Logo Position (1=TopLeft,2=TopRight,3=BotLeft,4=BotRight,5=Center)
-\$POSLOGO=4;
+POSLOGO=4;
 
 #      Default starting time logo ( in second after the movie beginning )
-\$STARTLOGO=2;
+STARTLOGO=2;
 
 #     Default Logo Duration ( in second )
-\$TIMELOGO=25;
+TIMELOGO=25;
 
 #		Your preferred Language (fr,en,de...) for audio channel encoding 
-#			( USE V2divx rip to enable this !!!) 
-\$LANGUAGE=en;
+#			( USE v2v rip to enable this !!!) 
+LANGUAGE=en;
 
-# If for some reason V2divx is unable to determine the audio channel 
+# If for some reason v2v is unable to determine the audio channel 
 # for your LANGUAGE, put here the audio channel number
 # ( generally 0 is your language, 1 is english, 2 is another ...)
-\$DEF_AUDIOCHANNEL=0;   
+DEF_AUDIOCHANNEL=0;   
 
 # Here is the output audio format
 # Allowed formats are mp3 or ogg ( if ogmtools are installed )
-\$AO=mp3;
+AO=mp3;
 
 # EXT SUBTITLE FILTER 5 LAST OPTIONS (here we just use 3) ...See the docs 8-(
-\$EXTSUB=0:0:255;
+EXTSUB=0:0:255;
 
 # multiplexer used when converting DVDs from DVD9 to DVD5 or in general
-\$MULTIPLEXER=mplex;
+MULTIPLEXER=mplex;
 
 ";
 
 #################### GLOBAL VARIABLES ###################
 my $release="2.3.1 (C) 2002-2004 Dominique Caron";
-my $v2d="[V2divx]";
+my $v2d="[v2v]";
 my $keyframes = 250;
 my $audiosample_length = 1000;
 my $PGMFINDCLIP="pgmfindclip"; # New tool of transcode
@@ -187,7 +187,7 @@ my $node="";
 my $EXT="avi"; # extension of final movie ( avi or ogm)
 my $clust_percent="--cluster_percentage --a52_dolby_off ";
 
-# --- V2divx.conf Global  vars
+# --- v2v.conf Global  vars
 my $VOBPATH="";
 my $END_SEC=0;
 my $START_SEC=0;
@@ -224,7 +224,7 @@ my $DVDAUTHOR = "<dvdauthor dest='XXXDIRXXX'>\n<vmgm />\n    <titleset>\n       
 # global for do_file_ary
 my @ary_files = ();
 
-my $urldvdtitle="$GREEN\t V2divx is unable to find dvdtitle in your PATH.\n\t Code Sources of dvdtitle are available at : \n\t http://www.lpm.univ-montp2.fr/~domi/V2divx/dvdtitle.tgz\n $NORM\n";
+my $urldvdtitle="$GREEN\t v2v is unable to find dvdtitle in your PATH.\n\t Code Sources of dvdtitle are available at : \n\t http://www.lpm.univ-montp2.fr/~domi/v2v/dvdtitle.tgz\n $NORM\n";
 
 my $warnclust = "\n ERROR: cluster mode. Please see README file\n\n";
 
@@ -273,20 +273,20 @@ my $usage="
 
     \n # to rip a DVD
     \n cd /scratch_disk && mkdir DVD
-    \n V2divx --rip=tccat ./DVD
+    \n v2v --rip=tccat ./DVD
     \n V2dvix ./DVD rip [ DEPRECATED ]
     \n or
-    \n V2divx --rip=mplayer --titleset=1 ./DVD
+    \n v2v --rip=mplayer --titleset=1 ./DVD
     \n or
-    \n V2divx --rip=dvdbackup --titleset=1 ./DVD
+    \n v2v --rip=dvdbackup --titleset=1 ./DVD
     \n
     \n # to convert to DVD5
     \n mkdir DVD5 && cd DVD5
-    \n V2divx --dvd9-to-dvd5 /scratch_disk/DVD # or, if --dvdbackup:
-    \n # V2divx --dvd9-to-dvd5 /scratch_disk/DVD/ --titleset=\"DVD_TITLE_HERE\"
+    \n v2v --dvd9-to-dvd5 /scratch_disk/DVD # or, if --dvdbackup:
+    \n # v2v --dvd9-to-dvd5 /scratch_disk/DVD/ --titleset=\"DVD_TITLE_HERE\"
     \n # to make a .avi
     \n mkdir /scratch_disk/AVI && cd /scratch_disk/AVI
-    \n V2divx /scratch_disk/DVD 680 # replace 680 with desired size
+    \n v2v /scratch_disk/DVD 680 # replace 680 with desired size
     \n 
     \n See README file for more examples.\n";
 
@@ -432,7 +432,7 @@ sub chk_wdir
     my $wdir=getcwd();
     #chdir($VOBPATH); #unecessary
     ( $VOBPATH ne $wdir ) 
-        or mydie "You MUST NOT run V2divx from the ".
+        or mydie "You MUST NOT run v2v from the ".
     " /path/to/vob directory ...\nPlease cd to another directory";
     chomp($wdir);
     #chdir($wdir);
@@ -508,7 +508,7 @@ sub chk_wdir
                 if ( "$i" ne "$1" )
                 {
                     # If user has remove some files we cannot use probe.rip anymore
-                    _warn("Number of vob files in probe.rip is not exact, V2divx will create extract.txt \n");
+                    _warn("Number of vob files in probe.rip is not exact, v2v will create extract.txt \n");
                     system ("touch tmp/probe.rip-BAD");
                 }
              $flag=0; last;
@@ -570,7 +570,7 @@ sub ask_logo
         _warn("Transcode is not compile with ImageMagick... Unable to encode your Logo $LOGO\n") if  ( -r $LOGO );
         $ADDLOGO=0;
     }      
-    open(CONF,">>tmp/V2divx.conf");
+    open(CONF,">>tmp/v2v.conf");
     print CONF "#ADDLOGO:$ADDLOGO # THIS VALUE IS THE DURING TIME OF LOGO (in sec.)\n";
     print CONF "#POSLOGO:$POSLOGO\n" if ( $POSLOGO ne "" );
     print CONF "#STARTLOGO:$STARTLOGO\n" if ( $STARTLOGO ne "" );
@@ -582,7 +582,7 @@ sub ask_filesize
     print " Enter the maximal avifile size (in MB): ";
     $FILESIZE=<STDIN>;
     chomp($FILESIZE);
-    open(CONF,">>tmp/V2divx.conf");
+    open(CONF,">>tmp/v2v.conf");
     print CONF "#FILESIZE:$FILESIZE\n";
     close(CONF);
 }
@@ -672,7 +672,7 @@ sub check_system
         || ( $Vers[0] == $MAJOR 
             && $Vers[1] < $MINOR ) )
     {
-        _warn("This V2divx perl script does not support".
+        _warn("This v2v perl script does not support".
             " your transcode release\n Please upgrade to the latest".
                 " transcode release (0.6.11 at least)\n");
                     exit(1);
@@ -743,9 +743,9 @@ sub readconf
 {
     # ******** Read actual conf ********** #
     _debug ("---> Enter readconf");
-    if ( -f "tmp/V2divx.conf")
+    if ( -f "tmp/v2v.conf")
     {
-        open (CONF,"<tmp/V2divx.conf");
+        open (CONF,"<tmp/v2v.conf");
         while (<CONF>)
         {       
             chomp;
@@ -789,7 +789,7 @@ sub readconf
     }
     _debug (" VOBPATH = $VOBPATH");
     # We need to retest $AO in case user has change
-    # in tmp/V2divx.conf so we recall check_sys
+    # in tmp/v2v.conf so we recall check_sys
     check_system;
 } # end readconf
 
@@ -817,7 +817,7 @@ sub a_bitrate
         }
     }
     $AUDIO_BITRATE=0 if  ( $AUDIO_BITRATE eq 'null');
-    open (CONF,">>tmp/V2divx.conf");
+    open (CONF,">>tmp/v2v.conf");
     print CONF "#AUDIO_BITRATE:$AUDIO_BITRATE\n";
     print CONF "#AO:$AO\n";
     close CONF;	
@@ -843,7 +843,7 @@ sub create_extract
         # || $in_video_magic eq 'vdr' )
         _warn(" A tcextract bug do not allow me to extract correct informations from"
             ." this $in_video_magic streams\n") if ( $NEED_TIME  );
-        _warn(" As there is no audio channel, V2divx is unable to extract some informations"
+        _warn(" As there is no audio channel, v2v is unable to extract some informations"
             ." from this Clip\n") if ( $NOAUDIO == 1 ); 
         print " So please, say me how long is this movie (in seconds)?:";
         $rep=<STDIN>;
@@ -1115,9 +1115,9 @@ sub printinfo
     print $v2d."   T:\tOptional Filters:\t(2)| $filter\n" if ( $INFO );
     print "\n";
     print "(1)This value can be modify in your $userconfigfile\n";
-    print "(2)This value can be modify in tmp/V2divx.conf\n";
+    print "(2)This value can be modify in tmp/v2v.conf\n";
     print "(3)This value can be modify in your $CLUSTER_CONFIG\n" if ( $CLUSTER ne "NO");
-    print $RED."\tYou can say \'no\' at this time, modify by hand some parameters \n\t in the tmp/V2divx.conf(BUT TAKE CARE!) \n\t or in your $userconfigfile,\n\t and then rerun V2divx without parameters\n".$NORM;
+    print $RED."\tYou can say \'no\' at this time, modify by hand some parameters \n\t in the tmp/v2v.conf(BUT TAKE CARE!) \n\t or in your $userconfigfile,\n\t and then rerun v2v without parameters\n".$NORM;
     print " Ready to encode (y|N)? ";
     my $rep=<STDIN>;
     chomp($rep);
@@ -1245,7 +1245,7 @@ sub tv_recorder
     $FPS=25;
     $CLUSTER="NO";
     # record the TV .
-    if ( ! -f "tmp/V2divx.conf")
+    if ( ! -f "tmp/v2v.conf")
     {
         print " How many minutes do you want to record ? ";
         $TV_RUNTIME=<STDIN>;
@@ -1264,7 +1264,7 @@ sub tv_recorder
             my $diskspace=240 * $TV_RUNTIME/ 1024 ;
             _warn("\t\t *** WARNING *** \n You need average $diskspace Go to record this Movie\n");
         }
-        open (CONF,">>tmp/V2divx.conf");
+        open (CONF,">>tmp/v2v.conf");
         print CONF "#TVREC:$TVREC#DO NOT MODIFY THIS LINE\n";
         print CONF "#VOBPATH:$VOBPATH# DO NOT MODIFY THIS LINE\n";
         print CONF "#TV_RUNTIME:$TV_RUNTIME\n";
@@ -1346,16 +1346,16 @@ sub srt_subrip
 {
     _debug ("---> Enter srt_subrip");
     _debug ("subtitle channel=$_[0], subtitle language $_[1]");
-    if ( ! -e "$HOME/.V2divx_db" )
+    if ( ! -e "$HOME/.v2v_db" )
     {
         umask(000); # resets current umask values. Luis Mondesi 
-        mkdir ("$HOME/.V2divx_db",01777);
-        _info("$v2d\t PGM2txt database created:\t\t   | ${RED}${HOME}/.V2divx_db");
+        mkdir ("$HOME/.v2v_db",01777);
+        _info("$v2d\t PGM2txt database created:\t\t   | ${RED}${HOME}/.v2v_db");
     }
     if ( ! -e "db")
     {
-        system("ln -s $HOME/.V2divx_db db");
-        _info("$v2d\t PGM2txt database ${RED}db${GREEN} linked to \$HOME/.V2divx_db");
+        system("ln -s $HOME/.v2v_db db");
+        _info("$v2d\t PGM2txt database ${RED}db${GREEN} linked to \$HOME/.v2v_db");
     } 
     if ( ! -f "tmp/srtpgm_done")
     {
@@ -1371,7 +1371,7 @@ sub srt_subrip
         while ( $rep ne 'Y' && $rep ne 'y' && $rep ne 'O' && $rep ne 'o' )
         {
             mydie "Problems with your subtitle image grey level .. Sorry\n Read the transcode man"
-                ." pages and change the \$EXTSUB variable in your ~/.V2divxrc \n" if ( $i == 4 );
+                ." pages and change the \$EXTSUB variable in your ~/.v2vrc \n" if ( $i == 4 );
             my $sys="cat $VOBPATH/* | tcextract -x ps1 -t vob -a 0x2$_[0] | "
                 ."subtitle2pgm -c $def_grey[$i] -e 00:00:00,1 -C 15 -o tmp/${TITLE}_test";
             system("$sys")==0 or mydie ("Failed to execute:\n $sys");
@@ -1664,7 +1664,7 @@ sub get_audio_channel
     if ( $findaudio_channel ne "" )
     {
         $audio_channel=$findaudio_channel;
-        _info("$v2d\t Audio channel for $RED$LANGUAGE$GREEN language:\t\t   | $audio_channel\n\t (You may modify your \$LANGUAGE variable in your $userconfigfile)") if ($FLAG_GAC);
+        _info("$v2d\t Audio channel for $RED$LANGUAGE$GREEN language:\t\t   | $audio_channel\n\t (You may modify your LANGUAGE variable in your $userconfigfile)") if ($FLAG_GAC);
     } else {
         _warn("$v2d\t Unable to find your Language ($LANGUAGE) in:\t   | tmp/probe.rip \n") if ($FLAG_GAC) ;
         _info("$v2d\t Default audio channel is set to ") if ($FLAG_GAC);
@@ -1685,9 +1685,12 @@ sub get_audio_channel
 
 sub readuserconf
 {
-    if ( -f $userconfigfile ) {
-        open (USERCONF,"<$userconfigfile") || open (USERCONF,"<".lc($userconfigfile)); 
+    if ( -r $userconfigfile ) {
+        open (USERCONF,"<$userconfigfile") || open (USERCONF,"<".lc($userconfigfile));
     } else {
+        # be backward compatible...
+        open (USERCONF,"<$HOME/.V2divxrc") ||
+        open (USERCONF,"<$HOME/.v2divxrc") ||
         open (USERCONF,"<$HOME/.vob2divxrc");
     }
     no warnings; # suppress warnings for now
@@ -1745,9 +1748,9 @@ sub readuserconf
     $RMCMD="ssh" if ( $RMCMD eq "" );
     $XTERM="xterm \%s -e" if ( $XTERM eq ""  ); 
     $POSLOGO=4 if ( $POSLOGO eq "" );
-    $CLUSTER_CONFIG="/see/your/V2divxrc" if ( $CLUSTER_CONFIG eq "" );
+    $CLUSTER_CONFIG="/see/your/v2vrc" if ( $CLUSTER_CONFIG eq "" );
     $TIMELOGO=25 if ( $TIMELOGO eq "" );
-    $LOGO="/see/your/V2divxrc" if ( $LOGO eq "" );
+    $LOGO="/see/your/v2vrc" if ( $LOGO eq "" );
     $DEF_AUDIOCHANNEL=0 if ( $DEF_AUDIOCHANNEL eq "" );
     $LANGUAGE="fr"  if ( $LANGUAGE eq "" );
     $STARTLOGO=2 if ( $STARTLOGO eq "" );
@@ -1760,7 +1763,7 @@ sub readuserconf
         $DIVX_OPT="";
         $DIVX_OPT="-F mpeg4" if ( $DIVX eq "ffmpeg");  
         open (USERCONF,">>$userconfigfile");
-        print USERCONF "# Add your encoder specifics options \n\$DIVX_OPT=$DIVX_OPT ; #for example '-F mpeg4' for divx ffmpeg output";
+        print USERCONF "# Add your encoder specifics options \nDIVX_OPT=$DIVX_OPT ; #for example '-F mpeg4' for divx ffmpeg output";
         close(USERCONF);
     }
     #_debug ("\n++++++++++ AO1 -> $AO ");
@@ -1769,14 +1772,14 @@ sub readuserconf
         #_debug ("\n++++++++++ AO -> $AO ")
         $AO="mp3";
         open (USERCONF,">>$userconfigfile");
-        print USERCONF "\n# This is the output Audio format\n# allowed formats are : mp3 or ogg (if ogmtools are installed )\n\$AO=$AO;";
+        print USERCONF "\n# This is the output Audio format\n# allowed formats are : mp3 or ogg (if ogmtools are installed )\nAO=$AO;";
         close(USERCONF);
     }
 
     if ( $EXTSUB eq ""  )
     {
         open (USERCONF,">>$userconfigfile");
-        print USERCONF "# EXT SUBTITLE FILTER 5 LAST OPTIONS (here we just use 3) ...See the docs 8-(\n\$EXTSUB=0:0:255;";
+        print USERCONF "# EXT SUBTITLE FILTER 5 LAST OPTIONS (here we just use 3) ...See the docs 8-(\nEXTSUB=0:0:255;";
         close(USERCONF);
         $EXTSUB="0:0:255";
     } 
@@ -1975,7 +1978,7 @@ sub merge
     # without logo encoded movie ( we DO NOT use avisplit to do that )
     if ( $CLUSTER ne "NO" && $ADDLOGO != 0  )
     {
-        _warn(" WARNING : At this thime V2divx is unable to encode logo\n in cluster mode".
+        _warn(" WARNING : At this thime v2v is unable to encode logo\n in cluster mode".
             " in $VIDEONORM movies.\n") if ( $VIDEONORM eq "NTSC" );
         makelogo if ( $VIDEONORM ne "NTSC" ) ;
     }
@@ -2104,8 +2107,8 @@ sub finish
 
     print " Now take a look at the end of $TITLE.$EXT\n".
     "\t If for some reason the movie file doesn't reach the end credits,".
-    " just edit tmp/V2divx.conf, decrease the \$END_SEC value, ".
-    "remove the tmp/finish file and then run V2divx without ".
+    " just edit tmp/v2v.conf, decrease the \$END_SEC value, ".
+    "remove the tmp/finish file and then run v2v without ".
     "parameters.";
     print " Is you divx file OK? (y/N): ";
     my $rep=<STDIN>;
@@ -2134,7 +2137,7 @@ sub ask_clust
     my ($rep)='n';
     _debug ("--->  Enter ask_clust");
     $CLUSTER="NO";
-    open(CONF,">>tmp/V2divx.conf");
+    open(CONF,">>tmp/v2v.conf");
     unlink("tmp/cluster.args");
     _info("$v2d\t Cluster config file exist:\t\t   |");
     if ( ! -f $CLUSTER_CONFIG )
@@ -2260,7 +2263,7 @@ sub cluster
                     smily("checknode");
                 }
                 # $rs != 0 means node unreachable 
-                # or 'V2divx -v' exit with non 0 status
+                # or 'v2v -v' exit with non 0 status
                 # or master working directory does not exist on node
                 # so we don't run on it
                 if ( $rs != 0 )
@@ -2297,7 +2300,7 @@ sub cluster
     # Now we have number of a available nodes
     # percentages of frames that each nodes
     # need to encode more
-    # So we run V2divx on nodes ...
+    # So we run v2v on nodes ...
     if ( -f "$n_file" )
     {	
         # tabpower is just a table to know when nodes 
@@ -2348,11 +2351,11 @@ sub cluster
                     print "+ executing $this_cmd\n" if ( $INFO );
                     system ( $this_cmd );
                 }
-                _info("$v2d\t V2divx on the node $rhost starting\t   | ");
+                _info("$v2d\t v2v on the node $rhost starting\t   | ");
                 $tabpower[$i]=$sumpow;
                 $i++;
                 $sumpow= $sumpow + $pow;
-                # we have to be SURE that V2divx has started on the remote node 
+                # we have to be SURE that v2v has started on the remote node 
                 # before continue ( we wait for 25 secondes max)
                 my $j=0;
                 while ( ! -f "tmp/node_started" && $j < 25 )
@@ -2772,7 +2775,7 @@ sub get_params
 {  	
     #  ************* Get Needed parameters ************ #
     _debug ("--->  Enter get_params");
-    if ( ! -f "tmp/V2divx.conf")
+    if ( ! -f "tmp/v2v.conf")
     {
         # We are in Quick Mode
         my $i = 0;
@@ -2867,7 +2870,7 @@ sub get_params
 
     $TITLE="movie" if ( $TITLE eq "" );
 
-    open(CONF,">tmp/V2divx.conf");
+    open(CONF,">tmp/v2v.conf");
     if ( $VOBPATH ne ""  ) {
         print CONF "#VOBPATH:$VOBPATH# DO NOT MODIFY THIS LINE\n";
     }
@@ -3076,16 +3079,16 @@ sub config
     my $rep="";
     # ********************** Config ****************************
     _debug ("--->  Enter config");
-    mydie "There is still a tmp/V2divx.conf , please remove all tmp files".
-        "\n (or at least tmp/V2divx.conf) before running V2divx /path/to/vob sample" 
-        if ( -f "tmp/V2divx.conf") ;
+    mydie "There is still a tmp/v2v.conf , please remove all tmp files".
+        "\n (or at least tmp/v2v.conf) before running v2v /path/to/vob sample" 
+        if ( -f "tmp/v2v.conf") ;
     $VOBPATH= $ARGV[0];
     mydie "Directory \"$VOBPATH\" does not exist \n Sorry" if ( ! -e $VOBPATH);
     umask(000); #reset current umask values. Luis Mondesi
     mkdir ("tmp",01777);
     chk_wdir;
 
-    open(CONF,">>tmp/V2divx.conf");
+    open(CONF,">>tmp/v2v.conf");
     print CONF "#VOBPATH:$VOBPATH# DO NOT MODIFY THIS LINE\n";
     print CONF "#DIVX:$DIVX# \n";
     print CONF "#DIVX_OPT:$DIVX_OPT# \n";
@@ -3112,7 +3115,7 @@ sub config
     _warn("\t**** WARNING ****\nIn cluster mode we split the movie after it's completly encoded\n")
         and sleep(5) if ( $END_SEC > 600 or $START_SEC > 600 ); 
 
-    open(CONF,">>tmp/V2divx.conf");
+    open(CONF,">>tmp/v2v.conf");
     print CONF "#END_SEC:$END_SEC\n";
     close CONF;
 
@@ -3221,7 +3224,7 @@ sub config
                 chomp($AC2);
                 my $audiofmt_ch2=audioformat("-a $AC2");
                 _info("$v2d\t Audio channel $AC2 format:\t\t   | $audiofmt_ch2\n");
-                open (CONF,">>tmp/V2divx.conf");
+                open (CONF,">>tmp/v2v.conf");
                 print CONF "#AC2:$AC2 $pcm_swb\n";
                 close(CONF);
             }
@@ -3401,12 +3404,12 @@ sub config
             } else {
                 $SUB_TITLE="extsub=$st:$tb:0:1:$EXTSUB,";
             }
-            open (CONF,">>tmp/V2divx.conf");
+            open (CONF,">>tmp/v2v.conf");
             print CONF "#SUB_TITLE:$SUB_TITLE\n";
             close (CONF);
         }
     }
-    open (CONF,">>tmp/V2divx.conf");
+    open (CONF,">>tmp/v2v.conf");
     print CONF "#START_SEC:$START_SEC\n";
     close (CONF);
     
@@ -3425,7 +3428,7 @@ sub config
         || $rep eq "Y" 
         || ($is_interlaced eq "yes" && $rep ne 'N' && $rep ne 'n') ) 
     {	
-        open (CONF,">>tmp/V2divx.conf");
+        open (CONF,">>tmp/v2v.conf");
         my $telecine=ask_telecine() if ($FPS =~ m,29\.9,);
         if ( $telecine eq "yes" )
         {
@@ -3468,7 +3471,7 @@ sub config
     #       Write parameters
     ( $left_right && $top_bot ) or mydie "Oups Sorry.. I miss some parameters :-(";
     $PARAMS = $PARAMS.$aalias;
-    open (CONF,">>tmp/V2divx.conf");
+    open (CONF,">>tmp/v2v.conf");
     print CONF "#PARAMS:$PARAMS # YOU MUST KNOW WHAT YOU DO IN THIS LINE\n";
     close(CONF);
 
@@ -3488,7 +3491,7 @@ sub config
             $TITLE="movie";
         }
     }
-    open (CONF,">>tmp/V2divx.conf");
+    open (CONF,">>tmp/v2v.conf");
     print CONF "#TITLE:$TITLE # DO NOT MODIFY THIS LINE\n";
     close(CONF);
 
@@ -3513,7 +3516,7 @@ sub ripdvd
             or mydie("Problem when running '$DVDTITLE $dvd'");
         chomp($TITLE);
     } else {  	
-        $TITLE=prompt(" V2divx doesn't find dvdtitle, please enter this DVD Movie Title: ");
+        $TITLE=prompt(" v2v doesn't find dvdtitle, please enter this DVD Movie Title: ");
         $TITLE =~ s/ /_/g;
         $TITLE ="VT" if ( $TITLE eq "" );
     }
@@ -3650,7 +3653,7 @@ sub ripdvd
     print PROBE "Number of vob files:$i" ;
     close(PROBE);
     _info("$v2d\t Video files are in:\t\t   | $VOBPATH\n");
-    _info(" You may now run V2divx with yours arguments to encode the vob file(s)\n\n");
+    _info(" You may now run v2v with yours arguments to encode the vob file(s)\n\n");
     exit(0);
 } # END ripidvd
 
@@ -4072,6 +4075,9 @@ sub make_dvd
 
     # remove XML file
     unlink("tmp/dvdauthor.xml") if ( $UNLINK_CONFIG );
+   
+    # TODO if we don't want an ISO just burn the Disc with growisofs:
+    # growisofs -V 'SHREK' -dvd-video -udf -dvd-compat -Z /dev/dvd $dir
     
     # make DVD Image
     my $mkisofs = which("mkisofs");
@@ -4198,21 +4204,25 @@ sub dvdbackup
 
 # ********************* MAIN () ************************ #
 
-# Read or create the user configuration file
-# we kept .vob2divxrc for backward compatibility
-if ( -f $HOME."/.vob2divxrc" )  
+# rename our old config files to our new name:
+if ( -f $HOME."/.vob2divxrc" )
 {
     rename($HOME."/.vob2divxrc",$userconfigfile);
+} elsif ( -f $HOME."/.v2divxrc" ) {
+    rename($HOME."/.v2divxrc",$userconfigfile);
+} elsif ( -f $HOME."/.V2divxrc" ) {
+    rename($HOME."/.V2divxrc",$userconfigfile);
 }
 
-if ( -f $userconfigfile )
+if ( -r $userconfigfile )
 {   
-    readuserconf;
+    readuserconf();
 } else {
+    # create a default config file
     open ( USERCONF,"> $userconfigfile");
     print USERCONF $userconfig;
     close USERCONF;
-    readuserconf;
+    readuserconf();
 }
 
 # command line options override those in the config file
@@ -4266,7 +4276,7 @@ $Res_DIVX_OPT=1 if ( $DIVX ne "" && $DIVX_OPT eq "" );
 # Show release and exit
 if ( $VERSION )
 {
-    print STDOUT "V2divx v$release\n";
+    print STDOUT "v2v v$release\n";
     exit(0);
 }
 
@@ -4384,7 +4394,7 @@ if ( $RUNCLUST )
     aviencode;
     exit(0);
     } else {
-        mydie "Error: Why run V2divx with --runclust option ?\n";
+        mydie "Error: Why run v2v with --runclust option ?\n";
     }
     # We do never come here !
     exit(1);
@@ -4403,9 +4413,9 @@ if ( $TVREC )
     _debug ("$0 called with --tv");
     mydie("You want to record TV but it seems that NVrec".
         " is'nt install on this system?\n") if (! $NVREC );
-    mydie("There is still a tmp/V2divx.conf , please remove".
-        " all tmp files\n (or at least tmp/V2divx.conf) before".
-        " running V2divx /path/to/vob --tv") if ( -f "tmp/V2divx.conf") ;
+    mydie("There is still a tmp/v2v.conf , please remove".
+        " all tmp files\n (or at least tmp/v2v.conf) before".
+        " running v2v /path/to/vob --tv") if ( -f "tmp/v2v.conf") ;
     $VOBPATH= $ARGV[0];
     mydie("Directory \"$VOBPATH\" does not exist \n Sorry") if ( ! -e $VOBPATH);
     _warn("Warning All files in $VOBPATH will be deleted\n Press Enter");
@@ -4459,7 +4469,7 @@ if ($TOVCD > 0)
     exit(0);
 }
 
-# help or bad V2divx parameters
+# help or bad v2v parameters
 if (
     ( defined ($ARGV[0])
         && $ARGV[0] ne  "continue"
@@ -4485,9 +4495,9 @@ if ( defined ($ARGV[1]) && $ARGV[1] eq "continue"
 if ( defined($ARGV[1])  && $ARGV[1] ne "config" && ! $SRTSUBRIP )
 {
     _info("$v2d\t Quick Mode:\t\t\t\t   | Yes\n");
-    mydie "There is still a tmp/V2divx.conf , please remove".
-        " all tmp files\n before running V2divx /path/to/vob".
-        " SIZE" if ( -f "tmp/V2divx.conf") ;
+    mydie "There is still a tmp/v2v.conf , please remove".
+        " all tmp files\n before running v2v /path/to/vob".
+        " SIZE" if ( -f "tmp/v2v.conf") ;
     get_params;
 }
 

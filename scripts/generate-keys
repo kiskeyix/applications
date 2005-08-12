@@ -1,0 +1,18 @@
+#!/usr/bin/perl -w
+
+use strict;
+$|++;
+
+#my @alpha = (   );
+my @hex_num = ( "0","1","2","3","4","5","6","7","8","9","A","B","C","D","E","F" );
+
+
+foreach ( 1..5 )
+{
+    my $key = "";
+    foreach ( 1..26 )
+    {
+        $key .= $hex_num[int(rand(16))];
+        print $key,"\n" if ( $_ == 26 );
+    }
+}

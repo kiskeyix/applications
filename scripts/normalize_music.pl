@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.23 $
-# $Date: 2005-08-12 16:08:37 $
+# $Revision: 1.24 $
+# $Date: 2005-08-12 17:27:37 $
 #
 # Luis Mondesi < lemsx1@gmail.com >
 #
@@ -22,7 +22,23 @@ use File::Find;     # find();
 use File::Basename; # basename() && dirname()
 #use FileHandle;     # for progressbar
 
-use MP3::Tag;
+my $got_ogg = 0;
+my $got_mp3 = 0;
+
+eval "use MP3::Tag";
+if ( not $@ )
+{
+    $got_mp3 = 1;
+}
+
+eval "use Ogg::Vorbis::Header::PurePerl";
+if ( not $@ )
+{
+    $got_ogg = 1;
+}
+
+die("We need Ogg::Vorbis::Header::PurePerl or MP3::Tag installed\n") 
+    if (not $got_ogg and not $got_mp3);
 
 # Globals (no need to change any variables @see $0 --help)
 my $MUSIC_FILES = '\.(mp3|ogg)$'; # files we will find
@@ -70,20 +86,22 @@ if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
 # main
 umask(0022); # fix anal permissions
 
-if ( defined ($FILE) and -f $FILE )
+if ( defined ($FILE) and $FILE !~ /^\s*$/ )
 {
-   my $err =  _rename($FILE);
-   print STDOUT ($err,"\n") if ( $DEBUG or $VERBOSE );
-   # if we were passed more files from the command line, do those as well:
-   foreach ( @ARGV )
-   {
-       next if ( ! -f $_ );
-       $err = "";
-       $err = _rename($_);
-       print STDOUT ($err,"\n") if ( $DEBUG or $VERBOSE );
-   }
+    die ("No such file $FILE\n") if ( not -f $FILE );
+    my $err =  _rename($FILE);
+    print STDOUT ($err,"\n") if ( $DEBUG or $VERBOSE );
+    # if we were passed more files from the command line, do those as well:
+    foreach ( @ARGV )
+    {
+        next if ( ! -f $_ );
+        $err = "";
+        $err = _rename($_);
+        print STDOUT ($err,"\n") if ( $DEBUG or $VERBOSE );
+    }
 } else {
-    my $_root = ( -d $FILE ) ? $FILE : "."; # defaults to current directory
+    # if we were passed a directory name, use it, else defaults to current directory
+    my $_root = ( $FILE !~ /^\s*$/ and -d $FILE ) ? $FILE : ".";
     # are we running from Nautilus?
     # Get Nautilus current working directory, if under Natilus:
     if ( exists $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} 
@@ -177,10 +195,35 @@ sub _mkdir
 sub _rename
 {
     my $orig_filename=shift;
-    my $mp3 = MP3::Tag->new($orig_filename);
-    my $hashref = $mp3->autoinfo();
+    my ($_name,$_path,$_suffix) = fileparse($orig_filename,('\.mp3','\.ogg'));
+    my $hashref = undef;
+    # deal with ogg files
+    if ( $_suffix eq ".ogg" )
+    {
+        my $ogg = Ogg::Vorbis::Header::PurePerl->new($orig_filename);
+        foreach my $k ($ogg->comment_tags) {
+            foreach my $v ( $ogg->comment($k) )
+            {
+                $hashref->{lc($k)} = $v;
+                $hashref->{'song'} = $v if ( lc($k) eq 'title' );
+            }
+        } 
+    } elsif ( $_suffix eq ".mp3" ) {
+        # deal with mp3 files
+        no warnings;
+        my $mp3 = MP3::Tag->new($orig_filename);
+        $hashref = $mp3->autoinfo();
+    } else {
+        print STDERR ("Unknown fileformat for $orig_filename\n");
+        return;
+    }
     print STDOUT ("_"x69,"\n") if ( $VERBOSE );
     print STDOUT ("file\t$orig_filename\n") if ( $VERBOSE );
+    if ( $DEBUG )
+    {
+        use Data::Dumper;
+        print Dumper($hashref);
+    }
     # tracks,artist,album are not that essential:
     #'song','track','artist','album'
     if ( ! defined($hashref->{'track'}) or $hashref->{'track'} =~ m/^\s*$/ )
@@ -206,10 +249,8 @@ sub _rename
     }
     my ($track,$garbage) = split(/\//,$hashref->{'track'});
     $track =~ s/^(\d{1,2}).*$/$1/g;
-    $orig_filename =~ m/(\.[a-zA-Z0-9]{1,5})$/; # catches the extension in $1
-    print STDERR ("DEBUG: EXT $1\n") if ( $DEBUG );
     my $path = lc( catdir($hashref->{'artist'},$hashref->{'album'}) );
-    my $new_filename = lc( catfile($path,$track."-".$hashref->{'song'}.$1) );
+    my $new_filename = lc( catfile($path,$track."-".$hashref->{'song'}.$_suffix) );
     print STDOUT ("to file\t$new_filename\n") if ( $VERBOSE );
     # silently bail out if we have done this file before
     if ( $new_filename eq $orig_filename )
@@ -218,7 +259,6 @@ sub _rename
     }
     if ( ! -f $new_filename )
     {
-        print STDERR ("DEBUG: use path $path\n") if ( $DEBUG );
         _mkdir($path) if ( ! -d "$path" );
         if ( ! rename ( $orig_filename,$new_filename ) )
         {

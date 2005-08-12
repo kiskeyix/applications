@@ -1,10 +1,11 @@
 #!/usr/bin/perl -w
-# $Revision: 1.22 $
-# $Date: 2005-08-12 13:28:05 $
+# $Revision: 1.23 $
+# $Date: 2005-08-12 16:08:37 $
+#
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to rename Music files in a consistent manner
-# USAGE: cd ~/Music; normalize_music.pl
+# USAGE: cd ~/Music; normalize_music.pl or simply: $0 --help
 # LICENSE: GPL
 
 use strict;
@@ -16,9 +17,7 @@ my $revision = "1.0"; # version
 use utf8;
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
-use POSIX;                  # cwd() ... man POSIX
 use File::Spec::Functions qw/ splitdir catdir catfile / ;  # abs2rel() and other dir/filename specific
-#use File::Copy;
 use File::Find;     # find();
 use File::Basename; # basename() && dirname()
 #use FileHandle;     # for progressbar
@@ -31,13 +30,17 @@ my @TAGS = ('song','track','artist','album');
 
 my @ls=();
 
+# allows for removing dirs
+my @ls_dirs=();
+my $longest_path = 0;
+
 # Args:
 my $PVERSION=0;
 my $HELP=0;
 my $DEBUG=0;
 my $VERBOSE=0;
 my $SHOW_DUPS=0;
-
+my $REMOVE_EMPTY_DIRS=0; 
 my $FILE=undef;
 
 # get options
@@ -48,11 +51,11 @@ GetOptions(
     'D|debug'               =>  sub { $DEBUG++; $VERBOSE++; $SHOW_DUPS++; },
     'V|verbose'             =>  sub { $VERBOSE++; $SHOW_DUPS++; },
     'S|show-duplicatets'    =>  \$SHOW_DUPS,
-
+    'R|remove-empty-dirs'   =>  \$REMOVE_EMPTY_DIRS,
     # strings
-    #'o|option=s'       =>  \$NEW_OPTION,
+    #'o|option=s'           =>  \$NEW_OPTION,
     # numbers
-    #'a|another-option=i'      =>  \$NEW_ANOTHER_OPTION,
+    #'a|another-option=i'   =>  \$NEW_ANOTHER_OPTION,
 ) and $FILE = shift;
 
 if ( $HELP ) { 
@@ -83,25 +86,21 @@ if ( defined ($FILE) and -f $FILE )
     my $_root = ( -d $FILE ) ? $FILE : "."; # defaults to current directory
     # are we running from Nautilus?
     # Get Nautilus current working directory, if under Natilus:
-    if ( exists $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} and $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} =~ m#^file:///# ) 
+    if ( exists $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} 
+        and $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} =~ m#^file:///# ) 
     {
         $_root = $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'};
         $_root =~ s#%([0-9A-Fa-f]{2})#chr(hex($1))#ge; # fixes %20 and other URL thingies
         $_root =~ s#^file://##g;
     }
-    cwd($_root) || die ("Could not change to directory $_root. $!\n"); 
+    chdir($_root) or die ("Could not change to directory $_root. $!\n"); 
     my $aryref = do_file_ary(".");
     foreach(@$aryref)
     {
         my $err = _rename($_);
         print STDOUT ($err,"\n") if ( $DEBUG or $VERBOSE );
     }
-# TODO remove empty directories if --remove-empty-dirs
-# HINT: you will have to find the longest path and recursively call something like:
-# find . -type d -exec rmdir {} 2> /dev/null \;
-# for e/a directory in the longest path... This should be done quickly.
-# rmdir pays extra care in NOT unlinking directories that have files in them.
-# You could also implement your own version of rmdir ;-)
+    _remove_empty_dirs() if ($REMOVE_EMPTY_DIRS > 0);
 }
 
 # support functions
@@ -130,19 +129,36 @@ sub do_file_ary {
 }
 
 sub process_file {
-    my $base_name = basename($_);
-    if ( 
-        $_ =~ m($MUSIC_FILES)i &&
-        -f $_
-    ) {
-        s/^\.\/*//g;
-        push @ls,$_;
+    # remove empty dirs before we rename files (in case there is no files in this)
+    if ($REMOVE_EMPTY_DIRS > 0 and -d $_)
+    {
+        my @_dirs = splitdir($_);
+        $longest_path = ($#_dirs > $longest_path) ? ($#_dirs+1) : $longest_path;
+        push(@ls_dirs,$_);
+        return;
+    }
+    push (@ls,$_) if ( $_ =~ m($MUSIC_FILES)i and -f $_ );
+}
+
+sub _remove_empty_dirs
+{
+    # removes all empty directories from our list of dirs
+    # you have to do $longest_path number of passes using rmdir() 
+    # to get them all
+    for (my $i=0;$i<$longest_path;$i++)
+    {
+        for (my $j=0;$j<$#ls_dirs;$j++)
+        {
+            warn("removing dir $ls_dirs[$j]\n") if ($DEBUG);
+            rmdir($ls_dirs[$j]) and
+            splice(@ls_dirs,$j,1); # remove this item from our array
+        }
     }
 }
 
-# @desc implements `mkdir -p`
 sub _mkdir
 {
+    # @desc implements `mkdir -p`
     my $path = shift;
     my $root = ( $path =~ m,^([/|\\|:]), ) ? $1 : ""; # relative or full path?
     my @dirs = splitdir($path);
@@ -219,7 +235,7 @@ __END__
 
 =head1 NAME
 
-normalize_music.pl - normalize_music script for Perl by Luis Mondesi <lemsx1@gmail.com>
+normalize_music.pl - a simple mp3/ogg file renaming script
 
 =head1 SYNOPSIS
 
@@ -228,11 +244,25 @@ B<normalize_music.pl>  [-v,--version]
                 [-h,--help]
                 [-V,--verbose]
                 [-S,--show-duplicates]
+                [-R,--remove-empty-dirs]
+                [[directory] | [file1 [file2] [...]]]
 
 =head1 DESCRIPTION 
 
 This script finds all music files in a given directory and renames them according to the tags found in them. Renaming is consistent with iTunes naming convention with minor additions:
     Artist/Album/track-song_name-artist.$ext
+
+If a directory name is given as argument, then it will rename music files found in that path, otherwise the current directory is used.
+
+If a file name is given as argument, or more a series of files, only those files will be processed.
+
+=head1 EXAMPLES
+
+cd /path/to/dir && normalize_music.pl
+
+normalize_music.pl /path/to/dir
+
+normalize_music.pl file.ogg file.mp3 ...
 
 =head1 OPTIONS
 
@@ -257,6 +287,16 @@ print all tags about each file
 =item -S,--show-duplicates
 
 print files which have the same id3 tags but on different locations
+
+=item -R,--remove-empty-dirs
+
+removes empty directories found in given path
+
+=back
+
+=head1 AUTHORS
+
+Luis Mondesi <L<lemsx1@gmail.com>>
 
 =cut
 

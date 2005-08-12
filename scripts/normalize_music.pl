@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.21 $
-# $Date: 2005-07-18 04:36:33 $
+# $Revision: 1.22 $
+# $Date: 2005-08-12 13:28:05 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to rename Music files in a consistent manner
@@ -58,8 +58,7 @@ GetOptions(
 if ( $HELP ) { 
     use Pod::Text;
     my $parser = Pod::Text->new (sentence => 0, width => 78);
-    $parser->parse_from_file(File::Spec->catfile("$0"),
-			   \*STDOUT);
+    $parser->parse_from_file($0,\*STDOUT);
     exit 0;
 }
 
@@ -70,23 +69,39 @@ umask(0022); # fix anal permissions
 
 if ( defined ($FILE) and -f $FILE )
 {
-   _rename($FILE);
+   my $err =  _rename($FILE);
+   print STDOUT ($err,"\n") if ( $DEBUG or $VERBOSE );
+   # if we were passed more files from the command line, do those as well:
+   foreach ( @ARGV )
+   {
+       next if ( ! -f $_ );
+       $err = "";
+       $err = _rename($_);
+       print STDOUT ($err,"\n") if ( $DEBUG or $VERBOSE );
+   }
 } else {
+    my $_root = ( -d $FILE ) ? $FILE : "."; # defaults to current directory
     # are we running from Nautilus?
     # Get Nautilus current working directory, if under Natilus:
-    my $_root = ".";
     if ( exists $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} and $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} =~ m#^file:///# ) 
     {
         $_root = $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'};
         $_root =~ s#%([0-9A-Fa-f]{2})#chr(hex($1))#ge; # fixes %20 and other URL thingies
         $_root =~ s#^file://##g;
     }
-    my $aryref = do_file_ary($_root);
+    cwd($_root) || die ("Could not change to directory $_root. $!\n"); 
+    my $aryref = do_file_ary(".");
     foreach(@$aryref)
     {
-        _rename($_);
+        my $err = _rename($_);
+        print STDOUT ($err,"\n") if ( $DEBUG or $VERBOSE );
     }
 # TODO remove empty directories if --remove-empty-dirs
+# HINT: you will have to find the longest path and recursively call something like:
+# find . -type d -exec rmdir {} 2> /dev/null \;
+# for e/a directory in the longest path... This should be done quickly.
+# rmdir pays extra care in NOT unlinking directories that have files in them.
+# You could also implement your own version of rmdir ;-)
 }
 
 # support functions
@@ -166,10 +181,11 @@ sub _rename
     }
     foreach(@TAGS)
     {
-        return "$_ missing. Bailing out" if ( ! defined($hashref->{$_}) or $hashref->{$_} =~ m/^\s*$/ );
+        return "\n*** $_ tag missing for file '$orig_filename'\nBailing out\n" 
+            if ( ! defined($hashref->{$_}) or $hashref->{$_} =~ m/^\s*$/ );
         # clean chars that might not be good for filenames
         #ñ|á|é|í|ó|ú|
-        $hashref->{$_} =~ s/([^[:alnum:]\!\@\*\#\%\(\)\[\]\_\-\:\,\.\'\"\{\}\=\+])//gi;
+        $hashref->{$_} =~ s/([^[:alnum:]\!\@\*\#\%\(\)\[\]\_\-\:\,\.\'\"\{\}\=\+ ])//gi;
         print STDOUT ($_, "\t", $hashref->{$_}, "\n") if ( $VERBOSE );
     }
     my ($track,$garbage) = split(/\//,$hashref->{'track'});
@@ -184,11 +200,11 @@ sub _rename
     {
         return;
     }
-    if ( ! -f "$new_filename" )
+    if ( ! -f $new_filename )
     {
         print STDERR ("DEBUG: use path $path\n") if ( $DEBUG );
         _mkdir($path) if ( ! -d "$path" );
-        if ( ! rename ( "$orig_filename","$new_filename" ) )
+        if ( ! rename ( $orig_filename,$new_filename ) )
         {
             print STDOUT ("Renaming $orig_filename to $new_filename failed. Do you have permissions to write in $path?\n");
             return;

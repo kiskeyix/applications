@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.24 $
-# $Date: 2005-08-12 17:27:37 $
+# $Revision: 1.25 $
+# $Date: 2005-08-18 13:33:20 $
 #
 # Luis Mondesi < lemsx1@gmail.com >
 #
@@ -57,6 +57,7 @@ my $DEBUG=0;
 my $VERBOSE=0;
 my $SHOW_DUPS=0;
 my $REMOVE_EMPTY_DIRS=0; 
+my $REMOVE_DUPS=0; 
 my $FILE=undef;
 
 # get options
@@ -68,6 +69,7 @@ GetOptions(
     'V|verbose'             =>  sub { $VERBOSE++; $SHOW_DUPS++; },
     'S|show-duplicatets'    =>  \$SHOW_DUPS,
     'R|remove-empty-dirs'   =>  \$REMOVE_EMPTY_DIRS,
+    'r|remove-duplicates'   =>  sub { $REMOVE_DUPS++; $SHOW_DUPS++; },
     # strings
     #'o|option=s'           =>  \$NEW_OPTION,
     # numbers
@@ -89,15 +91,14 @@ umask(0022); # fix anal permissions
 if ( defined ($FILE) and $FILE !~ /^\s*$/ )
 {
     die ("No such file $FILE\n") if ( not -f $FILE );
-    my $err =  _rename($FILE);
-    print STDOUT ($err,"\n") if ( $DEBUG or $VERBOSE );
+    my $err = _rename($FILE);
+    print STDERR ("$err\n") if ( $VERBOSE );
     # if we were passed more files from the command line, do those as well:
     foreach ( @ARGV )
     {
         next if ( ! -f $_ );
-        $err = "";
-        $err = _rename($_);
-        print STDOUT ($err,"\n") if ( $DEBUG or $VERBOSE );
+        my $err = _rename($_);
+        print STDERR ("$err\n") if ( $VERBOSE );
     }
 } else {
     # if we were passed a directory name, use it, else defaults to current directory
@@ -215,7 +216,7 @@ sub _rename
         $hashref = $mp3->autoinfo();
     } else {
         print STDERR ("Unknown fileformat for $orig_filename\n");
-        return;
+        return "";
     }
     print STDOUT ("_"x69,"\n") if ( $VERBOSE );
     print STDOUT ("file\t$orig_filename\n") if ( $VERBOSE );
@@ -253,21 +254,25 @@ sub _rename
     my $new_filename = lc( catfile($path,$track."-".$hashref->{'song'}.$_suffix) );
     print STDOUT ("to file\t$new_filename\n") if ( $VERBOSE );
     # silently bail out if we have done this file before
+    $orig_filename =~ s,^(\./|\.),,;
     if ( $new_filename eq $orig_filename )
     {
-        return;
+        print STDERR ("Skipping filename: same file ...\n") if ($DEBUG);
+        return "";
     }
-    if ( ! -f $new_filename )
+    if ( -f $new_filename )
     {
-        _mkdir($path) if ( ! -d "$path" );
-        if ( ! rename ( $orig_filename,$new_filename ) )
-        {
-            print STDOUT ("Renaming $orig_filename to $new_filename failed. Do you have permissions to write in $path?\n");
-            return;
-        }
-    } else {
-        print STDOUT ("$orig_filename is a duplicate of $new_filename\n")
-            if ( $SHOW_DUPS );
+        print STDERR ("New filename already exist ...\n") if ($DEBUG);
+        print STDOUT ("DUP:\t$orig_filename\t$new_filename\n") if ( $SHOW_DUPS );
+        unlink($orig_filename) if ( $REMOVE_DUPS );
+        return "";
+    }
+    # make the path where we will be putting our new_filename
+    _mkdir($path) if ( ! -d $path );
+    if ( ! rename ( $orig_filename,$new_filename ) )
+    {
+        print STDOUT ("Renaming $orig_filename to $new_filename failed. Do you have permissions to write in $path?\n");
+        return "";
     }
 }
 
@@ -285,6 +290,7 @@ B<normalize_music.pl>  [-v,--version]
                 [-V,--verbose]
                 [-S,--show-duplicates]
                 [-R,--remove-empty-dirs]
+                [-r,--remove-duplicates]
                 [[directory] | [file1 [file2] [...]]]
 
 =head1 DESCRIPTION 
@@ -326,11 +332,15 @@ print all tags about each file
 
 =item -S,--show-duplicates
 
-print files which have the same id3 tags but on different locations
+print files which have the same id3 tags but on different locations. The lines will be prefix with "DUP:"
 
 =item -R,--remove-empty-dirs
 
 removes empty directories found in given path
+
+=item -r,--remove-duplicates
+
+removes duplicate files. This option implies --show-duplicates. Backup your files first. Be extra careful with this option! Use --show-duplicates to know what will be deleted.
 
 =back
 

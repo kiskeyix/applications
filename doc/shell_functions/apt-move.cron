@@ -14,6 +14,20 @@ TMPDIRS="/tmp /home/Shared/tmp /var/tmp" # path to look for deb's for apt-move (
 
 set -e
 
+## trap some signals:
+## our exit function removes the .pid file
+function _exit()        # function to run upon exit of shell
+{
+    echo "Hasta la vista apt-move.cron $HOSTNAME"
+    rm -f $LOCKFILE
+    # reenable signals
+    trap EXIT HUP TERM INT
+    exit 0
+}
+# hint: trap -l (displays signals)
+# SIGTERM (15) is sent to us from init when rebooting
+trap _exit EXIT HUP TERM INT
+
 function debug()
 {
     if [ $DEBUG -eq 1 ]; then

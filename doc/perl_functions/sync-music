@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: syncs the music from my imac to this computer
@@ -35,7 +35,7 @@ sub is_alive
     {
         # send 1 package of 8 bytes to $host and wait 2 seconds before
         # exiting
-        my $tmp_str = qx/ping -c 1 -w 2 -s 8 $host/;
+        my $tmp_str = qx/ping -c 1 $host/;
         # 0 when good
         # 256 when not good
         debug ("*** pinging $host returned $?");

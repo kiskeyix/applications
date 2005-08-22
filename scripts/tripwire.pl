@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.2 $
-# $Date: 2005-08-05 16:50:09 $
+# $Revision: 1.3 $
+# $Date: 2005-08-22 18:02:29 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to run tripwire interactively, and email the tripwire file and md5sum to a given email when done
@@ -21,6 +21,7 @@ use File::Copy;
 use File::Find;     # find();
 use File::Basename; # basename() && dirname()
 use FileHandle;     # for progressbar
+use Sys::Hostname;  # hostname()
 
 #eval "use My::Module";
 #if ($@) 
@@ -73,15 +74,14 @@ if ( -r "$ENV{'HOME'}/.signaturerc" )
     $config = parse_ini(\@files);
 }
 
-my $HOSTNAME = qx/hostname/;
+my $HOSTNAME = hostname();
 
-chomp($HOSTNAME);
 chomp($UID);
 
 my $TRIPWIRE = "tripwire --check -I"; # interactive check
 my $TRIPWIREDB = "/var/lib/tripwire/$HOSTNAME.twd";
 my $HASH = "md5sum";
-my $SUBJECT = "$HASH: $HOSTNAME triwire";
+my $SUBJECT = "$HASH: tripwire $HOSTNAME";
 my $MUA = "mutt";
 my $EMAIL = undef;
 if ( defined($_EMAIL) )

@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.112 $
+# $Revision: 1.113 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -609,11 +609,12 @@ sub which
     # @param 0 string := binary to find in $ENV{PATH}
     # @return binary path or undef
     my $binary = shift;
-    my $path = undef;
+    return undef if (not defined $binary);
+    my $path = $binary;
     foreach my $binary_path ( split(/:/,$ENV{"PATH"}) )
     {
-        $path = File::Spec->catfile($binary_path,$binary);
         last if ( -x $path );
+        $path = File::Spec->catfile($binary_path,$binary);
     }
     return $path; # undef means not found
 }

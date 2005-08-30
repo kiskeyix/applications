@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.25 $
-# $Date: 2005-08-18 13:33:20 $
+# $Revision: 1.26 $
+# $Date: 2005-08-30 23:17:25 $
 #
 # Luis Mondesi < lemsx1@gmail.com >
 #
@@ -67,7 +67,7 @@ GetOptions(
     'h|help'                =>  \$HELP,
     'D|debug'               =>  sub { $DEBUG++; $VERBOSE++; $SHOW_DUPS++; },
     'V|verbose'             =>  sub { $VERBOSE++; $SHOW_DUPS++; },
-    'S|show-duplicatets'    =>  \$SHOW_DUPS,
+    'S|show-duplicates'     =>  \$SHOW_DUPS,
     'R|remove-empty-dirs'   =>  \$REMOVE_EMPTY_DIRS,
     'r|remove-duplicates'   =>  sub { $REMOVE_DUPS++; $SHOW_DUPS++; },
     # strings

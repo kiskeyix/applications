@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.28 $
+# $Revision: 1.29 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -275,13 +275,17 @@ if ( $HOST )
 {
     debug("Doing single host $HOST");
     print STDERR ("WARNING! This host is in the excluded list\n") 
-    if ( grep(/$EXCLUDE/,$HOST) );
-    $hosts{$HOST}{alive}=-1; # initialize key
-    
+        if ( grep(/$EXCLUDE/,$HOST) );
     if ( !$DEBUG )
     {
         print update_host($HOST); # prints error if any
     } else {
+        if ( is_alive($HOST) )
+        {
+            debug("$HOST, it's alive!");
+        } else {
+            debug("$HOST, is kaboom!");
+        }
         debug("*** SKIPPED $HOST");
     }
     exit(0);
@@ -335,28 +339,22 @@ sub slurp_hosts
 sub is_alive
 {
     my $host = shift;
-    my $ret = 0; # assume host is not alive
-
-    if ( exists($hosts{$host}{'alive'}) and $hosts{$host}{'alive'} == 1 ) {
-        debug ("*** no need to ping $host [".$hosts{$host}{'alive'}."]");
-        $ret = $hosts{$host}{'alive'};
-    } elsif ( $host and not exists ($hosts{$host}{'alive'}) ) {
-        #  and 
-        # send 1 package of 8 bytes to $host and wait 2 seconds before
-        # exiting
+    return undef if ( not defined ( $host ) );
+    $hosts{$host}{'alive'} = 0 if ( not exists ($hosts{$host}{'alive'}) );
+    if ( $hosts{$host}{'alive'} == 0  ) {
         my $tmp_str = undef;
         $tmp_str = qx/ping -c 1 $host/ if ( $hosts{$host}{'alive'} < 1  );
         # 0 when good
         # 256 when not good
         debug ("*** pinging $host returned $?");
         # return the opposite of ping's return output
-        $ret = ( $? ) ? 0:1;
+        my $ret = ( $? ) ? 0:1;
         $hosts{$host}{'alive'} = $ret; # save for future reference
     } else {
         debug ("*** uh? We should never reach this...");
     }
-    debug("is_alive returning $ret for $host");
-    return $ret;
+    debug("is_alive returning ".$hosts{$host}{'alive'}." for $host");
+    return $hosts{$host}{'alive'};
 }
 
 # @desc finds binaries in your $PATH 

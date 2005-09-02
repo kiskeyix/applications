@@ -1,12 +1,12 @@
 [Desktop Entry]
 Version=1.0
 Encoding=UTF-8
-Name=No name
+Name=Mozilla Firefox
 Exec=firefox
 Terminal=false
 MultipleArgs=false
 Type=Application
-Icon=/usr/local/firefox/chrome/icons/default/default.xpm
+Icon=/usr/local/mozilla-firefox/chrome/icons/default/default.xpm
 Categories=Application;Network
 TryExec=
 X-GNOME-DocPath=

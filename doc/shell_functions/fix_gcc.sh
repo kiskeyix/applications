@@ -1,7 +1,7 @@
 #!/bin/sh
-# $Revision: 1.5 $
-# $Date: 2005-07-18 04:36:07 $
-# Luis Mondesi < lemsx1@hotmail.com >
+# $Revision: 1.6 $
+# $Date: 2005-09-02 15:19:56 $
+# Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: fixes gcc symlinks when updating to a new version under debian
 # USAGE: ./fix_gcc.sh
@@ -19,20 +19,32 @@ GCOV="/usr/bin/gcov-3.4"
 # sudo update-alternatives --remove-all $G++
 
 if [ -x ${GCC} ]; then
-    sudo update-alternatives --install /usr/bin/gcc gcc ${GCC} \
-    $PRIORITY --slave /usr/bin/cc cc ${GCC}
+    if [ -L "/usr/bin/gcc" ]; then
+        sudo ln -sf /etc/alternatives/gcc /usr/bin/gcc
+        sudo update-alternatives --install /usr/bin/gcc gcc ${GCC} \
+        $PRIORITY --slave /usr/bin/cc cc ${GCC}
+    else
+        echo "Failed to setup gcc symlink in /usr/bin/gcc. Please remove existing symlink first"
+    fi
 fi
 
 if [ -x ${GPP} ]; then
-    sudo update-alternatives --install /usr/bin/g++ g++ ${GPP} \
-    $PRIORITY --slave /usr/bin/c++ c++ ${GPP}
+    if [ -L "/usr/bin/g++" ]; then
+        sudo ln -sf /etc/alternatives/g++ /usr/bin/g++
+        sudo update-alternatives --install /usr/bin/g++ g++ ${GPP} \
+        $PRIORITY --slave /usr/bin/c++ c++ ${GPP}
+    else
+        echo "Failed to setup g++ symlink in /usr/bin/g++. Please remove existing file"
+    fi
 fi
 
 if [ -x ${GCOV} ]; then
+    sudo ln -sf /etc/alternatives/gcov /usr/bin/gcov
     sudo update-alternatives --install /usr/bin/gcov gcov ${GCOV} $PRIORITY
 fi
 
 if [ -x ${GCCBUG} ]; then
+    sudo ln -sf /etc/alternatives/gccbug /usr/bin/gccbug
     sudo update-alternatives --install /usr/bin/gccbug gccbug ${GCCBUG} $PRIORITY
 fi
 

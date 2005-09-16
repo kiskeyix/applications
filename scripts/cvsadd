@@ -1,0 +1,80 @@
+#!/usr/bin/perl -w
+# Luis Mondesi <lemsx1@hotmail.com>
+# Use this to add a file or series of files to
+# CVS in one shot!
+# Usage: cvsadd.sh filename [filename ...]
+#
+# Changelog:
+# 2003-09-27 04:53 EDT made silent
+
+use strict;
+
+my $DEBUG = 0;
+
+my $EXCEPTIONS_REGEX = "(.*\.swp|.*\.o|.*\.so)";
+
+sub prompt
+{
+    #@param 0 string := question to prompt
+    #returns answer or undef
+    print STDOUT "@_";
+    my $rep=<STDIN>;
+    chomp($rep);
+    return $rep;
+}
+
+sub is_binary
+{
+    # returns 1 if true
+    my $file = shift;
+    print STDERR ( "is_binary() called: $file\n" ) if ( $DEBUG );
+    my $file_t = qx/file "$file"/;
+    if ( $file_t =~ m/(text\s+executable|\btext\b)/i )
+    {
+        return 0;
+    }
+    print STDERR ( "binary file\n" ) if ( $DEBUG );
+    return 1;
+}
+
+if ( -f $ARGV[0] )
+{
+    for my $file (@ARGV)
+    {
+        if ( ! -f $file or is_binary($file) or $file =~ /$EXCEPTIONS_REGEX/ )
+        {
+            print "Skipping file '$file'";
+            next;
+        }
+        system("cvs add $file 2> /dev/null");
+        if ( $? == 0 )
+        {
+            system( "cvs commit -m \"first commit\" $file" );
+        } else {
+            print "Error adding = $file = to the repository. Please add it by hand";
+        }
+    }
+} else {
+    my $addlist = qx/cvs update/;
+    if ($addlist =~ /\bM\b/mg)
+    {
+        print STDERR ("Please run 'cvs commit' first"); 
+        exit 0;
+    }
+    my $YESNO = prompt("Do you want to add new files to the repository? [y/N] ");
+    if ( defined($YESNO) and ($YESNO eq "y" or $YESNO eq "Y") )
+    {
+        for my $i (split(/\n/,$addlist))
+        {
+            next if ($i !~ /\?/g);  # if not a new file, keep on
+            $i =~ s/\?//;           # remove ? from the beginning of the line
+            next if (is_binary($i) or $i =~ /$EXCEPTIONS_REGEX/); # skip other files
+#             next if ($i =~ /\bU\b/g); # an update that came from the server
+#             next if ($i =~ /\bP\b/g); # a patch that came from the server
+#             next if ($i =~ /\bC\b/g); # a conflicting file
+#             next if ($i =~ /\bM\b/g); # we still have modified files?
+            system( "cvs add $i" );
+            system( "cvs commit -m \"first commit\" $i" );
+        }
+    }
+}

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.98 $
+# $Revision: 1.99 $
 # Luis Mondesi  <lemsx1@gmail.com>
 # 
 # HELP: $0 --help
@@ -74,7 +74,7 @@ my @pixfiles = ();      # for all picture files
 my %thumbfiles = ();    # hash of arrays for all thumbnails 
                         # created by mkthumb
 my %config = ();        # hash of hashes to hold config per directories
-my $total_links=0;
+my $TOTAL_LINKS=0;
 my $FORCE=0; 
 my $NOMENU=0; 
 my $MENUONLY=0;
@@ -244,12 +244,11 @@ sub main {
     # which progressbar are we using?
     print $LOGFILE ("Mode $MODE\n");
     print $LOGFILE "= Start directory $ROOT_DIRECTORY \n";
-    if ( ! -f "$ROOT_DIRECTORY/$CONFIG_FILE" )
-    {
-        print $LOGFILE 
-        ( "! Missing main $CONFIG_FILE. Creating one for you at '$ROOT_DIRECTORY'\n");
-        init_config($ROOT_DIRECTORY,"true");
-    }
+
+    # setup our internal variables:
+    my $create_config = ( ! -f File::Spec->catfile($ROOT_DIRECTORY,$CONFIG_FILE) ) ? "true":"false";
+    init_config($ROOT_DIRECTORY,$create_config);
+
     # --------------------------- STEPS -----------------------------#
     # 1.
     # Create an array of all image files that we will work on.
@@ -864,7 +863,8 @@ sub mkthumb_files {
     } #end foreach $i
 } # end mkthumb_files
 
-sub menu_file {
+sub menu_file
+{
     #---------------------------------------------#
     # It creates a menu.$EXT file at 
     # the root level of the picture
@@ -882,7 +882,7 @@ sub menu_file {
     # new=http://images.server.com/new_icon.png;
     #----------------------------------------------#
 
-    init_config("$ROOT_DIRECTORY");
+    # deprecated: init_config($ROOT_DIRECTORY);
 
     my $MENU_STR = ""; # return this instead of making file
     my $IMG = ""; 
@@ -896,7 +896,7 @@ sub menu_file {
     my @files=();
     my @pixdir = (); # reset array 
 
-    my @ary = do_dir_ary("$ROOT_DIRECTORY");
+    my @ary = do_dir_ary($ROOT_DIRECTORY);
     # remove duplicates:
     my %seen = ();
     my @uniq = grep(!$seen{$_}++,@ary);
@@ -907,28 +907,27 @@ sub menu_file {
     # if it doesn't, then assume this will contain
     # a index.$EXT file and add it to the menu. 
     foreach my $directory (@uniq){
-        next if (-f "$directory/$SKIP_DIR_FILE");
-        # remove ./ from begining of names
+        next if (-f File::Spec->catfile($directory,$SKIP_DIR_FILE));
+        next if ( basename($directory) =~ /^\./ ); # skip dir names starting with .
+        # remove ./ or . from begining of names
         $directory =~ s,^\./*,,g;
         # note that @ls holds the HTML links...
         # thus, paths are relative and not absolute here:
-        push(@ls,"$directory/$FILE_NAME.".$config{"$ROOT_DIRECTORY"}{"ext"});
+        push( @ls,File::Spec->catfile($directory,$FILE_NAME.".".$config{$ROOT_DIRECTORY}{"ext"}) );
     }   
     dict_sort(\@ls); # sort in dictionary order
-    $total_links = $#ls + 1;
+    $TOTAL_LINKS = $#ls + 1;
     # set menu-name now (from command-line or config file)
-    if ( $NEW_MENU_NAME gt "" ) 
+    if ( $NEW_MENU_NAME !~ /^\s*$/ ) 
     {
         $MENU_NAME=$NEW_MENU_NAME;
-    } elsif ( defined($config{"$ROOT_DIRECTORY"}{"menuname"}) 
-            && $config{"$ROOT_DIRECTORY"}{"menuname"} gt "" )
+    } elsif ( defined($config{$ROOT_DIRECTORY}{"menuname"}) 
+        and $config{$ROOT_DIRECTORY}{"menuname"} !~ /^\s*$/ )
     {
-        $MENU_NAME=$config{"$ROOT_DIRECTORY"}{"menuname"};
+        $MENU_NAME=$config{$ROOT_DIRECTORY}{"menuname"};
     } # else MENU_NAME keeps the default name
 
-    if ( 
-        $config{"$ROOT_DIRECTORY"}{"menutype"} eq "modern" 
-    )
+    if ( $config{$ROOT_DIRECTORY}{"menutype"} eq "modern" )
     {
         # create modern menu 
         # modern menu is a file, no --menu-only needed here
@@ -937,36 +936,34 @@ sub menu_file {
         print FILE ($config{"$ROOT_DIRECTORY"}{"header"}."\n");
         print FILE ($config{"$ROOT_DIRECTORY"}{"table"}."\n");
         # loop
-        my $tmp_tr = ""; # used to color the rows
         foreach (@ls)
         {
-            # temporarily turn off warnings
-            no warnings;
-            if ($config{"$ROOT_DIRECTORY"}{"tr"}=~m/\%+bgcolor\%+/i){
+            # no warnings;
+            if ($config{$ROOT_DIRECTORY}{"tr"} =~ m/\%+bgcolor\%+/i)
+            {
+                my $tmp_tr = "";
                 # alternate colors for TR?
-                if (($j % 2) == 0){
-                    ($tmp_tr = $config{"$ROOT_DIRECTORY"}{"tr"}) =~ s/\%+bgcolor\%+/bgcolor="#efefef"/i;
-                } else {
-                    ($tmp_tr = $config{"$ROOT_DIRECTORY"}{"tr"}) =~ s/\%+bgcolor\%+//i;
-                }
+                my $color = (($j % 2) == 0) ? "bgcolor=\"#efefef\"" : "" ;
+                ($tmp_tr = $config{$ROOT_DIRECTORY}{"tr"}) =~ s/\%+bgcolor\%+/$color/i;
                 print FILE ($tmp_tr."\n");
             } else {
                 print FILE ($config{"$ROOT_DIRECTORY"}{"tr"}."\n");
             }
-            if ( -f $config{"$ROOT_DIRECTORY"}{"albumpix"} )
+            if ( -f $config{$ROOT_DIRECTORY}{"albumpix"} )
             {
                 print FILE ("\t<td background='".$config{"$ROOT_DIRECTORY"}{"albumpix"}."' align='center'>\n");
             } else {
                 print FILE ("\t".$config{"$ROOT_DIRECTORY"}{"td"}."\n");
             }
-            if ( $ls[$i] ne "" ) {
+            #if ( $ls[$i] !~ /^\s*$/ )
+            #{
                 # if link exists, otherwise leave it blank
                 $ts = dirname($ls[$i]);
                 if ( $nautilus_root gt "" ) {
                     $ls[$i] =~ s,$nautilus_root/,,g;
                     $ts =~ s,$nautilus_root/*,,g;
                 }
-                $IMG = (-f "$ts/.new") ? 
+                $IMG = ( -f File::Spec->catfile($ts,".new") ) ? 
                     "<img valign='middle' border=0 src='".
                     $config{"$ROOT_DIRECTORY"}{"new"}.
                     "' alt='new'>" : "";
@@ -974,33 +971,27 @@ sub menu_file {
                 $tmp_ts = str_truncate($tmp_ts); # truncate up to $STR_LIMIT
                 $tmp_ts = ucfirst($tmp_ts); # uppercase first letter
                 my $image = "";
-                if ( -d "$ts/$THUMBNAIL" )
+                if ( -d File::Spec->catfile($ts,$THUMBNAIL) )
                 {
-                    # We need one thumbnail here. hackish? you bet!
-                    my $pwd = getcwd();
-                    chdir("$ts/$THUMBNAIL") 
-                        or mydie("Could not change to dir $ts/$THUMBNAIL. $!\n","menu_file 2");
-                    my @glob_ary = glob("t*.???"); # get all files starting with 't' and ending in .??? (3 characters); they might or might not be picture files, but... we are trusting they are for now
-
-                    # go back to our original directory
-                    chdir($pwd) 
-                        or mydie("Could not go back to $pwd. $!\n",
-                            "menu_file 3"); 
+                    # get all files starting with 't' and ending in .??? 
+                    # (3 characters); they might or might not be picture files, 
+                    # but... we are trusting they are for now
+                    my @glob_ary = glob("$ts/$THUMBNAIL/t*.???");
                     my $attempts = 3; # number of tries to get an image
                     IMAGE:
                     $image = $glob_ary[rand(@glob_ary)];
-                    if ( 
-                        $image !~ /$EXT_INCL_EXPR$/i 
-                        && $attempts != 0
+                    if ( $image !~ /$EXT_INCL_EXPR$/i 
+                        or ! -f $image 
+                        or $attempts != 0
                     ) { 
                         print LOGFILE "$image is not an IMAGE file\n"; 
                         $attempts--;
                         goto IMAGE;
                     }
                     my $tmp_image="";
-                    if ( -f "$ts/$THUMBNAIL/$image" )
+                    if ( -f $image )
                     {
-                        $tmp_image="<img src='$ts/$THUMBNAIL/$image' border=0 alt='$tmp_ts album'>";
+                        $tmp_image="<img src='$image' border=0 alt='$tmp_ts album'>";
                     } else {
                         $tmp_image="MISSING. Try re-running ".basename($0)." with no arguments";
                     }
@@ -1010,8 +1001,9 @@ sub menu_file {
                 }
                 # close table row  (TR)
                 print FILE ("\t</td>\n</tr>\n");
+                # TODO do we need two counters here?
                 $i++; # incr file counter
-            } 
+                #} 
             $j++; # incr TR counter
         } # end while loop
         print FILE ("</table>\n");
@@ -1047,7 +1039,7 @@ sub menu_file {
             print FILE ($config{"$ROOT_DIRECTORY"}{"header"}."\n");
         }
         # generate menu
-        if ( $total_links > 1 )
+        if ( $TOTAL_LINKS > 1 )
         {
             if ( $MENUONLY > 0 ) 
             {
@@ -1167,7 +1159,7 @@ sub menu_file {
                 print FILE ("</table>\n");
             }
             $MENU_STR .= "</table>\n";
-        # end if total_links
+        # end if TOTAL_LINKS
         } else {
             print $LOGFILE (": Not a single link found\n");
         }
@@ -1181,8 +1173,8 @@ sub menu_file {
             close(FILE);
         }
     }
-    if ( $total_links > 1 ) {
-        print $LOGFILE (": $total_links links in menu.\n");
+    if ( $TOTAL_LINKS > 1 ) {
+        print $LOGFILE (": $TOTAL_LINKS links in menu.\n");
     }
     return $MENU_STR;
 } #end menu_file

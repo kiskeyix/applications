@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.101 $
+# $Revision: 1.102 $
 # Luis Mondesi  <lemsx1@gmail.com>
 # 
 # HELP: $0 --help
@@ -289,11 +289,14 @@ sub main {
         # i.e. under the "t" directory
         #
         # TODO this should use %thumbfiles (see mkindex())
+        print $LOGFILE ("= Creating thumbnails HTML files\n");
         mkthumb_files(\%thumbfiles);
         
         # 5.
         # create index.$EXT files for thumbnails. The index file contains
         # the links to e/a h/t$file.$EXT
+
+        print $LOGFILE ("= Creating all index files\n");
         mkindex(\%thumbfiles,$menu_str);
     }
 
@@ -482,7 +485,7 @@ sub mkindex {
             init_config($this_base,"false");
         }
         # "serialization"
-        my @files = @{$$hashref{"$this_base"}};
+        my @files = @{$$hashref{$this_base}};
 
         dict_sort(\@files);
 
@@ -719,13 +722,14 @@ sub mkthumb_files {
     # TODO are this really needed?
     foreach my $this_base ( keys %$hashref )
     {
-        foreach (@{$hashref->{$this_base}}){
-            $this_file = basename($_);
+        foreach my $_file ( @{$$hashref{$this_base}} )
+        {
+            $this_file = basename($_file);
             next if (not defined ($this_file));
             next if ($this_file =~ m/$EXCEPTION_LIST/);
             next if ($this_file !~ m/$EXT_INCL_EXPR$/i);
-            next if ($_ =~ m/\/$THUMBNAIL\/.*$EXT_INCL_EXPR$/i);
-            push @ls,$_;
+            next if ($_file =~ m/\/$THUMBNAIL\/.*$EXT_INCL_EXPR$/i);
+            push @ls,$_file;
             $this_file = undef;
         } #end images array creation
     }

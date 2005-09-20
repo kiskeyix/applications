@@ -1,7 +1,9 @@
 #!/usr/bin/perl 
-# $Revision: 1.97 $
-# Luis Mondesi  <lemsx1@hotmail.com>
+# $Revision: 1.98 $
+# Luis Mondesi  <lemsx1@gmail.com>
 # 
+# HELP: $0 --help
+# DESC: pixdir2html - makes thumbnails and custom html files for pictures
 # REQUIRED: ImageMagick's Perl module and a dialog 
 #           program or Term::Pogressbar Perl module
 use strict;
@@ -10,7 +12,7 @@ $|++; # disable buffer (autoflush)
 # standard Perl modules
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
-use File::Spec::Functions;     # abs2rel() and other dir/filename specific
+use File::Spec::Functions  qw(splitpath curdir updir catfile catdir splitpath);
 use File::Copy;
 use File::Find;     # find();
 use File::Basename; # basename() && dirname()
@@ -246,18 +248,21 @@ sub main {
     {
         print $LOGFILE 
         ( "! Missing main $CONFIG_FILE. Creating one for you at '$ROOT_DIRECTORY'\n");
-        init_config("$ROOT_DIRECTORY","true");
+        init_config($ROOT_DIRECTORY,"true");
     }
     # --------------------------- STEPS -----------------------------#
     # 1.
     # Create an array of all image files that we will work on.
     # HINT: check EXCEPT for files we will be ignoring.
-    my @ary = do_file_ary("$ROOT_DIRECTORY");
+    my @ary = do_file_ary($ROOT_DIRECTORY);
     # remove duplicates:
     my %seen = ();
     my @uniq = grep(!$seen{$_}++,@ary);
     @pixfiles = @uniq; # copies all unique files to pixfiles
     # free up memory:
+    @ary = ();
+    %seen = ();
+    @uniq = ();
     undef @ary;
     undef %seen;
     undef @uniq;
@@ -265,37 +270,34 @@ sub main {
     # we need to create thumbnails first... 
     # make all thumbnails and save all thumbs in %thumbfiles
     # so that mkindex() can create the indices.
-    $err = mkthumb("$ROOT_DIRECTORY");
-    if ( $err > 0 || $THUMBSONLY > 0 ) {
-        exit (0);
-    }
+    $err = mkthumb($ROOT_DIRECTORY);
+    exit(0) if ( $err > 0 or $THUMBSONLY > 0 );
+    
     # 3.
     # We need to create a menu string to pass it to mkindex()
-    if ( $err == 0 && ( $NOMENU != 1 || $config{"$ROOT_DIRECTORY"}{"menutype"} eq "modern" ) ) 
+    if ( $NOMENU != 1 or $config{$ROOT_DIRECTORY}{"menutype"} eq "modern" ) ) 
     {
         print $LOGFILE ("= Creating menu string\n");
         $menu_str = menu_file();
-        if ( $MENUONLY > 0 ) 
-        {
-            # When menuonly is set, we print to a menu.$EXT file and exit
-            exit (0);
-        }
+        # When menuonly is set, we print to a menu.$EXT file and exit
+        exit(0) if ( $MENUONLY > 0 );
     } 
-    # 4.
-    # make all supporting HTML files for e/a thumbnail image. 
-    # i.e. under the "t" directory
-    if ( $err == 0 && $NOINDEX == 0 ) {
+
+    if ( $NOINDEX == 0 )
+    {
+        # 4.
+        # make all supporting HTML files for e/a thumbnail image. 
+        # i.e. under the "t" directory
+        #
         # TODO this should use %thumbfiles (see mkindex())
-        mkthumb_files($ROOT_DIRECTORY);
+        mkthumb_files(\%thumbfiles);
+        
+        # 5.
+        # create index.$EXT files for thumbnails. The index file contains
+        # the links to e/a h/t$file.$EXT
+        mkindex(\%thumbfiles,$menu_str);
     }
-    # 5.
-    # create index.$EXT files for thumbnails. The index file contains
-    # the links to e/a h/tfile.$EXT
-    if ( $err == 0 && $NOINDEX == 0 ) {
-        mkindex(\%thumbfiles,$menu_str);  # pass hash reference
-                                        # and a menu string
-                                        # to be included in e/a file
-    }
+
     # close progressbar
     if ( $use_console_progressbar != 1 ) 
     {
@@ -388,9 +390,11 @@ sub init_config {
     $config{"$ROOT"}{"strlimit"}=( $STR_LIMIT ) ? $STR_LIMIT : 32;
     $config{"$ROOT"}{"cutdirs"}=( $CUT_DIRS ) ? $CUT_DIRS : 0 ;
 
-    if ( -f "$ROOT/$CONFIG_FILE" )
+    my $config_file = File::Spec->catfile($ROOT,$CONFIG_FILE);
+    if ( -f $config_file )
     {
-        open(CONFIG, "<$ROOT/$CONFIG_FILE");
+        open( CONFIG,"< $config_file" )
+            or die("Could not read $config_file\n");
         # suppress warnings for now... 
         no warnings; 
         while ( defined($line = <CONFIG>) ) {
@@ -403,7 +407,7 @@ sub init_config {
                 $line .= <CONFIG>;
                 redo unless eof(CONFIG);
             }
-            $config{"$ROOT"}{"$1"} = "$2" if ( $line =~ m,^\s*([^=]+)=(.+), );
+            $config{$ROOT}{$1} = $2 if ( $line =~ m,^\s*([^=]+)=(.+), );
         }
         close(CONFIG);
     } 
@@ -428,18 +432,16 @@ sub init_config {
         print $LOGFILE (": Blank footer. Generating my own [$ROOT] ... \n");
         $config{"$ROOT"}{"footer"}="</center></body></html>";
     }
-    # write or warn about configuration if one doesn't exists
-    if (!-f "$ROOT/$CONFIG_FILE" ) {
-        warn "Could not find $ROOT/$CONFIG_FILE\n";
-        if ( $create_config =~ /true/ ) 
-        {
-            # uncomment for debugging...
-            #use Data::Dumper;
-            #print STDOUT Dumper(%config);
-            #print STDOUT "\n\n\n";
-            write_config($ROOT,\%config);
-        }
+    # write configuration 
+    if ( $create_config =~ /true/ ) 
+    {
+        # uncomment for debugging...
+        #use Data::Dumper;
+        #print STDOUT Dumper(%config);
+        #print STDOUT "\n\n\n";
+        write_config($ROOT,\%config);
     }
+    warn "Could not find $config_file\n" if ( ! -f $config_file );
 } # end init_config
 
 sub mkindex {
@@ -458,31 +460,27 @@ sub mkindex {
     my @files = ();
 
     foreach $this_base ( sort keys %$hashref ) {
-        next if ( -f "$this_base/$SKIP_DIR_FILE" );
+        next if ( -f File::Spec->catfile($this_base,$SKIP_DIR_FILE) );
         my ($my_bgcolor,$file_name) = ""; 
         $i = 0;
         # read specific config file for this directory
-        if ( ! -f "$this_base/$SKIP_DIR_FILE" 
-            && !-f "$this_base/$CONFIG_FILE") {
+        if ( ! -f File::Spec->catfile($this_base,$CONFIG_FILE) )
+        {
             # oops, missing config file copying from root dir
             if ( 
-                copy("$ROOT_DIRECTORY/$CONFIG_FILE", 
-                    "$this_base/$CONFIG_FILE") 
+                copy(File::Spec->catfile($ROOT_DIRECTORY,$CONFIG_FILE), 
+                    File::Spec->catfile($this_base,$CONFIG_FILE)) 
             ) {
                 print $LOGFILE (": mkindex() Copied ".
                     " $ROOT_DIRECTORY/$CONFIG_FILE ".
                     "==> $this_base/$CONFIG_FILE \n");
             }
-            # now read the config file
-            # and init a %config{this_base} hash for us
-            print $LOGFILE "+ mkindex() Reading config for '$this_base'\n";
-            init_config("$this_base");
         } # end if/elsif
-        if (! exists $config{"$this_base"} )
+        if (! exists $config{$this_base} )
         {
             # this should rarely happen
             print $LOGFILE "++ mkindex() Reading config for '$this_base'\n";
-            init_config("$this_base");
+            init_config($this_base,"false");
         }
         # "serialization"
         my @files = @{$$hashref{"$this_base"}};
@@ -552,10 +550,10 @@ sub mkthumb {
     #
     my $ROOT = $_[0];
     # globals
-    %thumbfiles = (); # reset %thumbfiles
+    %thumbfiles = (); # reset
     # locals: reset some locals
     my @ls = ();
-    my ($thisFile,
+    my ($this_file,
         $pix_name,
         $file_name,
         $next_pix_name,
@@ -575,27 +573,23 @@ sub mkthumb {
     my $tmp_BASE = ",\/more_trash";
     # error reporting:
     my $err = 0;
-
     my $i = 0;
+    my $image = Image::Magick->new; # image::magick is installed?
 
     print $LOGFILE ("= Making thumbnails in $ROOT \n");
-    #construct array of all image files
-    my @ary = ();
-    if ( defined $pixfiles[0] && -f $pixfiles[0] ) 
+    if ( ! defined $pixfiles[0] or ! -f $pixfiles[0] ) 
     {
-        # copy that array instead:
-        @ary = @pixfiles;
-    } else {
-        # construct array of all files
-        @ary = do_file_ary("$ROOT");
+        die("Sorry, do_file_ary() didn't do its job\n");
     }
+
     # parse array of images
-    foreach (@ary) {
-        $thisFile = basename($_);
-        next if ($thisFile =~ m/$EXCEPTION_LIST/);
+    foreach (@pixfiles) {
+        $this_file = basename($_);
+        next if ($this_file =~ m/$EXCEPTION_LIST/);
         next if ($_ =~ m/\b$THUMBNAIL\b/i);
-        next if ($thisFile !~ m/$EXT_INCL_EXPR$/i);
+        next if ($this_file !~ m/$EXT_INCL_EXPR$/i);
         push @ls,$_;
+        $this_file = "";
     } #end images array creation
     #print STDERR @ls;
     dict_sort(\@ls);
@@ -604,7 +598,6 @@ sub mkthumb {
     # gauge message
     my $MESSAGE = "Thumbnails Creation";
     # initial values for gauge
-    # TOTAL -> number of elements in ls array
     my $PROGRESS = 0;
     my $TOTAL = $#ls + 1;
     if ( $use_console_progressbar == 1 )
@@ -622,32 +615,28 @@ sub mkthumb {
         $BASE = dirname($ls[$i]);
         # BASE is blank if we are already inside the directory
         # for which to do thumbnails, thus:
-        if ( $BASE eq "" 
-            || ! -d $BASE ) 
+        if ( not defined ($BASE) or $BASE eq "" or ! -d $BASE ) 
         { 
             $BASE = "."; 
         }
-        next if ( -f "$BASE/$SKIP_DIR_FILE" );
+        next if ( -f File::Spec->catfile($BASE,$SKIP_DIR_FILE) );
         next if ($BASE eq $THUMBNAIL); 
-        if ( $BASE gt ""
-            && $BASE ne $tmp_BASE )
+        if ( $BASE ne $tmp_BASE )
         {
             # Note that this tmp_BASE comparison is meant
-            # to avoid doing this for e/a directory:
-            if (  $FORCE > 0 || ! -f  "$BASE/$CONFIG_FILE" )
+            # to avoid doing this for e/a directory more than once:
+            if (  $FORCE > 0 or ! -f File::Spec->catfile($BASE,$CONFIG_FILE) )
             {
-                copy("$ROOT_DIRECTORY/$CONFIG_FILE", 
-                "$BASE/$CONFIG_FILE") 
+                copy(File::Spec->catfile($ROOT_DIRECTORY,$CONFIG_FILE), 
+                    File::Spec->catfile($BASE,$CONFIG_FILE)) 
                     or die("Could not copy $ROOT_DIRECTORY/$CONFIG_FILE to $BASE/$CONFIG_FILE. $!");
-                print $LOGFILE (": Copied ".
-                " $ROOT_DIRECTORY/$CONFIG_FILE ".
-                "==> $BASE/$CONFIG_FILE \n");
+                print $LOGFILE (": Copied $ROOT_DIRECTORY/$CONFIG_FILE ==> $BASE/$CONFIG_FILE \n");
             } # end if missing $CONFIG_FILE
             # read specific config file for this directory
-            if (! exists $config{"$BASE"})
+            if ( ! exists $config{$BASE} )
             {
                 print $LOGFILE "+ mkthumb Reading config for '$BASE'\n";
-                init_config("$BASE");
+                init_config($BASE,"false");
             }
         } # end if base not equal tmp_base
         # update flag
@@ -657,37 +646,36 @@ sub mkthumb {
         # strip extension from file name
         ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR$//gi;
         # construct PATH for thumbnail directory
-        $THUMBNAILSDIR="$BASE/$THUMBNAIL";
+        $THUMBNAILSDIR=File::Spec->catfile($BASE,$THUMBNAIL);
 
-        if (!-d "$THUMBNAILSDIR") { 
+        if ( ! -d $THUMBNAILSDIR )
+        { 
             print $LOGFILE ("= Making thumbnail's directory in $BASE\n");
-            mkdir("$THUMBNAILSDIR",0755);
+            mkdir($THUMBNAILSDIR,0755);
         }
 
-        if ( !-f "$THUMBNAILSDIR/".$THUMB_PREFIX.$pix_name ){
+        if ( !-f File::Spec->catfile($THUMBNAILSDIR,$THUMB_PREFIX.$pix_name) )
+        {
             print $LOGFILE ("\n= Converting file $BASE/$pix_name into $THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name \n");
             if ( $USE_CONVERT == 1 )
             {
-                system("convert -geometry $PERCENT $BASE/$pix_name $THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name");
+                system("convert -geometry $PERCENT ".File::Spec->catfile($BASE,$pix_name)." ".File::Spec->catfile($THUMBNAILSDIR,$THUMB_PREFIX.$pix_name) );
                 if ( $? != 0 ) {
-                    print $LOGFILE "** ERROR: conversion failed\n $! ";
+                    print $LOGFILE "** ERROR: conversion failed: $! \n";
                     $err = 1;
                 }
             } else {
                 # assumes Image::Magick was checked for before
-                my $image = Image::Magick->new;
-                $image->Read("$BASE/$pix_name");
-                $image->Resize("$PERCENT");
-                $image->Write("$THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name");
-                undef $image;
+                $image->Read( File::Spec->catfile($BASE,$pix_name) );
+                $image->Resize($PERCENT);
+                $image->Write( File::Spec->catfile($THUMBNAILSDIR,$THUMB_PREFIX.$pix_name) );
             }
-            
             print $LOGFILE ("\n"); 
         } 
         # end if thumbnail file
-
+        
         # save pixname for the index.html file
-        push @{$thumbfiles{"$BASE"}}, "$THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name";
+        push @{$thumbfiles{$BASE}}, File::Spec->catfile($THUMBNAILSDIR,$THUMB_PREFIX.$pix_name);
         # update flags
         $LAST_BASE = $BASE;
         # update progressbar
@@ -703,12 +691,12 @@ sub mkthumb {
 
 sub mkthumb_files {
     # creates an HTML file for e/a thumbnail 
-    # @param 0 string := path to directory to generate html files for
-    my $ROOT = $_[0];
+    # @param 0 hash := $name{$base}->[$i] = 'path/file'
+    my $hashref = $_[0];
     # locals
     my @ls = ();
     my $i = 0;
-    my ($thisFile,
+    my ($this_file,
         $pix_name,
         $file_name,
         $next_pix_name,
@@ -723,27 +711,23 @@ sub mkthumb_files {
         $HTMLSDIR) = ""; 
     # TODO find a more elegant solution here
     # init to dummy string:
-    my $BASE = "trash/\file";
-    my $last_html_file = "this_is/dummy\string";
+    my $BASE = "trash/\\file";
+    my $last_html_file = "this_is/dummy\\string";
 
-    my @ary = ();
-
-    if ( defined $pixfiles[0] && -f $pixfiles[0] ) 
+    # some sanity checks plus "serializes" our hashref into a more manageable array @ls
+    # TODO are this really needed?
+    foreach my $this_base ( keys %$hashref )
     {
-        @ary = @pixfiles;
-    } else {
-        @ary = do_file_ary("$ROOT");
+        foreach (@{$hashref->{$this_base}}){
+            $this_file = basename($_);
+            next if (not defined ($this_file));
+            next if ($this_file =~ m/$EXCEPTION_LIST/);
+            next if ($this_file !~ m/$EXT_INCL_EXPR$/i);
+            next if ($_ =~ m/\/$THUMBNAIL\/.*$EXT_INCL_EXPR$/i);
+            push @ls,$_;
+            $this_file = undef;
+        } #end images array creation
     }
-    # parse array of files, get images only
-    # from it:
-    foreach (@ary){
-        $thisFile = basename($_);
-        next if ($thisFile =~ m/$EXCEPTION_LIST/);
-        next if ($_ =~ m/\/$THUMBNAIL\/.*$EXT_INCL_EXPR$/i);
-        next if ($thisFile !~ m/$EXT_INCL_EXPR$/i);
-        push @ls,$_;
-    } #end images array creation
-
     dict_sort(\@ls);
 
     # progressbar stuff
@@ -765,43 +749,45 @@ sub mkthumb_files {
         $PROGRESS++;
         # get base directory
         $BASE = dirname( $ls[$i] );
+        next if ($BASE eq $THUMBNAIL);
         # BASE is blank if we are already inside the directory
         # for which to do thumbnails, thus:
         if ( ! -d $BASE ) { 
             print $LOGFILE "+ mkthumb_files changed based $BASE to .\n";
             $BASE = "."; 
         }
-        next if ( -f "$BASE/$SKIP_DIR_FILE" );
-        next if ($BASE eq $THUMBNAIL);
+        next if ( -f File::Spec->catfile($BASE,$SKIP_DIR_FILE) );
         $pix_name = basename($ls[$i]);
         # strip extension from file name
         ($file_name = $pix_name) =~ s/$EXT_INCL_EXPR$//gi;
         # if we have not already read this config file,
         # do so now:
-        if ( ! exists $config{"$BASE"} ) 
+        if ( ! exists $config{$BASE} ) 
         {
             print $LOGFILE "+ mkthumb_files Reading config for '$BASE'\n";
-            init_config("$BASE");
+            init_config($BASE,'false');
         }
         
         # construct PATH for html directory
-        $HTMLSDIR = "$BASE/$HTMLDIR";
-        if (!-d "$HTMLSDIR") { 
+        $HTMLSDIR = File::Spec->catfile($BASE,$HTMLDIR);
+        if (!-d $HTMLSDIR)
+        { 
             print $LOGFILE ("= Making HTML directory in $BASE\n");
-            mkdir("$HTMLSDIR",0755);
+            mkdir($HTMLSDIR,0755);
         }
 
-        $current_html_file = "$HTMLSDIR/$file_name.".$config{"$BASE"}{"ext"};
-        $current_link = "$file_name.".$config{"$BASE"}{"ext"};
+        $current_html_file = File::Spec->catfile($HTMLSDIR,$file_name.$config{$BASE}{"ext"});
+        $current_link = $file_name.".".$config{$BASE}{"ext"};
 
         my $msg = "= Creating";
-        if ( -f $current_html_file ){
+        if ( -f $current_html_file )
+        {
             $msg = ": Overriding";
-        } # end if not current_html_file
+        }
         print $LOGFILE ("$msg html file '$current_html_file'\n");
         # TODO routine for creating file should be called here...
-        open(FILE, "> $current_html_file") || 
-        mydie("Couldn't write file $current_html_file","mkthumb_files");
+        open(FILE, "> $current_html_file") or
+            mydie("Couldn't write file $current_html_file","mkthumb_files");
 
         # start HTML
         print FILE ($config{"$BASE"}{"header"}."\n");
@@ -812,7 +798,7 @@ sub mkthumb_files {
         {
             $MENU_NAME=$NEW_MENU_NAME;
         } elsif ( defined($config{"$ROOT_DIRECTORY"}{"menuname"}) 
-            && $config{"$ROOT_DIRECTORY"}{"menuname"} gt "" ) {
+            and $config{"$ROOT_DIRECTORY"}{"menuname"} gt "" ) {
             $MENU_NAME=$config{"$ROOT_DIRECTORY"}{"menuname"};
         } # else MENU_NAME keeps the default name
         
@@ -823,8 +809,8 @@ sub mkthumb_files {
         }
         # backward link here
         if ( $last_html_file ne "this_is/dummy\string" 
-            && -f $last_html_file 
-            && ($BASE eq $LAST_BASE) ) 
+            and -f $last_html_file 
+            and ($BASE eq $LAST_BASE) ) 
         {
             print FILE ("\t\t<a class='pdlink' href='$last_link'>&lt;==</a>\n"); 
         } else {
@@ -841,7 +827,7 @@ sub mkthumb_files {
             $NEXT_BASE = dirname($ls[$i+1]);
         }
         # forward link here
-        if ( -f $ls[$i+1] && ($BASE eq $NEXT_BASE) ) {
+        if ( -f $ls[$i+1] and ($BASE eq $NEXT_BASE) ) {
             $next_file_name = "";
             ($next_file_name = $next_pix_name) =~ s/$EXT_INCL_EXPR$//gi;
             #print FILE ("==&gt;");
@@ -901,7 +887,7 @@ sub menu_file {
     my $MENU_STR = ""; # return this instead of making file
     my $IMG = ""; 
     my $line = "";
-    #my $thisFile= "";
+    #my $this_file= "";
     my $y=0;    # counts number of td's
     my $i=0;    # general purpose counter
     my $j=0;    # count number of TR's
@@ -1425,10 +1411,11 @@ B<pixdir2html.pl>  [-n,--no-menu]
 
 For the Impatient:
     Passes current directory to script 
-        pixdir2html.pl 
+    shell> pixdir2html.pl 
+    
     Force copies the "rootdir"/.pixdir2htmlrc
     to all other directories within this tree
-        pixdir2html.pl -f --directory="rootdir"
+    shell> pixdir2html.pl -f --directory="rootdir"
     
     To use this script in a non interactive way with Nautilus,
     make this file executable and put it in:
@@ -1626,13 +1613,15 @@ A simple styles.css file should have things like:
   text-decoration:    none;
 }
 
+=back
+
 =head1 ENVIRONMENT
 
 No environment variables are used.
 
-=head1 AUTHOR
+=head1 AUTHORS
 
-Luis Mondesi <lemsx1@hotmail.com>
+Luis Mondesi <lemsx1@gmail.com>
 
 =head1 SEE ALSO
 

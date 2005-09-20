@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.102 $
+# $Revision: 1.103 $
 # Luis Mondesi  <lemsx1@gmail.com>
 # 
 # HELP: $0 --help
@@ -490,7 +490,7 @@ sub mkindex {
         dict_sort(\@files);
 
         # FILE_NAME is a global
-        open(FILE, "> ".$this_base."/".$FILE_NAME.".".$config{"$this_base"}{"ext"}) || 
+        open(FILE, "> ".$this_base."/".$FILE_NAME.".".$config{"$this_base"}{"ext"}) or 
         mydie("Couldn't write file $FILE_NAME.".$config{"$this_base"}{"ext"}." to $this_base","mkindex");
 
         # start HTML
@@ -722,8 +722,11 @@ sub mkthumb_files {
     # TODO are this really needed?
     foreach my $this_base ( keys %$hashref )
     {
+        print $LOGFILE "$this_base --> ";
         foreach my $_file ( @{$$hashref{$this_base}} )
         {
+            print $LOGFILE "$_file\n";
+
             $this_file = basename($_file);
             next if (not defined ($this_file));
             next if ($this_file =~ m/$EXCEPTION_LIST/);

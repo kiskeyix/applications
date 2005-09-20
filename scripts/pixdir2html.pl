@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.103 $
+# $Revision: 1.104 $
 # Luis Mondesi  <lemsx1@gmail.com>
 # 
 # HELP: $0 --help
@@ -519,7 +519,7 @@ sub mkindex {
             ($file_name = $file_name) =~ s/^$THUMB_PREFIX//; # removes prefix
             # EXT is a global and so is THUMBNAIL
             print FILE ("\t\t<a class='pdlink' href='$HTMLDIR/$file_name.".$config{"$this_base"}{"ext"}."'>".
-                "\t\t<img class='pdimage' src='$THUMBNAIL/"."$this_file' border=0 alt='$file_name'></a>\n");
+                "\t\t<img class='pdimage' src='$THUMBNAIL/t"."$this_file' border=0 alt='$file_name'></a>\n");
             print FILE ("\t</td>\n");
             if ($i<($TD-1)) {
                 $i++;
@@ -720,20 +720,25 @@ sub mkthumb_files {
 
     # some sanity checks plus "serializes" our hashref into a more manageable array @ls
     # TODO are this really needed?
+    # TODO sometimes the $this_base is the full file others is a key??
+    # FIXME we need to strip $THUMBNAIL/t$file out of the names
     foreach my $this_base ( keys %$hashref )
     {
-        print $LOGFILE "$this_base --> ";
+        #print $LOGFILE "$this_base --> ";
+        if ($this_base =~ m/$EXT_INCL_EXPR$/i)
+        {
+            $this_base =~ s|$THUMBNAIL\/t||g;
+            push @ls,$this_base;
+            #    next;
+        }
         foreach my $_file ( @{$$hashref{$this_base}} )
         {
-            print $LOGFILE "$_file\n";
-
-            $this_file = basename($_file);
-            next if (not defined ($this_file));
-            next if ($this_file =~ m/$EXCEPTION_LIST/);
-            next if ($this_file !~ m/$EXT_INCL_EXPR$/i);
-            next if ($_file =~ m/\/$THUMBNAIL\/.*$EXT_INCL_EXPR$/i);
+            #    print $LOGFILE "$_file\n";
+            next if ($_file =~ m/$EXCEPTION_LIST/);
+            next if ($_file !~ m/$EXT_INCL_EXPR$/i);
+            #next if ($_file =~ m/\/$THUMBNAIL\/.*$EXT_INCL_EXPR$/i);
+            $_file =~ s|$THUMBNAIL\/t||g;
             push @ls,$_file;
-            $this_file = undef;
         } #end images array creation
     }
     dict_sort(\@ls);
@@ -784,7 +789,7 @@ sub mkthumb_files {
             mkdir($HTMLSDIR,0755);
         }
 
-        $current_html_file = File::Spec->catfile($HTMLSDIR,$file_name.$config{$BASE}{"ext"});
+        $current_html_file = File::Spec->catfile($HTMLSDIR,$file_name.".".$config{$BASE}{"ext"});
         $current_link = $file_name.".".$config{$BASE}{"ext"};
 
         my $msg = "= Creating";

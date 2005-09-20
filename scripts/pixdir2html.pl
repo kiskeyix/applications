@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.99 $
+# $Revision: 1.100 $
 # Luis Mondesi  <lemsx1@gmail.com>
 # 
 # HELP: $0 --help
@@ -274,7 +274,7 @@ sub main {
     
     # 3.
     # We need to create a menu string to pass it to mkindex()
-    if ( $NOMENU != 1 or $config{$ROOT_DIRECTORY}{"menutype"} eq "modern" ) ) 
+    if ( $NOMENU != 1 or $config{$ROOT_DIRECTORY}{"menutype"} eq "modern" ) 
     {
         print $LOGFILE ("= Creating menu string\n");
         $menu_str = menu_file();

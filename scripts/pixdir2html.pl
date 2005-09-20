@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.100 $
+# $Revision: 1.101 $
 # Luis Mondesi  <lemsx1@gmail.com>
 # 
 # HELP: $0 --help
@@ -393,7 +393,7 @@ sub init_config {
     if ( -f $config_file )
     {
         open( CONFIG,"< $config_file" )
-            or die("Could not read $config_file\n");
+            or mydie("Could not read $config_file\n","init_config");
         # suppress warnings for now... 
         no warnings; 
         while ( defined($line = <CONFIG>) ) {
@@ -578,7 +578,7 @@ sub mkthumb {
     print $LOGFILE ("= Making thumbnails in $ROOT \n");
     if ( ! defined $pixfiles[0] or ! -f $pixfiles[0] ) 
     {
-        die("Sorry, do_file_ary() didn't do its job\n");
+        mydie("Sorry, do_file_ary() didn't do its job\n","mkthumb");
     }
 
     # parse array of images
@@ -628,7 +628,7 @@ sub mkthumb {
             {
                 copy(File::Spec->catfile($ROOT_DIRECTORY,$CONFIG_FILE), 
                     File::Spec->catfile($BASE,$CONFIG_FILE)) 
-                    or die("Could not copy $ROOT_DIRECTORY/$CONFIG_FILE to $BASE/$CONFIG_FILE. $!");
+                    or mydie("Could not copy $ROOT_DIRECTORY/$CONFIG_FILE to $BASE/$CONFIG_FILE. $!","mkthumb");
                 print $LOGFILE (": Copied $ROOT_DIRECTORY/$CONFIG_FILE ==> $BASE/$CONFIG_FILE \n");
             } # end if missing $CONFIG_FILE
             # read specific config file for this directory
@@ -691,7 +691,9 @@ sub mkthumb {
 sub mkthumb_files {
     # creates an HTML file for e/a thumbnail 
     # @param 0 hash := $name{$base}->[$i] = 'path/file'
-    my $hashref = $_[0];
+    my $hashref = shift;
+    mydie("Error while creating thumb_files HTML indeces\n","mkthumb_files") 
+        if (not defined $hashref);
     # locals
     my @ls = ();
     my $i = 0;
@@ -1027,7 +1029,7 @@ sub menu_file
                 $config{"$ROOT_DIRECTORY"}{"ext"}) 
                 or mydie("Couldn't write file $MENU_NAME.".
                     $config{"$ROOT_DIRECTORY"}{"ext"}.
-                    " to $ROOT_DIRECTORY","menu_file 4");
+                    " to $ROOT_DIRECTORY","menu_file");
         }
 
         # menus are now part of the index.EXT...
@@ -1366,9 +1368,9 @@ sub mydie
 {
     # @param 0 string := message to log
     # @param 1 string := function which called us
-    my $msg = $_[0];
-    my $fun = $_[1];
-    print LOGFILE "$msg";
+    my $msg = shift;
+    my $fun = shift;
+    print LOGFILE "DIE: $fun : $msg\n";
     die("Stopping execution $fun");
 }
 

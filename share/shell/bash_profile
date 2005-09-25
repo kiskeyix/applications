@@ -1,0 +1,134 @@
+## vim: expandtab:sts=4:sw=4:ft=sh:columns=80 :
+## Luis Mondesi <lemsx1@hotmail.com> 
+## A "smart" way to setup bash:
+## 2004-10-07 18:22 EDT 
+
+## PLEASE DO NOT MODIFY THIS FILE
+## create a .profile-`hostname` file in your
+## $HOME and edit that file instead.
+
+## User specific environment and startup programs
+## attempt to set these default locales:
+## HINT: see `locale -a` for ideas of what to put in your 
+## .profile-`hostname` file
+#DEFAULT_LANGUAGE="en" # Perl likes this
+#DEFAULT_LC_ALL="en_US" # shells like this
+#DEFAULT_LANG="en_US" # vim loves this
+## Other variables you might want to put in your hosts profile:
+PATH="$HOME/Applications/bin:$HOME/Applications/scripts:$HOME/bin:$PATH"
+MANPATH="$HOME/bin/man:$HOME/Applications/man:/usr/local/man:/usr/local/share/man:/usr/share/man:/usr/man:$MANPATH"
+BASH_ENV="$HOME/.bashrc"
+
+CVS_RSH="ssh"
+EDITOR="vim"
+
+MAIL="/var/mail/${USER:?}"
+
+HISTSIZE=1500
+
+## compiling
+## setup ccache in a shared cache dir:
+CCACHE_DIR="/tmp/ccache"
+if [[ -x "`command -v distcc 2> /dev/null`" ]]; then
+    CCACHE_PREFIX="distcc"
+fi
+## attempt to read hosts for distcc:
+if [[ -f "$HOME/.distcc/hosts" ]]; then
+    DISTCC_HOSTS="`cat \"$HOME/.distcc/hosts\"`"
+fi
+## end compiling
+
+## setup temporary directory:
+## 1. attempt to find $HOME/tmp
+## 2. if that doesn't work, make a directory in /dev/shm (RAM disk)
+## 3. fallback to /tmp if all goes wrong
+TMP="/tmp"
+if [[ -d "$HOME/tmp" ]]; then
+    TMP="$HOME/tmp"
+elif [[ -d "/dev/shm/" ]]; then
+    mkdir -p -m 0700 "/dev/shm/$USER/tmp" > /dev/null 2>&1
+    if [[ -d "/dev/shm/$USER/tmp" ]]; then
+        TMP="/dev/shm/$USER/tmp"
+    fi
+fi
+
+# Mini-Hack to use Vim as a pager
+PAGER="less"
+MANPAGER=$PAGER
+
+if [[ -x "`command -v vim 2> /dev/null`" ]]; then
+    # Now use an alias for less and more to
+    # Use Vim as a PAGER!!! (for man pages only)
+    # $HOME/Applications/scripts/pager contains:
+    #   cat $1 \
+    #   | col -b \
+    #   | vim -c 'se ft=man ro nomod wrap ls=1 notitle ic' \
+    #   -c 'set nu!' \
+    #   -c 'nmap q :q!<CR>' -c 'nmap <Space> <C-F>' -c 'nmap b <C-B>' \
+    #   -c 'nmap f <C-F>' -c 'norm L' -
+
+    # man pages are ok
+    if [[ -x "$HOME/Applications/scripts/pager" ]]; then
+        MANPAGER="$HOME/Applications/scripts/pager"
+        PAGER="$HOME/Applications/scripts/pager"
+    fi
+    # These lines could create problems if you
+    # use 'more' or 'less' to see files not from STDIN
+    # alias less=$PAGER
+    # alias more=$PAGER
+fi
+
+LESSCHARSET='utf-8'
+LESS='-i -N -w -R -z-4 -g -e -M -X -P%t?f%f \
+        :stdin .?pb%pb\%:?lbLine %lb:?bbByte %bb:-...'
+
+## allow users to override environment in different hosts for the same
+## $HOME (mounted over NFS or something like that)
+## NOTE that this is attempted now before locales are setup and before
+## any environment varible is exported:
+HOST_PROFILE="$HOME/.profile-`hostname`"
+if [[ -f "$HOST_PROFILE" ]]; then
+    . "$HOST_PROFILE"
+fi
+
+## locale settings
+## if locales assigned in the DEFAULT_* variables are correct, then 
+## set this or fallback to "C"
+## NOTES:
+##  * because Xlib doesn't like strings like en_US.utf8, we have to
+##    set DEFAULT_* variables to strings like: en_US.UTF-8
+
+LANGUAGE="${DEFAULT_LANGUAGE:-C}"
+LANG="${DEFAULT_LANG:-C}"
+LC_ALL="${DEFAULT_LC_ALL:-C}"
+
+## end locale settings
+
+## one big export:
+export BASH_ENV PATH CVS_RSH EDITOR MAIL MANPATH HISTSIZE LC_ALL \
+        LANG LANGUAGE CCACHE_PREFIX CCACHE_DIR DISTCC_HOSTS \
+        LESS LESSCHARSET PAGER MANPAGER
+
+## read admin bashrc files ?? maybe we don't need these
+if [[ -f /etc/bashrc ]]; then
+ 	. /etc/bashrc
+elif [[ -f /etc/bash.bashrc ]]; then
+    # debian & cygwin style
+        . /etc/bash.bashrc
+elif [[ -f /usr/local/etc/bashrc ]]; then
+    # solaris and others
+        . /usr/local/etc/bashrc
+fi
+
+## read host-specific path:
+if [[ -f "$HOME/.path.setup" ]]; then
+    . "$HOME/.path.setup"
+fi
+
+## Finally, get the aliases and functions from .bashrc. This will in turn
+## read host-specific .bashrc-`hostname` file and .alias.setup, .path.setup, and
+## .signaturerc and possibly others... See the .bashrc provided with this file
+if [[ -f "$HOME/.bashrc" ]]; then
+	. "$HOME/.bashrc"
+fi
+## EOF ##

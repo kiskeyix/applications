@@ -1,0 +1,5 @@
+This directory "vim" should be moved or symlinked to:
+~/.vim
+
+The vimrc file here should be symlinked to:
+ln -s ~/.vim/vimrc ~/.vimrc

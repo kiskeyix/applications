@@ -1,0 +1,452 @@
+" Think real hard  before moving blocks around as it  will most likely break
+" things (nocompatible has to be at the beginning, and the autocommands need
+" appear before color syntaxing
+
+" I am to blame for most of this file -- Marc 2000/08/13
+" (I wrote it over my years of using vim and after reading all the docs)
+"
+" I'll get part of the blame for enhancing this file for VIM 6.0 and up
+" -- Luis M < lemsx1@hotmail.com > 2002-10-30 19:47 
+
+"
+" Options
+"
+
+" Override default options
+
+set nocompatible	" we want vim's features, not stupid vi compatiblity
+set ruler		" shows ruler at the bottom of the screen
+set bs=2		" allow backspacing over everything in insert mode
+
+set ic			" comment this out if you want to search non case sensitive
+set nu			" line numbers baby
+set columns=80          " we have line number on at all times
+
+set showcmd		" Show (partial) command in status line
+
+" Those 2 are really useful, but they may confuse unsuspecting users -- Marc
+set hlsearch		" Switch on syntax highlighting.
+set incsearch		" show matches on the fly
+
+" Newer vims let you paste without holding shift, so let's make this a default
+if version>=508
+    set mouse=v		" Use mouse to select and point in visual mode
+                        " for all use mouse=a
+			" (use shift+click to get old cut/paste behavior)
+endif
+
+set fileformats=unix	" I want to see those ^M if I'm editing a dos file. See below (Key Mappings) for ^M removal!
+
+set expandtab		" use spaces as tabs :-) 
+set sts=4               " use 4 softtabstops
+set sw=4                " shiftwidth fixes tab
+
+set ignorecase		" for pattern machine
+set smartcase		" Except when a mix of case is given
+set exrc
+set secure              " do not allow shell commands in au blocks
+
+" set swapsync=sync	" the swap is synced with sync, not fsync
+set updatecount=20	" Number of characters typed before doing an update
+set updatetime=10000	" Number of milliseconds before doing an update
+set history=100		" Number of history commands to remember
+set viminfo='50,\"200	" read/write a .viminfo file, remember filemarks for 50
+			" files and store 200 lines of registers
+
+set confirm		" To get a dialog when a command fails
+
+" For debugging
+"set verbose=9
+
+" If bash is called sh on the system, define this
+let bash_is_sh=1
+
+" Suffixes that get lower priority when doing tab completion for filenames.
+" These are files we are not likely to want to edit or read.
+set suffixes=.bak,~,.swp,.o,.info,.aux,.log,.dvi,.bbl,.blg,.brf,.cb,.ind,.idx,.ilg,.inx,.out,.toc
+
+"
+" Key mappings
+"
+
+" Key mappings for par (text reformatting)
+vmap  !par -w72 -gjq -dh -p3
+vmap X !par -w72 -gjq -p2 -dh<CR>
+vmap F !par -w72 -gjq<CR>
+vmap f !par -w80<CR>
+
+imap  :set invpaste<CR>a
+map  :set invpaste<CR>o
+
+" space bar scrolls one page at a time
+nmap <Space> 
+
+" So what, I can't type...
+nmap :W :w
+nmap :X :x
+nmap :Q :q
+
+" use <C-F6> for spell checking (see ~/.vim/plugin/vimspell.vim)
+"
+" Switches match highlighting on and off
+nmap <C-F7> :set hls!<CR>
+
+" Suppress all spaces at end/beginning of lines
+nmap _s :%s/\s\+$//<CR>
+nmap _S :%s/^\s\+//<CR>
+"
+" Convert file format to unix
+nmap _ux :se ff=unix<CR>
+
+" ctags
+let Tlist_Ctags_Cmd = 'ctags'
+let Tlist_Auto_Open = 0
+nnoremap <silent> <C-F8> :Tlist<CR>
+nnoremap <silent> <C-F9> :TlistSync<CR>
+nmap    ,t  :Tlist<CR>  " another method just in case...
+nmap    ,r  :TlistSync<CR>
+
+" rot-13
+map ,13 mzggVGg?'z
+
+"set pastetoggle=<F9>
+
+" Custom functions:
+" This function tries to fold a given file
+" by it's default fold-type. i.e. if we are in 
+" a Perl file, then sets "let perl_fold=1"
+"
+" fun foldthis () 
+"     if &ft == "perl"
+"         let perl_fold=1
+"     else
+"         let foldmethod=marker
+"     endif
+" endfun
+ 
+" nnoremap <silent> <F2> :call foldthis()<CR>
+
+" Removes those bloody ^M's
+fun RmCR()
+    let oldLine=line('.')
+    exe ":%s/\r//g"
+    exe ':' . oldLine
+endfun
+map <C-F5> :call RmCR()<CR>
+
+" To indent the whole file without having the cursor move to the beginning or the end I have the following
+
+fun BenIndent()
+    let oldLine=line('.')
+    normal(gg=G)
+    exe ':' . oldLine
+endfun
+map -- :call BenIndent()<CR>
+
+" 2002-10-30 09:39 
+" comment out highlighted lines according to file type
+" put a line like the following in your ~/.vim/filetype.vim file
+" and remember to turn on filetype detection: filetype on
+" au! BufRead,BufNewFile *.sh,*.tcl,*.php,*.pl let Comment="#"
+" if the comment character for a given filetype happens to be @
+" then use let Comment="\@" to avoid problems...
+
+" default values
+let Comment="#"
+let EndComment=""
+
+fun CommentLines() 
+    let oldLine=line('.')
+    "let Comment="#" " shell, tcl, php, perl
+    exe ":s@^@".g:Comment."@g"
+    exe ":s@$@".g:EndComment."@g"
+    exe ":".oldLine
+endfun
+" map visual mode keycombo 'co' to this function
+vmap co :call CommentLines()<CR>
+
+" goodies:
+"
+" Plugins
+
+" Abbreviations
+" 
+" i stands for insert
+" so these work in insert mode only
+" 
+" date format: YYYY-mm-dd . eg. 2002-01-06 
+" USAGE: just type the test after iab and space (or CR)
+iab idate <C-R>=strftime("%Y-%m-%d")<CR>
+iab ifdate <C-R>=strftime("%Y-%m-%d %H:%M %Z")<CR>
+" inser full formatted date (changelogs like this. GNU. rfc822)
+iab iffdate <C-R>=strftime("%a, %d %b %Y %H:%M:%S %z")<CR>
+iab itime <C-R>=strftime("%H:%M")<CR>
+
+" HTML
+" return cursor to position before closing tag
+iab itd <Tab><td><CR><CR></td><Up><Left>
+iab itr <tr><CR><CR></tr><Up><Left>
+iab itable <table border='0'><CR><tr><td><CR></td></tr><CR></table><Up><Left>
+iab ()? ()?:;<Left><Left><Left><Left>
+
+"
+" Autoload commands
+"
+" Only do this part when compiled with support for autocommands.
+if has("autocmd")
+
+" Default (global) group
+if !exists("autocommands_loaded")
+    let autocommands_loaded = 1
+    au BufReadPre * set sw=4 tw=0 sts=4 nosm nocindent cinkeys& comments& formatoptions&
+endif
+
+augroup mail
+    if !exists("autocommands_mail_loaded")
+        let autocommands_mail_loaded = 1
+    " If you wonder, the big regexes are for matching temp files from cvs
+        au BufRead .followup,.article,.letter,/tmp/snd*,/tmp/mutt*,/tmp/moder*,/var/tmp/[a-z][a-z][a-z][a-z][0-9][0-9][0-9]*,/tmp/[0-9][0-9][0-9][0-9][0-9][a-z][a-z][a-z] set formatoptions=tcqro2 comments=n:>,n::,n:»,n:] tw=72 autoindent
+    endif
+augroup END
+
+augroup html
+    if !exists("autocommands_html_loaded")
+        let autocommands_html_loaded = 1
+        au BufRead *.shtml,*.html,*.htm set formatoptions=tcqro2 autoindent
+  " Show default HTML file when new.
+        au BufNewFile *.shtml,*.html,*.htm 0r ~/.vim/skeleton.html
+
+  " Setup browser to display when writing files
+  "au BufWritePost *.shtml,*.html,*.htm !netscape -remote 'openFile(%:p)'
+    endif
+augroup END
+
+augroup php 
+    if !exists("autocommands_php_loaded")
+        let autocommands_php_loaded = 1
+        au BufRead *.php,*.php3,*.phps set formatoptions=tcqro2 autoindent
+        au BufEnter *.class,*.inc,*.tpl,*.php,*.php3,*.phps syntax sync fromstart 
+        " set syntax higlight starting from start. 
+        " This takes those annoying missing highlight colors for certain files. 
+        " could be slow for slow connections. see help 
+        " Show default php file when new 
+        au BufNewFile *.php,*.php3,*.phps 0r ~/.vim/skeleton.php
+
+        " Add HTML menu
+        "au BufEnter  *.php,*.php3,*.phps so ~/.vim/html.vim
+        "au BufLeave  *.php,*.php3,*.phps so ~/.vim/unhtml.vim
+
+        " Setup browser to display when writing files
+        "au BufWritePost *.shtml,*.html,*.htm !netscape -remote 'openFile(%:p)'
+    endif
+augroup END
+
+augroup cprog
+    if !exists("autocommands_cprog_loaded")
+        let autocommands_cprog_loaded = 1
+        " C programs should have 8 spaces as tabs. makes things better
+        au BufRead *.cpp,*.c,*.h,*.cxx,*.cc,*.hh set formatoptions=croq sm sw=8 sts=8 cindent comments=sr:/*,mb:*,el:*/,:// | if filereadable("tags.vim") | so tags.vim | endif
+    endif
+augroup END
+
+augroup perl
+    if !exists("autocommands_perl_loaded")
+        let autocommands_perl_loaded = 1
+        au BufReadPre *.pl,*.ph,*.pm set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' 
+        " tags=./tags,tags,~/devel/tags,~/devel/CVS/bin/contrib/tags
+        " Show default php file when new 
+
+        au BufNewFile *.pl 0r ~/.vim/skeleton.pl
+        au BufNewFile *.pm 0r ~/.vim/skeleton.pm
+
+        " au BufReadPost */CVS/lib/perl5/netapp/*.pm so ~/devel/CVS/bin/contrib/tags.vim
+        " The default syntax highlight syncing scheme is too slow (which makes
+        " backwards scrolling very slow), so we reset it to something faster
+        " au BufReadPost *.pm,*.pl syntax sync clear | syntax sync lines=30
+    endif
+augroup END
+
+augroup python
+    if !exists("autocommands_python_loaded")
+        let autocommands_python_loaded = 1
+        au BufReadPre *.py set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e'
+    endif
+augroup END
+
+augroup shell
+    if !exists("autocommands_shell_loaded")
+        let autocommands_shell_loaded = 1
+        au BufRead profile,bashrc,.profile,.bashrc,.bash_*,.kshrc,*.sh,*.ksh,*.bash,*.env,.login,.cshrc,*.csh,*.tcsh,.z*,zsh*,zlog* set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e'
+        " On new files do..."  
+        au BufNewFile *.sh 0r ~/.vim/skeleton.sh
+    endif
+augroup END
+
+augroup tcl
+    if !exists("autocommands_tcl_loaded")
+        let autocommands_tcl_loaded = 1
+        au BufRead *.tcl,*.tk set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e'
+        " On new files do..."  
+        au BufNewFile *.tcl 0r ~/.vim/skeleton.tcl
+    endif
+augroup END
+
+endif " end if has(autocmd)
+
+" Luis 2002-07-10 00:14
+" These groups, gzip and bz2, are handle by the standard plugins
+" in $VIMRUNTIME/plugins
+
+let myscriptsfile = "~/.vim/myscripts.vim"
+
+"
+" Colors
+"
+
+" XTerm colors
+" 16 seems to trigger a bug on Solaris, which then shows
+" almost no colors. 
+" It doesn't seem to work with Eterm on Suse 6.3 either...
+" So change to 8 if you use any of these systems ...
+" luis, 2002-07-09 22:01 
+" switched back to 16
+set t_Co=16
+if has("terminfo")
+  set t_AB=[%?%p1%{8}%<%t%p1%{40}%+%e%p1%{92}%+%;%dm
+  set t_AF=[%?%p1%{8}%<%t%p1%{30}%+%e%p1%{82}%+%;%dm
+else
+  set t_Sf=[3%dm
+  set t_Sb=[4%dm
+endif
+
+if &term =~ "xterm-debian" || &term =~ "xterm-xfree86"
+  set t_Co=16
+  set t_Sf=[3%dm
+  set t_Sb=[4%dm
+endif
+
+" Default is white background
+" uncomment this if you want to cover your terminal's color
+" highlight normal ctermbg=15 ctermfg=0 guibg=#cccccc guifg=#000000
+" Default is some unreadable yellow
+ highlight Search term=reverse  ctermbg=4 ctermfg=3 guibg=blue guifg=yellow
+" The selection highlight in gvim renders the font unreadable
+highlight Visual gui=reverse guifg=NONE guibg=NONE
+
+" set the background according to your terminal..
+"set background=dark
+set background=light
+
+" Really fancy status line from Sven Guckes
+" From http://www.vim.org/vimrc
+set statusline=Vim-%{Version()}\ %{getcwd()}\ \ %1*[%02n]%*\ %(%M%R%H%)\ %2*%F%*\ %=%{Options()}\ %3*<%l,%c%V>%*
+" Text between "%{" and "%}" is being evaluated and thus suited for functions.
+" Here I will use the function "Options()" as defined below to show the
+" values of some (local) options..
+" The strings "%N*" unto "%*" correspond to the highlight group "UserN":
+"       User1: color for buffer number
+  hi    User1 cterm=NONE    ctermfg=red    ctermbg=white  guifg=red    guibg=white
+"       User2: color for filename
+  hi    User2 cterm=NONE    ctermfg=black  ctermbg=green  guifg=black  guibg=green
+"       User3: color for position
+  hi    User3 cterm=NONE    ctermfg=blue   ctermbg=white  guifg=blue   guibg=white
+
+fu! Version()
+    return version
+endf
+
+fu! Options()
+    let opt=""
+    " autoindent
+    if &ai|   let opt=opt." ai"   |endif
+        "  expandtab
+    if &et|   let opt=opt." et"   |endif
+        "  hlsearch
+    if &hls|  let opt=opt." hls"  |endif
+        "  paste
+    if &paste|let opt=opt." paste"|endif
+        "  shiftwidth
+    if &shiftwidth!=8|let opt=opt." sw=".&shiftwidth|endif
+        "  textwidth - show always!
+        let opt=opt." tw=".&tw
+        return opt
+endf
+
+
+" Debian specific stuff
+
+" Debian uses .gz files for help, those bastards!
+" luckily there is no need to set this
+if filereadable($VIMRUNTIME.'/doc/help.txt.gz')
+    set helpfile=$VIMRUNTIME/doc/help.txt.gz
+endif
+
+set dictionary+=/usr/share/dict/words
+
+set ai			" always set autoindenting on
+
+                        " skip making backups for these files
+set backupskip=/tmp/*,~/tmp/*,$TMPDIR/*,$TMP/*,$TEMP/*
+                        " append '.orig' to the oldest file
+                        " written (copied to backupdir)
+" set patchmode ".org"
+                        " keep backups in one of these directories
+                        " when possible
+set backupdir=~/.backup,~/tmp
+set backup		" do not keep a backup file. use a .vimrc
+                        " file in every folder where you think
+                        " you might need a backup with the option
+                        " set backup
+
+" Don't use Ex mode, use Q for formatting
+map Q gq
+
+" Make p in Visual mode replace the selected text with the "" register.
+vnoremap p <Esc>:let current_reg = @"<CR>gvs<C-R>=current_reg<CR><Esc>
+
+" Switch syntax highlighting on, when the terminal has colors
+if &t_Co > 2 || has("gui_running")
+  syntax on
+endif
+
+" Only do this part when compiled with support for autocommands.
+if has("autocmd")
+
+  " Enable file type detection.
+  " Use the default filetype settings, so that mail gets 'tw' set to 72,
+  " 'cindent' is on in C files, etc.
+  " Also load indent files, to automatically do language-dependent indenting.
+  " filetype plugin indent on
+
+  if v:version >= 600
+    runtime! pubplugin/*.vim
+    filetype plugin on
+    filetype indent on
+  else
+      filetype on
+  endif
+
+		
+  " For all text files set 'textwidth' to 78 characters.
+  au FileType text setlocal tw=78
+
+  " When editing a file, always jump to the last known cursor position.
+  autocmd BufReadPost *
+    \ if line("'\"") > 0 && line("'\"") <= line("$") |
+    \   exe "normal g`\"" |
+    \ endif
+endif " has("autocmd")
+
+" include other vim commands specific to this host:
+" let localvimrc = hostname() . "-vimrc.vim"
+" if filereadable(localvimrc)
+"     so localvimrc
+" endif
+let hostname = hostname()
+if hostname == "zion" || hostname == "minime"
+    iab ime Luis Mondesi <luis.mondesi@americanhm.com>
+    iab idebian -- Luis Mondesi <lemsx1@gmail.com>  <C-R>=strftime("%a, %d %b %Y %H:%M:%S %z")<CR>
+else
+    iab ime Luis Mondesi <lemsx1@gmail.com>
+    iab idebian -- Luis Mondesi <lemsx1@gmail.com>  <C-R>=strftime("%a, %d %b %Y %H:%M:%S %z")<CR>
+endif

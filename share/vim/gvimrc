@@ -1,0 +1,33 @@
+"
+" /etc/gvimrc
+"
+" edited by Luis Mondesi <lemsx1@gmail.com> 
+" Version: 2005-04-25 11:42 EDT 
+
+set guipty
+
+" Set a reasonable font
+"set guifont=6x10
+
+" full mouse mode here :-)
+set mouse=a
+
+" Hide the mouse pointer while typing
+set mousehide
+" windows focus follows mouse pointer
+"set mousefocus
+
+" Switch syntax highlighting on, when the terminal has colors
+" (this is probably already done by vimrc, but just in case...)
+if &t_Co > 2 || has("gui_running")
+  syntax on
+  ":colorscheme peachpuff
+  :colorscheme default
+endif
+
+" open a big window please
+set lines=30
+set columns=100
+
+" You can also specify a different font:
+" set guifont=-misc-fixed-medium-r-normal--14-130-75-75-c-70-iso8859-1

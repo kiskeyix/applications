@@ -1,0 +1,231 @@
+# $Revision: 1.1 $
+# $Date: 2005-09-25 22:22:06 $
+set folder="~/.mail"     # where emails are kept
+set signature="~/.signature"
+
+# Set these when replacing your mbox with iMap for all your
+# emailing needs. Good candidate for a .muttrc-`hostname` file
+#set hostname="mail.server.com"
+#set spoolfile=imap://server.com/INBOX   # where new email is located
+#set folder=imap://server.com/   # set to this if you want to use IMAP
+#set imap_force_ssl=yes
+#set imap_authenticators="gssapi:cram-md5:login"
+#mailboxes ! +imaps://mail.server.com:993/INBOX 
+
+# Macro to launch fetchmail to gather all your emails
+macro generic <f2> \
+<shell-escape>'fetchmail'<enter> \
+'Run fetchmail' 
+
+set mail_check=30
+set timeout=15 
+set connect_timeout=90
+
+# This is the default pop_host that gets check
+# when the command G get's send
+# set these in your private .muttrc-`hostname` file instead
+# set pop_authenticators="digest-md5:cram-md5:user"
+# set pop_host="pops://user@mail.server.com"
+# set pop_delete=yes
+# set pop_reconnect=yes
+
+set certificate_file="~/.mutt-certificates" # save certificates in localhost
+
+set smart_wrap  # attempt to be smart about wrapping lines
+set allow_8bit	# Don't do any Quoted-Printable encoding on 8-bit data!
+set copy=yes	# Ask me if I want to save a copy of my outgoing messages.
+set delete=yes
+set noaskcc
+set nomark_old
+set reverse_alias
+set reverse_name
+set reply_to        # always use reply-to if present
+# set this in private .muttrc-`hostname` file
+# set realname="My Name"
+set attribution="On %M %N, %f wrote:"
+set editor=vim
+set help        # show help lines
+set print=ask-no
+set print_cmd="echo Nix printi printi!"
+set mbox=+inbox         # where to store read messages
+set record=+sent	# where to save copies of my outgoing messages
+set edit_hdrs		# let me edit those headers!
+set nosave_empty
+set sort=threads        # primary sorting method
+set mime_forward        # use message/rfc822 type to forward messages
+set move=yes                    # don't ask about moving messages, just do it
+
+set read_inc=10
+set write_inc=10
+#set pager="~/.vim/pager.sh"        # using vim as pager no good! :-)
+                        # lots of keybinding problems
+set noprompt_after
+#set status_format="---%h:%f [%?M of ?%m msgs, %?n new, ?%?t tagged, ?%l bytes]---(%s)%|-"
+set status_format="%r %v [%?M?%M/?%m] %?n?%n new, ?%?p?%p postponed, ?%?t?%t +tagged, ?%?d?%d deleted, ?(%h:%f) %?b?%b more to go.?%> %r"
+
+set alias_file="~/.aliases"
+# set quote_regexp="^ *[-=]*[>:|][>:|]*[ 	A-Za-z0-9]"
+set quote_regexp="^([A-Za-z ]+>|[]>:|}-][]>:|}-]*)"
+set include     # always include messages when replying
+set hdr_format="%4C %Z %{%b %d} %-15.15n (%4l) %s"
+set nomove
+set tilde
+macro index \cb |urlview\n
+macro pager \cb |urlview\n
+set noautoedit
+set pager_context=1
+set pager_stop
+
+# GNUpg ... (see gpg.rc appended)
+set pgp_replyencrypt
+set pgp_replysign
+#set pgp_autosign
+
+set pipe_decode
+set postponed="+postponed"
+set to_chars="b .c>"
+
+set fast_reply
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Color definitions
+#
+
+source ~/.mutt/colors
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Key bindings
+#
+#       maps:
+#               alias           alias menu
+#               attach          attachment menu
+#               browser         directory browser
+#               compose         compose menu
+#               index           message index
+#               pgp             pgp menu
+#               postpone        postponed message recall menu
+#               generic         generic keymap for all of the above
+#               editor          line editor
+#               pager           text viewer
+#               
+
+bind generic '{' top-page
+bind generic '}' bottom-page
+
+bind pager 'w' previous-page
+bind pager 'j' next-line
+bind pager 'k' previous-line
+bind index '#' tag-entry
+bind index '{' previous-thread
+bind index '}' next-thread
+bind index 'j' next-thread      # move up and down not
+bind index 'k' previous-thread  # for checking the new emails only
+
+# Headers to ignore
+ignore *
+unignore date from to cc subject x-mailer resent-from reply-to x-url
+
+# set these in your .muttrc-`hostname` file
+# set alternates=(name1|namex1|webmaster)@((www|mail).server.com|hotmail.com)
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Mailing lists that I'm on which I want to see on the 
+# display rather than who sent the message.
+#
+#lists vim vim-dev 
+
+#- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Automatically use entries from ~/.mailcap to view these MIME types
+#
+#       auto_view <type> [ <type> ... ]
+
+set mailcap_path="~/.mutt/mailcap"
+
+auto_view application/ms-tnef text/x-vcard
+auto_view application/x-chess application/x-lotus-notes
+auto_view application/x-gzip application/x-gunzip 
+auto_view application/rtf application/x-rath
+auto_view application/msword
+auto_view image/*
+auto_view video/*
+auto_view text/html
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Scoring
+#
+#       score <pattern> <value>
+#
+# 9999 and -9999 are special values which cause processing of hooks to stop
+# at that entry.  If you prefix the score with an equal sign (=), the score
+# is assigned to the message and processing stops.
+
+#score '~f ^me@cs\.hmc\.edu$' 1000
+#score '~t mutt | ~c mutt' =500
+#score '~f aol\.com$' -9999
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# Mailboxes to watch for new mail
+#
+#       mailboxes <path1> [ <path2> ... ]
+#
+
+#mailboxes +domain 
+#mailboxes +domain2
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# A whole bunch of hooks!
+#
+#       *-hook pattern COMMAND
+#
+
+folder-hook \! 'set hdr_format="%4C %Z %{%b %d} %-15.15L (%4l) %s"'
+folder-hook \! 'set strict_threads'
+folder-hook +outbox 'set hdr_format="%4C %Z %{%b %d} %-15.15t (%4l) %s"'
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+#   Where to save messages to automatically..
+#
+#       save-hook PATTERN filename
+# 
+#save-hook webmaster@domain.com     +domain
+#save-hook root@domain.com          +domain
+#save-hook webmaster@domain2-nyc.com         +domain2
+
+# These are good candidates for the .muttrc-localhost (or whatever the host) private file:
+# send-hook "@domain.net" "my_hdr From: name <e@mail.net>"
+# send-hook "@hotmail.com" "set pgp_autosign; my_hdr From: me <me@hotmail.com>"
+# send-hook "@other.com" "set pgp_autosign; my_hdr From: other <other@other.com>"
+
+# what keys to use according to
+# a given pattern
+# pgp-hook "@(other.com|hotmail.com|sf.net)"     "key or email for gpg"
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#
+# I use Mutt on several different machines, 
+# so I put local config commands
+# in a separate file so I can have the rest of 
+# the settings the same on all machines.
+# And, since this $HOME directory is mounted over
+# NFS sometimes, I use the complete hostname
+# of the current server with this mini hack:
+# 
+
+source ~/.muttrc-`hostname`  # config commands local to this site
+
+
+# aliases and mailists:
+source ~/.mutt/aliases
+
+# append RC's from here down...
+source ~/.mutt/gpg.rc
+

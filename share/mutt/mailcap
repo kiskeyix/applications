@@ -1,0 +1,21 @@
+# $Revision: 1.1 $
+# $Date: 2005-09-25 22:22:05 $
+
+# dont display text/html by default (no copiousoutput set)
+# when V is pressed, then give it's ouput to this browser
+text/html; firefox  %s
+#text/html;  lynx %s; nametemplate=%s.html
+# this displays videos automatically
+video/mpg; mplayer %s; copiousoutput
+#xanim %s > /dev/null; copiousoutput
+# this displays the images automatically
+image/gif; eog %s
+image/jpg; eog %s
+image/jpeg; eog %s
+# this saves all images to /tmp
+image/*; ~/.mutt/copy.sh %s; copiousoutput
+application/vnd.ms-powerpoint; ooimpress %s
+application/x-gunzip;   gzcat; copiousoutput
+application/x-tar-gz; gunzip -c %s | tar -tf - ; copiousoutput
+application/postscript; ps2ascii %s; copiousoutput
+#application/pgp-keys; pgp -f < %s ; copiousoutput

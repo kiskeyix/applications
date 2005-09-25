@@ -1,0 +1,27 @@
+# $Revision: 1.1 $
+# $Date: 2005-09-25 22:22:07 $
+# customized for local machines
+# put this file in: .muttrc-`hostsname`
+# where `hostname` is the output of the shell command
+# 'hostname' :-)
+# These is just a sample skeleton
+# of things that should be defined here:
+
+#set realname="My name"
+#set alternates=(email1|emailx1|webmaster)@((www|mail).server.com|hotmail.com)
+
+#send-hook "@server.net" "my_hdr From: me <me@server.net>"
+#send-hook "@hotmail.com" "set pgp_autosign; my_hdr From: other <other@hotmail.com>"
+#send-hook "@kewl.com" "set pgp_autosign; my_hdr From: h4cks <k@x.com>"
+
+# what keys to use according to
+# a given pattern
+
+# pgp-hook "@(other.com|hotmail.com|sourceforge.net|mandrake.*)"     "My ID or email from gpg key"
+
+#set pop_authenticators="digest-md5:cram-md5:user"
+#set pop_host="pops://me@mail.server.com"
+#set pop_delete=yes
+#set pop_reconnect=yes
+
+

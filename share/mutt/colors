@@ -1,0 +1,40 @@
+# $Revision: 1.1 $
+# $Date: 2005-09-25 22:22:02 $
+#color header white black .
+#color header brightcyan black "(Subject|From):"
+#color header blue black "(Date|To):"
+
+#color body white black .
+# email addresses:
+color body brightyellow black "[_a-z\.\$A-Z0-9-]+@[a-zA-Z0-9\./\-]+"
+# url's:
+color body yellow black "(http|ftp)://[_a-zA-Z0-9\./~\-]+"
+# logcheck reports
+color body yellow black "logcheck"
+color body yellow black "^Unusual.*$"
+color body brightred black "^Possible Security Violations"
+color body brightred black "^Security Violations"
+color body brightred black "Relaying denied"
+color body brightred black "DPT=[0-9]+"
+color body brightred black "IN=[a-zA-Z0-9]{1,4}"
+# match those IP's ... there must be a million ways to do this, but...
+# for as long as it works!
+color body brightyellow black "SRC=[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3} "
+color body brightcyan black "DST=[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3} "
+
+color quoted green black
+color signature brightblue black
+# color indicator yellow blue
+color attachment yellow black
+color tree red black
+color indicator black cyan
+
+color status brightwhite blue 
+color tilde blue black 
+
+#color normal default black      # normal is for everything else
+
+color search default green      # how to hilite search patterns in the pager
+color markers brightcyan default
+
+

@@ -1,0 +1,299 @@
+#===============================================================#
+# This file is read (normally) by interactive shells only.      #
+# Here is the place to define your aliases, functions and       #
+# other interactive features like your prompt.                  #
+#                                                               #
+# This file was designed (originally) for Solaris.              #
+# --> Modified for Linux.                                       #
+# --> Modified for OS X and all others, including root accounts #
+# --> Modified for CygWin on Win32 platforms                    #
+#                                                               #
+# Unless you are adding generic functionality, there is no need #
+# to edit this file, follow the tips below for other ways in    #
+# which you can incorporate your own settings in your           #
+# environment. Especially if you use this file from a remotely  #
+# mounted $HOME                                                 #
+#                                                               #
+# TIPS:                                                         #
+#   * Create a file named "$HOME/.path.setup" to modify         #
+#       your PATH variable. The file contains something like    #
+#       export PATH=$PATH:/other/path                           #
+#   * Create a file named "$HOME/.alias.setup" to modify        #
+#       your aliases. The file should contain lines like        #
+#       alias vi='vim -c "set ft=dosini" '                      #
+#   * Create a file named "$HOME/.bashrc-`hostname` to add host #
+#       specific functions and other bashrc related things      #
+#   * Create a file named "$HOME/.profile-`hostname` to add     #
+#       host specific environmental variables and other         #
+#       profile-related things                                  #
+#   * Create a file named "$HOME/.signaturerc" and add your     #
+#       host specific signature related variables. See below    #
+#       for defaults (and examples)                             #
+# Luis Mondesi < lemsx1@hotmail.com >                           #
+# http://www.latinomixed.com/lems1/bashrc.html                  #
+# 2003-04-25 13:46                                              #
+#===============================================================#
+
+#-----------------------------------#
+#     Source Global Definitions     #
+#-----------------------------------#
+
+## signature setup
+
+## variables
+NAME="Name"
+POSITION="Position"
+COMPANY="Domain.com"
+PHONE="area.tel.number"
+EMAIL="name@domain.com"
+URL="http://www.domain.com/"
+DEFAULT_QUOTE="This is a quote"
+
+SIGNATURE=0 # should signature be generated?
+QUOTE=0     # should we use fortune to generate a quote?
+RECODE=0    # should we recode from iso to utf8?
+#FORTUNE_ARGS="-s" # default fortune argument. See "man fortune"
+
+## end variables
+. "$HOME/.signaturerc"  # contains a per server set of
+                        # variables from the ones above
+                        # this line
+## end signature setup
+
+# pretty print logged in users when you login interactively?
+PRINTUSERS=0
+
+## color definitions
+red='\e[0;31m'
+RED='\e[1;31m'
+blue='\e[0;34m'
+BLUE='\e[1;34m'
+cyan='\e[0;36m'
+CYAN='\e[1;36m'
+NC='\e[0m'		# No Color
+
+## dircolors fallback to these defaults
+LS_COLORS="no=00:fi=00:di=01;34:ln=01;36:pi=40;33:so=01;35:bd=40;33;01:cd=40;33;01:or=01;05;37;41:mi=01;05;37;41:ex=01;32:*.cmd=01;32:*.exe=01;32:*.bin=01;32:*.com=01;32:*.btm=01;32:*.bat=01;32:*.sh=01;32:*.csh=01;32:*.tar=01;31:*.tgz=01;31:*.tbz2=01;31:*.arc=01;31:*.lha=01;31:*.arj=01;31:*.taz=01;31:*.lzh=01;31:*.zip=01;31:*.z=01;31:*.Z=01;31:*.gz=01;31:*.bz2=01;31:*.bz=01;31:*.tz=01;31:*.rpm=01;31:*.cpio=01;31:*.jpg=01;35:*.jpeg=01;35:*.gif=01;35:*.bmp=01;35:*.xbm=01;35:*.xpm=01;35:*.png=01;35:*.tif=01;35:*.tiff=01;35:*.html=00;31:*.tpl=00;31:*.cpp=04;31:*.cc=04;31:*.c++=04;31:*.c=04;31:*.php=04;31:*.php3=04;31:*.js=04;31:*.pl=04;31:*.h=04;35:*.inc=04;35:*.class=04;35:"
+
+## see 'help command' from within an interactive bash session
+eval `command dircolors --sh ~/.dir_colors 2> /dev/null`
+
+if [[ "x$TERM" == "xcygwin" ]]; then
+    ## switch TERM variable so that Vim and others don't complaint
+    export TERM="ansi"
+fi
+
+## lastly, read user host-specific entries
+HOST_BASHRC="$HOME/.bashrc-`hostname`"
+if [[ -f "$HOST_BASHRC" ]]; then
+    . $HOST_BASHRC
+fi
+# check the window size after each command and, if necessary,
+# update the values of LINES and COLUMNS.
+shopt -s checkwinsize
+
+# enable bash completion in interactive shells
+if [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+fi
+
+#---------------------------#
+#          FUNCTIONS        #
+#---------------------------#
+
+function printusers()
+{
+    #grep -v $USER | grep -v User | grep -v "load average"
+     w \
+     | grep -v -e "^$USER" \
+     | grep -v -e "^.*load average:.*$" \
+     | grep -v -e "USER.*TTY.*FROM.*LOGIN.*IDLE.*JCPU.*PCPU.*WHAT" \
+     | awk '{printf ("\t%s on since %s\n", $1, $4)}' - \
+     | sort -k 1,1 \
+     | cat -n
+
+}
+
+function _exit()	# function to run upon exit of shell
+{
+    echo -e "${RED}Hasta la vista, $HOSTNAME ${NC}"
+}
+#trap _exit 0
+
+function cd_pushd()
+{
+    if [[ ! -z "$1" ]]; then
+        pushd "$1" > /dev/null 2>&1 
+    else
+        cd ~
+    fi
+}
+
+#---------------#
+#  Shell prompt #
+#---------------#
+
+function fastprompt()
+{
+    unset PROMPT_COMMAND
+    case $TERM in
+	*term | rxvt | vt100 )	
+	    PS1="[\h/\u] \W > \[\033]0;[\h/\u] \w\007\]" ;;
+	*) 
+	    PS1="[\h/\u] \W > " ;;
+    esac
+}
+
+
+function powerprompt()
+{
+    _powerprompt() 
+    {
+        ## trick: first put command in command history, then find it in
+        ## the list. TODO find a better way of doing this:
+        LOAD=$(command uptime 2> /dev/null | sed -e "s/.*: \([^,]*\).*/\1/" -e "s/ //g")	
+        if [[ -z $LOAD ]]; then
+            LOAD="NOLOAD_CMD"
+        fi
+        TIME=$(date +%H:%M)
+    } 
+  
+    PROMPT_COMMAND=_powerprompt;
+    case $TERM in
+	*term | rxvt | vt100 | ansi )
+	    PS1="${cyan}[\$LOAD \h/\u]$NC \w \n\\$> \[\033]0;[\h/\u] \w\007\]" ;;
+	linux )
+	    PS1="${cyan}[\$TIME - \$LOAD]$NC\n[\h/\u \#] \w \n\\$> " ;;
+	* )
+	    PS1="[\$TIME - \$LOAD]\n[\h/\u \#] \w \n\\$> " ;;
+    esac
+}
+
+powerprompt	# this is the default prompt - might be slow
+		# If too slow, use fastprompt instead....
+
+
+#-------------------#
+# Personal Aliases  #
+#-------------------#
+
+alias bye='exit'
+alias abul='exit'
+
+alias ssh='ssh -c blowfish'
+alias cvs='cvs -q -w -z3'
+
+alias diff='diff -burN'
+alias make='make -j3'
+
+alias btdownloadheadless='btdownloadheadless --max_upload_rate 4'
+
+alias ww=printusers
+
+alias rm='rm -i'
+alias cp='cp -i'
+alias mv='mv -i'
+
+alias h='history'
+alias j='jobs -l'
+
+alias r='rlogin'
+
+alias which='type -a'
+
+alias ..='cd ..'
+alias path='echo -e ${PATH//:/\\n}'
+
+alias print='/usr/bin/lp -o nobanner -d $LPDEST'
+alias pjet='enscript -h -G -fCourier9 -d $LPDEST '
+
+alias du='du -h'
+alias df='df -h'
+
+alias ls='ls -hF --color' 
+alias lx='ls -lXB'          # B doesn't show files ending with ~
+alias lk='ls -lSr'
+alias la='ls -lA'           # A doesn't show implied . and .. files
+alias lr='ls -lR'
+alias lt='ls -ltr'  
+alias lm='ls -Al | more'
+alias ll='ls -Al | less'
+
+alias background='xv -root -quit -max -rmode 5'
+
+alias ts='tail -f /var/log/syslog'
+
+alias tm='tail -f /var/log/messages'
+
+alias cd='cd_pushd' # keep a stack of all directories visited
+                    # use 'popd' to go back in the stack
+
+if [ -x "/usr/sbin/adduser" ]; then
+    alias useradd="adduser" # better implementaion
+fi
+
+alias close="eject -t" # close CDROM tray ;-)
+
+## Vim baby!
+alias vi='vim -u "$HOME/.vim/vimrc"'
+## use gvim if exists instead of vim
+## and if we are not connected remotely to a system 
+## (via ssh)
+if [[ -z "$SSH_TTY" && -x "`command -v gvim 2> /dev/null`" ]]; then
+    alias vim="gvim"
+    if [[ -x "`command -v gvimdiff 2> /dev/null`" ]]; then
+        alias vimdiff="gvimdiff"
+    fi
+fi
+
+alias dpkg-buildpackage='dpkg-buildpackage -rfakeroot'
+
+## spelling typos
+
+alias xs='cd'
+alias vf='cd'
+alias moer='more'
+alias moew='more'
+alias kk='ll'
+alias suod='sudo'
+
+## get aliases for localhost
+## format is:
+## alias NAME='command'
+if [[ -f "$HOME/.alias.setup" ]]; then
+    . "$HOME/.alias.setup"
+fi
+
+#----------------------#
+#       Signature      #
+#----------------------#
+
+if [[ $SIGNATURE -eq 1 ]]; then
+    echo -e "----)(----- \
+        \n$NAME\n$POSITION\n$COMPANY\n$PHONE \
+        \n$EMAIL\n" > "$HOME/.signature"
+
+    if [[ -x "`command -v fortune 2> /dev/null`" && \
+        $QUOTE -eq 1 ]]; then
+        if [[ -x "`command -v recode 2> /dev/null`" && \
+            $RECODE -eq 1 ]]; then
+            command fortune ${FORTUNE_ARGS:--s} | \
+            command recode -q ISO-8859-1..utf-8 >> "$HOME/.signature";
+        else
+            command fortune ${FORTUNE_ARGS:--s} >> "$HOME/.signature";
+        fi
+    else
+        echo $DEFAULT_QUOTE >> "$HOME/.signature";
+    fi
+    echo -e "\n \n $URL" >> "$HOME/.signature"
+fi
+
+#----------------------#
+#      Print Users     #
+#----------------------#
+
+if [[ $PRINTUSERS -eq 1  && "x$PS1" != "x"  && \
+    $SHLVL -gt 0 ]]; then
+    printusers
+fi
+

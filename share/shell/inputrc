@@ -1,0 +1,41 @@
+# /etc/inputrc - global inputrc for libreadline
+# See readline(3readline) and `info rluserman' for more information.
+
+# Be 8 bit clean.
+set input-meta On
+set output-meta On
+
+# allow iso-latin1 characters set convert-meta to off
+set convert-meta Off
+
+# lems 2003-01-05 13:00 
+set editing-mode vi
+set keymap vi
+#set history-preserve-point On
+set horizontal-scroll-mode Off
+set expand-tilde On
+
+$if mode=vi
+    #pressing up/down keys is equivalent to: up/down + end-of-line
+    # previous-history
+    # next-history
+    #previous-history: end-of-line
+    #reverse-search-history: end-of-line
+   
+    #arrowup and PgUp append to last history
+    "[A": "kA"
+    "[5~": "kA"
+
+    #arrow down and PgDown append to next history
+    "[B": "jA"
+    "[6~": "jA"
+    
+    # right arrow: space then append
+    "[C": "\ a"
+    # left arrow: go in insert mode
+    "[D": vi-insertion-mode
+
+    # append to end of line A La Emacs
+    Control-e: vi-append-eol
+
+$endif

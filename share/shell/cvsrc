@@ -1,0 +1,4 @@
+cvs -z3
+diff -uN
+rdiff -uN
+update -dP

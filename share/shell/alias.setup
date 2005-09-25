@@ -1,0 +1,18 @@
+# sample ~/.alias.setup file:
+alias distccd_server="/usr/bin/distccd --verbose --daemon --nice=10 --listen=10.10.10.3 --no-detach --log-stderr --allow=10.10.10.10"
+
+alias file_check='sudo nice /usr/sbin/fcheck -casxlf /etc/fcheck/fcheck.cfg'
+alias muttrc='tar -cjvf ~/muttrc-`date -I`.tar.bz2 .mutt'
+
+alias vimrc='tar -cjvf ~/vimrc-`date -I`.tar.bz2 .vim'
+
+alias bashrc='tar -h -cjvf ~/bashrc-`date -I`.tar.bz2 .bashrc .bash_profile .dir_colors .inputrc'
+	
+alias scripts='tar --exclude="CVS" -cjvf ~/Applications-`date -I`.tar.bz2 Applications'
+
+alias ta='tail -f /var/log/apache2/access_log'
+alias te='tail -f /var/log/apache2/error.log'
+
+alias procmailrc='vi ~/.procmailrc'
+
+alias cpiptables='sudo cp /var/lib/iptables/active ~/firewall/iptables-rules-`date +%Y-%m-%d` && sudo chown -R ${USER} ~/firewall'

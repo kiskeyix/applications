@@ -79,7 +79,7 @@ if [[ -x "`command -v vim 2> /dev/null`" ]]; then
 fi
 
 LESSCHARSET='utf-8'
-LESS='-i -N -w -R -z-4 -g -e -M -X -P%t?f%f \
+LESS='-i -w -R -z-4 -g -e -M -X -P%t?f%f \
         :stdin .?pb%pb\%:?lbLine %lb:?bbByte %bb:-...'
 
 ## allow users to override environment in different hosts for the same

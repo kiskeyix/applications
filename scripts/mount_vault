@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.2 $
-# $Date: 2005-09-29 05:15:07 $
+# $Revision: 1.3 $
+# $Date: 2005-09-29 05:32:51 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: simple way to mount a File Vault on Linux $HOME/Vault directory for the current user
@@ -24,9 +24,10 @@ my $ENCRYPTION = "-aes-256-ecb"; # ie -aes-256-ecb, etc... openssl --help for mo
 my $USER = $ENV{'USER'};
 my $LOOP_DEV = "/dev/loop".int(rand(7));
 my $MOUNT_POINT = $ENV{'HOME'}."/Vault";
+my $MOUNT_TYPE = "xfs";
 my $ENC_IMAGE = "/home/Shared/pri/ehd/$USER.img";
 my $ENC_KEY_FILE = "/etc/ehd/$USER.key";
-my $EXTRA_MOUNT_OPTIONS="";
+my $EXTRA_MOUNT_OPTIONS=undef;
 
 # get options
 GetOptions(
@@ -37,11 +38,12 @@ GetOptions(
     # strings
     'E|mount-options=s' =>  \$EXTRA_MOUNT_OPTIONS,
     'e|encryption=s'    =>  \$ENCRYPTION,
-    'u|user=s'          =>  \$USER,
-    'l|loop=s'          =>  \$LOOP_DEV,
-    'm|mount-point=s'   =>  \$MOUNT_POINT,
     'i|image=s'         =>  \$ENC_IMAGE,
     'f|key-file=s'      =>  \$ENC_KEY_FILE,
+    'l|loop=s'          =>  \$LOOP_DEV,
+    'm|mount-point=s'   =>  \$MOUNT_POINT,
+    'u|user=s'          =>  \$USER,
+    't|type=s'          =>  \$MOUNT_TYPE
 );
 
 if ( $HELP ) { 
@@ -62,20 +64,22 @@ if ( ! -d $MOUNT_POINT )
     die ("Could not create directory $MOUNT_POINT\n") if ( ! mkdir($MOUNT_POINT,0700) );
 }
 
+system("sudo losetup -d $LOOP_DEV 2> /dev/null"); 
+
 # 2. setup loop
 
 my ($LO_foo,$LO_ENC,$LO_KEY,$LO_OTHER) = split(/-/,$ENCRYPTION);
-
 my $cmd = "openssl enc -d $ENCRYPTION -in $ENC_KEY_FILE | sudo losetup -e $LO_ENC -k $LO_KEY -p0 $LOOP_DEV $ENC_IMAGE";
 print STDOUT ($cmd,"\n") if ( $DEBUG );
-system($cmd);
+my $err = qx/$cmd/;
 
-die ("Failed to setup unencrypted loopback on $LOOP_DEV\n") if ($? != 0);
+die ("Failed to setup unencrypted loopback on $LOOP_DEV\n") 
+    if ($? != 0 or $err =~ /error/i);
 
 # 3. mount vault
 
-my $MOUNT_OPTIONS = "loop=$LOOP_DEV,exec,nosuid,rw,defaults,$EXTRA_MOUNT_OPTIONS";
-my $mount_cmd = "sudo mount $MOUNT_OPTIONS $LOOP_DEV $MOUNT_POINT";
+my $MOUNT_OPTIONS = (defined($EXTRA_MOUNT_OPTIONS) and $EXTRA_MOUNT_OPTIONS !~ /^\s*$/) ? "exec,nosuid,rw,defaults,$EXTRA_MOUNT_OPTIONS":"exec,nosuid,rw,defaults";
+my $mount_cmd = "sudo mount -t $MOUNT_TYPE -o $MOUNT_OPTIONS $LOOP_DEV $MOUNT_POINT";
 print STDOUT ($mount_cmd,"\n") if ($DEBUG);
 system($mount_cmd);
 warn ("Failed to mount encrypted image \n") if ($? != 0);

@@ -1,0 +1,192 @@
+#!/usr/bin/perl -w
+# $Revision: 1.1 $
+# $Date: 2005-09-29 05:13:22 $
+# Luis Mondesi < lemsx1@gmail.com >
+#
+# DESCRIPTION: simple way to mount a File Vault on Linux $HOME/Vault directory for the current user
+# USAGE: $0 --help
+# LICENSE: GPL
+
+use strict;
+$|++;
+
+my $revision = "1.0"; # version
+
+# standard Perl modules
+use Getopt::Long;
+Getopt::Long::Configure('bundling');
+
+# Args:
+my $PVERSION=0;
+my $HELP=0;
+my $DEBUG=0;
+my $ENCRYPTION = "-aes-256-ecb"; # ie -aes-256-ecb, etc... openssl --help for more
+my $USER = $ENV{'USER'};
+my $LOOP_DEV = "/dev/loop".int(rand(7));
+my $MOUNT_POINT = $ENV{'HOME'}."/Vault";
+my $ENC_IMAGE = "/home/Shared/pri/ehd/$USER.img";
+my $ENC_KEY_FILE = "/etc/ehd/$USER.key";
+my $EXTRA_MOUNT_OPTIONS="";
+
+# get options
+GetOptions(
+    # flags
+    'v|version'         =>  \$PVERSION,
+    'h|help'            =>  \$HELP,
+    'D|debug'           =>  \$DEBUG,
+    # strings
+    'E|mount-options=s' =>  \$EXTRA_MOUNT_OPTIONS,
+    'e|encryption=s'    =>  \$ENCRYPTION,
+    'u|user=s'          =>  \$USER,
+    'l|loop=s'          =>  \$LOOP_DEV,
+    'm|mount-point=s'   =>  \$MOUNT_POINT,
+    'i|image=s'         =>  \$ENC_IMAGE,
+    'f|key-file=s'      =>  \$ENC_KEY_FILE,
+);
+
+if ( $HELP ) { 
+    use Pod::Text;
+    my $parser = Pod::Text->new (sentence => 0, width => 78);
+    $parser->parse_from_file($0,\*STDOUT);
+    exit 0;
+}
+
+if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
+
+# 1. sanity checks
+
+die ("File not found $ENC_IMAGE\n") if ( ! -e $ENC_IMAGE );
+
+die ("Could not create directory $MOUNT_POINT\n") if ( ! mkdir($MOUNT_POINT,0700) );
+
+# 2. setup loop
+
+my ($LO_foo,$LO_ENC,$LO_KEY,$LO_OTHER) = split(/-/,$ENCRYPTION);
+
+my $cmd = "openssl enc -d $ENCRYPTION -in $ENC_KEY_FILE | sudo losetup -e $LO_ENC -k $LO_KEY -p0 $LOOP_DEV $ENC_IMAGE";
+print STDOUT ($cmd,"\n") if ( $DEBUG );
+system($cmd);
+
+die ("Failed to setup unencrypted loopback on $LOOP_DEV\n") if ($? != 0);
+
+# 3. mount vault
+
+my $MOUNT_OPTIONS = "loop=$LOOP_DEV,exec,nosuid,rw,defaults,$EXTRA_MOUNT_OPTIONS";
+my $mount_cmd = "sudo mount $MOUNT_OPTIONS $LOOP_DEV $MOUNT_POINT";
+print STDOUT ($mount_cmd,"\n") if ($DEBUG);
+system($mount_cmd);
+warn ("Failed to mount encrypted image \n") if ($? != 0);
+
+__END__
+
+=head1 NAME
+
+mount_vault - a simple script to mount an encrypted file system. See http://www.kiskeyix.org/article.php?story_id=1151
+
+=head1 SYNOPSIS
+
+B<mount_vault>  [-v,--version]
+                [-D,--debug] 
+                [-h,--help]
+
+=head1 DESCRIPTION 
+
+    This script mounts an encrypted image from /home/Shared/pri/ehd/$USER.img to $HOME/Vault.
+    To setup the .img file, please follow this instructions carefully:
+    http://www.kiskeyix.org/article.php?story_id=1151
+
+# need pam-mount only if you want the .img to be mounted at login
+
+apt-get install libpam-mount openssl
+
+# again, this is only for pam-mount
+
+1. change /etc/pam.d/* files:
+
+add B<@include common-pammount> after B<@include common-session> to
+gdm, gdm-autologin, login, ssh, and any other login-related
+service
+
+2. create a password-proteced encryption key:
+
+C<mkdir /etc/ehd>
+
+C<chmod 0750 /etc/ehd>
+
+C<chown root:staff /etc/ehd>
+
+C<dd if=/dev/urandom bs=1c count=32 | openssl enc -aes-256-ecb | tee /etc/ehd/$USER.key>
+
+C<chmod 0640 /etc/ehd/$USER.key>
+
+# where $USER is the user you want to have that given key file
+
+C<chown :$GROUP /etc/ehd/$USER.key>
+
+# where $GROUP is a group where $USER belong
+
+3. create encrypted image:
+
+# 1024 * 5 of block-size 1M = 5 GB image
+
+dd if=/dev/urandom of=/home/Shared/pri/ehd/$USER.img bs=1M count=5120
+
+openssl enc -d -aes-256-ecb -in /etc/ehd/$USER.key | \
+
+losetup -e aes -k 256 -p0 /dev/loop0 /home/Shared/pri/ehd/$USER.img
+
+chown $USER /home/Shared/pri/ehd/$USER.img
+
+chmod 0600 /home/Shared/pri/ehd/$USER.img
+
+mkfs -t xfs /dev/loop0
+
+umount /dev/loop0
+
+losetup -d /dev/loop0
+
+# only need to edit /etc/fstab for pam-mount
+
+4. edit /etc/fstab and add:
+
+# encrypted hard drive
+
+/home/Shared/pri/ehd/&.img /home/& xfs defaults,exec,user,rw,loop,encryption=aes,keybits=256,noauto 0 0
+
+# this applies to pam-mount:
+
+5. edit /etc/security/pam_mount.conf and add:
+
+volume * local - /home/&.img - loop,user,exec,encryption=aes,keybits=256 aes-256-ecb /etc/ehd/&.key
+
+6. edit /etc/login.defs and make sure that CLOSE_SESSION is set to "yes"
+
+Notes:
+
+* if the user ever changes his/her password, use the passwdehd script from libpam-mount to change the password for the /etc/ehd/$USER.key file
+
+* Make sure you read /usr/share/doc/libpam-mount/README.Debian.gz file
+
+=head1 OPTIONS
+
+=over 8
+
+=item -v,--version
+
+prints version and exits
+
+=item -D,--debug
+
+enables debug mode
+
+=item -h,--help
+
+prints this help and exits
+
+=back
+
+=head1 AUTHOR
+
+Luis Mondesi <lemsx1@gmail.com>
+
+=cut

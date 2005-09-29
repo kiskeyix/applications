@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
-# $Date: 2005-09-29 05:13:22 $
+# $Revision: 1.2 $
+# $Date: 2005-09-29 05:15:07 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: simple way to mount a File Vault on Linux $HOME/Vault directory for the current user
@@ -57,7 +57,10 @@ if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
 
 die ("File not found $ENC_IMAGE\n") if ( ! -e $ENC_IMAGE );
 
-die ("Could not create directory $MOUNT_POINT\n") if ( ! mkdir($MOUNT_POINT,0700) );
+if ( ! -d $MOUNT_POINT )
+{
+    die ("Could not create directory $MOUNT_POINT\n") if ( ! mkdir($MOUNT_POINT,0700) );
+}
 
 # 2. setup loop
 

@@ -22,6 +22,20 @@ my $DEBUG = 0;
 my $EXCEPTIONS_REGEX = "(.*\.swp\$|.*\.o\$|.*\.so\$)";
 my @FILES = ();
 
+sub is_image
+{
+    # returns 1 if true
+    my $file = shift;
+    print STDERR ( "is_image() called: $file\n" ) if ( $DEBUG );
+    my $file_t = qx/file "$file"/;
+    if ( $file_t =~ m/(\bGIF\b|\bPNG\b|\bJPEG\b)/i )
+    {
+        return 1;
+    }
+    print STDERR ( "not image file\n" ) if ( $DEBUG );
+    return 0;
+}
+
 sub is_binary
 {
     # returns 1 if true
@@ -51,9 +65,10 @@ if ( defined($ARGV[0]) and -f $ARGV[0] )
 
 for my $file (@FILES)
 {
-    if (    ! -f $file 
-            or is_binary($file) 
-            or $file =~ /$EXCEPTIONS_REGEX/ )
+    if (    ! -f $file
+            and ! is_image($file)
+            and ( is_binary($file) or $file =~ /$EXCEPTIONS_REGEX/ )
+        )
     {
         print STDERR ("Skipping file «$file»\n");
         next;

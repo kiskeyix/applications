@@ -1,15 +1,17 @@
 #!/bin/sh
-# Luis Mondesi <lemsx1@hotmail.com>
+# Luis Mondesi <lemsx1@gmail.com>
 # Use this to delete a file from CVS in one shot!
-# Usage: cvsdelete.sh filename
+# Usage: cvsdelete filename
 if [ -f $1 ]; then
     for file in $*
     do
-        echo "Removing ${file} from current tree";
-        /bin/rm ${file};
-        cvs delete ${file};
-        cvs commit -m "file deleted from current tree" ${file};
+        if  [ -f ${file} ]; then
+            echo "Removing ${file} from current tree"
+            /bin/rm ${file}
+            cvs delete ${file}
+            cvs commit -m "file deleted from current tree" ${file}
+        fi
     done
 else
-    echo "Usage: cvsdelete.sh filename [filename2]"
+    echo "Usage: cvsdelete {filename [filename2 ... filenameN]}"
 fi

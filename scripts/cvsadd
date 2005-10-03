@@ -23,6 +23,7 @@ my $DEBUG = 0;
 my $INCLUDE_DIRS=0;
 my $EXCEPTIONS_REGEX = "(.*\.swp\$|.*\.o\$|.*\.so\$)";
 my @FILES = ();
+my $CVS_COMMAND = "cvs -q -w -z3 ";
 
 GetOptions(
     # flags
@@ -68,7 +69,7 @@ if ( defined($ARGV[0]) and -f $ARGV[0] )
 {
     @FILES = @ARGV;    
 } else {
-    my $addlist = qx/cvs update/;
+    my $addlist = qx/$CVS_COMMAND update/;
     for my $i ( split(/\n/,$addlist) )
     {
         next if ($i !~ /^\s*\?/g); # if not a new file, keep on
@@ -90,10 +91,10 @@ for my $file (@FILES)
                 next;
             }
     }
-    system("cvs add $file 2> /dev/null");
+    system("$CVS_COMMAND add $file 2> /dev/null");
     if ( $? == 0 )
     {
-        system( "cvs commit -m 'first commit' $file" );
+        system( "$CVS_COMMAND commit -m 'first commit' $file" );
     } else {
         print STDERR ("Error adding «$file» to the repository\n");
     }

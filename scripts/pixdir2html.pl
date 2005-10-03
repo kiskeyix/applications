@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.106 $
+# $Revision: 1.107 $
 # Luis Mondesi  <lemsx1@gmail.com>
 # 
 # HELP: $0 --help
@@ -277,7 +277,7 @@ sub main {
     if ( $NOMENU != 1 or $config{$ROOT_DIRECTORY}{"menutype"} eq "modern" ) 
     {
         print $LOGFILE ("= Creating menu string\n");
-        $menu_str = menu_file();
+        $menu_str = menu_file_or_string();
         # When menuonly is set, we print to a menu.$EXT file and exit
         exit(0) if ( $MENUONLY > 0 );
     } 
@@ -883,14 +883,17 @@ sub mkthumb_files {
     } #end foreach $i
 } # end mkthumb_files
 
-sub menu_file
+sub menu_file_or_string
 {
     #---------------------------------------------#
-    # It creates a menu.$EXT file at 
+    # this function creates a menu.$EXT file at 
     # the root level of the picture
     # directory (at the first 
     # directory that was passed to the script) or
     # it returns a string to be put in e/a index.$EXT file
+    #
+    # This function must be called after mkthumb() have created
+    # all thumbnails.
     #
     # if there is a file named .new 
     # inside the given directory,
@@ -926,9 +929,11 @@ sub menu_file
     # if it does, then skip it and do the next one.
     # if it doesn't, then assume this will contain
     # a index.$EXT file and add it to the menu. 
-    foreach my $directory (@uniq){
-        next if (-f File::Spec->catfile($directory,$SKIP_DIR_FILE));
-        next if ( basename($directory) =~ /^\./ ); # skip dir names starting with .
+    foreach my $directory (@uniq)
+    {
+        next if ( ! -d File::Spec->catfile($directory,$THUMBNAIL) );
+        next if ( -f File::Spec->catfile($directory,$SKIP_DIR_FILE) );
+        next if ( basename($directory) =~ /^\.[^\/]/ ); # skip dir names starting with .
         # remove ./ or . from begining of names
         $directory =~ s,^\./*,,g;
         # note that @ls holds the HTML links...
@@ -952,13 +957,12 @@ sub menu_file
         # create modern menu 
         # modern menu is a file, no --menu-only needed here
         open(FILE, "> ".$ROOT_DIRECTORY."/".$MENU_NAME.".".$config{"$ROOT_DIRECTORY"}{"ext"}) 
-            or mydie("Couldn't write file $MENU_NAME.".$config{"$ROOT_DIRECTORY"}{"ext"}." to $ROOT_DIRECTORY","menu_file");
+            or mydie("Couldn't write file $MENU_NAME.".$config{"$ROOT_DIRECTORY"}{"ext"}." to $ROOT_DIRECTORY","menu_file_or_string");
         print FILE ($config{"$ROOT_DIRECTORY"}{"header"}."\n");
         print FILE ($config{"$ROOT_DIRECTORY"}{"table"}."\n");
         # loop
         foreach (@ls)
         {
-            # no warnings;
             if ($config{$ROOT_DIRECTORY}{"tr"} =~ m/\%+bgcolor\%+/i)
             {
                 my $tmp_tr = "";
@@ -1047,7 +1051,7 @@ sub menu_file
                 $config{"$ROOT_DIRECTORY"}{"ext"}) 
                 or mydie("Couldn't write file $MENU_NAME.".
                     $config{"$ROOT_DIRECTORY"}{"ext"}.
-                    " to $ROOT_DIRECTORY","menu_file");
+                    " to $ROOT_DIRECTORY","menu_file_or_string");
         }
 
         # menus are now part of the index.EXT...
@@ -1197,7 +1201,7 @@ sub menu_file
         print $LOGFILE (": $TOTAL_LINKS links in menu.\n");
     }
     return $MENU_STR;
-} #end menu_file
+} #end menu_file_or_string
 
 # ---- HELPER functions ----- #
 

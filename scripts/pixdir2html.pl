@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.105 $
+# $Revision: 1.106 $
 # Luis Mondesi  <lemsx1@gmail.com>
 # 
 # HELP: $0 --help
@@ -576,7 +576,6 @@ sub mkthumb {
     # error reporting:
     my $err = 0;
     my $i = 0;
-    my $image = Image::Magick->new; # image::magick is installed?
 
     print $LOGFILE ("= Making thumbnails in $ROOT \n");
     if ( ! defined $pixfiles[0] or ! -f $pixfiles[0] ) 
@@ -672,10 +671,12 @@ sub mkthumb {
                     $err = 1;
                 }
             } else {
-                # assumes Image::Magick was checked for before
+                # there is no way around defining $image here...
+                my $image = Image::Magick->new;
                 $image->Read( $_pix_name_tmp );
                 $image->Resize($PERCENT);
                 $image->Write( $_thumb_pix_name_tmp );
+                undef $image;
             }
             print $LOGFILE ("= Wrote $_thumb_pix_name_tmp\n"); 
         } 

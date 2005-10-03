@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.107 $
+# $Revision: 1.108 $
 # Luis Mondesi  <lemsx1@gmail.com>
 # 
 # HELP: $0 --help
@@ -1271,8 +1271,8 @@ sub do_dir_ary {
 sub process_dir {
     my $base_name = basename ($_);
     if  ( 
-        -d $_ 
-        && ! -f "$_/$SKIP_DIR_FILE"
+        -d File::Spec->catfile($_,$THUMBNAIL)
+        && ! -f File::Spec->catfile($_,$SKIP_DIR_FILE)
         && $base_name !~ m/^($EXCEPTION_LIST)$/
         && $base_name !~ m/\b$THUMBNAIL\b/
         && $base_name !~ m/\b$HTMLDIR\b/

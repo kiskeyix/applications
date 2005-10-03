@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.104 $
+# $Revision: 1.105 $
 # Luis Mondesi  <lemsx1@gmail.com>
 # 
 # HELP: $0 --help
@@ -609,6 +609,9 @@ sub mkthumb {
         progressbar_msg($MESSAGE);
     }
     print $LOGFILE ("= $TOTAL pictures \n");
+
+    print $LOGFILE ("\n= Using system command convert  \n") 
+        if ($USE_CONVERT == 1);
     #print $LOGFILE join(" ",@ls)."\n";
     for ( $i=0; $i < $TOTAL; $i++) 
     {
@@ -655,29 +658,31 @@ sub mkthumb {
             print $LOGFILE ("= Making thumbnail's directory in $BASE\n");
             mkdir($THUMBNAILSDIR,0755);
         }
-
-        if ( !-f File::Spec->catfile($THUMBNAILSDIR,$THUMB_PREFIX.$pix_name) )
+        my $_pix_name_tmp =  File::Spec->catfile($BASE,$pix_name);
+        my $_thumb_pix_name_tmp = File::Spec->catfile($THUMBNAILSDIR,$THUMB_PREFIX.$pix_name);
+        if ( !-f $_thumb_pix_name_tmp )
         {
-            print $LOGFILE ("\n= Converting file $BASE/$pix_name into $THUMBNAILSDIR/$THUMB_PREFIX"."$pix_name \n");
+            print $LOGFILE ("\n= Converting file $BASE/$pix_name $_thumb_pix_name_tmp \n");
             if ( $USE_CONVERT == 1 )
             {
-                system("convert -geometry $PERCENT ".File::Spec->catfile($BASE,$pix_name)." ".File::Spec->catfile($THUMBNAILSDIR,$THUMB_PREFIX.$pix_name) );
+                
+                system("convert -geometry $PERCENT $_pix_name_tmp $_thumb_pix_name_tmp" );
                 if ( $? != 0 ) {
-                    print $LOGFILE "** ERROR: conversion failed: $! \n";
+                    print $LOGFILE "** ERROR: $_pix_name_tmp conversion failed: $! \n";
                     $err = 1;
                 }
             } else {
                 # assumes Image::Magick was checked for before
-                $image->Read( File::Spec->catfile($BASE,$pix_name) );
+                $image->Read( $_pix_name_tmp );
                 $image->Resize($PERCENT);
-                $image->Write( File::Spec->catfile($THUMBNAILSDIR,$THUMB_PREFIX.$pix_name) );
+                $image->Write( $_thumb_pix_name_tmp );
             }
-            print $LOGFILE ("\n"); 
+            print $LOGFILE ("= Wrote $_thumb_pix_name_tmp\n"); 
         } 
         # end if thumbnail file
         
         # save pixname for the index.html file
-        push @{$thumbfiles{$BASE}}, File::Spec->catfile($THUMBNAILSDIR,$THUMB_PREFIX.$pix_name);
+        push (@{$thumbfiles{$BASE}}, $_thumb_pix_name_tmp);
         # update flags
         $LAST_BASE = $BASE;
         # update progressbar

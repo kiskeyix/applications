@@ -16,11 +16,25 @@
 
 $|++;
 use strict;
+use Getopt::Long;
+Getopt::Long::Configure('bundling');
 
 my $DEBUG = 0;
-
+my $INCLUDE_DIRS=0;
 my $EXCEPTIONS_REGEX = "(.*\.swp\$|.*\.o\$|.*\.so\$)";
 my @FILES = ();
+
+GetOptions(
+    # flags
+#    'v|version'         =>  \$PVERSION,
+#    'h|help'            =>  \$HELP,
+    'D|debug'           =>  \$DEBUG,
+    'd|include-dirs'    =>  \$INCLUDE_DIRS,
+    # strings
+    #'o|option=s'       =>  \$NEW_OPTION,
+    # numbers
+    #'a|another-option=i'      =>  \$NEW_ANOTHER_OPTION,
+);
 
 sub is_image
 {
@@ -69,9 +83,12 @@ for my $file (@FILES)
             and ! is_image($file)
             and ( is_binary($file) or $file =~ /$EXCEPTIONS_REGEX/ )
         )
-    {
-        print STDERR ("Skipping file «$file»\n");
-        next;
+        {
+            unless ( $INCLUDE_DIRS )
+            {
+                print STDERR ("Skipping file «$file»\n");
+                next;
+            }
     }
     system("cvs add $file 2> /dev/null");
     if ( $? == 0 )

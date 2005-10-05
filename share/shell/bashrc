@@ -184,7 +184,10 @@ alias ssh='ssh -c blowfish'
 alias cvs='cvs -q -w -z3'
 
 alias diff='diff -burN'
-alias make='make -j3'
+if [[ -z "$CONCURRENCY_LEVEL" ]]; then
+    CONCURRENCY_LEVEL=8
+fi
+alias make="make -j$CONCURRENCY_LEVEL"
 
 alias btdownloadheadless='btdownloadheadless --max_upload_rate 4'
 

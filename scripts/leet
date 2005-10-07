@@ -1,0 +1,181 @@
+#!/usr/bin/perl -w 
+# Description: a simple script based on SLaK IRC script to convert regular text into l33t.
+#
+## l33+ 5p34k 
+## v1.0 by SLaK` (irc.rebelchat.org #n3rd)
+
+use strict;
+$|++;
+
+# We are not using IRC here... 
+#IRC::register("SLaK`s 133+ 5p34k", "1.0", "", "");
+#IRC::print("[SLaK`s 133+ 5p34k Loaded]");
+#IRC::add_message_handler("PRIVMSG", "deleet");
+#IRC::add_command_handler("leet", "leet");
+
+my $cmd = shift(@ARGV);
+
+if ($cmd eq "leet")
+{
+    print leet(join(" ",@ARGV));
+    print "\n";
+} elsif ($cmd eq "deleet") {
+    print deleet(join(" ",@ARGV));
+    print "\n";
+} else {
+    print "Usage: $0 {leet|deleet} {message}\n";
+}
+sub leet 
+{
+    my $in=shift;
+    my $out="";
+    return undef if not defined $in;
+
+    for ( my $i=0; $i <= length($in); $i++ )
+    {
+        $_=substr($in,$i,1);
+        #big letters
+        if ("A" eq $_ ) { $_ = "4"; };
+        if ("B" eq $_ ) { $_ = "B"; };
+        if ("C" eq $_ ) { $_ = "<"; };
+        if ("D" eq $_ ) { $_ = "D"; };
+        if ("E" eq $_ ) { $_ = "3"; };
+        if ("F" eq $_ ) { $_ = "F"; };
+        if ("G" eq $_ ) { $_ = "G"; };
+        if ("H" eq $_ ) { $_ = "H"; };
+        if ("I" eq $_ ) { $_ = "|"; };
+        if ("J" eq $_ ) { $_ = "J"; };
+        if ("K" eq $_ ) { $_ = "K"; };
+        if ("L" eq $_ ) { $_ = "1"; };
+        if ("M" eq $_ ) { $_ = "M"; };
+        if ("N" eq $_ ) { $_ = "N"; };
+        if ("O" eq $_ ) { $_ = "0"; };
+        if ("P" eq $_ ) { $_ = "P"; };
+        if ("Q" eq $_ ) { $_ = "Q"; };
+        if ("R" eq $_ ) { $_ = "R"; };
+        if ("S" eq $_ ) { $_ = "5"; };
+        if ("T" eq $_ ) { $_ = "+"; };
+        if ("U" eq $_ ) { $_ = "U"; };
+        if ("V" eq $_ ) { $_ = "V"; };
+        if ("W" eq $_ ) { $_ = "W"; };
+        if ("X" eq $_ ) { $_ = "X"; };
+        if ("Y" eq $_ ) { $_ = "Y"; };
+        if ("Z" eq $_ ) { $_ = "Z"; };
+        if ("a" eq $_ ) { $_ = "4"; };
+        if ("b" eq $_ ) { $_ = "b"; };
+        if ("c" eq $_ ) { $_ = "<"; };
+        if ("d" eq $_ ) { $_ = "d"; };
+        if ("e" eq $_ ) { $_ = "3"; };
+        if ("f" eq $_ ) { $_ = "f"; };
+        if ("g" eq $_ ) { $_ = "g"; };
+        if ("h" eq $_ ) { $_ = "h"; };
+        if ("i" eq $_ ) { $_ = "|"; };
+        if ("j" eq $_ ) { $_ = "j"; };
+        if ("k" eq $_ ) { $_ = "k"; };
+        if ("l" eq $_ ) { $_ = "1"; };
+        if ("m" eq $_ ) { $_ = "m"; };
+        if ("n" eq $_ ) { $_ = "n"; };
+        if ("o" eq $_ ) { $_ = "0"; };
+        if ("p" eq $_ ) { $_ = "p"; };
+        if ("q" eq $_ ) { $_ = "q"; };
+        if ("r" eq $_ ) { $_ = "r"; };
+        if ("s" eq $_ ) { $_ = "5"; };
+        if ("t" eq $_ ) { $_ = "+"; };
+        if ("u" eq $_ ) { $_ = "u"; };
+        if ("v" eq $_ ) { $_ = "v"; };
+        if ("w" eq $_ ) { $_ = "w"; };
+        if ("x" eq $_ ) { $_ = "x"; };
+        if ("y" eq $_ ) { $_ = "y"; };
+        if ("z" eq $_ ) { $_ = "z"; };
+        $out=$out.$_;	
+    }
+#	IRC::command($out);
+return $out;
+#return 1;
+}
+
+sub deleet 
+{
+    my $_msg=shift;
+    return undef if not defined $_msg;
+#    my $nick=$_msg;
+#    $nick=~ s/^\://;
+#    $nick=~ s/!.*//;
+#    $_msg =~ s/^.*PRIVMSG.*\s\://;
+#    #s/^.*\://;
+    my $in=$_msg;
+    my $out="";
+    my $count=0;
+    for ( my $i=0; $i <= length($in); $i++)#=$i+3 )
+    {
+        $_=substr($in,$i,1);
+        #print $_,"\n";
+        #if ( $_ eq "" ) {
+            #	$_=substr($in,$i,2);
+            #}
+            #if ( $_ eq "" ) {
+                #	$_=substr($in,$i,1);
+                #}
+                my $test=$_;
+                #big letters
+                if ( "4" eq $_ ) { $_ = "A"; };
+                if ( "B" eq $_ ) { $_ = "B"; };
+                if ( "<" eq $_ ) { $_ = "C"; };
+                if ( "D" eq $_ ) { $_ = "D"; };
+                if ( "3" eq $_ ) { $_ = "E"; };
+                if ( "F" eq $_ ) { $_ = "F"; };
+                if ( "G" eq $_ ) { $_ = "G"; };
+                if ( "H" eq $_ ) { $_ = "H"; };
+                if ( "|" eq $_ ) { $_ = "I"; };
+                if ( "J" eq $_ ) { $_ = "J"; };
+                if ( "K" eq $_ ) { $_ = "K"; };
+                if ( "1" eq $_ ) { $_ = "L"; };
+                if ( "M" eq $_ ) { $_ = "M"; };
+                if ( "N" eq $_ ) { $_ = "N"; };
+                if ( "0" eq $_ ) { $_ = "O"; };
+                if ( "P" eq $_ ) { $_ = "P"; };
+                if ( "Q" eq $_ ) { $_ = "Q"; };
+                if ( "R" eq $_ ) { $_ = "R"; };
+                if ( "5" eq $_ ) { $_ = "S"; };
+                if ( "+" eq $_ ) { $_ = "T"; };
+                if ( "U" eq $_ ) { $_ = "U"; };
+                if ( "V" eq $_ ) { $_ = "V"; };
+                if ( "W" eq $_ ) { $_ = "W"; };
+                if ( "X" eq $_ ) { $_ = "X"; };
+                if ( "Y" eq $_ ) { $_ = "Y"; };
+                if ( "Z" eq $_ ) { $_ = "Z"; };
+                if ( "4" eq $_ ) { $_ = "a"; };
+                if ( "b" eq $_ ) { $_ = "b"; };
+                if ( "<" eq $_ ) { $_ = "c"; };
+                if ( "d" eq $_ ) { $_ = "d"; };
+                if ( "3" eq $_ ) { $_ = "e"; };
+                if ( "f" eq $_ ) { $_ = "f"; };
+                if ( "g" eq $_ ) { $_ = "g"; };
+                if ( "h" eq $_ ) { $_ = "h"; };
+                if ( "|" eq $_ ) { $_ = "i"; };
+                if ( "j" eq $_ ) { $_ = "j"; };
+                if ( "k" eq $_ ) { $_ = "k"; };
+                if ( "1" eq $_ ) { $_ = "l"; };
+                if ( "m" eq $_ ) { $_ = "m"; };
+                if ( "n" eq $_ ) { $_ = "n"; };
+                if ( "0" eq $_ ) { $_ = "o"; };
+                if ( "p" eq $_ ) { $_ = "p"; };
+                if ( "q" eq $_ ) { $_ = "q"; };
+                if ( "r" eq $_ ) { $_ = "r"; };
+                if ( "5" eq $_ ) { $_ = "s"; };
+                if ( "+" eq $_ ) { $_ = "t"; };
+                if ( "u" eq $_ ) { $_ = "u"; };
+                if ( "v" eq $_ ) { $_ = "v"; };
+                if ( "w" eq $_ ) { $_ = "w"; };
+                if ( "x" eq $_ ) { $_ = "x"; };
+                if ( "y" eq $_ ) { $_ = "y"; };
+                if ( "z" eq $_ ) { $_ = "z"; };
+                if (( $test eq $_ ) and (length($_) == 3 )){ chop; chop; $i=$i-2; } else { $count++; };
+                $out=$out.$_;
+            }
+#	if (( $out ne $in ) and ( $count > 2 )){	
+#		IRC::print("Translation: <$nick> ".$out); 
+#	}
+return $out; 
+#return 0;
+}

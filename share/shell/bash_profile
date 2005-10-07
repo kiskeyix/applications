@@ -31,7 +31,7 @@ HISTSIZE=1500
 # this is needed by distcc/ccache and on SMP systems
 CONCURRENCY_LEVEL=8
 ## setup ccache in a shared cache dir:
-if [[ -x "`command -v ccache`" ]]; then
+if [[ -x "`command -v ccache 2> /dev/null`" ]]; then
     CCACHE_DIR="/tmp/ccache"
     MAKEFLAGS="$MAKEFLAGS CCACHE_PREFIX=distcc"
 fi

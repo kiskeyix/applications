@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.29 $
+# $Revision: 1.30 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -162,7 +162,7 @@ GetOptions(
     'D|debug'           =>  \$DEBUG,
     'r|remove'          =>  \$REMOVE_FILES,
     'V|verbose'         =>  \$VERBOSE,
-    'm|master'          =>  \$MASTER,
+    'm|master|localhost'    =>  \$MASTER,
     'l|local'           =>  \$LOCAL,
     'print-files'       =>  \$PRINT_FILES,
     # strings
@@ -212,8 +212,12 @@ if ( $MASTER )
 {
     my @failed = (); # array of files that failed
     
-    _mkdir($LOCAL_PATH);
+    _mkdir("$ENV{'HOME'}/.backup");
+    _mkdir("$ENV{'HOME'}/tmp");
+    system("touch $ENV{'HOME'}/.signaturerc") 
+        if ( !-f "$ENV{'HOME'}/.signaturerc");
 
+    _mkdir($LOCAL_PATH);
     chdir($LOCAL_PATH) or die ("$LOCAL_PATH $!");
     if ( !$LOCAL )
     {

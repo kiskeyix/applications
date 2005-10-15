@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
-# $Date: 2005-10-15 12:46:47 $
+# $Revision: 1.2 $
+# $Date: 2005-10-15 13:06:02 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: converts a UNIX epoc timestamp to local time date
@@ -43,7 +43,8 @@ if ( $HELP ) {
 if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
 
 my $seconds = join(" ",@ARGV);
-$seconds =~ s/[^0-9]//g;
+$seconds =~ s/[^0-9\.]//g;
+print "DEBUG: $seconds\n" if ( $DEBUG );
 my $date = localtime($seconds);
 print "$date\n"; 
 

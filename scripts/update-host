@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.44 $
+# $Revision: 1.45 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -274,13 +274,11 @@ if ( $MASTER )
                 debug("Deleting $i");
                 unlink($i); # silently delete old copies
             }
-            print STDOUT "\n";
             printf STDOUT ("%20s","Downloading $MASTER_HOST/$i ");
             system("wget $WGET_ARGS $MASTER_HOST/$i ".$silent);
-            print STDOUT ( $? ) ? " failed": " done";
+            print STDOUT ( $? ) ? " failed\n": " done\n";
         }
     }
-    print STDOUT ("\n");
     chdir($ENV{'HOME'});
     foreach my $i ( @FILES )
     {
@@ -313,17 +311,19 @@ if ( $MASTER )
             printf STDOUT ("|%-".$n_files."s|", "#" x $j); # progress
         } else {
             # last tar command failed?
-            # TODO Find a way to "remember" which file failed
             printf STDOUT ("|%-".($n_files-($j-1))."s|", "#" x ($j-1)); # progress
             printf STDOUT ("%-".($j-1)."s|", "!" x 1); # progress
             push(@failed,"$i");
         }
     }
-    print ("\nlocalhost These files failed: ".join ( " ",@failed )."\n") if ( $#failed > 0 );
+    print STDERR ("\nlocalhost: These files failed: ".
+        join ( " ",@failed )) 
+        if ( $#failed > 0 );
     if ( $DOLINKS )
     {
        _do_links("localhost"); 
     }
+    print STDOUT ("\n");
     exit(0);
 }
 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.41 $
+# $Revision: 1.42 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -324,7 +324,6 @@ if ( $MASTER )
     {
        _do_links("localhost"); 
     }
-    print STDOUT "\n";
     exit(0);
 }
 
@@ -496,7 +495,6 @@ sub update_host
         }
     } 
     print STDOUT ("\n$h These files failed: ".join ( " ",@failed )."\n") if ( $#failed > 0 );
-    print STDOUT "\n";
     if ( $DOLINKS )
     {
        _do_links($h); # remote links

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.42 $
+# $Revision: 1.43 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -259,7 +259,7 @@ if ( $MASTER )
     _mkdir("$ENV{'HOME'}/.backup");
     _mkdir("$ENV{'HOME'}/tmp");
     system("touch $ENV{'HOME'}/.signaturerc") 
-        if ( !-f "$ENV{'HOME'}/.signaturerc");
+        if ( !-e "$ENV{'HOME'}/.signaturerc");
 
     _mkdir($LOCAL_PATH);
     chdir($LOCAL_PATH) or die ("$LOCAL_PATH $!");
@@ -268,7 +268,7 @@ if ( $MASTER )
         # download files from remote (master) host:
         foreach my $i ( @FILES )
         {
-            if ( $MASTER_HOST =~ m/^http:/i && -f "$i" )
+            if ( $MASTER_HOST =~ m/^http:/i && -r $i )
             {
                 # wget is not too smart when using http
                 debug("Deleting $i");
@@ -284,9 +284,9 @@ if ( $MASTER )
     chdir($ENV{'HOME'});
     foreach my $i ( @FILES )
     {
-        if ( !-r $i )
+        if ( !-r "$LOCAL_PATH/$i" )
         {
-            debug("Skipping $i because we can't read it");
+            debug("Skipping $LOCAL_PATH/$i because we can't read it");
             next;
         }
         next if ( $DOLINKS and $i =~ /bashrc|vim|mutt/i ); # skip shell config
@@ -459,7 +459,7 @@ sub update_host
     foreach my $i ( @FILES )
     {
         next if ( $DOLINKS and $i =~ /bashrc|vim|mutt/i ); # skip shell config
-        next if ( ! -f "$LOCAL_PATH/$i" );
+        next if ( ! -r "$LOCAL_PATH/$i" );
         $j++;
         print STDOUT "\r";
         printf STDOUT ("%20s",$h); # host padded

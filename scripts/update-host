@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.33 $
+# $Revision: 1.34 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -538,7 +538,7 @@ sub _do_links
             symlink($_,$_conf);
         } else {
             # dealing with a remote hosts
-            system("ssh $h ln -sf $_ $_conf ".$silent);
+            system("ssh $host ln -sf $_ $_conf ".$silent);
         }
     }
 }

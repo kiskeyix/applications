@@ -6,3 +6,5 @@ share
 lib
 JPL
 etc
+.*.swp
+.DS_Store

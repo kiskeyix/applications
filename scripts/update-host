@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.37 $
+# $Revision: 1.38 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -284,6 +284,11 @@ if ( $MASTER )
     chdir($ENV{'HOME'});
     foreach my $i ( @FILES )
     {
+        if ( !-r $i )
+        {
+            debug("Skipping $i because we can't read it");
+            next;
+        }
         next if ( $DOLINKS and $i =~ /bashrc|vim|mutt/i ); # skip shell config
         $j++;
         print STDOUT "\r"; 

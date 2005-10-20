@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.31 $
+# $Revision: 1.32 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -307,9 +307,9 @@ if ( $MASTER )
         foreach(@_CONFIG_FILES)
         {
             my $_conf = ".".basename($_); # dot file
-            if (! -l $_conf )
+            if ( ! -l $_conf )
             {
-                if (-e $_conf)
+                if ( -e $_conf )
                 {
                     # backup
                     if (!rename($_conf,"$_config.bak"))
@@ -323,7 +323,7 @@ if ( $MASTER )
                 # test that symlink is valid and move on
                 #next if ();
                 #}
-                #symlink($_conf,);
+            symlink($_,$_conf);
         }
     }
     print STDOUT "\n";

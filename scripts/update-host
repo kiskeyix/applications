@@ -1,24 +1,26 @@
 #!/usr/bin/perl -w
-# $Revision: 1.36 $
-# Luis Mondesi < lemsx1@hotmail.com >
+# $Revision: 1.37 $
+# Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
 # USAGE: $0 --help
+#
+# TODO:
+#  - tidy old files with @_OBSOLETE
+#  - tests host file and print their new IP to STDOUT. hint slurp_hosts() and do host lookups on the names
+#
 
 use strict;
 $|++;
 
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
-#use POSIX;                  # cwd() ... man POSIX
 use File::Spec::Functions  qw/ splitdir catdir catfile /;  # abs2rel() and other dir/filename specific
-#use File::Copy;
-#use File::Find;     # find();
 use File::Basename qw/ basename /;
-#use FileHandle;     # for progressbar
 
 ############## NO NEED TO MODIFY THESE #################
 =pod
+
 =head1 update-host
 
 update-host - by Luis Mondesi <lemsx1@gmail.com>
@@ -26,30 +28,36 @@ update-host - by Luis Mondesi <lemsx1@gmail.com>
 =head1 SYNOPSIS
 
 B<update-host>  
-[-v,--version]
-[-h,--help]   
 [-D,--debug]
+[--files <file1,file2,...>]
+[--host <hostname>] 
+[-h,--help]
+[--hosts-file <path/to/file>]
+[-l,--local]
+[--local-path]
+[-L,--links,--symlinks]
+[-m,--master] 
+[--print-files]
 [-r,--remove]
 [-V,--verbose]
-[-m,--master] 
-[-l,--local]  
-[-L,--links,--symlinks]
-[--host] 
-[--files]  
-[--print-files]
-[--local-path]
-[--hosts-file]
+[-v,--version]
 [HOSTNAME]
 
 =head1 DESCRIPTION 
 
-This script updates my user configurations on this computer from a remote host, or distributes them from this host to others in ~/.remote-hosts.
+This script updates my user configurations (bash,vim,mutt,cvs) on this computer from a remote host, or distributes them from this host to others as defined in ~/.remote-hosts.
 
 The files from the master host will be downloaded using a URL (wget). And all other downloads will be done via ssh (for hosts in ~/.remote-hosts by default).
 
 The script tries to find if a given host is alive first by using ping.
 
+The format of the remote-hosts file is the same as /etc/hosts.
+
 =head1 EXAMPLES
+
+B<update-host>  --master --links --local
+
+updates localhost using files from the default local settings folder ($ENV{"HOME"}/Shared/software/settings. See --local-path) and creates symlinks from Applications/share/* to the respective locations.
 
 B<update-host>  --master --host URL
 
@@ -94,6 +102,10 @@ my @_CONFIG_FILES = (
     "Applications/share/vim",
     "Applications/share/mutt",
 );
+# files that should be tidied!
+my @_OBSOLETE = (
+    "Application/scripts/cvsdelete.sh",
+);
 my %hosts; # global multi-dimensional hash to store hosts' information
 my $VERBOSE=0;
 my $DEBUG=0;
@@ -113,27 +125,28 @@ my $CONF_FILES=undef; # comma separated list
 
 ## GET OPTIONS ##
 =pod
+
 =over 8
-
-=item -v,--version
-
-Prints version and exits
 
 =item -D,--debug
 
 Enables debug mode
 
+=item --files FILES
+
+Comma separated list of files to get/upgrade instead of the defaults at @FILES.
+
 =item -h,--help
 
 Prints this help and exits
 
-=item -r,--remove
+=item --host URL
 
-Remove all temporary files after updating
+Sets $MASTER_HOST to URL
 
-=item -V,--verbose
+=item --hosts-file FILE
 
-be verbose
+Uses FILE instead of ~/.remote-hosts as our hosts file. This file is in the same format as /etc/hosts.
 
 =item -m,--master
 
@@ -147,25 +160,9 @@ Use copies in $LOCAL_PATH instead of remote $MASTER_HOST. @see --local-path
 
 Sets $LOCAL_PATH to PATH instead of the default $ENV{"HOME"}/Shared/software/settings
 
-=item --host URL
-
-Sets $MASTER_HOST to URL
-
-=item --files FILES
-
-Comma separated list of files to get/upgrade instead of the defaults at @FILES.
-
-=item --hosts-file FILE
-
-Uses FILE instead of ~/.remote-hosts as our hosts file. This file is in the same format as /etc/hosts.
-
-=item --print-files
-
-Prints a list of files and exits. @see --files
-
 =item -L,--symlinks,--links
 
-Do symlinks:
+Do symlinks instead of unpacking bashrc.tar.bz2, vimrc.tar.bz2, muttrc.tar.bz2. See --files.
 
 .bashrc -> Applications/share/shell/bashrc
 
@@ -180,6 +177,22 @@ Do symlinks:
 .mutt -> Applications/share/mutt
 
 See @_CONFIG_FILES
+
+=item --print-files
+
+Prints a list of files and exits. @see --files
+
+=item -r,--remove
+
+Remove all temporary files after updating
+
+=item -V,--verbose
+
+be verbose
+
+=item -v,--version
+
+Prints version and exits
 
 =back
 

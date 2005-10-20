@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.43 $
+# $Revision: 1.44 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -500,7 +500,7 @@ sub update_host
        _do_links($h); # remote links
     }
     # no errors:
-    return "";
+    return "\n";
 }
 
 # @desc implements `mkdir -p`

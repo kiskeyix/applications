@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.30 $
+# $Revision: 1.31 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -14,18 +14,18 @@ Getopt::Long::Configure('bundling');
 use File::Spec::Functions  qw/ splitdir catdir catfile /;  # abs2rel() and other dir/filename specific
 #use File::Copy;
 #use File::Find;     # find();
-#use File::Basename; # basename() && dirname()
+use File::Basename qw/ basename /;
 #use FileHandle;     # for progressbar
 
 ############## NO NEED TO MODIFY THESE #################
 =pod
-=head1 update-remote-hosts.pl
+=head1 update-host
 
-update-remote-hosts.pl - by Luis Mondesi <lemsx1@gmail.com>
+update-host - by Luis Mondesi <lemsx1@gmail.com>
 
 =head1 SYNOPSIS
 
-B<update-remote-hosts.pl>  
+B<update-host>  
 [-v,--version]
 [-h,--help]   
 [-D,--debug]
@@ -50,15 +50,15 @@ The script tries to find if a given host is alive first by using ping.
 
 =head1 EXAMPLES
 
-B<update-remote-hosts.pl>  --master --host URL
+B<update-host>  --master --host URL
 
 updates localhost using files from URL
 
-B<update-remote-hosts.pl> --hosts-file ~/.hosts
+B<update-host> --hosts-file ~/.hosts
 
 updates all hosts found in ~/.hosts. If --hosts-file is omitted, it will upgrade all hosts found in ~/.remote-hosts
 
-B<update-remote-hosts.pl> --hosts-file ~/.hosts --files "bashrc.tar.bz2,vimrc.tar.bz2"
+B<update-host> --hosts-file ~/.hosts --files "bashrc.tar.bz2,vimrc.tar.bz2"
 
 updates only bashrc and vimrc files to all hosts found in ~/.hosts
 
@@ -84,12 +84,21 @@ my $TMP="tmp";
 my $EXCLUDE= "172.16.1.250|as400";
 # files we will be updating
 my @FILES=("bashrc.tar.bz2", "vimrc.tar.bz2", "muttrc.tar.bz2", "Applications.tar.bz2");
- 
+# links to $ENV{HOME} if DOLINKS is true
+my @_CONFIG_FILES = (
+    "Applicatons/share/shell/bash_profile",
+    "Applicatons/share/shell/bashrc",
+    "Applicatons/share/shell/inputrc",
+    "Applicatons/share/shell/cvsrc",
+    "Applicatons/share/vim",
+    "Applicatons/share/mutt",
+);
 my %hosts; # global multi-dimensional hash to store hosts' information
 my $VERBOSE=0;
 my $DEBUG=0;
 my $PRINT_FILES=0;
 my $REMOVE_FILES=0;
+my $DOLINKS=0;
 my $MASTER=0; # update current host from $MASTER_HOST
 my $LOCAL=0; # do not get any new copies, use the local files instead
 my $RED = "\033[1;31m";
@@ -153,6 +162,26 @@ Uses FILE instead of ~/.remote-hosts as our hosts file. This file is in the same
 
 Prints a list of files and exits. @see --files
 
+=item -L,--symlinks,--links
+
+Do symlinks:
+
+.bashrc -> Applications/share/shell/bashrc
+
+.bash_profile -> Applications/share/shell/bashrc
+
+.inputrc -> Applications/share/shell/inputrc
+
+.cvsrc -> Applications/share/shell/cvsrc
+
+.vim -> Applications/share/vim
+
+.mutt -> Applications/share/mutt
+
+See @_CONFIG_FILES
+
+=back
+
 =cut
 
 GetOptions(
@@ -165,6 +194,7 @@ GetOptions(
     'm|master|localhost'    =>  \$MASTER,
     'l|local'           =>  \$LOCAL,
     'print-files'       =>  \$PRINT_FILES,
+    'L|symlinks|links'  =>  \$DOLINKS,
     # strings
     'host=s'            =>  \$MASTER_HOST,
     'files=s'           =>  \$CONF_FILES,
@@ -207,7 +237,7 @@ my $j =0;
 my $n_files = $#FILES+1;
 my $silent = ( ! $VERBOSE ) ? " > /dev/null 2>&1" : "";
 
-# update master and exit
+# update localhost from master and exit
 if ( $MASTER )
 {
     my @failed = (); # array of files that failed
@@ -237,9 +267,10 @@ if ( $MASTER )
         }
     }
     print STDOUT ("\n");
-    chdir("$ENV{'HOME'}");
+    chdir($ENV{'HOME'});
     foreach my $i ( @FILES )
     {
+        next if ( $DOLINKS and $i =~ /bashrc|vim|mutt/i ); # skip shell config
         $j++;
         print STDOUT "\r"; 
         my $cmd = "";
@@ -270,6 +301,31 @@ if ( $MASTER )
         }
     }
     print ("\nlocalhost These files failed: ".join ( " ",@failed )."\n") if ( $#failed > 0 );
+    if ( $DOLINKS )
+    {
+        chdir($ENV{'HOME'}); # redundant
+        foreach(@_CONFIG_FILES)
+        {
+            my $_conf = ".".basename($_); # dot file
+            if (! -l $_conf )
+            {
+                if (-e $_conf)
+                {
+                    # backup
+                    if (!rename($_conf,"$_config.bak"))
+                    {
+                        # oops
+                        print STDERR ("Failed to backup ".$ENV{'HOME'}."/$_conf\n");
+                        next;
+                    }
+                }
+            } #else {
+                # test that symlink is valid and move on
+                #next if ();
+                #}
+                #symlink($_conf,);
+        }
+    }
     print STDOUT "\n";
     exit(0);
 }

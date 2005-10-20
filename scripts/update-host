@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.32 $
+# $Revision: 1.33 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -33,6 +33,7 @@ B<update-host>
 [-V,--verbose]
 [-m,--master] 
 [-l,--local]  
+[-L,--links,--symlinks]
 [--host] 
 [--files]  
 [--print-files]
@@ -303,28 +304,7 @@ if ( $MASTER )
     print ("\nlocalhost These files failed: ".join ( " ",@failed )."\n") if ( $#failed > 0 );
     if ( $DOLINKS )
     {
-        chdir($ENV{'HOME'}); # redundant
-        foreach(@_CONFIG_FILES)
-        {
-            my $_conf = ".".basename($_); # dot file
-            if ( ! -l $_conf )
-            {
-                if ( -e $_conf )
-                {
-                    # backup
-                    if (!rename($_conf,"$_config.bak"))
-                    {
-                        # oops
-                        print STDERR ("Failed to backup ".$ENV{'HOME'}."/$_conf\n");
-                        next;
-                    }
-                }
-            } #else {
-                # test that symlink is valid and move on
-                #next if ();
-                #}
-            symlink($_,$_conf);
-        }
+       _do_links("localhost"); 
     }
     print STDOUT "\n";
     exit(0);
@@ -461,6 +441,7 @@ sub update_host
     # copy and unpack files:
     foreach my $i ( @FILES )
     {
+        next if ( $DOLINKS and $i =~ /bashrc|vim|mutt/i ); # skip shell config
         next if ( ! -f "$LOCAL_PATH/$i" );
         $j++;
         print STDOUT "\r";
@@ -498,6 +479,10 @@ sub update_host
     } 
     print STDOUT ("\n$h These files failed: ".join ( " ",@failed )."\n") if ( $#failed > 0 );
     print STDOUT "\n";
+    if ( $DOLINKS )
+    {
+       _do_links($h); # remote links
+    }
     # no errors:
     return "";
 }
@@ -520,3 +505,40 @@ sub _mkdir
     return $flag; # number of directories created
 }
 
+sub _do_links
+{
+    my $host = shift;
+    return undef if (!defined($host));
+    chdir($ENV{'HOME'}) if ($host eq "localhost");
+    foreach(@_CONFIG_FILES)
+    {
+        my $_conf = ".".basename($_); # dot file
+        if ( $host eq "localhost" )
+        {
+            if ( ! -l $_conf )
+            {
+                if ( -e $_conf )
+                {
+                    # backup
+                    if (!rename($_conf,"$_conf.bak"))
+                    {
+                        # oops
+                        print STDERR ("Failed to backup ".$ENV{'HOME'}."/$_conf\n");
+                        next;
+                    }
+                }
+            } else {
+                # we already have a symlink here,
+                # we need to make sure that the link points to the
+                # correct path:
+                # TODO test that symlink is valid and move on
+                # for now, we simply remove the link
+                next if (!unlink($_conf));
+            }
+            symlink($_,$_conf);
+        } else {
+            # dealing with a remote hosts
+            system("ssh $h ln -sf $_ $_conf ".$silent);
+        }
+    }
+}

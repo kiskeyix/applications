@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.34 $
+# $Revision: 1.35 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -87,12 +87,12 @@ my $EXCLUDE= "172.16.1.250|as400";
 my @FILES=("bashrc.tar.bz2", "vimrc.tar.bz2", "muttrc.tar.bz2", "Applications.tar.bz2");
 # links to $ENV{HOME} if DOLINKS is true
 my @_CONFIG_FILES = (
-    "Applicatons/share/shell/bash_profile",
-    "Applicatons/share/shell/bashrc",
-    "Applicatons/share/shell/inputrc",
-    "Applicatons/share/shell/cvsrc",
-    "Applicatons/share/vim",
-    "Applicatons/share/mutt",
+    "Applications/share/shell/bash_profile"
+    "Applications/share/shell/bashrc",
+    "Applications/share/shell/inputrc",
+    "Applications/share/shell/cvsrc",
+    "Applications/share/vim",
+    "Applications/share/mutt",
 );
 my %hosts; # global multi-dimensional hash to store hosts' information
 my $VERBOSE=0;

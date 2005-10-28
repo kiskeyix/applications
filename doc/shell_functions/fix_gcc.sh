@@ -1,18 +1,18 @@
 #!/bin/sh
-# $Revision: 1.6 $
-# $Date: 2005-09-02 15:19:56 $
+# $Revision: 1.7 $
+# $Date: 2005-10-28 06:38:14 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: fixes gcc symlinks when updating to a new version under debian
 # USAGE: ./fix_gcc.sh
 #
 
-PRIORITY=52 # 0 - 100. higher is better
+PRIORITY=53 # 0 - 100. higher is better
 
-GCC="/usr/bin/gcc-3.4"
-GPP="/usr/bin/g++-3.4"
-GCCBUG="/usr/bin/gccbug-3.4"
-GCOV="/usr/bin/gcov-3.4"
+GCC="/usr/bin/gcc-4.0"
+GPP="/usr/bin/g++-4.0"
+GCCBUG="/usr/bin/gccbug-4.0"
+GCOV="/usr/bin/gcov-4.0"
 
 # to remove do:
 # sudo update-alternatives --remove-all $GCC

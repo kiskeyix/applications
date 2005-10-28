@@ -9,3 +9,5 @@ etc
 .*.swp
 .DS_Store
 bin
+include
+man

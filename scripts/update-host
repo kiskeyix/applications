@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.46 $
+# $Revision: 1.47 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -105,6 +105,23 @@ my @_CONFIG_FILES = (
 # files that should be tidied!
 my @_OBSOLETE = (
     "Application/scripts/cvsdelete.sh",
+    "Application/scripts/cvsadd.sh",
+    "Application/scripts/backup.sh",
+    "Applications/scripts/isoMount.sh",
+    "Applications/scripts/mount_image.sh",
+    "Applications/scripts/mvall.sh",
+    "Applications/scripts/myestablished.sh",
+    "Applications/scripts/mylisten.sh",
+    "Applications/scripts/myproc.sh",
+    "Applications/scripts/mywait.sh",
+    "Applications/scripts/rcmd.sh",
+    "Applications/scripts/rundig.sh",
+    "Applications/scripts/service.sh",
+    "Applications/scripts/ssh-tunnel.sh",
+    "Applications/scripts/tar-all.sh", # now compress
+    "Applications/scripts/untar-all.sh", # now uncompress
+    "Applications/scripts/utar-all.sh",
+    "Applications/scripts/vnctunnel.sh",
 );
 my %hosts; # global multi-dimensional hash to store hosts' information
 my $VERBOSE=0;

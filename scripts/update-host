@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.47 $
+# $Revision: 1.48 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -122,6 +122,7 @@ my @_OBSOLETE = (
     "Applications/scripts/untar-all.sh", # now uncompress
     "Applications/scripts/utar-all.sh",
     "Applications/scripts/vnctunnel.sh",
+    "Applications/scripts/regex-test.pl",
 );
 my %hosts; # global multi-dimensional hash to store hosts' information
 my $VERBOSE=0;

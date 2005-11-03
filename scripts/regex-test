@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: test regular expressions against a string
@@ -56,10 +56,7 @@ if ($html->param())
         ($str = $STR) =~ s/(.*)($REGEX)(.*)//mg;
 
         print STDOUT (
-            "<p><font color='#cecece'>String: '",
-            $STR,
-            "'<br />\n",
-            "Regex: m/$REGEX/mg</font>",
+            "<p><font color='#cecece'>Regex: m/$REGEX/mg</font>",
             "</p>\n");
         
         print STDOUT (

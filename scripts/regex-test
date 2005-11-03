@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: test regular expressions against a string
@@ -63,6 +63,7 @@ if ($html->param())
             "</p>\n");
         
         print STDOUT (
+            $html->hr(),
             "<p>$1",
             "<font color='red'><b>$2</b></font>",
             "$3",

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: test regular expressions against a string
@@ -9,39 +9,98 @@
 use strict;
 $|++;
 
+eval "use CGI qw/:cgi/";
+if ($@)
+{
+    print STDERR "\nERROR: Could not load the CGI module.\n" .
+    "       To install this module use:\n".
+    "       Use: perl -e shell -MCPAN to install it.\n".
+    "       On Debian just: apt-get install perl-modules \n\n".
+    print STDERR "$@\n";
+    exit 1;
+}
+
 # Args:
 my $HELP_MSG="$0 'regex' 'string'";
 my $REGEX=undef;
 my $STR=undef;
 my $str = undef; 
 
-$REGEX=$ARGV[0];
-$STR=$ARGV[1];
+###############################################################
+##                         main ()                             #
+################################################################
+
+## globals
+my $html = new CGI; # OO interface
+
+print STDOUT (
+    $html->header(),
+);
+
+#$REGEX=$ARGV[0];
+#$STR=$ARGV[1];
 
 #$REGEX="0";
 #$STR="0123abc";
-
-if ( defined($REGEX) and defined($STR) )
+if ($html->param())
 {
-    no warnings;
-    ($str = $STR) =~ s/($REGEX)//mg;
+    print STDOUT (
+        $html->start_html('American Home Mortgage Spam Learner'),
+        $html->h1('Learn or Forget Spam Keywords'),
+        $html->start_multipart_form()
+    );
 
+    $REGEX = $html->param('regex');
+    $STR = $html->param('str');
+
+    if ( defined($REGEX) and defined($STR) )
+    {
+        no warnings;
+        ($str = $STR) =~ s/($REGEX)//mg;
+
+        print STDOUT (
+            "String: '",
+            $STR,
+            "'<br />\n",
+            "Regex: m/$REGEX/mg",
+            "<br />\n");
+        print STDOUT (
+            "Matches all!",
+            "<br />\n",
+        ) if ( $str =~ /^$/ );
+        print STDOUT (
+            "Not Matching: '",
+            $str,
+            "'<br />\n",
+        ) if ( $str =~ /^.+$/ );
+    } else {
+        print STDERR $HELP_MSG,"\n";
+    }
+}
+
+sub _print_form
+{
+    # we are not doing lookups, print form:
     print STDOUT (
-        "String: '",
-        $STR,
-        "'\n",
-        "Regex: m/$REGEX/mg",
-        "\n");
+        $html->start_html('Regular Expression Tester'),
+        $html->h1('Enter Regular Expression:'),
+        $html->start_multipart_form()
+    );
     print STDOUT (
-        "Matches all!",
+        $html->p("Regex: "),
+        $html->textarea(-name=>"regex",-default=>'',-rows=>10,-columns=>50),
+        $html->p("Text: "),
+        $html->textarea(-name=>"str",-default=>'',-rows=>10,-columns=>50),
         "\n",
-    ) if ( $str =~ /^$/ );
+        $html->p()
+    );
     print STDOUT (
-        "Not Matching: '",
-        $str,
-        "'\n",
-    ) if ( $str =~ /^.+$/ );
-} else {
-    print STDERR $HELP_MSG,"\n";
+        "\n",
+        $html->submit(),
+        $html->end_form(),
+        $html->hr()
+    );
+
+    print STDOUT ( "\n",$html->end_html() );
 }
 

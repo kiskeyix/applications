@@ -161,7 +161,7 @@ function powerprompt()
     PROMPT_COMMAND=_powerprompt;
     case $TERM in
 	*term | rxvt | vt100 | ansi )
-	    PS1="${cyan}[\$LOAD \h/\u]$NC \w \n\\$> \[\033]0;[\h/\u] \w\007\]" ;;
+	    PS1="${cyan}[\$TIME - \$LOAD \h/\u]$NC \w \n\\$> \[\033]0;[\h/\u] \w\007\]" ;;
 	linux )
 	    PS1="${cyan}[\$TIME - \$LOAD]$NC\n[\h/\u \#] \w \n\\$> " ;;
 	* )

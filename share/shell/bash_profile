@@ -29,7 +29,9 @@ HISTSIZE=1500
 ## compiling
 # the number of gcc/cc threads that make will create
 # this is needed by distcc/ccache and on SMP systems
-CONCURRENCY_LEVEL=8
+if [[ -z "$CONCURRENCY_LEVEL" ]]; then
+    CONCURRENCY_LEVEL=8
+fi
 ## setup ccache in a shared cache dir:
 if [[ -x "`command -v ccache 2> /dev/null`" ]]; then
     CCACHE_DIR="/tmp/ccache"
@@ -37,7 +39,7 @@ fi
 if [[ -x "`command -v distcc 2> /dev/null`" ]]; then
     CCACHE_PREFIX="distcc"
     if [[ -x "`command -v ccache 2> /dev/null`" ]]; then
-        MAKEFLAGS="$MAKEFLAGS CCACHE_PREFIX=distcc"
+        MAKEFLAGS="$MAKEFLAGS CCACHE_PREFIX=distcc -j$CONCURRENCY_LEVEL"
     fi
 fi
 ## attempt to read hosts for distcc:

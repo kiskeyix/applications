@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
-# $Date: 2005-11-11 02:45:04 $
+# $Revision: 1.2 $
+# $Date: 2005-11-11 02:55:28 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: start/stop or removes services in Linux (all distros)
@@ -111,6 +111,10 @@ foreach(@ARGV)
             print "ERROR: $_ service was not reset\n";
         }
         next; 
+    } elsif ($ACTION=~/\bremove\b/ or $ACTION=~/\boff\b/) {
+        # when removing a service we turn it off as well
+        print "Turning off service $_\n" if ($DEBUG);
+        system( sprintf($distros{$release_info}->{'service'},$_,'stop') );
     }
     my $service_cmd = sprintf($distros{$release_info}->{$KEY},$_,$ACTION);
     # TODO check if service script exists

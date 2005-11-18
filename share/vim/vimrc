@@ -19,8 +19,8 @@ set ruler		" shows ruler at the bottom of the screen
 set bs=2		" allow backspacing over everything in insert mode
 
 set ic			" comment this out if you want to search non case sensitive
-set nu			" line numbers baby
-set columns=80          " we have line number on at all times
+"set nu!			" line numbers off. we only need this for specific buffers
+"set columns=80          " we have line number on at all times
 
 set showcmd		" Show (partial) command in status line
 
@@ -224,7 +224,7 @@ augroup END
 augroup php 
     if !exists("autocommands_php_loaded")
         let autocommands_php_loaded = 1
-        au BufRead *.php,*.php3,*.phps set formatoptions=tcqro2 autoindent
+        au BufRead *.php,*.php3,*.phps set formatoptions=tcqro2 cindent cinkeys='0{,0},!^F,o,O,e' nu
         au BufEnter *.class,*.inc,*.tpl,*.php,*.php3,*.phps syntax sync fromstart 
         " set syntax higlight starting from start. 
         " This takes those annoying missing highlight colors for certain files. 
@@ -245,14 +245,14 @@ augroup cprog
     if !exists("autocommands_cprog_loaded")
         let autocommands_cprog_loaded = 1
         " C programs should have 8 spaces as tabs. makes things better
-        au BufRead *.cpp,*.c,*.h,*.cxx,*.cc,*.hh set formatoptions=croq sm sw=8 sts=8 cindent comments=sr:/*,mb:*,el:*/,:// | if filereadable("tags.vim") | so tags.vim | endif
+        au BufRead *.cpp,*.c,*.h,*.cxx,*.cc,*.hh set formatoptions=croq sm sw=8 sts=8 cindent comments=sr:/*,mb:*,el:*/,:// nu | if filereadable("tags.vim") | so tags.vim | endif
     endif
 augroup END
 
 augroup perl
     if !exists("autocommands_perl_loaded")
         let autocommands_perl_loaded = 1
-        au BufReadPre *.pl,*.ph,*.pm set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' 
+        au BufReadPre *.pl,*.ph,*.pm set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu
         " tags=./tags,tags,~/devel/tags,~/devel/CVS/bin/contrib/tags
         " Show default php file when new 
 

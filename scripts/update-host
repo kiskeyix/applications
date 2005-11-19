@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.52 $
+# $Revision: 1.53 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -504,9 +504,9 @@ sub update_host
         my $_tar_arg = ( $i =~ /\.bz2$/i ) ? "j" : "z"; # gzip or bzip2?
         my $cmd = "ssh ".$USERNAME.$h." 'command $_zcat '$TMP/$i' | command $tar x".$VERBOSE_ARGS."f -' ";
         
-        system($cmd.$silent);
+        my $err = system($cmd.$silent);
 
-        if ( ! $? ) 
+        if ( ! $err ) 
         {
             printf STDOUT ("|%-".$n_files."s|", "#" x $j); # progress
         } else {

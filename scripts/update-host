@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.49 $
+# $Revision: 1.50 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -39,6 +39,7 @@ B<update-host>
 [-m,--master] 
 [--print-files]
 [-r,--remove]
+[-u,--username USER]
 [-V,--verbose]
 [-v,--version]
 [HOSTNAME]
@@ -139,6 +140,7 @@ my $GREEN = "\033[0;32m";
 my $VERBOSE_ARGS="";
 my $WGET_ARGS="--continue --timestamping";
 my $HOST=undef;
+my $USERNAME=undef;
 
 my $CONF_FILES=undef; # comma separated list
 
@@ -205,6 +207,10 @@ Prints a list of files and exits. @see --files
 
 Remove all temporary files after updating
 
+=item -u,--username USER
+
+Use USER as the name to use when connecting via ssh to HOST
+
 =item -V,--verbose
 
 be verbose
@@ -232,7 +238,8 @@ GetOptions(
     'host=s'            =>  \$MASTER_HOST,
     'files=s'           =>  \$CONF_FILES,
     'local-path=s'      =>  \$LOCAL_PATH,
-    'hosts-file=s'      =>  \$REMOTE_HOSTS_FILE
+    'hosts-file=s'      =>  \$REMOTE_HOSTS_FILE,
+    'u|username=s'      =>  \$USERNAME
 ) and $HOST=shift;
 
 ## START SCRIPT ##
@@ -250,6 +257,14 @@ if ( $VERBOSE )
     $VERBOSE_ARGS="v";
 } else {
     $WGET_ARGS="-nv $WGET_ARGS";
+}
+
+# username will be passed to e/a ssh call
+if (defined($USERNAME))
+{
+    $USERNAME .= "\@";
+} else {
+    $USERNAME = "";
 }
 
 ## main ##
@@ -464,56 +479,51 @@ sub debug
 sub update_host
 {
     my $h = shift;
-    my $j=0;
     my @failed = (); # array of failes that failed
+    my $tar = "tar";
 
     # sanity check. make sure host is alive:
     return "ERROR: host $h is dead\n" if ( ! is_alive($h) );
 
     # make sure the .backup and $TMP dir exists
-    system("ssh $h mkdir -p $TMP .backup ".$silent);
+    system("ssh ".$USERNAME.$h." mkdir -p $TMP .backup ".$silent);
     # make sure this signature file exists:
-    system("ssh $h touch .signaturerc ".$silent);
+    system("ssh ".$USERNAME.$h." touch .signaturerc ".$silent);
     # copy and unpack files:
     foreach my $i ( @FILES )
     {
         next if ( $DOLINKS and $i =~ /bashrc|vim|mutt/i ); # skip shell config
         next if ( ! -r "$LOCAL_PATH/$i" );
-        $j++;
-        print STDOUT "\r";
-        printf STDOUT ("%20s",$h); # host padded
+        
+        print STDOUT "\r";          # return cursor to beginning of line
+        printf STDOUT ("%20s",$h);  # host name padded to print progressbar correctly
+        
         system("scp $LOCAL_PATH/$i $h:$TMP/ ".$silent);
 
-        my $cmd = "";
-        # TODO find a way to get the path to *zcat on remote host?
         my $_zcat = ( $i =~ /\.bz2$/i ) ? "bzcat" : "zcat"; # zcat or bzcat?
         my $_tar_arg = ( $i =~ /\.bz2$/i ) ? "j" : "z"; # gzip or bzip2?
-        my $tar = "tar";
-        #if ( -x $_zcat )
-        #{
-            $cmd = "ssh $h 'command $_zcat '$TMP/$i' | command $tar x".$VERBOSE_ARGS."f -' ";
-        #} else {
-            # assume tar can decompress on the fly
-        #    debug("Falling back to $tar...");
-        #    $cmd = "command $tar x".$VERBOSE_ARGS.$_tar_arg."f '$TMP/$i'";
-        #}
-
+        my $cmd = "ssh ".$USERNAME.$h." 'command $_zcat '$TMP/$i' | command $tar x".$VERBOSE_ARGS."f -' ";
+        
         system($cmd.$silent);
+
         if ( ! $? ) 
         {
             printf STDOUT ("|%-".$n_files."s|", "#" x $j); # progress
         } else {
+            push(@failed,$i);
             # last tar command failed?
-            printf STDOUT ("|%-".($n_files-($j-1))."s", "#" x ($j-1)); # progress
-            printf STDOUT ("%-".($j-1)."s|", "!" x 1); # progress
-            push(@failed,"$i");
+            printf STDOUT ("|%-".($n_files - $#failed)."s", "#" x ($n_files - $#failed)); # successful progress
+            printf STDOUT ("%-".($#failed)."s|", "!" x $#failed); # failed progress
         }
+
         if ( $REMOVE_FILES )
         {
-            system("ssh $h command rm -f '$TMP/$i' ".$silent);
+            system("ssh ".$USERNAME.$h." command rm -f '$TMP/$i' ".$silent);
         }
     } 
+    
     print STDOUT ("\n$h These files failed: ".join ( " ",@failed )."\n") if ( $#failed > 0 );
+
     if ( $DOLINKS )
     {
        _do_links($h); # remote links

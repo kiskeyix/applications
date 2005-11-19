@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.53 $
+# $Revision: 1.54 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -289,7 +289,9 @@ my $silent = ( ! $VERBOSE ) ? " > /dev/null 2>&1" : "";
 if ( $MASTER )
 {
     my @failed = (); # array of files that failed
-    
+    my $FAIL_FLAG=0;
+    my $SUCESS_FLAG=0;
+
     _mkdir("$ENV{'HOME'}/.backup");
     _mkdir("$ENV{'HOME'}/tmp");
     system("touch $ENV{'HOME'}/.signaturerc") 
@@ -338,21 +340,29 @@ if ( $MASTER )
             $cmd = "command $tar x".$VERBOSE_ARGS.$_tar_arg."f '$LOCAL_PATH/$i'";
         }
 
-        system($cmd.$silent);
+        my $err = system($cmd.$silent);
         printf STDOUT ("%20s","localhost"); # host padded
-        if ( ! $? ) 
+        if ( ! $err ) 
         {
             printf STDOUT ("|%-".$n_files."s|", "#" x $j); # progress
+            $SUCESS_FLAG++;
         } else {
+            $FAIL_FLAG++;
+            push(@failed,$i);
+            my $n_failed = $#failed + 1;
             # last tar command failed?
-            printf STDOUT ("|%-".($n_files-($j-1))."s|", "#" x ($j-1)); # progress
-            printf STDOUT ("%-".($j-1)."s|", "!" x 1); # progress
-            push(@failed,"$i");
+            if (!$SUCESS_FLAG)
+            {
+                printf STDOUT ("|%-".$n_files."s|", "!" x $n_failed); # failed progress
+            } else {
+                # TODO keep the order of file failures
+                printf STDOUT ("|%-".($n_files - $n_failed )."s", "#" x ($n_files - $n_failed)); # successful progress
+                printf STDOUT ("%-".($n_failed )."s|", "!" x $n_failed); # failed progress
+            }
         }
     }
-    print STDERR ("\nlocalhost: These files failed: ".
-        join ( " ",@failed )) 
-        if ( $#failed > 0 );
+    print STDERR ("\nlocalhost: These files failed: ". join ( " ",@failed )) 
+        if ( $FAIL_FLAG );
     if ( $DOLINKS )
     {
        _do_links("localhost"); 
@@ -479,8 +489,11 @@ sub debug
 sub update_host
 {
     my $h = shift;
-    my @failed = (); # array of failes that failed
+    my @failed = ();    # array of failes that failed
     my $tar = "tar";
+    my $j=0;            # number of files done
+    my $SUCESS_FLAG=0;
+    my $FAIL_FLAG=0;
 
     # sanity check. make sure host is alive:
     return "ERROR: host $h is dead\n" if ( ! is_alive($h) );
@@ -494,7 +507,7 @@ sub update_host
     {
         next if ( $DOLINKS and $i =~ /bashrc|vim|mutt/i ); # skip shell config
         next if ( ! -r "$LOCAL_PATH/$i" );
-        
+        $j++; 
         print STDOUT "\r";          # return cursor to beginning of line
         printf STDOUT ("%20s",$h);  # host name padded to print progressbar correctly
         
@@ -508,13 +521,21 @@ sub update_host
 
         if ( ! $err ) 
         {
+            $SUCESS_FLAG++;
             printf STDOUT ("|%-".$n_files."s|", "#" x $j); # progress
         } else {
-            print "failed\n";
+            $FAIL_FLAG++;
             push(@failed,$i);
+            my $n_failed = $#failed + 1;
             # last tar command failed?
-            printf STDOUT ("|%-".($n_files - $#failed)."s", "#" x ($n_files - $#failed)); # successful progress
-            printf STDOUT ("%-".($#failed)."s|", "!" x $#failed); # failed progress
+            if (!$SUCESS_FLAG)
+            {
+                printf STDOUT ("|%-".$n_files."s|", "!" x $n_failed); # failed progress
+            } else {
+                # TODO keep the order of file failures
+                printf STDOUT ("|%-".($n_files - $n_failed )."s", "#" x ($n_files - $n_failed)); # successful progress
+                printf STDOUT ("%-".($n_failed )."s|", "!" x $n_failed); # failed progress
+            }
         }
 
         if ( $REMOVE_FILES )
@@ -523,7 +544,7 @@ sub update_host
         }
     } 
     
-    print STDOUT ("\n$h These files failed: ".join ( " ",@failed )."\n") if ( $#failed > 0 );
+    print STDOUT ("\n$h These files failed: ".join ( " ",@failed )."\n") if ( $FAIL_FLAG );
 
     if ( $DOLINKS )
     {

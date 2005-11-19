@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.51 $
+# $Revision: 1.52 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -498,7 +498,7 @@ sub update_host
         print STDOUT "\r";          # return cursor to beginning of line
         printf STDOUT ("%20s",$h);  # host name padded to print progressbar correctly
         
-        system("scp $LOCAL_PATH/$i $h:$TMP/ ".$silent);
+        system("scp $LOCAL_PATH/$i ".$USERNAME."$h:$TMP/ ".$silent);
 
         my $_zcat = ( $i =~ /\.bz2$/i ) ? "bzcat" : "zcat"; # zcat or bzcat?
         my $_tar_arg = ( $i =~ /\.bz2$/i ) ? "j" : "z"; # gzip or bzip2?
@@ -510,6 +510,7 @@ sub update_host
         {
             printf STDOUT ("|%-".$n_files."s|", "#" x $j); # progress
         } else {
+            print "failed\n";
             push(@failed,$i);
             # last tar command failed?
             printf STDOUT ("|%-".($n_files - $#failed)."s", "#" x ($n_files - $#failed)); # successful progress

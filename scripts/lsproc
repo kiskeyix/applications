@@ -4,7 +4,7 @@
 # DESCRIPTION: a simple way to list running processes
 #
 
-PS='ps -eo pid,user,args,rss'
+PS='ps -eo pid,user,rss,args'
 
 if [ ! -z $1 ]; then
     $PS | grep PID | grep -v grep # put the header

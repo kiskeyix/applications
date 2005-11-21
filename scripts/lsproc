@@ -7,7 +7,7 @@
 PS='ps -eo pid,user,args,rss'
 
 if [ ! -z $1 ]; then
-    $PS | grep PID
+    $PS | grep PID | grep -v grep # put the header
     $PS | grep -v lsproc | grep -v PID | grep -v grep | grep  $1
 else
     $PS | grep -v lsproc | grep -v grep 

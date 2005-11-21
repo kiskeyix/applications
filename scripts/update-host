@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.54 $
+# $Revision: 1.55 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -84,7 +84,7 @@ updates only bashrc and vimrc files to all hosts found in ~/.hosts
 
 my $PVERSION=0;
 my $HELP=0;
-my $MASTER_HOST = "http://lems1.kiskeyix.org";
+my $MASTER_HOST = "http://lems.kiskeyix.org";
 my $LOCAL_PATH  = "$ENV{'HOME'}/Shared/software/settings";
 my $REMOTE_HOSTS_FILE = "$ENV{'HOME'}/.remote-hosts";
 # path to temporary directory

@@ -3,8 +3,12 @@
 # 
 # DESCRIPTION: a simple way to list running processes
 #
+
+PS='ps -eo pid,user,args,rss'
+
 if [ ! -z $1 ]; then
-    ps ax | grep -v lsproc | grep -v grep | grep  $1
+    $PS | grep PID
+    $PS | grep -v lsproc | grep -v PID | grep -v grep | grep  $1
 else
-    ps ax | grep -v lsproc | grep -v grep 
+    $PS | grep -v lsproc | grep -v grep 
 fi

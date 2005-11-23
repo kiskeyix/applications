@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.55 $
+# $Revision: 1.56 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -40,9 +40,10 @@ B<update-host>
 [--print-files]
 [-r,--remove]
 [-u,--username USER]
+[-?,--usage]
 [-V,--verbose]
 [-v,--version]
-[HOSTNAME]
+[HOSTNAME1 [HOSTNAME2 ...]]
 
 =head1 DESCRIPTION 
 
@@ -129,6 +130,7 @@ my @_OBSOLETE = (
 my %hosts; # global multi-dimensional hash to store hosts' information
 my $VERBOSE=0;
 my $DEBUG=0;
+my $USAGE=0;
 my $PRINT_FILES=0;
 my $REMOVE_FILES=0;
 my $DOLINKS=0;
@@ -211,6 +213,10 @@ Remove all temporary files after updating
 
 Use USER as the name to use when connecting via ssh to HOST
 
+=item -?,--usage
+
+Prints usage information
+
 =item -V,--verbose
 
 be verbose
@@ -227,6 +233,7 @@ GetOptions(
     # flags
     'v|version'         =>  \$PVERSION,
     'h|help'            =>  \$HELP,
+    '?|usage'           =>  \$USAGE,
     'D|debug'           =>  \$DEBUG,
     'r|remove'          =>  \$REMOVE_FILES,
     'V|verbose'         =>  \$VERBOSE,
@@ -249,6 +256,12 @@ if ( $HELP ) {
     my $parser = Pod::Text->new (sentence => 0, width => 78);
     $parser->parse_from_file(File::Spec->catfile("$0"),
 			   \*STDOUT);
+    exit 0;
+}
+
+if ( $USAGE ) { 
+    use Pod::Usage;
+    pod2usage(1);
     exit 0;
 }
 
@@ -371,23 +384,27 @@ if ( $MASTER )
     exit(0);
 }
 
-# update a single host and exit
+# update a single host or set of hosts passed from the command line
+# and exit
 if ( $HOST )
 {
-    debug("Doing single host $HOST");
-    print STDERR ("WARNING! This host is in the excluded list\n") 
-        if ( grep(/$EXCLUDE/,$HOST) );
-    if ( !$DEBUG )
+    foreach my $host (@ARGV)
     {
-        print update_host($HOST); # prints error if any
-    } else {
-        if ( is_alive($HOST) )
+        debug("Doing host $host");
+        print STDERR ("WARNING! This host is in the excluded list\n") 
+        if ( grep(/$EXCLUDE/,$host) );
+        if ( !$DEBUG )
         {
-            debug("$HOST, it's alive!");
+            print update_host($host); # prints error if any
         } else {
-            debug("$HOST, is kaboom!");
+            if ( is_alive($host) )
+            {
+                debug("$host, it's alive!");
+            } else {
+                debug("$host, is kaboom!");
+            }
+            debug("*** SKIPPED $host");
         }
-        debug("*** SKIPPED $HOST");
     }
     exit(0);
 }

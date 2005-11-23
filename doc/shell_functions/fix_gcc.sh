@@ -1,13 +1,13 @@
 #!/bin/sh
-# $Revision: 1.7 $
-# $Date: 2005-10-28 06:38:14 $
+# $Revision: 1.8 $
+# $Date: 2005-11-23 06:29:16 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: fixes gcc symlinks when updating to a new version under debian
 # USAGE: ./fix_gcc.sh
 #
 
-PRIORITY=53 # 0 - 100. higher is better
+PRIORITY=54 # 0 - 100. higher is better
 
 GCC="/usr/bin/gcc-4.0"
 GPP="/usr/bin/g++-4.0"

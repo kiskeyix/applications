@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.56 $
+# $Revision: 1.57 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -388,6 +388,8 @@ if ( $MASTER )
 # and exit
 if ( $HOST )
 {
+    print update_host($HOST); # prints error if any
+    # do all other hosts if any
     foreach my $host (@ARGV)
     {
         debug("Doing host $host");

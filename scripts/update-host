@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.57 $
+# $Revision: 1.58 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -40,7 +40,7 @@ B<update-host>
 [--print-files]
 [-r,--remove]
 [-u,--username USER]
-[-?,--usage]
+[-U,--usage]
 [-V,--verbose]
 [-v,--version]
 [HOSTNAME1 [HOSTNAME2 ...]]
@@ -213,7 +213,7 @@ Remove all temporary files after updating
 
 Use USER as the name to use when connecting via ssh to HOST
 
-=item -?,--usage
+=item -U,--usage
 
 Prints usage information
 
@@ -233,7 +233,7 @@ GetOptions(
     # flags
     'v|version'         =>  \$PVERSION,
     'h|help'            =>  \$HELP,
-    '?|usage'           =>  \$USAGE,
+    'U|usage'           =>  \$USAGE,
     'D|debug'           =>  \$DEBUG,
     'r|remove'          =>  \$REMOVE_FILES,
     'V|verbose'         =>  \$VERBOSE,

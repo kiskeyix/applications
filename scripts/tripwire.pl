@@ -1,10 +1,10 @@
 #!/usr/bin/perl -w
-# $Revision: 1.3 $
-# $Date: 2005-08-22 18:02:29 $
+# $Revision: 1.4 $
+# $Date: 2005-12-03 04:44:48 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
-# DESCRIPTION: A simple script to run tripwire interactively, and email the tripwire file and md5sum to a given email when done
-# USAGE: $0
+# DESCRIPTION: A simple script to run tripwire interactively, and email the tripwire file and hash sum to a given email when done
+# USAGE: tripwire.pl
 # LICENSE: GPL
 
 use strict;
@@ -23,24 +23,18 @@ use File::Basename; # basename() && dirname()
 use FileHandle;     # for progressbar
 use Sys::Hostname;  # hostname()
 
-#eval "use My::Module";
-#if ($@) 
-#{
-#    print STDERR "\nERROR: Could not load the Image::Magick module.\n" .
-#    "       To install this module use:\n".
-#    "       Use: perl -e shell -MCPAN to install it.\n".
-#    "       On Debian just: apt-get install perlmagic \n\n".
-#    "       FALLING BACK to 'convert'\n\n";
-#    print STDERR "$@\n";
-#    exit 1;
-#}
-
 # Args:
 my $PVERSION=0;
 my $HELP=0;
 my $DEBUG=0;
 my $SKIP_TRIPWIRE=0; # should we skip running tripwire and just email the db
 my $_EMAIL=undef;
+my $TRIPWIRE = "tripwire --check -I"; # interactive check
+my $TRIPWIREDB = "/var/lib/tripwire/$HOSTNAME.twd";
+my $HASH = "sha1sum";
+my $SUBJECT = "$HASH: tripwire $HOSTNAME";
+my $MUA = "mutt";
+
 # get options
 GetOptions(
     # flags
@@ -50,8 +44,11 @@ GetOptions(
     's|skip'            =>  \$SKIP_TRIPWIRE,
     # strings
     'e|email=s'         =>  \$_EMAIL,
-    # numbers
-    #'a|another-option=i'      =>  \$NEW_ANOTHER_OPTION,
+    'H|hash=s'          =>  \$HASH,
+    't|tripwire=s'      =>  \$TRIPWIRE,
+    'd|database=s'      =>  \$TRIPWIREDB,
+    'S|subject=s'       =>  \$SUBJECT,
+    'M|mua=s'          =>  \$MUA,
 );
 
 if ( $HELP ) { 
@@ -78,11 +75,6 @@ my $HOSTNAME = hostname();
 
 chomp($UID);
 
-my $TRIPWIRE = "tripwire --check -I"; # interactive check
-my $TRIPWIREDB = "/var/lib/tripwire/$HOSTNAME.twd";
-my $HASH = "md5sum";
-my $SUBJECT = "$HASH: tripwire $HOSTNAME";
-my $MUA = "mutt";
 my $EMAIL = undef;
 if ( defined($_EMAIL) )
 {
@@ -225,7 +217,7 @@ __END__
 
 =head1 NAME
 
-tripwire.pl - tripwire script for Perl
+tripwire.pl - tripwire script to email reports and twd to a remote address
 
 =head1 SYNOPSIS
 
@@ -233,11 +225,16 @@ B<tripwire.pl>  [-v,--version]
                 [-D,--debug] 
                 [-h,--help]
                 [-s,--skip]
-                [-e,--email]
+                [-e,--email EMAIL]
+                [-H,--hash HASH]
+                [-t,--tripwire TRIPWIRE_REPORT]
+                [-d,--database PATH]
+                [-S,--subject SUBJECT]
+                [-M,--mua MAIL]
 
 =head1 DESCRIPTION 
 
-    This script runs tripwire interactively. Then emails the md5sum of the tripwire database along with a copy of the database to an external email address.
+    This script runs tripwire interactively. Then emails the md5sum or sha1sum (configurable) of the tripwire database along with a copy of the database to an external email address.
 
 =head1 OPTIONS
 
@@ -266,6 +263,26 @@ E-Mail address to send the files to. If not passed from the command line, it wil
 The format of .signaturerc is the same as the one of my bashrc.tar.bz2 package. Read ~/.bashrc and ~/.bash_profile for more.
 
 EMAIL=lemsx1@gmail.com
+
+=item -H,--hash HASH
+
+Hash application to use. i.e.: md5sum, sha1sum [default]
+
+=item -t,--tripwire TRIPWIRE_REPORT
+
+Tripwire command to run to output report. Defaults to: 
+
+=item -d,--database PATH
+
+Full path to tripwire database
+
+=item -S,--subject SUBJECT
+
+Subject of resulting email
+
+=item -M,--mua MAIL
+
+Mail user agent to use. Defaults to "mutt"
 
 =back
 

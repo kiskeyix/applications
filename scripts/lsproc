@@ -2,6 +2,8 @@
 # Luis Mondesi < lemsx1@gmail.com >
 # 
 # DESCRIPTION: a simple way to list running processes
+# USAGE: lsproc [process_name]
+# LICENSE: GPL
 #
 
 PS='ps -eo pid,user,rss,args'

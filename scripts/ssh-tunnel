@@ -1,9 +1,10 @@
 #!/bin/sh
-# $Id: ssh-tunnel,v 1.2 2005-04-20 19:16:22 luigi Exp $
+# $Id: ssh-tunnel,v 1.3 2005-12-03 04:32:37 luigi Exp $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: creates a tunnel between 2 servers through ssh
 # USAGE: ssh-tunnel.sh hostname.domain 3128 # opens a tunnel to a proxy server running (squid) on port 3128
+# LICENSE: GPL
 
 USAGE="USAGE: $0 [USER@]SERVER [PORT]"
 

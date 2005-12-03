@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.4 $
-# $Date: 2005-12-03 04:44:48 $
+# $Revision: 1.5 $
+# $Date: 2005-12-03 04:50:57 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to run tripwire interactively, and email the tripwire file and hash sum to a given email when done
@@ -23,10 +23,13 @@ use File::Basename; # basename() && dirname()
 use FileHandle;     # for progressbar
 use Sys::Hostname;  # hostname()
 
+my $HOSTNAME = hostname();
+
 # Args:
 my $PVERSION=0;
 my $HELP=0;
 my $DEBUG=0;
+my $USAGE=0;
 my $SKIP_TRIPWIRE=0; # should we skip running tripwire and just email the db
 my $_EMAIL=undef;
 my $TRIPWIRE = "tripwire --check -I"; # interactive check
@@ -41,6 +44,7 @@ GetOptions(
     'v|version'         =>  \$PVERSION,
     'h|help'            =>  \$HELP,
     'D|debug'           =>  \$DEBUG,
+    'U|usage'           =>  \$USAGE,
     's|skip'            =>  \$SKIP_TRIPWIRE,
     # strings
     'e|email=s'         =>  \$_EMAIL,
@@ -58,6 +62,12 @@ if ( $HELP ) {
     exit 0;
 }
 
+if ( $USAGE ) { 
+    use Pod::Usage;
+    pod2usage(1);
+    exit 0; # never reaches here
+}
+
 if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
 # sanity checks
 my $UID = $<;
@@ -70,8 +80,6 @@ if ( -r "$ENV{'HOME'}/.signaturerc" )
     my @files = ("$ENV{'HOME'}/.signaturerc"); 
     $config = parse_ini(\@files);
 }
-
-my $HOSTNAME = hostname();
 
 chomp($UID);
 
@@ -102,29 +110,20 @@ system($TRIPWIRE) unless ( $SKIP_TRIPWIRE ); # TODO is command in our path and w
 #    print STDERR ("$TRIPWIRE failed! No emails were sent\n");
 #}
 
-=pod
-
-=item write_ini()
-
-@desc a simple function to write a hash of hashes to a text file in DOS INI format:
-
-$_->{"foo"}{"bar"} = $value;
-
-becomes
-
-[foo]
-
-bar = $value
-
-@param $file file name to write 
-
-@param $hashref hash of hashes containing what to write
-
-@param $truncate whether we want to truncate existing files or not
-
-@return
-
-=cut 
+#write_ini()
+#@desc a simple function to write a hash of hashes to a text file in DOS INI format:
+#
+#$_->{"foo"}{"bar"} = $value;
+#
+#becomes
+#
+#[foo]
+#bar = $value
+#
+#@param $file file name to write 
+#@param $hashref hash of hashes containing what to write
+#@param $truncate whether we want to truncate existing files or not
+#@return
 
 sub write_ini
 {
@@ -144,23 +143,14 @@ sub write_ini
     close(INI);
 } # end write_config
 
-=pod
-
-=item parse_ini()
-
-@desc parses an INI file in the form:
-
-[SECTION]
-
-VAR = VALUE
-
-FOO = BAR
-
-@param $files arrayref of config files to parse
-
-@return hashref of hash of hashes in the form $_->{$SECTION}{$VAR} = $VALUE
-
-=cut
+#parse_ini()
+#@desc parses an INI file in the form:
+#
+#[SECTION]
+#VAR = VALUE
+#FOO = BAR
+#@param $files arrayref of config files to parse
+#@return hashref of hash of hashes in the form $_->{$SECTION}{$VAR} = $VALUE
 
 sub parse_ini {
     my $files = shift;
@@ -223,6 +213,7 @@ tripwire.pl - tripwire script to email reports and twd to a remote address
 
 B<tripwire.pl>  [-v,--version]
                 [-D,--debug] 
+                [-U,--usage]
                 [-h,--help]
                 [-s,--skip]
                 [-e,--email EMAIL]
@@ -247,6 +238,10 @@ prints version and exits
 =item -D,--debug
 
 enables debug mode
+
+=item -U,--usage
+
+prints usage information and exits
 
 =item -h,--help
 

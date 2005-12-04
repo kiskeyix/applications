@@ -1,12 +1,13 @@
 #!/bin/sh
-# $Revision: 1.5 $
+# $Revision: 1.6 $
+# $Date: 2005-12-04 20:48:29 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Aug-19
 #
 # DESCRIPTION: a simple script to write VCD .cue files
 # USAGE: run from current directory. pass .cue file
 #       write_vcd.sh file.cue
 # CHANGELOG:
+# LICENSE: GPL
 #
 
 # device block:

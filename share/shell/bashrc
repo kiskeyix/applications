@@ -191,9 +191,16 @@ alias make="make -j$CONCURRENCY_LEVEL"
 
 # we setup MAKEFLAGS for debian to be able to use
 # multiple jobs in make (-j8) and distcc+ccache
-if [[ ! -z "$MAKEFLAGS" ]]; then
-    alias debuild="debuild -e MAKEFLAGS"
-fi
+# 2005-12-05 01:15 EST - it happens to create problems.
+# if [[ ! -z "$MAKEFLAGS" ]]; then
+#     alias debuild="debuild -e MAKEFLAGS"
+# fi
+
+# TODO if apt-get not install, then use lsb_release
+# to know what distro we are running and set alias
+# accordingly using yast2, yum or even rpm and dpkg
+alias swinstall="apt-get install "
+alias swremove="apt-get remove "
 
 alias btdownloadheadless='btdownloadheadless --max_upload_rate 4'
 

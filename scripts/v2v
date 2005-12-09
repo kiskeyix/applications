@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.113 $
+# $Revision: 1.114 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -29,10 +29,11 @@
 #   * transcode doesn't work with kernel 2.6.0 (not yet)
 
 use strict;
+$|++;
 use POSIX; # getcwd() for `pwd` and others
-use Env qw(HOME);
+use Env qw/ HOME /;
 use FileHandle;
-use File::Spec::Functions;  # catfile()
+use File::Spec::Functions qw/ catfile splitdir /;
 use File::Temp qw/ tempfile  /;     # Perl 5.6.1: 
                                     # used to get secured temp file
 use File::Basename; # basename();
@@ -53,6 +54,7 @@ my $SRTSUBRIP=0;
 my $OKCLUSTER=0;
 my $TEST = 0;
 my $DVD9TO5 = 0;
+my $VOLIDMAXLENGTH=32; # max num of char for DVD names
 my $DVD5SIZE = 4500000000; # bytes
 my $DVDBACKUP = 0;
 my $MPLAYER = 0;
@@ -212,15 +214,6 @@ my $MULTIPLEXER="tcmplex"; # By default use this multiplexer
 my $MULTIPLEXARGS=""; # extra arguments for whichever multiplexer you choose, setable from the command line --multiplex-args=""
 # end defaults #
 
-# TODO we create simple DVDs here, the user might want to pass a more
-# complicated .XML file fromt he command line... will provide a switch
-# for that later. For now, we generate our own:
-# XXXFILEXXX is in the form(s):
-## LH string will be replaced (s///) with RH string
-# XXXFILEXXX := <vob file="video.mpg" />
-# XXXFILEXXX := <vob file="video1.mpg" />\n<vob file="video2.mpg" />...
-my $DVDAUTHOR = "<dvdauthor dest='XXXDIRXXX'>\n<vmgm />\n    <titleset>\n        <titles>\n            <pgc>\nXXXFILEXXX\n            </pgc>\n        </titles>\n    </titleset>\n</dvdauthor>\n"; # xml file
-
 # global for do_file_ary
 my @ary_files = ();
 
@@ -233,6 +226,7 @@ my $RIP=""; # ripping method
 my $usage="
     # flags
     '-h|--help'                     Help
+    '-U|--usage'                    Usage
     '-v|--version'                  Print Version and exit
     '--srtsubrip'                   Subtitle rip (?)
     '-tv'                           Record TV
@@ -240,7 +234,7 @@ my $usage="
     '-i|--info'                     Print Informational Messages
     '-c|--with-cluster'             Run in Cluster mode
     '-t|--test'                     Do a minor test with movie
-    '--dvd9-to-dvd5'                Convert from DVD-9 to DVD-5
+    '--dvd9-to-dvd5'                Convert a DVD (directory or device) from DVD-9 to DVD-5
     '--dvdbackup'                   Backup a DVD using dvdbackup (interactive) and exit [DEPRECATED: use --rip=dvdbackup]
     '--mplayer'                     Backup a DVD using mplayer (non-interactive) and exit [DEPRECATED: use --rip=mplayer]
     '--avi-to-vcd'                  Create VCD Image from AVI (deprecated)
@@ -262,7 +256,7 @@ my $usage="
     '-L|--logo=s'                   Logo image file
     '-l|--lang|--language=s'        Use this language [fr,en,es,...]
     '-S|--SUB_TITLE_opts=s'         Subtitle Options
-    '-r|--rip=s'                    Rip a DVD using tccat,mplayer,dvdbackup
+    '-R|--rip=s'                    Rip a DVD using tccat,mplayer,dvdbackup
     '-m|--multiplex=s'              Use this multiplexer [tcmplex,mplex]
     '--multiplex-args=s'            Pass these arguments to the chosen multiplexer. A nice place to put \"-D 0\" and other things.
     '-M|--make-dvd=s'               Use this name to create a DVD iso
@@ -283,7 +277,9 @@ my $usage="
     \n # to convert to DVD5
     \n mkdir DVD5 && cd DVD5
     \n v2v --dvd9-to-dvd5 /scratch_disk/DVD # or, if --dvdbackup:
-    \n # v2v --dvd9-to-dvd5 /scratch_disk/DVD/ --titleset=\"DVD_TITLE_HERE\"
+    \n # v2v --dvd9-to-dvd5 /scratch_disk/DVD/ --titleset=1
+    \n # to rip with tccat and use NAMED PIPES (no memory usage or disc space!)
+    \n v2v --dvd9-to-dvd5 --titleset=1 /dev/dvd
     \n # to make a .avi
     \n mkdir /scratch_disk/AVI && cd /scratch_disk/AVI
     \n v2v /scratch_disk/DVD 680 # replace 680 with desired size
@@ -374,6 +370,14 @@ sub format_date
         ($year+=1900),$mon,$mday,$hour,$min,$sec);
     return $ADATE;
 } # end format date
+
+sub hour_to_sec
+{ 
+    my $time = shift;
+    my ($h, $min, $sec) = (split /:/, $time);
+    $sec += ($h*3600) + ($min*60);
+    return $sec;
+}
 
 sub sec_to_hour 
 {
@@ -1686,7 +1690,8 @@ sub get_audio_channel
 
 sub readuserconf
 {
-    if ( -r $userconfigfile ) {
+    if ( -r $userconfigfile )
+    {
         open (USERCONF,"<$userconfigfile") || open (USERCONF,"<".lc($userconfigfile));
     } else {
         # be backward compatible...
@@ -3656,7 +3661,7 @@ sub ripdvd
     _info("$v2d\t Video files are in:\t\t   | $VOBPATH\n");
     _info(" You may now run v2v with yours arguments to encode the vob file(s)\n\n");
     exit(0);
-} # END ripidvd
+} # END ripdvd
 
 sub check_sync
 {
@@ -3673,29 +3678,42 @@ sub check_sync
     return $n_ms;
 }
 
-sub video_requant
+sub video_requant_factor
 {
     # @desc a simple function to requantize a given video file. we need the audio file
     # also to calculate a propper requantization factor
     # @param $video video stream file (m2v format)
     # @param $audio audio stream format (ac3 format)
-    # @return requantization factor. $video will be modified
+    # @return requantization factor
+    my $video_size = shift;
+    my $audio_size = shift;
+    
+    my $s_size = 10000000; # we add 10mb for e/a title we are ripping. for now is just one main title
+    # 1.05 * ( video_size / (4500000000 - (audio_size + 10)) ) for a 4.4GB DVD with 5% reserve
+    my $factor = 1.05 * ( $video_size / ($DVD5SIZE - ($audio_size + $s_size)) );
+    return $factor;
+}
+
+sub video_requant
+{
+    # @desc a simple function to requantize a given video file. we need the audio file
+    # also to calculate a propper requantization factor. $video will be modified
+    # @param $video video stream file (m2v format)
+    # @param $audio audio stream format (ac3 format)
+    # @return
     my $video = shift;
     my $audio = shift;
     _error("Cannot read file $video for requantization") if ( ! -r $video );
     _error("Cannot read file $audio for requantization") if ( ! -r $audio );
-    # $tcrequant = (1.05 * video_size) / (4500000000 - (audio_size + 10)) for a 4.4GB DVD
+
     my $video_size = (stat($video))[7]; # size in bytes, just like UNIX stat -c %s $file
     my $audio_size = (stat($audio))[7];
-    my $s_size = 10000000; # we add 10mb for e/a title we are ripping. for now is just one main title
-    my $tcrequant = (1.05 * $video_size) / ($DVD5SIZE - ($audio_size - $s_size));
 
-    my $sys = "nice -$nice tcrequant -i $video -d 0 -o shrunk.$video -f $tcrequant";
+    my $factor = video_requant_factor($video_size,$audio_size);
+    my $sys = "nice -n $nice tcrequant -i $video -d 0 -o shrunk.$video -f $factor";
     _info( $sys );
-    system( $sys );
-    rename( "shrunk.$video",$video );
-
-    return $tcrequant;
+    my $status = system( $sys );
+    rename( "shrunk.$video",$video ) if ( $status == 0 );
 } # end video_requant
 
 sub create_fifo
@@ -3705,6 +3723,24 @@ sub create_fifo
 
     system("mkfifo $fifo > /dev/null 2>&1");
     _error("Failed to create named pipe $fifo") if ( ! -e $fifo );
+}
+
+# @desc implements `mkdir -p`
+sub v2v_mkdir
+{
+    my $path = shift;
+    my $root = ( $path =~ m,^([/|\\|:]), ) ? $1 : ""; # relative or full path?
+    my @dirs = splitdir($path);
+    my $last = "";
+    my $flag=1;
+    foreach (@dirs)
+    {
+        next if ( $_ =~ m/^\s*$/ );
+        $last = ( $flag > 1 ) ? catdir($last,$_) : "$root"."$_" ;
+        mkdir ($last) if ( ! -d $last);
+        $flag++;
+    }
+    return $flag; # number of directories created
 }
 
 sub dvd9to5
@@ -3718,13 +3754,26 @@ sub dvd9to5
 
     _error("No DVD device or Directory given as argument for video extraction.") 
         if ( ! defined($dir) or ! -e $dir );
-    $title = ($title =~ /\d+/) ? $title : 1;
 
-    my $DISC_TITLE = "V2V"; # default title
+    my $VERBOSITY = ( $DEBUG == 0 ) ? 0 : 2;
+
+    $title = ($title =~ /^\s*[[:digit:],]+$/) ? $title : 1;
+
+    # pick a title for our DVD
+    my $dvdtitle = which("dvdtitle");
+    my $DISC_TITLE = ( -x $dvdtitle ) ? qx/ $dvdtitle / : "V2V"; # default title
+    # sanitize DISC_TITLE name
+    chomp($DISC_TITLE);
+    $DISC_TITLE =~ s,[\s\-]+,_,g; # replace whitespaces and dashes with _
+    $DISC_TITLE =~ y/a-z/A-Z/; # uppercase
+    $DISC_TITLE = substr($DISC_TITLE ,0,$VOLIDMAXLENGTH); # limit no. of characters
+
     my $TCMPLEX = which("tcmplex");
     my $TCMPLEXARGS = "";
     my $MPLEX = which("mplex");
-    my $MPLEXARGS = "";
+    # -S 4400 # split at 4.4GB. 0 means 'do not split"
+    # -f 8 # produce dvdauthor compliant/navigational MPEG-2
+    my $MPLEXARGS = " -f 8 -S 0 ";
 
     my $BUFFER = which("buffer");
     my $BUFFER_ARGS = " -s 64k -m 16m ";
@@ -3735,186 +3784,236 @@ sub dvd9to5
     my $audio_opts = " -a ac3+en "; # audio options for dvdauthor
 
     # files
-    my $mpg_file = "video.fifo.mpeg"; # final output
-    my $audio = "audio.fifo.mpa";
-    my $audio_vob_fifo = "audio.fifo.vob";
-    my $video = "video.fifo.m2v";
-    my $video_vob_fifo = "video.fifo.vob";
-    my $multiplex_config = "multiplexer.cfg";
-    my $subtitle = "subtitle.fifo.sub";
-    my $subtitle_vob_fifo = "subtitle.fifo.vob";
+    my $template_mpg_file = "video.fifo.\%s.mpeg"; # final output
+    my $template_audio = "audio.fifo.\%s.mpa"; # to mplex
+    my $template_audio_vob_fifo = "audio.fifo.\%s.vob"; # to be buffered for dvdauthor
+    my $template_video = "video.fifo.\%s.m2v"; # to mplex
+    my $template_video_vob_fifo = "video.fifo.\%s.vob"; # to be buffered for dvdauthor
+    my $template_subtitle = "subtitle.fifo.\%s.sub";
+    my $template_subtitle_vob_fifo = "subtitle.fifo.\%s.vob";
      
+    my $multiplex_config = "multiplexer.cfg";
+    my $dvdauthor_xml = "dvdauthor.xml";
+
     # flag
     my $UNLINK_CONFIG=0; # if we created this file, unlink it
     
     # extra arguments to pass to tccat 
     # different for dirs and special files (blocks)
-    my $TCCAT_EXTRA_ARGS = ( -b $dir ) ? " -T$title,-1 -L ":"";  
-  
-    # clean up old FIFOs
-    unlink($mpg_file) if ( -e $mpg_file );
-    unlink($video_vob_fifo) if ( -e $video_vob_fifo );
-    unlink($video) if ( -e $video );
-    unlink($audio_vob_fifo) if ( -e $audio_vob_fifo );
-    unlink($audio) if ( -e $audio );
-    unlink($subtitle_vob_fifo) if ( -e $subtitle_vob_fifo );
-    unlink($subtitle) if ( -e $subtitle );
+    #
+    # -L loop through all chapters in title -T
+    # -P get all data for title -T
+    my $TCCAT_EXTRA_ARGS = ( -b $dir ) ? " -T $title -L ":"";  
+ 
+    v2v_mkdir($DISC_TITLE);
+    
+    foreach(split(/\s*,\s*/,$title))
+    {
+        next if ( $_ !~ /^\d+$/); # sanity check
+        open(DVDAUTHOR,">dvdauthor.xml");
+        print DVDAUTHOR ("<dvdauthor dest=\"$DISC_TITLE\">
+        <vmgm />
+        <titleset>
+            <titles>
+                <pgc>");
+        
+        my $mpg_file =  sprintf($template_mpg_file ,$_);
 
-# FIXME if we requant carefully, we won't need this...
-#    # respect user configurations for this directory
-#    if ( ! -f $multiplex_config )
-#    {
-#        $UNLINK_CONFIG=1;
-#        # profile:
-#        open(PROFILE,">$multiplex_config") or die("Could not open file. $!");
-#        print PROFILE "maxFileSize = 4400"; # 4.4GB
-#        close(PROFILE);
-#    }
+        # we only support one audio track
+        # TODO add support for multiple audio tracks. hint: $title_audio_$audio_track
+        my $audio =  sprintf($template_audio ,$_);
+        my $audio_vob_fifo = sprintf($template_audio_vob_fifo ,$_);
 
-    # audio:
-    create_fifo($audio_vob_fifo);
-    create_fifo($audio);
-    push(@fifo_files,$audio_vob_fifo);
+        my $video = sprintf($template_video ,$_);
+        my $video_vob_fifo = sprintf($template_video_vob_fifo ,$_);
 
-    #if ( ! -f $audio )
-    #{
-        # TODO add a switch to turn this on (off by default)
-        # For now, it's just on :-)
-        # this will be useful when video is out of sync
+        # we only support one subtitle track
+        # TODO add support for multiple subtitle track. hint: $title_subtitle_$sub_track
+        my $subtitle = sprintf($template_subtitle ,$_);
+        my $subtitle_vob_fifo = sprintf($template_subtitle_vob_fifo ,$_);
+
+        # clean up old FIFOs
+        unlink($mpg_file) if ( -e $mpg_file );
+        unlink($video_vob_fifo) if ( -e $video_vob_fifo );
+        unlink($video) if ( -e $video );
+        unlink($audio_vob_fifo) if ( -e $audio_vob_fifo );
+        unlink($audio) if ( -e $audio );
+        unlink($subtitle_vob_fifo) if ( -e $subtitle_vob_fifo );
+        unlink($subtitle) if ( -e $subtitle );
+
+        create_fifo($audio_vob_fifo);
+        create_fifo($audio);
+
+        create_fifo($video_vob_fifo);
+        create_fifo($video);
+
+#FIXME    create_fifo($subtitle);
+#FIXME    create_fifo($subtitle_vob_fifo);
+
+        create_fifo($mpg_file);
+
+        push(@fifo_files,$audio_vob_fifo);
+        push(@fifo_files,$video_vob_fifo);
+#FIXME    push(@fifo_files,$subtitle_vob_fifo);
+
+        if ( -x $MPLEX )
+        {
+            # TODO test for sync problems and pass -0 NNms argument to mplex
+            my $sys = "nice -n $nice $MPLEX $MPLEXARGS $MULTIPLEXARGS -v $VERBOSITY -o $mpg_file $video $audio &";
+            _info($sys);
+            system($sys);
+        } else {
+            _error("mplex not found");
+            die("We need mplex for now... tcmplex support to come later \n");
+        }
+
+        my %DVD_INFO;
+        my @chapter; # dvdauthor chapter in format: 00:00:00.000
+
+        # TODO this will be useful when video is out of sync
         if ( -d $dir ) {
             foreach my $file (glob("$dir/*.[VvOoBb]")) # .vob too...
             {
-                system("tcprobe -H 50 -i $file > $file.txt");
+                open(DVD_INFO,"tcprobe -H 50 -i $file 2>&1 |");
+                my @lines = <DVD_INFO>;
+                close(DVD_INFO);
+                foreach(@lines)
+                {
+                    # (dvd_reader.c) [Chapter 01] 00:00:00.000 , block from 0 to 3133
+                    if (/\[Chapter (\d+)\]\s*([[:digit:]:\.]+)\s*,/)
+                    {
+                        $DVD_INFO{$title}{$1} = hour_to_sec($2);
+                        #$DVD_INFO{$title}{'length'} += int($DVD_INFO{$title}{$1});
+                        push(@chapter,$2) if ($2 ne '00:00:00.000');
+                    }
+                    if (m/title playback time: .* ([[:digit:]]+) sec/)
+                    {
+                        $DVD_INFO{$title}{'length'} = $1;
+                    }
+                }
+            }
+        } elsif ( -b $dir ) {
+            open(DVD_INFO,"tcprobe -H 50 -i $dir 2>&1 |");
+            my @lines = <DVD_INFO>;
+            close(DVD_INFO);
+            foreach(@lines)
+            {
+                # (dvd_reader.c) [Chapter 01] 00:00:00.000 , block from 0 to 3133
+                if (/\[Chapter (\d+)\]\s*([[:digit:]:\.]+)\s*,/)
+                {
+                    $DVD_INFO{$title}{$1} = hour_to_sec($2);
+                    #$DVD_INFO{$title}{'length'} += int($DVD_INFO{$title}{$1});
+                    push(@chapter,$2) if ($2 ne '00:00:00.000');
+                }
+                if (m/title playback time: .* ([[:digit:]]+) sec/)
+                {
+                    $DVD_INFO{$title}{'length'} = $1;
+                }
             }
         }
+        _info("Number of chapters: ".(@chapter+1));
+        # video extract
+        #my $audio_size = $DVD_INFO{$title}{'length'} * 128 * 125; # for channel 1 and 2
+        #my $video_size= $SECTOR * 2048 - $audio_size;
+        #my $factor = video_requant_factor($video_size,$audio_size);
+        #_info("[NOT USE YET] tcrequant factor $factor");
+        #FIXME | nice -n $nice tcrequant -f $factor
+        push(@_extract,"nice -n $nice $BUFFER $BUFFER_ARGS -i $video_vob_fifo | nice -n $nice tcextract -t vob -x mpeg2  > $video &");
+        # audio extract
         # TODO what if we don't want audio channel 0? use value from CONFIG file
-        push(@_extract,"nice -$nice $BUFFER $BUFFER_ARGS -i $audio_vob_fifo | nice -$nice tcextract -t vob -x ac3 -a 0 > $audio &");
-        #} else {
-        #_warn("Audio file $audio exists. Not extracting new sound.");
-        #} # end if not $audio
+        push(@_extract,"nice -n $nice $BUFFER $BUFFER_ARGS -i $audio_vob_fifo | nice -n $nice tcextract -t vob -x ac3 -a 0 > $audio &");
 
-    # video:
-    create_fifo($video_vob_fifo);
-    create_fifo($video);
-    push(@fifo_files,$video_vob_fifo);
-    #if ( ! -f $video )
-    #{
-        push(@_extract,"nice -$nice $BUFFER $BUFFER_ARGS -i $video_vob_fifo | nice -$nice tcextract -t vob -x mpeg2 > $video &");
-        #} else {
-        #_warn("Video file $video exists. Not extracting new video.");
-        #} # end if not $video
+        # subtitles extract
+        #push(@_extract,"nice -n $nice $BUFFER $BUFFER_ARGS -i $subtitle_vob_fifo | nice -n $nice tcextract -a 0 -x ps1 -t vob > $subtitle &");
 
-    # FIXME subtitles need something more... 
-    # subtitles:
-#    create_fifo($subtitle);
-#    create_fifo($subtitle_vob_fifo);
-#    push(@fifo_files,$subtitle_vob_fifo);
-   
-    #if ( ! -f $subtitle )
-    #{
-    #system("nice -$nice $BUFFER $BUFFER_ARGS -i $subtitle_vob_fifo | nice -$nice tcextract -a 0 -x ps1 -t vob > $subtitle &");
-        #} else {
-        #_warn("Subtitle file $subtitle exists. Not extracting new subtitle.");
-        #} # end if not $subtitle
-   
-    # multiplex audio, video 
-    #if ( -f $audio and -f $video )
-    #{
-#        video_requant($video,$audio); FIXME
+        # ready environment to do all extraction
+        foreach my $cmd (@_extract)
+        { 
+            _info($cmd);
+            system($cmd);
+            sleep(1);
+        }
 
-    #no warnings; # suppress warnings here
-        my $VERBOSITY = ( $DEBUG == 0 ) ? 0 : 2;
-        # join sound+video in file $mpg_file in current directory
-        # and add navigational information for dvdauthor
-        # although tcmplex is default, we give mplex a try
-#        if ( basename($MULTIPLEXER) eq "tcmplex" || ! -x $MPLEX )
-#        {
-#            if ( -x $TCMPLEX ) 
-#            {
-#                # we favor tcmplex over mplex. mplex chokes on some movies
-#                my $fps = get_fps($video); # can't pass fps to tcmplex
-#                if ( $fps !~ /^25\.0/ ) { $TCMPLEXARGS .= " -N " ;} # NTSC
-#                # -D 0 # dont correct sync
-#                # -m d # DVD mode
-#                my $sys = "$TCMPLEX $TCMPLEXARGS -d $VERBOSITY -o $mpg_file -i $video -p $audio -F $multiplex_config -m d $MULTIPLEXARGS";
-#                _info($sys);
-#                system($sys);
-#            } else {
-#                _warn("tcmplex not found");
-#            } # end if tcmplex
-#        } elsif ( basename($MULTIPLEXER) eq "mplex" || !-x $TCMPLEX ) {
-            if ( -x $MPLEX )
-            {
-                # -S 4400 # split at 4.4GB
-                # -f 8 # produce dvdauthor compliant/navigational MPEG-2
-                # TODO test for sync problems and pass -0 NNms argument to mplex
-                create_fifo($mpg_file);
-                my $sys = "nice -$nice $MPLEX $MPLEXARGS $MULTIPLEXARGS -v $VERBOSITY -S 0 -f 8 -o $mpg_file $video $audio &";
-                _info($sys);
-                system($sys);
-                sleep(2);
+        my $named_pipes = join(" ",@fifo_files);
+        my $_tc_sys = "nice -n $nice tccat -i $dir $TCCAT_EXTRA_ARGS | tee $named_pipes  > /dev/null &";
+        _info($_tc_sys);
+        system($_tc_sys);
 
-                # setup all tcextract FIFOs
-                foreach my $c (@_extract)
-                { 
-                    _info($c);
-                    system($c);
-                    sleep (2);
-                }
-                
-                my $named_pipes = join(" ",@fifo_files);
-                my $_tc_sys = "nice -$nice tccat -i $dir $TCCAT_EXTRA_ARGS -P | tee $named_pipes  > /dev/null &";
-                _info($_tc_sys);
-                system($_tc_sys);
-               
-                # Fake the chapters for now:
-                my @chapter = ("00:10:00.000","00:20:00.000","00:30:00.000","00:40:00.000","00:50:00.000","01:00:00.000","01:10:00.000","01:20:00.000","01:30:00.000","01:40:00.000","01:50:00.000","02:00:00.000");
-                my $chapters = "00:00:00.000";
-                for (my $l = 1; $l < (@chapter+0) - 1; ++$l)
-                { 
-                    $chapters .= "," . $chapter[$l];
-                }
+        my $chapters = "00:00:00.000";
+        for (my $l = 1; $l < (@chapter+0) - 1; ++$l)
+        { 
+            $chapters .= "," . $chapter[$l];
+        }
 
-                system("mkdir -p $DISC_TITLE/dvd/");
-                my $_dvdauthor_sys = "nice -$nice dvdauthor -t $audio_opts -c $chapters -o $DISC_TITLE/dvd/ $mpg_file";
-                _info($_dvdauthor_sys);
-                system($_dvdauthor_sys);
-                unlink($mpg_file,
-                    $audio,
-                    $audio_vob_fifo,
-                    $video,
-                    $video_vob_fifo,
-                    $subtitle,
-                    $subtitle_vob_fifo);
-            } else {
-                _error("mplex not found");
-            } # end if mplex
-#        } else {
-#            _warn("No multiplex application found in your PATH. Tried tcmplex [$TCMPLEX] and mplex [$MPLEX]");
-#        } # end if/elsif/else $multiplexer
-#    } else {
-#        if ( !-f "$audio") { _warn("Audio file $audio missing"); }
-#        if ( !-f "$video") { _warn("Video file $video missing"); }
-#    } # end if $video, $audio
+        print DVDAUTHOR ("<vob file=\"$mpg_file\" chapters=\"$chapters\" />");
+        print DVDAUTHOR ("
+                        <post>
+                            jump chapter 1;
+                        </post>
+                    </pgc>
+                </titles>
+            </titleset>
+            </dvdauthor>");
+        
+        close(DVDAUTHOR);
 
-    # deal with mux'ing subtitles: 
-    # if ( !-f "$subtitle") { _warn("Subtitle file $subtitle missing"); }
-    # nice -$nice subtitle2pgm -i $subtitle -o SUBPGM/$PROJNAME -X$TVRES -g 5 -t 1
-    # nice -$nice spumux spumux.xml < $video > $video.muxed.mpeg
+        my $_dvdauthor_sys = "nice -n $nice dvdauthor -x $dvdauthor_xml";
+        _info($_dvdauthor_sys);
+        system($_dvdauthor_sys);
 
+# FIXME
+        # deal with mux'ing subtitles: 
+        # if ( !-f "$subtitle") { _warn("Subtitle file $subtitle missing"); }
+        # nice -n $nice subtitle2pgm -i $subtitle -o SUBPGM/$PROJNAME -X$TVRES -g 5 -t 1
+        # nice -n $nice spumux spumux.xml < $video > $video.muxed.mpeg
+
+    } # end foreach $title
+    
+    my $_dvdauthor_sys_2 = "nice -n $nice dvdauthor -T -o $DISC_TITLE";
+    _info($_dvdauthor_sys_2);
+    system($_dvdauthor_sys_2);
+
+    # fifo cleanups
+    my $mpg_file =  glob(sprintf($template_mpg_file ,"*"));
+    my $audio =  glob(sprintf($template_audio ,"*"));
+    my $audio_vob_fifo = glob(sprintf($template_audio_vob_fifo ,"*"));
+    my $video = glob(sprintf($template_video ,"*"));
+    my $video_vob_fifo = glob(sprintf($template_video_vob_fifo ,"*"));
+    my $subtitle = glob(sprintf($template_subtitle ,"*"));
+    my $subtitle_vob_fifo = glob(sprintf($template_subtitle_vob_fifo ,"*"));
+    unlink($mpg_file,
+        $audio,
+        $audio_vob_fifo,
+        $video,
+        $video_vob_fifo,
+        $subtitle,
+        $subtitle_vob_fifo,
+        $dvdauthor_xml
+    );
+    # other cleanups
     if ( $UNLINK_CONFIG )
     {
         unlink($multiplex_config) or _warn("Could not remove file. $!");
     }
+
     say_end();
-    # ask to make DVD image
-#     my $rep = prompt("Do you want to make a DVD iso? [y/N] ");
-#     if ( $rep =~ m/^[yY]/ )
-#     {
-#         #DVD name is chosen for us. we could use basename($dir)...
-#         #make_dvd($dir,"V2DVD"); 
-#         print "Sorry, this doesn't work yet\n";
-#     }
+
+    # TODO make sure mkisofs is installed
+    # if ( -x $mkisofs )
+    my $rep_iso = prompt("Do you want to make a DVD iso? [y/N] ");
+    if ( $rep_iso =~ m/^y/i )
+    {
+        system("nice -n $nice mkisofs -dvd-video -udf -o $DISC_TITLE.iso -V $DISC_TITLE $DISC_TITLE");
+    }
+    # TODO make sure growisofs is installed
+    # if ( -x $growisofs )
+    my $rep_burn = prompt("Do you want to burn the DVD? [y/N] ");
+    if ( $rep_burn =~ m/^y/i and $rep_iso =~ m/^y/i )
+    {
+        system("growisofs -V $DISC_TITLE -dvd-compat -udf -Z /dev/dvd=$DISC_TITLE.iso")
+    } elsif ($rep_burn =~ m/^y/i) {
+        make_dvd($DISC_TITLE,$DISC_TITLE); 
+    }
 } # end dvd9to5()
 
 sub tovcd
@@ -4010,101 +4109,35 @@ sub tovcd
 
 sub make_dvd
 {
-    #@param 0 string := directory containing .VOB or .MP[E]{0,1}G (case insensitive)
-    #@param 1 string := name for DVD (tmp/NAME.iso and name of DVD). Defaults to "V2VDVD"
+    #@param 0 string := directory containing dvd tree (output of dvdauthor)
+    #@param 1 string := name for DVD. Defaults to "V2V"
     
     my $dir = shift;
     my $name = shift;
-
-    my $VOLIDMAXLENGTH=32; # max name for this DVD
+ 
     my $UNLINK_CONFIG=0; # will be useful later
 
-    $name = ($name ne "") ? $name : "V2DVD";
+    $name = ($name ne "") ? $name : "V2V";
     # cleanup $name
     ($name = $name) =~ s,[\s-]+,_,g; # replace whitespaces with _
     ($name = $name) =~ y/a-z/A-Z/; #uppercase $name
     $name = substr($name,0,$VOLIDMAXLENGTH); # limit no. of characters
-
-    my $dvdauthor = which("dvdauthor");
-    if ( !-x $dvdauthor )
-    {
-        # no need to continue
-        _warn("dvdauthor not found in PATH=". $ENV{'PATH'}."!");
-        exit(1);
-    } 
     
     # mk tmp directory
-    mkdir("tmp",oct(1777)) 
-        or die ("Could not create tmp directory. $!");
-    _info("$v2d DVD name : $name");
+    _info("DVD name : $name");
 
     # make DVD
-
-    my @files = do_file_ary("$dir");
-
-    my $files = ""; # strings for XML
-    my $mfiles = ""; # $dir+movie files. serialize
-
-    foreach my $file (@files) # maybe there is a simpler way to do this
-    {
-        $files .= " \t\t\t\t\t<vob file=\"$file\" />\n"; # pretty print
-        $mfiles .= " $file ";
-    }
-    
-    ($DVDAUTHOR = $DVDAUTHOR) =~ s/XXXFILEXXX/$files/g;
-
-    open(XML,">tmp/dvdauthor.xml") 
-        or die ("Could not create file tmp/dvdauthor.xml. $!");
-    $UNLINK_CONFIG=1; # will be useful when users pass their .xml files
-    print XML "$DVDAUTHOR"; 
-    close(XML);
-  
-    if ( -d "tmp/$name" )
-    {
-        _warn("Directory 'tmp/$name' exists.".
-        " Please remove this directory first to ensure ".
-        "that DVD will be playable. ".
-        "I assume that you know what you are doing");
-    }
-
     my $args = ( ! $DEBUG ) ? ">/dev/null 2>&1" :"";
-
-    my $sys = "$dvdauthor -o 'tmp/$name' -x 'tmp/dvdauthor.xml' $mfiles $args";
-    _debug($sys);
-    system("$sys") 
-        or die("Could not create DVD directory at tmp. $!\n");
-
-    # remove XML file
-    unlink("tmp/dvdauthor.xml") if ( $UNLINK_CONFIG );
-   
-    # TODO if we don't want an ISO just burn the Disc with growisofs:
-    # growisofs -V 'SHREK' -dvd-video -udf -dvd-compat -Z /dev/dvd $dir
     
     # make DVD Image
-    my $mkisofs = which("mkisofs");
-    if ( -x $mkisofs && -f "tmp/$name/VIDEO_TS/VIDEO_TS.IFO" )
+    if ( "$name/VIDEO_TS/VIDEO_TS.IFO" )
     {
-        _info("$v2d Image Path : $dir/tmp/$name.iso");
         # fix permissions. TODO use find() later to avoid system()
-        chmod(oct(0555),"tmp/$name"); # oct() changes to oct-based numbers
-        system("find 'tmp/$name' -type d -exec chmod 0555 {} \\; ");
-        system("find 'tmp/$name' -type f -exec chmod 0444 {} \\; ");
+        chmod(oct(0555),"$dir"); # oct() changes to oct-based numbers
+        system("find '$dir' -type d -exec chmod 0555 {} \\; ");
+        system("find '$dir' -type f -exec chmod 0444 {} \\; ");
         # make iso
-        my $sys="$mkisofs -dvd-video -udf -o '$name.iso' -V '$name' 'tmp/$name' $args";
-        _debug($sys);
-        system("$sys");
-        #or _warn("Failed to create $name.iso!. $!"); 
-    } else {
-        # we make the dvd, but warn about the image
-        _warn("mkisofs not found in PATH=".$ENV{'PATH'}."! The DVD directory will be created in tmp anyway. You will need to run 'mkisofs -dvd-video -udf -o '$name.iso' -V '$name' 'tmp/$name' ") if ( !-x $mkisofs );
-        _warn("$name/VIDEO_TS/VIDEO_TS.IFO file not found. Make sure $dvdauthor is creating the right DVD tree. Hint: run with '$0 --debug ...'") if ( ! -f "tmp/$name/VIDEO_TS/VIDEO_TS.IFO" );
-    }
-    
-    my $rep = prompt("Cleanup tmp directory? [y/N] ");
-    if ( $rep =~ /^[yY]/ )
-    {
-        system("find 'tmp' -type d -exec chmod 0775 {} \\; ");
-        system("rm -fr 'tmp'");
+        system("growisofs -V '$name' -dvd-video -udf -dvd-compat -Z /dev/dvd $dir");
     }
 } # end make_dvd()
 
@@ -4230,6 +4263,7 @@ if ( -r $userconfigfile )
 GetOptions(
     # flags
     'h|help'                    =>  \$HELP,
+    'U|usage'                   =>  \$HELP,
     'v|version'                 =>  \$VERSION,
     'runclust'                  =>  \$RUNCLUST,
     'srtsubrip'                 =>  \$SRTSUBRIP,
@@ -4260,7 +4294,7 @@ GetOptions(
     'L|logo=s'                  => \$LOGO, 
     'l|lang|language=s'         => \$LANGUAGE, 
     'S|SUB_TITLE_opts=s'        => \$EXTSUB,
-    'r|rip=s'                   => \$RIP,
+    'R|rip=s'                   => \$RIP,
     'm|multiplex=s'             => \$MULTIPLEXER,
     'multiplex-args=s'          => \$MULTIPLEXARGS,
     'M|make-dvd=s'              => \$DVD,
@@ -4291,14 +4325,14 @@ if ( $TEST )
     my $i=0; # counter
     my $dir = $ARGV[0];
 
-    my $TCCAT_EXTRA_ARGS = ( -b $dir ) ? " -T$TITLESET,-1 -L ":"";
+    my $TCCAT_EXTRA_ARGS = ( -b $dir ) ? " -T$TITLESET -L ":"";
 
     # let's rip 5 seconds of video and put it in test.vob
     system("tccat -i $dir $TCCAT_EXTRA_ARGS > test.vob &");
     while(1)
     {
-        sleep(1); # sleep one second
-        last if ( $i == 5 ); # end loop when 5 iterations are completed
+        sleep(1);
+        last if ( $i == 5 );
         $i++;
     }
     #my $pid = qx/ps -C tccat --no-headers -o pid/;
@@ -4319,7 +4353,7 @@ if ( $TEST )
     system("tcextract -i test_subtitle.fifo -t vob -x ps1 -a 0x20 > test.sub &");
 
     # rip it:
-    system("nice -$nice tccat -i test.vob $TCCAT_EXTRA_ARGS -P | tee test_video.fifo test_audio.fifo test_subtitle.fifo > /dev/null 2> /dev/null");
+    system("nice -$nice tccat -i test.vob $TCCAT_EXTRA_ARGS | tee test_video.fifo test_audio.fifo test_subtitle.fifo > /dev/null 2> /dev/null");
 
     # report findings:
     # requant video and report factor

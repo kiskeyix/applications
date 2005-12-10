@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.119 $
+# $Revision: 1.120 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -149,7 +149,7 @@ MULTIPLEXER=mplex;
 ";
 
 #################### GLOBAL VARIABLES ###################
-my $release="2.3.1 (C) 2002-2004 Dominique Caron";
+my $release="2.4 (C) 2002-2005 Luis Mondesi and Dominique Caron";
 my $v2d="[v2v]";
 my $keyframes = 250;
 my $audiosample_length = 1000;
@@ -210,7 +210,7 @@ my $QUALITY=2;
 my $NVREC=0; # By default NVREC is not here
 my $OGMTOOL=0; # By default ogmmerge is not here
 my $SUBRIP=0; # By default srtsubrip is not here
-my $MULTIPLEXER="tcmplex"; # By default use this multiplexer
+my $MULTIPLEXER="mplex"; # By default use this multiplexer
 my $MULTIPLEXARGS=""; # extra arguments for whichever multiplexer you choose, setable from the command line --multiplex-args=""
 # end defaults #
 
@@ -257,7 +257,7 @@ my $usage="
     '-l|--lang|--language=s'        Use this language [fr,en,es,...]
     '-S|--SUB_TITLE_opts=s'         Subtitle Options
     '-R|--rip=s'                    Rip a DVD using tccat,mplayer,dvdbackup
-    '-m|--multiplex=s'              Use this multiplexer [tcmplex,mplex]
+    '-m|--multiplex=s'              Use this multiplexer [mplex,tcmplex]
     '--multiplex-args=s'            Pass these arguments to the chosen multiplexer. A nice place to put \"-D 0\" and other things.
     '-M|--make-dvd=s'               Use this name to create a DVD iso
     # numbers
@@ -1761,7 +1761,7 @@ sub readuserconf
     $LANGUAGE="fr"  if ( $LANGUAGE eq "" );
     $STARTLOGO=2 if ( $STARTLOGO eq "" );
     $nice=10 if ( $nice eq "" );
-    $MULTIPLEXER="tcmplex" if ($MULTIPLEXER eq "");
+    $MULTIPLEXER="mplex" if ($MULTIPLEXER eq "");
 
     $DIVX="ffmpeg" if ( $DIVX eq "" );
     if ( $DIVX_OPT  eq "" )
@@ -3855,11 +3855,15 @@ sub dvd9to5
         push(@fifo_files,$audio_vob_fifo);
         push(@fifo_files,$video_vob_fifo);
 #FIXME    push(@fifo_files,$subtitle_vob_fifo);
-
+        
         if ( -x $MPLEX )
         {
             # TODO test for sync problems and pass -0 NNms argument to mplex
             my $sys = "nice -n $nice $MPLEX $MPLEXARGS $MULTIPLEXARGS -v $VERBOSITY -o $mpg_file $video $audio &";
+            _debug($sys);
+            system($sys);
+        } elsif ( -x $TCMPLEX ) {
+            my $sys = "nice -n $TCMPLEX $TCMPLEXARGS -d $VERBOSITY -o $mpg_file -i $video -p $audio -m d $MULTIPLEXARGS";
             _debug($sys);
             system($sys);
         } else {
@@ -4118,7 +4122,7 @@ sub tovcd
     } # end if/else $video file found
 
     # although tcmplex is default, we give mplex a try
-    if ( basename("$MULTIPLEXER") eq "tcmplex" || !-x $MPLEX )
+    if ( basename($MULTIPLEXER) eq "tcmplex" || !-x $MPLEX )
     {
         if ( -x $TCMPLEX ) 
         {
@@ -4131,8 +4135,7 @@ sub tovcd
         } else {
             _warn("tcmplex not be found");
         } # end if/else tcmplex
-    } elsif ( basename("$MULTIPLEXER") eq "mplex" || !-x $TCMPLEX ) 
-    {
+    } elsif ( basename($MULTIPLEXER) eq "mplex" || !-x $TCMPLEX ) {
         if ( -x $MPLEX )
         {
             my $sys = "$MPLEX -f 1 -V -s 2324 -p 1 -o $ovideo $video.mpa $video.m1v";

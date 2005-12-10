@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.115 $
+# $Revision: 1.116 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -55,7 +55,7 @@ my $OKCLUSTER=0;
 my $TEST = 0;
 my $DVD9TO5 = 0;
 my $VOLIDMAXLENGTH=32; # max num of char for DVD names
-my $DVD5SIZE = 4500000000; # bytes
+my $DVD5SIZE = 4400000000; # bytes
 my $DVDBACKUP = 0;
 my $MPLAYER = 0;
 my $TOVCD = 0;

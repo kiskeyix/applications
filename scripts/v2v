@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.116 $
+# $Revision: 1.117 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -3946,7 +3946,7 @@ sub dvd9to5
         # audio extract
         my $audio_track = 0; # default audio track
         my $audio_total = (@{$DVD_INFO{$title}{'audio_type'}}+0);
-        print "audio total: $audio_total\n";
+        _info("Number of audio tracks: ".$audio_total);
         if ($audio_total > 1)
         {
             print STDOUT ("Choose audio track:\n");

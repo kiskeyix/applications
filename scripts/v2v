@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.114 $
+# $Revision: 1.115 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -3860,7 +3860,7 @@ sub dvd9to5
         {
             # TODO test for sync problems and pass -0 NNms argument to mplex
             my $sys = "nice -n $nice $MPLEX $MPLEXARGS $MULTIPLEXARGS -v $VERBOSITY -o $mpg_file $video $audio &";
-            _info($sys);
+            _debug($sys);
             system($sys);
         } else {
             _error("mplex not found");
@@ -3874,16 +3874,23 @@ sub dvd9to5
         if ( -d $dir ) {
             foreach my $file (glob("$dir/*.[VvOoBb]")) # .vob too...
             {
+                # TODO
+                # perhaps this doesn't work the same as it does for special discs
+                # needs testing
                 open(DVD_INFO,"tcprobe -H 50 -i $file 2>&1 |");
                 my @lines = <DVD_INFO>;
                 close(DVD_INFO);
+                # TODO this section and the one for /dev/dvd are essentially
+                # the same, find a way to reuse the code
                 foreach(@lines)
                 {
                     # (dvd_reader.c) [Chapter 01] 00:00:00.000 , block from 0 to 3133
-                    if (/\[Chapter (\d+)\]\s*([[:digit:]:\.]+)\s*,/)
+                    if (/\[Chapter (\d+)\]\s*([[:digit:]:\.]+)\s*,\s*block\s*from\s*([[:digit:]]+)\s*to\s*([[:digit:]]+)/)
                     {
                         $DVD_INFO{$title}{$1} = hour_to_sec($2);
                         #$DVD_INFO{$title}{'length'} += int($DVD_INFO{$title}{$1});
+                        $DVD_INFO{$title}{'sectors'} += int($4 - $3);
+                        $DVD_INFO{$title}{'sectors'}++; # fix sector off-by-one
                         push(@chapter,$2) if ($2 ne '00:00:00.000');
                     }
                     if (m/title playback time: .* ([[:digit:]]+) sec/)
@@ -3893,50 +3900,87 @@ sub dvd9to5
                 }
             }
         } elsif ( -b $dir ) {
+            # /dev/dvd or similar...
             open(DVD_INFO,"tcprobe -H 50 -i $dir 2>&1 |");
             my @lines = <DVD_INFO>;
             close(DVD_INFO);
+            my @audio_type;
+            my @audio_lang;
+            my @audio_chan;
             foreach(@lines)
             {
                 # (dvd_reader.c) [Chapter 01] 00:00:00.000 , block from 0 to 3133
-                if (/\[Chapter (\d+)\]\s*([[:digit:]:\.]+)\s*,/)
+                if (/\[Chapter (\d+)\]\s*([[:digit:]:\.]+)\s*,\s*block\s*from\s*([[:digit:]]+)\s*to\s*([[:digit:]]+)/)
                 {
                     $DVD_INFO{$title}{$1} = hour_to_sec($2);
                     #$DVD_INFO{$title}{'length'} += int($DVD_INFO{$title}{$1});
+                    $DVD_INFO{$title}{'sectors'} += int($4 - $3);
+                    $DVD_INFO{$title}{'sectors'}++; # fix sector off-by-one
                     push(@chapter,$2) if ($2 ne '00:00:00.000');
                 }
                 if (m/title playback time: .* ([[:digit:]]+) sec/)
                 {
                     $DVD_INFO{$title}{'length'} = $1;
                 }
+                if (m/(ac3|dts)\s*([[:alpha:]]{2})\s*drc\s*[[:digit:]]+kHz\s*([[:digit:]]Ch)/)
+                {
+                    push(@audio_type,$1);
+                    push(@audio_lang,$2);
+                    push(@audio_chan,$3);
+                }
             }
+            $DVD_INFO{$title}{'audio_type'} = \@audio_type;
+            $DVD_INFO{$title}{'audio_lang'} = \@audio_lang;
+            $DVD_INFO{$title}{'audio_chan'} = \@audio_chan;
         }
         _info("Number of chapters: ".(@chapter+1));
-        # video extract
-        #my $audio_size = $DVD_INFO{$title}{'length'} * 128 * 125; # for channel 1 and 2
-        #my $video_size= $SECTOR * 2048 - $audio_size;
-        #my $factor = video_requant_factor($video_size,$audio_size);
-        #_info("[NOT USE YET] tcrequant factor $factor");
-        #FIXME | nice -n $nice tcrequant -f $factor
-        push(@_extract,"nice -n $nice $BUFFER $BUFFER_ARGS -i $video_vob_fifo | nice -n $nice tcextract -t vob -x mpeg2  > $video &");
-        # audio extract
-        # TODO what if we don't want audio channel 0? use value from CONFIG file
-        push(@_extract,"nice -n $nice $BUFFER $BUFFER_ARGS -i $audio_vob_fifo | nice -n $nice tcextract -t vob -x ac3 -a 0 > $audio &");
+        _info("Number of sectors: ".$DVD_INFO{$title}{'sectors'});
+        
+        my $audio_size = $DVD_INFO{$title}{'length'} * 128 * 125; # for channel 1 and 2
+        my $video_size= $DVD_INFO{$title}{'sectors'} * 2048 - $audio_size;
+        my $factor = video_requant_factor($video_size,$audio_size);
+        
+        # do video extract
+        push(@_extract,"nice -n $nice $BUFFER $BUFFER_ARGS -i $video_vob_fifo | nice -n $nice tcextract -t vob -x mpeg2 | nice -n $nice tcrequant -f $factor > $video &");
 
+        # audio extract
+        my $audio_track = 0; # default audio track
+        my $audio_total = (@{$DVD_INFO{$title}{'audio_type'}}+0);
+        print "audio total: $audio_total\n";
+        if ($audio_total > 1)
+        {
+            print STDOUT ("Choose audio track:\n");
+            AUDIO:
+            for(my $i=0;$i<@{$DVD_INFO{$title}{'audio_type'}}+0;$i++)
+            {
+                print STDOUT ($i.")\t".$DVD_INFO{$title}{'audio_type'}->[$i].
+                "\t lang: ".$DVD_INFO{$title}{'audio_lang'}->[$i].
+                "\tchannels: ".$DVD_INFO{$title}{'audio_chan'}->[$i]);
+                print STDOUT (" (*)") if ($i == $audio_track);
+                print STDOUT ("\n");
+            }
+            my $audio_rep = prompt("What audio track should we use [$audio_track]: ");
+            $audio_rep = $audio_track if ($audio_rep eq ""); # user pressed ENTER
+            goto AUDIO if ( $audio_rep !~ /^[[:digit:]]+$/
+                or $audio_rep < 0 or $audio_rep >= $audio_total);
+            $audio_track=$audio_rep;
+        }
+        push(@_extract,"nice -n $nice $BUFFER $BUFFER_ARGS -i $audio_vob_fifo | nice -n $nice tcextract -t vob -x ".${$DVD_INFO{$title}{'audio_type'}}[$audio_track]." -a $audio_track > $audio &");
+        
         # subtitles extract
         #push(@_extract,"nice -n $nice $BUFFER $BUFFER_ARGS -i $subtitle_vob_fifo | nice -n $nice tcextract -a 0 -x ps1 -t vob > $subtitle &");
 
         # ready environment to do all extraction
         foreach my $cmd (@_extract)
         { 
-            _info($cmd);
+            _debug($cmd);
             system($cmd);
             sleep(1);
         }
 
         my $named_pipes = join(" ",@fifo_files);
         my $_tc_sys = "nice -n $nice tccat -i $dir $TCCAT_EXTRA_ARGS | tee $named_pipes  > /dev/null &";
-        _info($_tc_sys);
+        _debug($_tc_sys);
         system($_tc_sys);
 
         my $chapters = "00:00:00.000";
@@ -3958,7 +4002,7 @@ sub dvd9to5
         close(DVDAUTHOR);
 
         my $_dvdauthor_sys = "nice -n $nice dvdauthor -x $dvdauthor_xml";
-        _info($_dvdauthor_sys);
+        _debug($_dvdauthor_sys);
         system($_dvdauthor_sys);
 
 # FIXME
@@ -3970,7 +4014,7 @@ sub dvd9to5
     } # end foreach $title
     
     my $_dvdauthor_sys_2 = "nice -n $nice dvdauthor -T -o $DISC_TITLE";
-    _info($_dvdauthor_sys_2);
+    _debug($_dvdauthor_sys_2);
     system($_dvdauthor_sys_2);
 
     # fifo cleanups
@@ -4003,17 +4047,24 @@ sub dvd9to5
     my $rep_iso = prompt("Do you want to make a DVD iso? [y/N] ");
     if ( $rep_iso =~ m/^y/i )
     {
-        system("nice -n $nice mkisofs -dvd-video -udf -o $DISC_TITLE.iso -V $DISC_TITLE $DISC_TITLE");
+        my $_cmd = "nice -n $nice mkisofs -dvd-video -udf -o $DISC_TITLE.iso -V $DISC_TITLE $DISC_TITLE";
+        _debug($_cmd);
+        system($_cmd);
     }
     # TODO make sure growisofs is installed
     # if ( -x $growisofs )
     my $rep_burn = prompt("Do you want to burn the DVD? [y/N] ");
+    BURN:
     if ( $rep_burn =~ m/^y/i and $rep_iso =~ m/^y/i )
     {
-        system("growisofs -V $DISC_TITLE -dvd-compat -udf -Z /dev/dvd=$DISC_TITLE.iso")
+        my $_cmd = "growisofs -V $DISC_TITLE -dvd-compat -udf -Z /dev/dvd=$DISC_TITLE.iso";
+        _debug($_cmd);
+        system($_cmd)
     } elsif ($rep_burn =~ m/^y/i) {
         make_dvd($DISC_TITLE,$DISC_TITLE); 
     }
+    my $do_another = prompt("Do you want to burn another DVD? [y/N] ");
+    goto BURN if ($do_another =~ m/^y/i);
 } # end dvd9to5()
 
 sub tovcd

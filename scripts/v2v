@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.118 $
+# $Revision: 1.119 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -4023,15 +4023,15 @@ sub dvd9to5
     my $audio_vob_fifo = glob(sprintf($template_audio_vob_fifo ,"*"));
     my $video = glob(sprintf($template_video ,"*"));
     my $video_vob_fifo = glob(sprintf($template_video_vob_fifo ,"*"));
-    my $subtitle = glob(sprintf($template_subtitle ,"*"));
-    my $subtitle_vob_fifo = glob(sprintf($template_subtitle_vob_fifo ,"*"));
+    #FIXME my $subtitle = glob(sprintf($template_subtitle ,"*"));
+    #FIXME my $subtitle_vob_fifo = glob(sprintf($template_subtitle_vob_fifo ,"*"));
     unlink($mpg_file,
         $audio,
         $audio_vob_fifo,
         $video,
         $video_vob_fifo,
-        $subtitle,
-        $subtitle_vob_fifo,
+        #FIXME $subtitle,
+        #FIXME $subtitle_vob_fifo,
         $dvdauthor_xml
     );
     # other cleanups

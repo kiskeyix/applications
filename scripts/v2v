@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.117 $
+# $Revision: 1.118 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -4063,8 +4063,11 @@ sub dvd9to5
     } elsif ($rep_burn =~ m/^y/i) {
         make_dvd($DISC_TITLE,$DISC_TITLE); 
     }
-    my $do_another = prompt("Do you want to burn another DVD? [y/N] ");
-    goto BURN if ($do_another =~ m/^y/i);
+    if ($rep_burn =~ m/^y/i)
+    {
+        my $do_another = prompt("Do you want to burn another DVD? [y/N] ");
+        goto BURN if ($do_another =~ m/^y/i);
+    }
 } # end dvd9to5()
 
 sub tovcd

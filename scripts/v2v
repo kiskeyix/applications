@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.121 $
+# $Revision: 1.122 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -3990,7 +3990,7 @@ sub dvd9to5
         my $_tc_sys = "nice -n $nice tccat -i $dir $TCCAT_EXTRA_ARGS | tee $named_pipes  > /dev/null &";
         _debug($_tc_sys);
         system($_tc_sys);
-
+        
         my $chapters = "00:00:00.000";
         for (my $l = 1; $l < (@chapter+0) - 1; ++$l)
         { 

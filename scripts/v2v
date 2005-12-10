@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.120 $
+# $Revision: 1.121 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
@@ -67,6 +67,7 @@ my $TVREC = 0;
 # numbers
 my $TITLESET=1; # default titleset when doing dvd9to5, mplayer or dvdbackup. 
                 # override from command line with --titleset=N
+my $START_CHAPTER=0; # start ripping from this chapter and up (for dvd9-to-dvd5)
 
 # strings
 my ($SVIDEO_FORMAT,$ROOT_DIRECTORY,$nice,$DIVX,$DIVX_OPT,
@@ -264,6 +265,7 @@ my $usage="
     '-a|--default_audio_channel=i'  Number of Audio Channels
     '--titleset=i'                  Rip this TitleSet for DVD-9 to DVD-5
     '-n|--nice=i'                   Nice level (UNIX) [+5]
+    'start_chapter=i'               Start ripping from chapter number
 
     \n # to rip a DVD
     \n cd /scratch_disk && mkdir DVD
@@ -3801,9 +3803,11 @@ sub dvd9to5
     # extra arguments to pass to tccat 
     # different for dirs and special files (blocks)
     #
-    # -L loop through all chapters in title -T
+    # -L loop through all chapters in title -T starting from ,$FIRST_CHAPTER
     # -P get all data for title -T
-    my $TCCAT_EXTRA_ARGS = ( -b $dir ) ? " -T $title -L ":"";  
+    my $FIRST_CHAPTER = ($START_CHAPTER =~/^\d+$/ 
+        and $START_CHAPTER > 0 ) ? ",".$START_CHAPTER:"";
+    my $TCCAT_EXTRA_ARGS = ( -b $dir ) ? " -T $title".$FIRST_CHAPTER." -L ":"";  
  
     v2v_mkdir($DISC_TITLE);
     
@@ -4358,7 +4362,8 @@ GetOptions(
     # numbers
     'a|default_audio_channel=i' => \$DEF_AUDIOCHANNEL,
     'titleset=i'                => \$TITLESET,
-    'n|nice=i'                  => \$nice
+    'n|nice=i'                  => \$nice,
+    'start_chapter=i'           => \$START_CHAPTER
 );
 # reset DIVX_OPT if DIVX is pass as parameter and not DIVX_OPT
 $Res_DIVX_OPT=1 if ( $DIVX ne "" && $DIVX_OPT eq "" );

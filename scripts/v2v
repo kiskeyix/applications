@@ -1,14 +1,16 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.122 $
+# $Revision: 1.123 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
+#
+# DESCRIPTION: A simple script to transform from a video type to another.
+# Useful for converting video streams from DVD to AVI or others.
+# 
+# USAGE: v2v --help
 #
 # AUTHORS :     Roland SEUHS <rolandATwertkarten.net>
 #               Dominique CARON <domiATlpm.univ-montp2.fr> 
 #		Tom ROTH <tomATtomroth.de>
 #		Luis Mondesi <lemsx1AThotmail_dot_com>
-# GPL LICENSE 
-# http://www.gnu.org/licenses/gpl.html
-#
 #
 # WEB :         http://v2v.sourceforge.net
 #
@@ -27,7 +29,9 @@
 #       begin (and end) credits which are average. So, if removed begin 
 #       credits is 0 sec, the asked start time of logo is respected.
 #   * transcode doesn't work with kernel 2.6.0 (not yet)
-
+#
+# LICENSE: GPL
+# http://www.gnu.org/licenses/gpl.html
 use strict;
 $|++;
 use POSIX; # getcwd() for `pwd` and others

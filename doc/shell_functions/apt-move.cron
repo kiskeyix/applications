@@ -1,4 +1,11 @@
 #!/bin/sh
+# $Revision: 1.9 $
+# Luis Mondesi < lemsx1@gmail.com >
+#
+# DESCRIPTION: a simple wrapper for apt-move to be used together with apt-ftparchive
+# USAGE: place this in /etc/cron.daily. Change variables to proper locations
+# LICENSE: GPL
+
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 LOCKFILE="/dev/shm/apt-move.lck"
 DEBUG=0     # should debugging messages be displayed? $0 0 1 see $1

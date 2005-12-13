@@ -25,6 +25,10 @@
 #   if you change LOG_FILE variable below, you will need to fix the
 #   logrotate path also.
 #
+# DESCRIPTION: A simple wrapper for apt-get to log its output to /var/log/apt.log
+# USAGE: read above
+# LICENSE: GPL
+
 export LOG_FILE="/var/log/apt.log"
 
 echo "Logging Wrapper for apt-get [`hostname`]"

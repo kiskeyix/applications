@@ -1,11 +1,11 @@
 #!/bin/sh
-# $Revision: 1.8 $
-# $Date: 2005-11-23 06:29:16 $
+# $Revision: 1.9 $
+# $Date: 2005-12-13 03:57:15 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: fixes gcc symlinks when updating to a new version under debian
 # USAGE: ./fix_gcc.sh
-#
+# LICENSE: GPL
 
 PRIORITY=54 # 0 - 100. higher is better
 

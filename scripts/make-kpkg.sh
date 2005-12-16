@@ -1,13 +1,11 @@
 #!/bin/bash
 # vim: ft=sh:columns=80 :
-# $Revision: 1.44 $
-# $Date: 2005-05-30 14:25:15 $
+# $Revision: 1.45 $
+# $Date: 2005-12-16 07:42:14 $
 #
 # Luis Mondesi < lemsx1@gmail.com >
-#
-# LICENSE: GPL (http://www.gnu.org/licenses/gpl.txt)
 # 
-# URL: http://www.kiskeyix.org/downloads/make-kpkg.sh.gz
+# URL: http://lems.kiskeyix.org/toolbox/make-kpkg.sh
 #
 # DESCRIPTION:  an interactive wrapper to Debian's "make-kpkg"
 #               to build a custom kernel package using 
@@ -21,6 +19,9 @@
 #               where N1 is the number or string appended to the kernel
 #               (01 or 02, or 03..., etc...)
 #               and N2 is the revision of this kernel: 1.0, 1.1 ...
+#               e.g.:
+#
+#           make-kpkg.sh -desktop 1.0
 # TIPS:
 #   * setup a $HOME/.make-kpkg.rc with the variables found in this 
 #     script (see below) to override them
@@ -36,7 +37,7 @@
 #   * If we also have ccache installed, then we arrange the commands 
 #     so that we can use both ccache and distcc. 
 #     Make sure that $CCACHE_DIR is setup correctly (man ccache)
-
+# LICENSE: GPL (http://www.gnu.org/licenses/gpl.txt)
 
 CCACHE="`command -v ccache 2> /dev/null`"
 DISTCC="`command -v distcc 2> /dev/null`"

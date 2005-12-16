@@ -1,14 +1,14 @@
 #!/usr/bin/perl -w
 # Luis Mondesi < lemsx1@gmail.com >
-# $Revision: 1.14 $
-# $Date: 2005-12-16 08:24:42 $
+# $Revision: 1.15 $
+# $Date: 2005-12-16 08:27:16 $
 #
 # DESCRIPTION:
 #   This script takes your tasks.ics file from Evolution
 #   and parses some fields and present that in a nicely format
 #   HTML file
 #
-# USAGE:
+# USAGE: etodo.pl -u "Name of User"
 #   Run this from a cronjob every X number of hours/minutes
 #   or whatever pleases you :-)
 #   This could've been written as a CGI, but, just to make it

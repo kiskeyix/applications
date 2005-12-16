@@ -1,9 +1,9 @@
 #!/usr/bin/perl -w
-# Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2002-Nov-18
-# $Id: etodo.pl,v 1.13 2005-05-15 01:52:42 luigi Exp $
+# Luis Mondesi < lemsx1@gmail.com >
+# $Revision: 1.14 $
+# $Date: 2005-12-16 08:24:42 $
 #
-# DESC:
+# DESCRIPTION:
 #   This script takes your tasks.ics file from Evolution
 #   and parses some fields and present that in a nicely format
 #   HTML file
@@ -45,7 +45,7 @@
 #
 # CHANGELOG:
 #   - initial relase
-#  
+# LICENSE: GPL 
 use strict;
 $|++;
 

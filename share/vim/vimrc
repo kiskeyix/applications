@@ -110,23 +110,25 @@ map ,13 mzggVGg?'z
 "set pastetoggle=<F9>
 
 " to embelish C code
-nmap == !indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments<CR>
+nmap -- !indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments<CR>
+vmap -- !indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments<CR>
 
 
 " Custom functions:
 
-" Removes those bloody ^M's
+" Removes those bloody ^M's in DOS files
 fun RmCR()
     let oldLine=line('.')
     exe ":%s/\r//g"
     exe ':' . oldLine
 endfun
-map rm :call RmCR()<CR>
+map ,d :call RmCR()<CR>
 
 " To indent the whole file without having the cursor move to the beginning or the end I have the following
 fun BenIndent()
     let oldLine=line('.')
-    normal(gg=G)
+    "normal(gg=G)
+    !indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments % 
     exe ':' . oldLine
 endfun
 map -- :call BenIndent()<CR>
@@ -186,7 +188,7 @@ if has("autocmd")
 " Default (global) group
 if !exists("autocommands_loaded")
     let autocommands_loaded = 1
-    au BufReadPre * set sw=4 tw=0 sts=4 nosm nocindent cinkeys& comments& formatoptions&
+    au BufReadPre * set sw=4 tw=0 sts=4 nosm nocindent formatoptions=""
 endif
 
 augroup mail
@@ -233,7 +235,7 @@ augroup cprog
     if !exists("autocommands_cprog_loaded")
         let autocommands_cprog_loaded = 1
         " C programs should have 8 spaces as tabs. makes things better
-        au BufRead *.cpp,*.c,*.h,*.cxx,*.cc,*.hh set formatoptions=croq sm sw=8 sts=8 cindent comments=sr:/*,mb:*,el:*/,:// nu cino='t8' | if filereadable("tags.vim") | so tags.vim | endif
+        au BufRead *.cpp,*.c,*.h,*.cxx,*.cc,*.hh set formatoptions=croq sm sw=8 sts=8 comments=sr:/*,mb:*,el:*/,:// nu cino='t8' cindent | if filereadable("tags.vim") | so tags.vim | endif
     endif
 augroup END
 

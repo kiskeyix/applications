@@ -6,7 +6,7 @@
 " (I wrote it over my years of using vim and after reading all the docs)
 "
 " I'll get part of the blame for enhancing this file for VIM 6.0 and up
-" -- Luis M < lemsx1@hotmail.com > 2002-10-30 19:47 
+" -- Luis M < lemsx1@gmail.com > 2002-10-30 19:47 
 
 "
 " Options
@@ -19,8 +19,6 @@ set ruler		" shows ruler at the bottom of the screen
 set bs=2		" allow backspacing over everything in insert mode
 
 set ic			" comment this out if you want to search non case sensitive
-"set nu!			" line numbers off. we only need this for specific buffers
-"set columns=80          " we have line number on at all times
 
 set showcmd		" Show (partial) command in status line
 
@@ -70,13 +68,13 @@ set suffixes=.bak,~,.swp,.o,.info,.aux,.log,.dvi,.bbl,.blg,.brf,.cb,.ind,.idx,.i
 "
 
 " Key mappings for par (text reformatting)
-vmap  !par -w72 -gjq -dh -p3
-vmap X !par -w72 -gjq -p2 -dh<CR>
-vmap F !par -w72 -gjq<CR>
-vmap f !par -w80<CR>
+"vmap  !par -w72 -gjq -dh -p3
+"vmap X !par -w72 -gjq -p2 -dh<CR>
+"vmap F !par -w72 -gjq<CR>
+"vmap f !par -w80<CR>
 
-imap  :set invpaste<CR>a
-map  :set invpaste<CR>o
+"imap  :set invpaste<CR>a
+"map  :set invpaste<CR>o
 
 " space bar scrolls one page at a time
 nmap <Space> 
@@ -89,20 +87,20 @@ nmap :Q :q
 " use <C-F6> for spell checking (see ~/.vim/plugin/vimspell.vim)
 "
 " Switches match highlighting on and off
-nmap <C-F7> :set hls!<CR>
+" nmap <C-F7> :set hls!<CR>
 
 " Suppress all spaces at end/beginning of lines
-nmap _s :%s/\s\+$//<CR>
-nmap _S :%s/^\s\+//<CR>
+nmap ,s :%s/\s\+$//<CR>
+nmap ,S :%s/^\s\+//<CR>
 "
 " Convert file format to unix
-nmap _ux :se ff=unix<CR>
+nmap ,ux :se ff=unix<CR>
 
 " ctags
 let Tlist_Ctags_Cmd = 'ctags'
 let Tlist_Auto_Open = 0
-nnoremap <silent> <C-F8> :Tlist<CR>
-nnoremap <silent> <C-F9> :TlistSync<CR>
+"nnoremap <silent> <C-F8> :Tlist<CR>
+"nnoremap <silent> <C-F9> :TlistSync<CR>
 nmap    ,t  :Tlist<CR>  " another method just in case...
 nmap    ,r  :TlistSync<CR>
 
@@ -111,20 +109,11 @@ map ,13 mzggVGg?'z
 
 "set pastetoggle=<F9>
 
+" to embelish C code
+nmap == !indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments<CR>
+
+
 " Custom functions:
-" This function tries to fold a given file
-" by it's default fold-type. i.e. if we are in 
-" a Perl file, then sets "let perl_fold=1"
-"
-" fun foldthis () 
-"     if &ft == "perl"
-"         let perl_fold=1
-"     else
-"         let foldmethod=marker
-"     endif
-" endfun
- 
-" nnoremap <silent> <F2> :call foldthis()<CR>
 
 " Removes those bloody ^M's
 fun RmCR()
@@ -132,10 +121,9 @@ fun RmCR()
     exe ":%s/\r//g"
     exe ':' . oldLine
 endfun
-map <C-F5> :call RmCR()<CR>
+map rm :call RmCR()<CR>
 
 " To indent the whole file without having the cursor move to the beginning or the end I have the following
-
 fun BenIndent()
     let oldLine=line('.')
     normal(gg=G)

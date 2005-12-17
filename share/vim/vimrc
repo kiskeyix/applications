@@ -245,7 +245,7 @@ augroup cprog
     if !exists("autocommands_cprog_loaded")
         let autocommands_cprog_loaded = 1
         " C programs should have 8 spaces as tabs. makes things better
-        au BufRead *.cpp,*.c,*.h,*.cxx,*.cc,*.hh set formatoptions=croq sm sw=8 sts=8 cindent comments=sr:/*,mb:*,el:*/,:// nu | if filereadable("tags.vim") | so tags.vim | endif
+        au BufRead *.cpp,*.c,*.h,*.cxx,*.cc,*.hh set formatoptions=croq sm sw=8 sts=8 cindent comments=sr:/*,mb:*,el:*/,:// nu cino='t8' | if filereadable("tags.vim") | so tags.vim | endif
     endif
 augroup END
 

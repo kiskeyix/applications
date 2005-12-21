@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.123 $
+# $Revision: 1.124 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -228,18 +228,23 @@ my $warnclust = "\n ERROR: cluster mode. Please see README file\n\n";
 
 my $RIP=""; # ripping method
 
+# TODO move this closer to getopt and use pod::usage pod::man for usage/help switches
+# TODO sort alphabetically
 my $usage="
-    # flags
+    '-a|--default_audio_channel=i'  Number of Audio Channels
     '-h|--help'                     Help
     '-U|--usage'                    Usage
     '-v|--version'                  Print Version and exit
     '--srtsubrip'                   Subtitle rip (?)
-    '-tv'                           Record TV
+    '--tv'                          Record TV
     '-d|--debug'                    Debug Script
     '-i|--info'                     Print Informational Messages
     '-c|--with-cluster'             Run in Cluster mode
     '-t|--test'                     Do a minor test with movie
     '--dvd9-to-dvd5'                Convert a DVD (directory or device) from DVD-9 to DVD-5
+    '--dvd5-size=i'                 Approximate size of the resulting DVD-5 Defaults to 
+                                    4400000000. For titles which go pass 5GB, you might 
+                                    want to use 3400000000.
     '--dvdbackup'                   Backup a DVD using dvdbackup (interactive) and exit [DEPRECATED: use --rip=dvdbackup]
     '--mplayer'                     Backup a DVD using mplayer (non-interactive) and exit [DEPRECATED: use --rip=mplayer]
     '--avi-to-vcd'                  Create VCD Image from AVI (deprecated)
@@ -247,7 +252,6 @@ my $usage="
     '--flip'                        Flip video vertically (VCD only)
     '--mirror'                      Flip video horizontally (VCD only)
     '--blued'                       Fix blue colors in people's faces (VCD only)
-    # strings
     '-D|--directory=s'              Use this directory as WORK DIR
     '-s|--source-video-format=s'    Video Format of the Source
     '-x|--x_video=s'                Video codec [ffmpeg]
@@ -265,11 +269,9 @@ my $usage="
     '-m|--multiplex=s'              Use this multiplexer [mplex,tcmplex]
     '--multiplex-args=s'            Pass these arguments to the chosen multiplexer. A nice place to put \"-D 0\" and other things.
     '-M|--make-dvd=s'               Use this name to create a DVD iso
-    # numbers
-    '-a|--default_audio_channel=i'  Number of Audio Channels
     '--titleset=i'                  Rip this TitleSet for DVD-9 to DVD-5
     '-n|--nice=i'                   Nice level (UNIX) [+5]
-    'start_chapter=i'               Start ripping from chapter number
+    '--start_chapter=i'               Start ripping from chapter number
 
     \n # to rip a DVD
     \n cd /scratch_disk && mkdir DVD
@@ -3951,7 +3953,8 @@ sub dvd9to5
         my $audio_size = $DVD_INFO{$title}{'length'} * 128 * 125; # for channel 1 and 2
         my $video_size= $DVD_INFO{$title}{'sectors'} * 2048 - $audio_size;
         my $factor = video_requant_factor($video_size,$audio_size);
-        
+        _info("Requant factor: ".$factor);
+
         # do video extract
         push(@_extract,"nice -n $nice $BUFFER $BUFFER_ARGS -i $video_vob_fifo | nice -n $nice tcextract -t vob -x mpeg2 | nice -n $nice tcrequant -f $factor > $video &");
 
@@ -4367,7 +4370,8 @@ GetOptions(
     'a|default_audio_channel=i' => \$DEF_AUDIOCHANNEL,
     'titleset=i'                => \$TITLESET,
     'n|nice=i'                  => \$nice,
-    'start_chapter=i'           => \$START_CHAPTER
+    'start_chapter=i'           => \$START_CHAPTER,
+    'dvd5-size=i'               => \$DVD5SIZE,
 );
 # reset DIVX_OPT if DIVX is pass as parameter and not DIVX_OPT
 $Res_DIVX_OPT=1 if ( $DIVX ne "" && $DIVX_OPT eq "" );

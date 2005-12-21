@@ -1,20 +1,20 @@
 #!/usr/bin/perl -w
-# $Revision: 1.27 $
+# $Revision: 1.28 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # URL: http://www.kiskeyix.org/downloads/find.pl.gz
 #
-# DESC: finds a string in a set of files
+# DESCRIPTION: finds a string in a set of files
 #
-# USAGE: 
-#   find.pl "string" ".*\.html"
-#   find.pl --replace="bar" "foo"
+# USAGE: find.pl --replace="bar" "foo"
+#        find.pl "string" ".*\.html"
 #
 # BUGS: if replacement string contains invalid characters
 #       nothing gets done. Have to find a way to escape
 #       all characters which might be used by Perl's
 #       s/// operator
 #
+# LICENSE: GPL
 
 
 use File::Find;     # find();

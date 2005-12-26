@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.39 $
+# $Revision: 1.40 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Mar-13
 #
@@ -133,6 +133,7 @@
 #
 #   Commenting these two will force the script to use Archive::Tar
 #   COMPRESS_LEVEL will be used for either "tar" or Archive::Tar
+# LICENSE: GPL
 
 use strict;
 $|++;

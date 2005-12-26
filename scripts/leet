@@ -1,5 +1,9 @@
 #!/usr/bin/perl -w 
-# Description: a simple script based on SLaK IRC script to convert regular text into l33t.
+# $Revision: 1.2 $
+#
+# DESCRIPTION: a simple script based on SLaK IRC script to convert regular text into l33t.
+# USAGE: leet <leet|deleet> <text>
+# LICENSE: GPL
 #
 ## l33+ 5p34k 
 ## v1.0 by SLaK` (irc.rebelchat.org #n3rd)

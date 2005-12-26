@@ -1,14 +1,14 @@
 #!/usr/bin/perl -w
-# $Revision: 1.58 $
+# $Revision: 1.59 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
-# USAGE: $0 --help
+# USAGE: update-host [OPTIONS] [host1 host2 host3 ...]
 #
 # TODO:
 #  - tidy old files with @_OBSOLETE
 #  - tests host file and print their new IP to STDOUT. hint slurp_hosts() and do host lookups on the names
-#
+# LICENSE: GPL
 
 use strict;
 $|++;

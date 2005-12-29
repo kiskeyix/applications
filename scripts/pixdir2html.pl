@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.108 $
+# $Revision: 1.109 $
 # Luis Mondesi  <lemsx1@gmail.com>
 # 
 # HELP: $0 --help
@@ -12,12 +12,12 @@ $|++; # disable buffer (autoflush)
 # standard Perl modules
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
-use File::Spec::Functions  qw(splitpath curdir updir catfile catdir splitpath);
+use POSIX qw(getcwd);
+use File::Spec::Functions  qw(splitpath curdir updir catfile catdir abs2rel);
 use File::Copy;
 use File::Find;     # find();
 use File::Basename; # basename() && dirname()
 use FileHandle;     # for progressbar
-use Cwd;            # same as: qx/pwd/
 
 # non-standard modules:
 my $USE_CONVERT=0;
@@ -43,13 +43,15 @@ if ($@)
 # Get Nautilus current working directory, if under Natilus:
 my $nautilus_root = "";
 if ( exists $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} 
-    && $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} =~ m#^file:///# 
+    && $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} =~ m#^file:/+# 
 ) 
 {
+    # convert special HTML char to plain text characters
     ($nautilus_root = $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} ) =~ s#%([0-9A-Fa-f]{2})#chr(hex($1))#ge;
-    ($nautilus_root = $nautilus_root ) =~ s#^file://##g;
+    # remove file:// from full Nautilus URI: file:///tmp -> /tmp
+    $nautilus_root =~ s#^file://##g;
 }
-my $ROOT_DIRECTORY= ( -d $nautilus_root ) ? $nautilus_root : ".";
+my $ROOT_DIRECTORY= ( -d $nautilus_root ) ? $nautilus_root : getcwd();
 my $LOG="$ROOT_DIRECTORY/pixdir2html.log";
 my $CONFIG_FILE=".pixdir2htmlrc";
 my $THUMBNAIL="t";  # individual thumnails files will be placed here
@@ -342,29 +344,8 @@ sub init_config {
     my $create_config = shift;
     my $line="";
 
-    # some defaults:
-    #
-    # it's very important to set this to a 
-    # full URI:
-    # file:///path/to/root/directory
-    # http://www.server.tld/path/to/root/directory
-    # where "root directory" is the main dir
-    # where all other directories reside (and not
-    # the / root filesystem of UNIX/Linux/...).
-    # For now, ".." do the trick for a simple
-    # tree of directories:
-    # ROOT/
-    # ROOT/dir_a
-    # ROOT/dir_b
-    # ROOT/dir_c
-    #
-    # and not
-    # ROOT/
-    # ROOT/dir_a/dir_a1/dir_a2
-    # ROOT/dir_b ...
-    # for which case you will need a full path
     # Some default values:
-    $config{"$ROOT"}{"uri"}=".."; # might need modifications
+    $config{"$ROOT"}{"uri"}=""; # all URL generated are relative the the path of the current dir
     $config{"$ROOT"}{"percent"}=( $PERCENT ) ? $PERCENT : "20%";
     $config{"$ROOT"}{"title"}="Images";
     $config{"$ROOT"}{"meta"}="<meta http-equiv='content-type' content='text/html;charset=iso-8859-1'>";
@@ -519,7 +500,7 @@ sub mkindex {
             ($file_name = $file_name) =~ s/^$THUMB_PREFIX//; # removes prefix
             # EXT is a global and so is THUMBNAIL
             print FILE ("\t\t<a class='pdlink' href='$HTMLDIR/$file_name.".$config{"$this_base"}{"ext"}."'>".
-                "\t\t<img class='pdimage' src='$THUMBNAIL/t"."$this_file' border=0 alt='$file_name'></a>\n");
+                "\t\t<img class='pdimage' src='$THUMBNAIL/$THUMB_PREFIX"."$this_file' border=0 alt='$file_name'></a>\n");
             print FILE ("\t</td>\n");
             if ($i<($TD-1)) {
                 $i++;
@@ -621,10 +602,10 @@ sub mkthumb {
         # for which to do thumbnails, thus:
         if ( not defined ($BASE) or $BASE eq "" or ! -d $BASE ) 
         { 
-            $BASE = "."; 
+            $BASE = getcwd(); 
         }
         next if ( -f File::Spec->catfile($BASE,$SKIP_DIR_FILE) );
-        next if ($BASE eq $THUMBNAIL); 
+        next if (basename($BASE) eq $THUMBNAIL); 
         if ( $BASE ne $tmp_BASE )
         {
             # Note that this tmp_BASE comparison is meant
@@ -683,7 +664,8 @@ sub mkthumb {
         # end if thumbnail file
         
         # save pixname for the index.html file
-        push (@{$thumbfiles{$BASE}}, $_thumb_pix_name_tmp);
+        push (@{$thumbfiles{abs2rel($BASE,$ROOT_DIRECTORY)}}, 
+            abs2rel($_thumb_pix_name_tmp,$ROOT_DIRECTORY));
         # update flags
         $LAST_BASE = $BASE;
         # update progressbar
@@ -924,6 +906,12 @@ sub menu_file_or_string
     my %seen = ();
     my @uniq = grep(!$seen{$_}++,@ary);
 
+    if ( $config{"$ROOT_DIRECTORY"}{"uri"} ne "" )
+    {
+        # make sure we have a forward slash at the end of our URL
+        $config{"$ROOT_DIRECTORY"}{"uri"} = 
+        ( $config{"$ROOT_DIRECTORY"}{"uri"} =~ /\/$/ ) ? $config{"$ROOT_DIRECTORY"}{"uri"} : $config{"$ROOT_DIRECTORY"}{"uri"}."/";
+    }
     # for e/a directory here
     # check if a $SKIP_DIR_FILE file exists
     # if it does, then skip it and do the next one.
@@ -956,7 +944,7 @@ sub menu_file_or_string
     {
         # create modern menu 
         # modern menu is a file, no --menu-only needed here
-        open(FILE, "> ".$ROOT_DIRECTORY."/".$MENU_NAME.".".$config{"$ROOT_DIRECTORY"}{"ext"}) 
+        open(FILE, "> $ROOT_DIRECTORY/$MENU_NAME.".$config{$ROOT_DIRECTORY}{"ext"}) 
             or mydie("Couldn't write file $MENU_NAME.".$config{"$ROOT_DIRECTORY"}{"ext"}." to $ROOT_DIRECTORY","menu_file_or_string");
         print FILE ($config{"$ROOT_DIRECTORY"}{"header"}."\n");
         print FILE ($config{"$ROOT_DIRECTORY"}{"table"}."\n");
@@ -1038,9 +1026,9 @@ sub menu_file_or_string
         # return a menu that contains a link back to menu.$EXT
         # Note that we use the URI here and not try to guess the relative path...
         $MENU_STR .= $config{"$ROOT_DIRECTORY"}{"table"}.
-            "\n<tr>\n\t<td align='center'>\n<div align='center'>\n";
+            "\n<tr>\n\t<td align='center'>\n<div align='center'>\n"; 
         $MENU_STR .= "\t\t<a class='pdlink' href='".
-            $config{"$ROOT_DIRECTORY"}{"uri"}."/".$MENU_NAME.".".
+            $config{"$ROOT_DIRECTORY"}{"uri"}.$MENU_NAME.".".
             $config{"$ROOT_DIRECTORY"}{"ext"}.
             "'>Back to Menu</a>\n</div>\n";
         $MENU_STR .= "\t</td>\n</tr>\n</table>\n";
@@ -1120,7 +1108,7 @@ sub menu_file_or_string
 
                             $IMG = (-f "$ts/.new") ? "<img valign='middle' border=0 src='".$config{"$ROOT_DIRECTORY"}{"new"}."' alt='new'>":""; # if .new file
                             $ts = ucfirst($tmp_ts);
-                            print FILE ("\t\t<a href='".$config{"$ROOT_DIRECTORY"}{"uri"}."/$ls[$i]' target='_top'>$IMG $ts</a>\n");
+                            print FILE ("\t\t<a href='".$config{"$ROOT_DIRECTORY"}{"uri"}.$ls[$i]."' target='_top'>$IMG $ts</a>\n");
                         } else {
                             print FILE ("&nbsp;");
                         }
@@ -1169,7 +1157,7 @@ sub menu_file_or_string
                             # we don't care about the whole path here...
                             $MENU_STR .= "\t\t<a href='".
                                 $config{"$ROOT_DIRECTORY"}{"uri"}.
-                                "/$ls[$i]' target='_top'>$IMG $ts</a>\n";
+                                "$ls[$i]' target='_top'>$IMG $ts</a>\n";
                         } else {
                             $MENU_STR .= "&nbsp;";
                         }
@@ -1279,7 +1267,7 @@ sub process_dir {
         && $base_name !~ m/^\.[a-zA-Z0-9]+$/ 
         ) 
     {
-        push @pixdir,$_;
+        push @pixdir,abs2rel($_,$ROOT_DIRECTORY);
     }
 } # end process_dir
 
@@ -1320,7 +1308,7 @@ sub process_file {
         ) 
     {
         s/^\.\/*//g;
-        push @pixfiles,$_;
+        push @pixfiles,abs2rel($_,$ROOT_DIRECTORY);
     }
 } #end process_file
 

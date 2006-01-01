@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.124 $
+# $Revision: 1.125 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -231,7 +231,7 @@ my $RIP=""; # ripping method
 # TODO move this closer to getopt and use pod::usage pod::man for usage/help switches
 # TODO sort alphabetically
 my $usage="
-    '-a|--default_audio_channel=i'  Number of Audio Channels
+    '-a|--default-audio-channel=i'  Number of Audio Channels
     '-h|--help'                     Help
     '-U|--usage'                    Usage
     '-v|--version'                  Print Version and exit
@@ -254,24 +254,24 @@ my $usage="
     '--blued'                       Fix blue colors in people's faces (VCD only)
     '-D|--directory=s'              Use this directory as WORK DIR
     '-s|--source-video-format=s'    Video Format of the Source
-    '-x|--x_video=s'                Video codec [ffmpeg]
-    '-F|--x_video_opts=s'           Video codec options [-F mpeg4]
-    '-o|--output_audio=s'           Audio output options
-    '-V|--video_player=s'           Use this to play video [xine]
-    '-A|--avi_player=s'             Use this to play AVI video [aviplay]
-    '-I|--image_viewer=s'           Use this as Image Viewer [xv]
-    '-C|--cluster_config=s'         Use this file as Cluster Configuration
-    '-r|--remote_cmd=s'             Remote command [ssh]
+    '-x|--x-video=s'                Video codec [ffmpeg]
+    '-F|--x-video-opts=s'           Video codec options [-F mpeg4]
+    '-o|--output-audio=s'           Audio output options
+    '-V|--video-player=s'           Use this to play video [xine]
+    '-A|--avi-player=s'             Use this to play AVI video [aviplay]
+    '-I|--image-viewer=s'           Use this as Image Viewer [xv]
+    '-C|--cluster-config=s'         Use this file as Cluster Configuration
+    '-r|--remote-cmd=s'             Remote command [ssh]
     '-L|--logo=s'                   Logo image file
     '-l|--lang|--language=s'        Use this language [fr,en,es,...]
-    '-S|--SUB_TITLE_opts=s'         Subtitle Options
+    '-S|--subtitle-opts=s'          Subtitle Options
     '-R|--rip=s'                    Rip a DVD using tccat,mplayer,dvdbackup
     '-m|--multiplex=s'              Use this multiplexer [mplex,tcmplex]
     '--multiplex-args=s'            Pass these arguments to the chosen multiplexer. A nice place to put \"-D 0\" and other things.
     '-M|--make-dvd=s'               Use this name to create a DVD iso
     '--titleset=i'                  Rip this TitleSet for DVD-9 to DVD-5
     '-n|--nice=i'                   Nice level (UNIX) [+5]
-    '--start_chapter=i'               Start ripping from chapter number
+    '--start-chapter=i'               Start ripping from chapter number
 
     \n # to rip a DVD
     \n cd /scratch_disk && mkdir DVD
@@ -4351,26 +4351,26 @@ GetOptions(
     # strings
     'D|directory=s'             => \$ROOT_DIRECTORY,
     's|source-video-format=s'   => \$SVIDEO_FORMAT,
-    'x|x_video=s'               => \$DIVX,
-    'F|x_video_opts=s'          => \$DIVX_OPT,
-    'o|output_audio=s'          => \$AO,
-    'V|video_player=s'          => \$XINE,
-    'A|avi_player=s'            => \$AVIPLAY,
-    'I|image_viewer=s'          => \$XV,
-    'C|cluster_config=s'        => \$CLUSTER_CONFIG,
-    'r|remote_cmd=s'            => \$RMCMD,
+    'x|x-video=s'               => \$DIVX,
+    'F|x-video-opts=s'          => \$DIVX_OPT,
+    'o|output-audio=s'          => \$AO,
+    'V|video-player=s'          => \$XINE,
+    'A|avi-player=s'            => \$AVIPLAY,
+    'I|image-viewer=s'          => \$XV,
+    'C|cluster-config=s'        => \$CLUSTER_CONFIG,
+    'r|remote-cmd=s'            => \$RMCMD,
     'L|logo=s'                  => \$LOGO, 
     'l|lang|language=s'         => \$LANGUAGE, 
-    'S|SUB_TITLE_opts=s'        => \$EXTSUB,
+    'S|subtitle-opts|sub-title-opts=s'        => \$EXTSUB,
     'R|rip=s'                   => \$RIP,
     'm|multiplex=s'             => \$MULTIPLEXER,
     'multiplex-args=s'          => \$MULTIPLEXARGS,
     'M|make-dvd=s'              => \$DVD,
     # numbers
-    'a|default_audio_channel=i' => \$DEF_AUDIOCHANNEL,
+    'a|default-audio-channel=i' => \$DEF_AUDIOCHANNEL,
     'titleset=i'                => \$TITLESET,
     'n|nice=i'                  => \$nice,
-    'start_chapter=i'           => \$START_CHAPTER,
+    'start-chapter=i'           => \$START_CHAPTER,
     'dvd5-size=i'               => \$DVD5SIZE,
 );
 # reset DIVX_OPT if DIVX is pass as parameter and not DIVX_OPT

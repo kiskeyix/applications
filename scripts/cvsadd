@@ -1,18 +1,19 @@
 #!/usr/bin/perl -w
-#
+# $Revision: 1.7 $
+# $Date: 2006-01-03 03:50:42 $
 # Luis Mondesi <lemsx1@gmail.com>
 #
-# DESCRIPTION:
-# Use this to add a file or series of files to
+# DESCRIPTION: Use this to add a file or series of files to
 # CVS in one shot!
 #
-# USAGE: cvsadd filename [filename ...]
+# USAGE: cvsadd [filename [filename ...]]
 #
 # LICENSE: GPL
 #
 # Changelog:
 # 2003-09-27 04:53 EDT made silent
 # 2005-09-25 18:02 EDT much more efficient
+# 2006-01-02 22:49 EST commit after all files are added
 
 $|++;
 use strict;

@@ -1,7 +1,10 @@
 #!/bin/sh
+# $Revision: 1.6 $
+# $Date: 2006-01-03 04:00:15 $
 # Luis Mondesi <lemsx1@gmail.com>
-# Use this to delete a file from CVS in one shot!
-# Usage: cvsdelete filename
+# DESCRIPTION: Use this to delete a file from CVS in one shot!
+# USAGE: cvsdelete <filename> [filename2 ...]
+# LICENSE: GPL
 if [ -f $1 ]; then
     for file in $*
     do
@@ -13,5 +16,5 @@ if [ -f $1 ]; then
         fi
     done
 else
-    echo "Usage: cvsdelete {filename [filename2 ... filenameN]}"
+    echo "Usage: cvsdelete <filename> [filename2 ... filenameN]"
 fi

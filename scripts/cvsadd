@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.8 $
-# $Date: 2006-01-03 03:54:38 $
+# $Revision: 1.9 $
+# $Date: 2006-01-03 03:58:02 $
 # Luis Mondesi <lemsx1@gmail.com>
 #
 # DESCRIPTION: Use this to add a file or series of files to
@@ -86,20 +86,20 @@ for my $file (@FILES)
     if (    ! -f $file
             and ! is_image($file)
             and ( is_binary($file) or $file =~ /$EXCEPTIONS_REGEX/ )
-        )
+    )
+    {
+        unless ( $INCLUDE_DIRS )
         {
-            unless ( $INCLUDE_DIRS )
-            {
-                print STDERR ("Skipping file «$file»\n");
-                next;
-            }
+            print STDERR ("Skipping file «$file»\n");
+            next;
+        }
     }
     system("$CVS_COMMAND add $file 2> /dev/null");
+    print STDERR ("Error adding «$file» to the repository\n")
+        if ( $? != 0 );
 }
 # now commit
 if ( $? == 0 )
 {
-    system( "$CVS_COMMAND commit -m 'first commit' $file" );
-} else {
-    print STDERR ("Error adding «$file» to the repository\n");
-}
+    system( "$CVS_COMMAND commit -m 'first commit'" );
+} 

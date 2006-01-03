@@ -92,10 +92,11 @@ for my $file (@FILES)
             }
     }
     system("$CVS_COMMAND add $file 2> /dev/null");
-    if ( $? == 0 )
-    {
-        system( "$CVS_COMMAND commit -m 'first commit' $file" );
-    } else {
-        print STDERR ("Error adding «$file» to the repository\n");
-    }
+}
+# now commit
+if ( $? == 0 )
+{
+    system( "$CVS_COMMAND commit -m 'first commit' $file" );
+} else {
+    print STDERR ("Error adding «$file» to the repository\n");
 }

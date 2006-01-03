@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.7 $
-# $Date: 2006-01-03 03:50:42 $
+# $Revision: 1.8 $
+# $Date: 2006-01-03 03:54:38 $
 # Luis Mondesi <lemsx1@gmail.com>
 #
 # DESCRIPTION: Use this to add a file or series of files to
@@ -73,6 +73,8 @@ if ( defined($ARGV[0]) and -f $ARGV[0] )
     my $addlist = qx/$CVS_COMMAND update/;
     for my $i ( split(/\n/,$addlist) )
     {
+        die ("Modifed file detected. Please commit these files before continuing. $i\n") 
+            if ( $i =~ /^\s*M\s+/ );
         next if ($i !~ /^\s*\?/g); # if not a new file, keep on
         $i =~ s/^\s*\?\s*//;    # remove ? from the beginning of the line
         push(@FILES,$i);        # files will be tested later

@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.129 $
+# $Revision: 1.130 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3604,18 +3604,18 @@ sub _collect_title_info
 sub _longest_title
 {
     my $dvd = shift;
-
     my ($angle,$angles,$chapter,$nchapters)=1;
     my (@titleSet,@titleLen,$sys,$vob,$sec,$hour,$min)="";
-
-    _collect_title_info($dvd,1); # collect default title so we can get 'titles_total'
+    
+    # we start by assuming title 1 is the longest
+    my $longestTitle = 1;
+    _collect_title_info($dvd,$longestTitle); # collect default title so we can get 'titles_total'
     _info("Number of titles: ".$DVD_INFO{'titles_total'});
-    _debug("longestTitle: $_ => ".$DVD_INFO{$_}{'length'});
+    _debug("longestTitle: $longestTitle => ".$DVD_INFO{$longestTitle}{'length'});
+    my $longestLen   = $DVD_INFO{$longestTitle}{'length'};
 
-    my @checkTitles = 2 .. $DVD_INFO{'titles_total'}; # we skip 1 because we already collected that
     # now probe each title and find longest
-    my $longestLen   = $DVD_INFO{'1'}{'length'}; # we start by assuming title 1 is the longest
-    my $longestTitle = 0;
+    my @checkTitles = 2 .. $DVD_INFO{'titles_total'};
     for(@checkTitles) 
     {
         # call tcprobe for info
@@ -3834,6 +3834,9 @@ sub v2v_mkdir
 
 sub dvd9to5
 {
+    # TODO we need to add support for $title='1,2,3' multiple selections
+    # broken as of 2006-01-07 00:54 EST by LM
+
     # @param $dir directory := string path to directory or device holding VOBs
     # @param $title integer := title to rip from DVD. Defaults to 1
     # @return output will be a video.mpeg file in the current directory

@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.127 $
+# $Revision: 1.128 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -315,9 +315,11 @@ my %DVD_INFO; # DVD information db. Holds data in the form:
               #  'audio_type'   => arrayref of audio types
               #  'audio_lang'   => arrayref of audio languages
               #  'audio_chan'   => arrayref of audio channels
+              #  'subtitles'    => arrayref of subtitles (2 char lang letters: en, fr,...)
               #
               # Also the following strings:
-              # $DVD_INFO{'disc_title'}
+              # $DVD_INFO{'disc_title'}     => (formatted) title name for the DVD
+              # $DVD_INFO{'titles_total'}   => number of titles (not VTS/titleset) in DVD 
 
 ######################## FUNCTIONS #########################
 
@@ -3528,6 +3530,76 @@ sub config
 
 }   # END Config 
 
+# gathers as much information as possible from $dvd (device or dir) and
+# $title (if device given). The information is stored in the %DVD_INFO db
+sub _collect_title_info
+{
+    my $dvd = shift;
+    my $title = shift;
+    my @audio_type;
+    my @audio_lang;
+    my @audio_chan;
+    my @subtitles;
+    my @chapters = ('00:00:00.000');
+
+#FIXME commented out until i find some useful way of getting this information - LM
+#     # TODO this will be useful when video is out of sync
+#     if ( -d $dir ) {
+#         foreach my $file (glob("$dir/*.[VvOoBb]")) # .vob too...
+#         {
+#             open(INFO,"tcprobe -H 50 -i $file 2>&1 |");
+    if ( -b $dvd )
+    {
+        # /dev/dvd or similar...
+        open(INFO,"tcprobe -T $title -H 50 -i $dvd 2>&1 |");
+        my @lines = <INFO>;
+        close(INFO);
+        foreach(@lines)
+        {
+            #TODO (dvd_reader.c) mpeg2 ntsc 16:9 only letterboxed U0 NTSC CC 1 720x480 video
+            # (dvd_reader.c) ac3 en drc 48kHz 6Ch
+            if (m/(ac3|dts)\s*([[:alpha:]]{2})\s*drc\s*[[:digit:]]+kHz\s*([[:digit:]]Ch)/)
+            {
+                push(@audio_type,$1);
+                push(@audio_lang,$2);
+                push(@audio_chan,$3);
+            }
+            # (dvd_reader.c) subtitle 00=<en>
+            elsif (m#\s+subtitle\s+\d+=<(\w{2})>#)
+            {
+                push(@subtitles,$1);
+            }
+            # (dvd_reader.c) DVD title 1/35: 38 chapter(s), 1 angle(s), title set 2
+            elsif (m#DVD\s+title\s+\d+/(\d+):\s+(\d+)\s+chapter\(s\),\s+(\d+)\s+angle\(s\),\s+title\s+set\s+(\d+)#)
+            {
+                $DVD_INFO{'titles_total'} = $1; # do we need to override this all the time?
+                $DVD_INFO{$title}{'chapters_total'} = $2;
+                $DVD_INFO{$title}{'angles_total'} = $3;
+                $DVD_INFO{$title}{'vts'} = $4;
+            }
+            # (dvd_reader.c) title playback time: 02:16:13.09  8174 sec
+            elsif (m#title\s+playback\s+time:\s+\d{2}:\d{2}:\d{2}\.\d{2}\s+([[:digit:]]+) sec#)
+            {
+                $DVD_INFO{$title}{'length'} = $1;
+            }
+            # (dvd_reader.c) [Chapter 01] 00:00:00.000 , block from 0 to 3133
+            elsif (/\[Chapter\s+(\d+)\]\s*([[:digit:]:\.]+)\s*,\s*block\s*from\s*([[:digit:]]+)\s*to\s*([[:digit:]]+)/)
+            {
+                $DVD_INFO{$title}{$1} = hour_to_sec($2);
+                $DVD_INFO{$title}{'sectors'} += int($4 - $3);
+                $DVD_INFO{$title}{'sectors'}++; # fix sector off-by-one
+                push(@chapters,$2) if ($2 ne '00:00:00.000');
+            } 
+        }
+    }
+    # collect arrays
+    $DVD_INFO{$title}{'audio_type'} = \@audio_type;
+    $DVD_INFO{$title}{'audio_lang'} = \@audio_lang;
+    $DVD_INFO{$title}{'audio_chan'} = \@audio_chan;
+    $DVD_INFO{$title}{'subtitles'}  = \@subtitles;
+    $DVD_INFO{$title}{'chapters'} = join(",",@chapters);
+} # end _collect_title_info()
+
 # returns the longest title of a given DVD
 sub _longest_title
 {
@@ -3536,58 +3608,32 @@ sub _longest_title
     my ($angle,$angles,$chapter,$nchapters)=1;
     my (@titleSet,@titleLen,$sys,$vob,$sec,$hour,$min)="";
 
-    my $probe = qx(tcprobe -i \"$dvd\" 2>&1)
-        or mydie("Problem when running 'tcprobe -i $dvd'");
-    ($probe =~ m,DVD title \d+/(\d+),) 
-        or mydie("Probing DVD failed! - No DVD?");
-    my $totalTitles = $1;
-    _info("Number of titles: $totalTitles");
-    my @checkTitles = 1 .. $totalTitles;
+    _collect_title_info($dvd,1); # collect default title so we can get 'titles_total'
+    _info("Number of titles: ".$DVD_INFO{'titles_total'});
+    my @checkTitles = 2 .. $DVD_INFO{'titles_total'}; # we skip 1 because we already collected that
     # now probe each title and find longest
     my $longestLen   = 0;
     my $longestTitle = 0;
     for(@checkTitles) 
     {
         # call tcprobe for info
-        $probe = qx(tcprobe -i \"$dvd\" -T $_ 2>&1) 
-            or mydie("Problem when running 'tcprobe -T $_ -i $dvd'");
-        # extract title playback time -> titlelen
-        ($probe =~ m,title playback time: .* (\d+) sec,) 
-            or mydie("No time found in tcprobe for title $_ !");
-        $titleLen[$_] = $1;
-        # extract title set (VTS file) -> title
-        ($probe =~ m,title set (\d+),) 
-            or mydie("No title set found in tcprobe for title $_! ");
-        $titleSet[$_] = $1;
-        # extract angles
-        ($probe =~ m,(\d+) angle\(s\),) 
-            or mydie("No angle found in tcprobe for title $_ !");
-        $angles = $1;
-        # extract number of chapters
-        ($probe =~ m,(\d+) chapter\(s\),) 
-            or mydie("No chapter found in tcprobe for title $_ !");
-        $nchapters = $1;
-
-        # calc hour, minute of title len
-        $sec  = $titleLen[$_];
-        $hour = int($sec / 3600);
-        $sec -= $hour * 3600;
-        $min  = int($sec / 60);
-        $sec -= $min * 60;
-        
-        _debug(sprintf("%02d: len=%02d:%02d:%02d vts=%02d angles=%02d ".
-        "chapters_total=%02d", $_,$hour,$min,$sec,$titleSet[$_],$angles,$nchapters));
-
-        # store in db
-        $DVD_INFO{$_}{'length'} = $titleLen[$_];
-        $DVD_INFO{$_}{'vts'} = $titleSet[$_];
-        $DVD_INFO{$_}{'angles_total'} = $angles;
-        $DVD_INFO{$_}{'chapters_total'} = $nchapters;
-
-        #  find largest title
-        if($titleLen[$_] > $longestLen) 
+        _collect_title_info($dvd,$_);
+        if ( $DEBUG )
         {
-            $longestLen   = $titleLen[$_];
+            # calc hour, minute of title len
+            $sec  = $DVD_INFO{$_}{'length'};
+            $hour = int($sec / 3600);
+            $sec -= $hour * 3600;
+            $min  = int($sec / 60);
+            $sec -= $min * 60;
+
+            _debug(sprintf("%02d: len=%02d:%02d:%02d vts=%02d angles=%02d ".
+                    "chapters_total=%02d", $_,$hour,$min,$sec,$DVD_INFO{$_}{'vts'},$DVD_INFO{$_}{'angles_total'},$DVD_INFO{$_}{'chapters_total'}));
+        }
+        #  find largest title
+        if($DVD_INFO{$_}{'length'} > $longestLen) 
+        {
+            $longestLen   = $DVD_INFO{$_}{'length'};
             $longestTitle = $_;
         }
     }
@@ -3858,6 +3904,9 @@ sub dvd9to5
     foreach(split(/\s*,\s*/,$title))
     {
         next if ( $_ !~ /^\d+$/); # sanity check
+        
+        _collect_title_info($dir,$_); # TODO make sure we don't collect this information twice
+
         open(DVDAUTHOR,">dvdauthor.xml");
         print DVDAUTHOR ("<dvdauthor dest=\"$DISC_TITLE\">
         <vmgm />
@@ -3918,78 +3967,18 @@ sub dvd9to5
             _error("mplex not found");
             die("We need mplex for now... tcmplex support to come later \n");
         }
-
-        my @chapter; # dvdauthor chapter in format: 00:00:00.000
-
-        # TODO this will be useful when video is out of sync
-        if ( -d $dir ) {
-            foreach my $file (glob("$dir/*.[VvOoBb]")) # .vob too...
-            {
-                # TODO
-                # perhaps this doesn't work the same as it does for special discs
-                # needs testing
-                open(INFO,"tcprobe -H 50 -i $file 2>&1 |");
-                my @lines = <INFO>;
-                close(INFO);
-                # TODO this section and the one for /dev/dvd are essentially
-                # the same, find a way to reuse the code
-                foreach(@lines)
-                {
-                    # (dvd_reader.c) [Chapter 01] 00:00:00.000 , block from 0 to 3133
-                    if (/\[Chapter (\d+)\]\s*([[:digit:]:\.]+)\s*,\s*block\s*from\s*([[:digit:]]+)\s*to\s*([[:digit:]]+)/)
-                    {
-                        $DVD_INFO{$title}{$1} = hour_to_sec($2);
-                        #$DVD_INFO{$title}{'length'} += int($DVD_INFO{$title}{$1});
-                        $DVD_INFO{$title}{'sectors'} += int($4 - $3);
-                        $DVD_INFO{$title}{'sectors'}++; # fix sector off-by-one
-                        push(@chapter,$2) if ($2 ne '00:00:00.000');
-                    }
-                    if (m/title playback time: .* ([[:digit:]]+) sec/)
-                    {
-                        $DVD_INFO{$title}{'length'} = $1;
-                    }
-                }
-            }
-        } elsif ( -b $dir ) {
-            # /dev/dvd or similar...
-            open(INFO,"tcprobe -T $title -H 50 -i $dir 2>&1 |");
-            my @lines = <INFO>;
-            close(INFO);
-            my @audio_type;
-            my @audio_lang;
-            my @audio_chan;
-            foreach(@lines)
-            {
-                # (dvd_reader.c) [Chapter 01] 00:00:00.000 , block from 0 to 3133
-                if (/\[Chapter (\d+)\]\s*([[:digit:]:\.]+)\s*,\s*block\s*from\s*([[:digit:]]+)\s*to\s*([[:digit:]]+)/)
-                {
-                    $DVD_INFO{$title}{$1} = hour_to_sec($2);
-                    #$DVD_INFO{$title}{'length'} += int($DVD_INFO{$title}{$1});
-                    $DVD_INFO{$title}{'sectors'} += int($4 - $3);
-                    $DVD_INFO{$title}{'sectors'}++; # fix sector off-by-one
-                    push(@chapter,$2) if ($2 ne '00:00:00.000');
-                }
-                if (m/title playback time: .* ([[:digit:]]+) sec/)
-                {
-                    $DVD_INFO{$title}{'length'} = $1;
-                }
-                if (m/(ac3|dts)\s*([[:alpha:]]{2})\s*drc\s*[[:digit:]]+kHz\s*([[:digit:]]Ch)/)
-                {
-                    push(@audio_type,$1);
-                    push(@audio_lang,$2);
-                    push(@audio_chan,$3);
-                }
-            }
-            $DVD_INFO{$title}{'audio_type'} = \@audio_type;
-            $DVD_INFO{$title}{'audio_lang'} = \@audio_lang;
-            $DVD_INFO{$title}{'audio_chan'} = \@audio_chan;
-        }
-        _info("Number of chapters: ".(@chapter+1));
-        _info("Number of sectors: ".$DVD_INFO{$title}{'sectors'});
-        
+ 
         my $audio_size = $DVD_INFO{$title}{'length'} * 128 * 125; # for channel 1 and 2
         my $video_size= $DVD_INFO{$title}{'sectors'} * 2048 - $audio_size;
         my $factor = video_requant_factor($video_size,$audio_size);
+
+        _info("Number of angles in title $title: ".$DVD_INFO{$title}{'angles_total'});
+        _info("Number of chapters in title $title: ".$DVD_INFO{$title}{'chapters_total'});
+        _info("Number of sectors in title $title: ".$DVD_INFO{$title}{'sectors'});
+        _info("Video size (sectors*2048): ".$video_size);
+        _info("Audio size (length*128*125): ".$audio_size);
+        _info("Target DVD5 size: ".$DVD5SIZE);
+        _debug("1.05 * ( video_size / (dvd5size - (audio_size + 10MB)) )");
         _info("Requant factor: ".$factor);
 
         # do video extract
@@ -4035,15 +4024,6 @@ sub dvd9to5
         _debug($_tc_sys);
         system($_tc_sys);
        
-        # TODO this should be done all at once inside the tcprobe parsing loop
-        my $chapters = "00:00:00.000";
-        for (my $l = 1; $l < (@chapter+0) - 1; ++$l)
-        { 
-            $chapters .= "," . $chapter[$l];
-        }
-        
-        $DVD_INFO{$title}{'chapters'} = $chapters;
-
         print DVDAUTHOR ("<vob file=\"$mpg_file\" chapters=\"$DVD_INFO{$title}{'chapters'}\" />");
         print DVDAUTHOR ("
                         <post>

@@ -1,9 +1,12 @@
 #!/usr/bin/perl -w
 # vi: wm=79:tw=79 :
-# 2004-09-22 21:57 EDT $Revision: 1.6 $ 
+# 2004-09-22 21:57 EDT $Revision: 1.7 $ 
 # Luis Mondesi <lemsx1@hotmail.com> 
-# Converts a bookmarks.html(firefox/mozilla/netscape) file 
+# 
+# DESCRIPTION: Converts a bookmarks.html(firefox/mozilla/netscape) file 
 # to bookmarks.rss (1.0)
+# 
+# USAGE: bookmarks2rss.pl [OPTIONS] > file.rss
 #
 # There is no need to edit anything below. To run simply do:
 #
@@ -18,7 +21,7 @@
 #
 # The resulting output will be printed to STDOUT unless --output= is given
 #
-# TODO
+# TODO:
 #   - should live bookmarks be included? hint: instead of "href" look for FEEDURL attribute
 #
 # CHANGELOG:
@@ -27,6 +30,7 @@
 #   - 2004-11-22 13:24 EST  Added better support for HTML::Parser, now XML::RSS 
 #                           can include better things, like nice Text names
 #   - 2004-11-22 13:23 EST  Perl 5.8.x fixed utf8 problems. ton of cleanups
+# LICENSE: GPL
 
 package Bookmarks2rss;
 use vars qw(@ISA);

@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.125 $
+# $Revision: 1.126 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -69,8 +69,9 @@ my $INFO = 0;
 my $VERSION = 0;
 my $TVREC = 0;
 # numbers
-my $TITLESET=1; # default titleset when doing dvd9to5, mplayer or dvdbackup. 
-                # override from command line with --titleset=N
+my $title=undef;    # default title when doing dvd9to5, mplayer or dvdbackup. 
+                    # override from command line with --title=N
+                    # autodetected by _longest_title();
 my $START_CHAPTER=0; # start ripping from this chapter and up (for dvd9-to-dvd5)
 
 # strings
@@ -269,7 +270,7 @@ my $usage="
     '-m|--multiplex=s'              Use this multiplexer [mplex,tcmplex]
     '--multiplex-args=s'            Pass these arguments to the chosen multiplexer. A nice place to put \"-D 0\" and other things.
     '-M|--make-dvd=s'               Use this name to create a DVD iso
-    '--titleset=i'                  Rip this TitleSet for DVD-9 to DVD-5
+    '--title=i'                  Rip this Title for DVD-9 to DVD-5
     '-n|--nice=i'                   Nice level (UNIX) [+5]
     '--start-chapter=i'               Start ripping from chapter number
 
@@ -278,16 +279,16 @@ my $usage="
     \n v2v --rip=tccat ./DVD
     \n V2dvix ./DVD rip [ DEPRECATED ]
     \n or
-    \n v2v --rip=mplayer --titleset=1 ./DVD
+    \n v2v --rip=mplayer --title=1 ./DVD
     \n or
-    \n v2v --rip=dvdbackup --titleset=1 ./DVD
+    \n v2v --rip=dvdbackup --title=1 ./DVD
     \n
     \n # to convert to DVD5
     \n mkdir DVD5 && cd DVD5
     \n v2v --dvd9-to-dvd5 /scratch_disk/DVD # or, if --dvdbackup:
-    \n # v2v --dvd9-to-dvd5 /scratch_disk/DVD/ --titleset=1
+    \n # v2v --dvd9-to-dvd5 /scratch_disk/DVD/ --title=1
     \n # to rip with tccat and use NAMED PIPES (no memory usage or disc space!)
-    \n v2v --dvd9-to-dvd5 --titleset=1 /dev/dvd
+    \n v2v --dvd9-to-dvd5 --title=1 /dev/dvd
     \n # to make a .avi
     \n mkdir /scratch_disk/AVI && cd /scratch_disk/AVI
     \n v2v /scratch_disk/DVD 680 # replace 680 with desired size
@@ -301,6 +302,22 @@ my $bpp=0.18;   # This value =  bitrate x 1000 / ( fps x height x width )
 my $start_time = time;
 my $f_start_time = "";
 #format_date($start_time);
+
+my %DVD_INFO; # DVD information db. Holds data in the form:
+              # DVD_INFO{$title}{'string'}
+              # most useful title values are:
+              #  'sectors'  => number of sectors in title
+              #  'length'   => length of this title (in seconds)
+              #  'vts'      => VTS file for title
+              #  'chapters' => dvdauthor list of chapters: 00:00:00,00:15:00,...
+              #  'chapters_total' => number of chapters in title
+              #  'angles_total'   => number of angles in title
+              #  'audio_type'   => arrayref of audio types
+              #  'audio_lang'   => arrayref of audio languages
+              #  'audio_chan'   => arrayref of audio channels
+              #
+              # Also the following strings:
+              # $DVD_INFO{'disc_title'}
 
 ######################## FUNCTIONS #########################
 
@@ -3511,11 +3528,78 @@ sub config
 
 }   # END Config 
 
+# returns the longest title of a given DVD
+sub _longest_title
+{
+    my $dvd = shift;
+
+    my ($angle,$angles,$chapter,$nchapters)=1;
+    my (@titleSet,@titleLen,$sys,$vob,$sec,$hour,$min)="";
+
+    my $probe = qx(tcprobe -i \"$dvd\" 2>&1)
+        or mydie("Problem when running 'tcprobe -i $dvd'");
+    ($probe =~ m,DVD title \d+/(\d+),) 
+        or mydie("Probing DVD failed! - No DVD?");
+    my $totalTitles = $1;
+    _info("Number of titles: $totalTitles");
+    my @checkTitles = 1 .. $totalTitles;
+    # now probe each title and find longest
+    my $longestLen   = 0;
+    my $longestTitle = 0;
+    for(@checkTitles) 
+    {
+        # call tcprobe for info
+        $probe = qx(tcprobe -i \"$dvd\" -T $_ 2>&1) 
+            or mydie("Problem when running 'tcprobe -T $_ -i $dvd'");
+        # extract title playback time -> titlelen
+        ($probe =~ m,title playback time: .* (\d+) sec,) 
+            or mydie("No time found in tcprobe for title $_ !");
+        $titleLen[$_] = $1;
+        # extract title set (VTS file) -> title
+        ($probe =~ m,title set (\d+),) 
+            or mydie("No title set found in tcprobe for title $_! ");
+        $titleSet[$_] = $1;
+        # extract angles
+        ($probe =~ m,(\d+) angle\(s\),) 
+            or mydie("No angle found in tcprobe for title $_ !");
+        $angles = $1;
+        # extract number of chapters
+        ($probe =~ m,(\d+) chapter\(s\),) 
+            or mydie("No chapter found in tcprobe for title $_ !");
+        $nchapters = $1;
+
+        # calc hour, minute of title len
+        $sec  = $titleLen[$_];
+        $hour = int($sec / 3600);
+        $sec -= $hour * 3600;
+        $min  = int($sec / 60);
+        $sec -= $min * 60;
+        
+        _debug(sprintf("%02d: len=%02d:%02d:%02d vts=%02d angles=%02d ".
+        "chapters_total=%02d", $_,$hour,$min,$sec,$titleSet[$_],$angles,$nchapters));
+
+        # store in db
+        $DVD_INFO{$_}{'length'} = $titleLen[$_];
+        $DVD_INFO{$_}{'vts'} = $titleSet[$_];
+        $DVD_INFO{$_}{'angles_total'} = $angles;
+        $DVD_INFO{$_}{'chapters_total'} = $nchapters;
+
+        #  find largest title
+        if($titleLen[$_] > $longestLen) 
+        {
+            $longestLen   = $titleLen[$_];
+            $longestTitle = $_;
+        }
+    }
+    return $longestTitle;
+}
+
 sub ripdvd
 { 	
     # *************** RIP A DVD ***********************
-    my ($angle,$angles,$chapter,$chapters)=1;
-    my (@titleSet,@titleLen,$sys,$vob,$sec,$hour,$min,$dvd)="";
+    #my ($angle,$angles,$chapter,$nchapters)=1;
+    #my (@titleSet,@titleLen,$sys,$vob,$sec,$hour,$min,$dvd)="";
+    my ($sys,$vob,$dvd)="";
     $VOBPATH = ( -e $ARGV[0] ) ? $ARGV[0] : prompt("Enter directory to hold ripped DVD [/scratch_disk/DVD]: ");
     # sanity check:
     ( -e $VOBPATH )
@@ -3538,66 +3622,16 @@ sub ripdvd
     "All files in $VOBPATH will be deleted !!!\n".
     "Press Enter to continue or <Ctrl-C> to Abort\n");
     my $junk=<STDIN>; # pause for key input
-    my $probe = qx(tcprobe -i \"$dvd\" 2>&1)
-        or mydie("Problem when running 'tcprobe -i $dvd'");
-    ($probe =~ m,DVD title \d+/(\d+),) 
-        or mydie("Probing DVD failed! - No DVD?");
-    my $totalTitles = $1;
-    _info(" titles: total=$totalTitles\n");
-    my @checkTitles = 1 .. $totalTitles;
-    # now probe each title and find longest
-    my $longestLen   = 0;
-    my $longestTitle = 0;
-    for(@checkTitles) 
-    {
-        # call tcprobe for info
-        $probe = qx(tcprobe -i \"$dvd\" 2>&1 -T $_) 
-            or mydie("Problem when running 'tcprobe -i $dvd'");
-        # extract title playback time -> titlelen
-        ($probe =~ m,title playback time: .* (\d+) sec,) 
-            or mydie("No time found in tcprobe for title $_ !");
-        $titleLen[$_] = $1;
-        # extract title set (VTS file) -> titleset
-        ($probe =~ m,title set (\d+),) 
-            or mydie("No title set found in tcprobe for title $_! ");
-        $titleSet[$_] = $1;
-        # extract angles
-        ($probe =~ m,(\d+) angle\(s\),) 
-            or mydie("No angle found in tcprobe for title $_ !");
-        $angles = $1;
-        # extract chapters
-        ($probe =~ m,(\d+) chapter\(s\),) 
-            or mydie("No chapter found in tcprobe for title $_ !");
-        $chapters = $1;
+    
+    my $longestTitle = _longest_title($dvd);
 
-        # calc hour, minute of title len
-        $sec  = $titleLen[$_];
-        $hour = int($sec / 3600);
-        $sec -= $hour * 3600;
-        $min  = int($sec / 60);
-        $sec -= $min * 60;
-        # verbose
-        printf("%02d: len=%02d:%02d:%02d titleset=%02d angles=%02d ".
-            "chapters=%02d\n", $_,$hour,$min,$sec,$titleSet[$_],$angles,$chapters);
-        #  find largest title
-        if($titleLen[$_] > $longestLen) 
-        {
-            $longestLen   = $titleLen[$_];
-            $longestTitle = $_;
-        }
-    }
     my $rep= prompt(" The Main Title seems to be the Title No : $longestTitle, OK ? (y/n) :");
     if ( $rep ne "o" &&  $rep ne "O" && $rep ne "y" && $rep ne "Y" ) 
     { 	
-        $longestTitle=prompt("Ups... Enter the Title number please : ");
+        $longestTitle=prompt("Oops... Enter the Title number please : ");
     }
     #  Check if this title is multiangle ....
-    $probe = qx(tcprobe -i \"$dvd\" 2>&1 -T $longestTitle) 
-        or mydie("Problem when running 'tcprobe -i $dvd'");
-    ($probe =~ m,(\d+) angle\(s\),) 
-        or mydie("No angle found in tcprobe for title $longestTitle !");
-    $angles = $1;
-    if ( $angles > 1 )
+    if ( $DVD_INFO{$longestTitle}{'angles_total'} > 1 )
     { 	
         _warn("***************** WARNING!!!! *********************\n".
             "\t This is a multi angles video stream. \n");
@@ -3607,12 +3641,8 @@ sub ripdvd
         _info(" OK ... we continue ...\n");
         $angle = prompt(" There is $angles angles which one do you want? ");
     }
-    #  Check if this title is multichapter
-    ($probe =~ m,(\d+) chapter\(s\),) 
-        or mydie("No chapter found in tcprobe for title $longestTitle !");
-    $chapter=$1;
     $rep="N";
-    if ( $chapter > 1 )
+    if ( $DVD_INFO{$longestTitle}{'chapter_total'} > 1 )
     { 	
         $rep=prompt(" Do you want to rip this title chapter by chapter (y|N)? ");
     }
@@ -3624,17 +3654,18 @@ sub ripdvd
     opendir(VOB,$VOBPATH);
     chdir($VOBPATH) 
         or mydie("Unable to chdir to $VOBPATH.. please DO NOT USE the ~ character in the /path/to/vob");
+    # save probe.rip for later (in case we do clustering so
     $sys="tcprobe -i $dvd -T $longestTitle >> probe.rip 2>&1 ";
     system ("nice -$nice $sys");
     if ( $rep =~ m/^y$/i  || $rep eq "o" || $rep eq "0")
     {
         my $i=0;
-        for ( $i=1;$i<=$chapter;$i++)
+        for ( $i=1;$i<=$DVD_INFO{$longestTitle}{'chapter_total'};$i++)
         {
-            $sys="tccat -i $dvd -T $longestTitle,$i,$angle ".
+            $sys="nice -$nice tccat -i $dvd -T $longestTitle,$i,$angle ".
                 "| split -b 1024m - ${TITLE}_T${longestTitle}_C${i}_" ;
-            _info("$sys \n") if ( $INFO );
-            system("nice -$nice $sys");
+            _info($sys);
+            system($sys);
         }
 # TODO we don't care about angles or chapters, 
 # rip whole title with -P to make more compatible with dvdauthor
@@ -3646,10 +3677,10 @@ sub ripdvd
 #        _info("$sys \n") if ( $INFO);
 #        system("nice -$nice $sys");
     } else {
-        $sys="tccat -i $dvd -T $longestTitle,-1,$angle ".
+        $sys="nice -$nice tccat -i $dvd -T $longestTitle,-1,$angle ".
             "| split -b 1024m - ${TITLE}_T${longestTitle}_" ;
-        _info("$sys \n") if ( $INFO);
-        system("nice -$nice $sys");
+        _info($sys);
+        system($sys);
     }
     # Check if $TITLE is well in the vob file name AND 
     # the vob file is well in the current directory 
@@ -3765,7 +3796,11 @@ sub dvd9to5
 
     my $VERBOSITY = ( $DEBUG == 0 ) ? 0 : 2;
 
-    $title = ($title =~ /^\s*[[:digit:],]+$/) ? $title : 1;
+    # TODO make sure that $dir is a block before using _longest_title();
+    $title = ( defined($title) and $title =~ /^\s*[[:digit:],]+$/) ? 
+        $title : _longest_title($dir);
+
+    _info("Longest title: $title");
 
     # pick a title for our DVD
     my $dvdtitle = which("dvdtitle");
@@ -3775,6 +3810,8 @@ sub dvd9to5
     $DISC_TITLE =~ s,[\s\-]+,_,g; # replace whitespaces and dashes with _
     $DISC_TITLE =~ y/a-z/A-Z/; # uppercase
     $DISC_TITLE = substr($DISC_TITLE ,0,$VOLIDMAXLENGTH); # limit no. of characters
+
+    $DVD_INFO{'disc_title'} = $DISC_TITLE;
 
     my $TCMPLEX = which("tcmplex");
     my $TCMPLEXARGS = "";
@@ -3881,7 +3918,6 @@ sub dvd9to5
             die("We need mplex for now... tcmplex support to come later \n");
         }
 
-        my %DVD_INFO;
         my @chapter; # dvdauthor chapter in format: 00:00:00.000
 
         # TODO this will be useful when video is out of sync
@@ -3891,9 +3927,9 @@ sub dvd9to5
                 # TODO
                 # perhaps this doesn't work the same as it does for special discs
                 # needs testing
-                open(DVD_INFO,"tcprobe -H 50 -i $file 2>&1 |");
-                my @lines = <DVD_INFO>;
-                close(DVD_INFO);
+                open(INFO,"tcprobe -H 50 -i $file 2>&1 |");
+                my @lines = <INFO>;
+                close(INFO);
                 # TODO this section and the one for /dev/dvd are essentially
                 # the same, find a way to reuse the code
                 foreach(@lines)
@@ -3915,9 +3951,9 @@ sub dvd9to5
             }
         } elsif ( -b $dir ) {
             # /dev/dvd or similar...
-            open(DVD_INFO,"tcprobe -H 50 -i $dir 2>&1 |");
-            my @lines = <DVD_INFO>;
-            close(DVD_INFO);
+            open(INFO,"tcprobe -T $title -H 50 -i $dir 2>&1 |");
+            my @lines = <INFO>;
+            close(INFO);
             my @audio_type;
             my @audio_lang;
             my @audio_chan;
@@ -3997,14 +4033,17 @@ sub dvd9to5
         my $_tc_sys = "nice -n $nice tccat -i $dir $TCCAT_EXTRA_ARGS | tee $named_pipes  > /dev/null &";
         _debug($_tc_sys);
         system($_tc_sys);
-        
+       
+        # TODO this should be done all at once inside the tcprobe parsing loop
         my $chapters = "00:00:00.000";
         for (my $l = 1; $l < (@chapter+0) - 1; ++$l)
         { 
             $chapters .= "," . $chapter[$l];
         }
+        
+        $DVD_INFO{$title}{'chapters'} = $chapters;
 
-        print DVDAUTHOR ("<vob file=\"$mpg_file\" chapters=\"$chapters\" />");
+        print DVDAUTHOR ("<vob file=\"$mpg_file\" chapters=\"$DVD_INFO{$title}{'chapters'}\" />");
         print DVDAUTHOR ("
                         <post>
                             jump chapter 1;
@@ -4368,7 +4407,7 @@ GetOptions(
     'M|make-dvd=s'              => \$DVD,
     # numbers
     'a|default-audio-channel=i' => \$DEF_AUDIOCHANNEL,
-    'titleset=i'                => \$TITLESET,
+    'title=i'                => \$title,
     'n|nice=i'                  => \$nice,
     'start-chapter=i'           => \$START_CHAPTER,
     'dvd5-size=i'               => \$DVD5SIZE,
@@ -4394,8 +4433,9 @@ if ( $TEST )
 {
     my $i=0; # counter
     my $dir = $ARGV[0];
-
-    my $TCCAT_EXTRA_ARGS = ( -b $dir ) ? " -T$TITLESET -L ":"";
+    my $longest_title = _longest_title($dir);
+    $title = prompt("Enter title to use for testing [Longest=$longest_title]: ");
+    my $TCCAT_EXTRA_ARGS = ( -b $dir ) ? " -T$title -L ":"";
 
     # let's rip 5 seconds of video and put it in test.vob
     system("tccat -i $dir $TCCAT_EXTRA_ARGS > test.vob &");
@@ -4543,21 +4583,21 @@ if ( $SRTSUBRIP )
 # Convert from DVD9 format to DVD5
 if ($DVD9TO5 > 0)
 {
-    dvd9to5($ARGV[0],$TITLESET); # calls make_dvd()
+    dvd9to5($ARGV[0],$title); # calls make_dvd()
     exit(0);
 }
 
 # rip dvd using dvdbackup
 if ($DVDBACKUP > 0 || $RIP =~ /dvdbackup/ )
 {
-    dvdbackup($ARGV[0],$TITLESET); # 
+    dvdbackup($ARGV[0],$title); # 
     exit(0);
 }
 
 # rip dvd using mplayer
 if ($MPLAYER > 0 || $RIP =~ /mplayer/)
 {
-    mplayer_rip($ARGV[0],$TITLESET); # 
+    mplayer_rip($ARGV[0],$title); # 
     exit(0);
 }
 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.128 $
+# $Revision: 1.129 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3610,9 +3610,11 @@ sub _longest_title
 
     _collect_title_info($dvd,1); # collect default title so we can get 'titles_total'
     _info("Number of titles: ".$DVD_INFO{'titles_total'});
+    _debug("longestTitle: $_ => ".$DVD_INFO{$_}{'length'});
+
     my @checkTitles = 2 .. $DVD_INFO{'titles_total'}; # we skip 1 because we already collected that
     # now probe each title and find longest
-    my $longestLen   = 0;
+    my $longestLen   = $DVD_INFO{'1'}{'length'}; # we start by assuming title 1 is the longest
     my $longestTitle = 0;
     for(@checkTitles) 
     {
@@ -3631,6 +3633,7 @@ sub _longest_title
                     "chapters_total=%02d", $_,$hour,$min,$sec,$DVD_INFO{$_}{'vts'},$DVD_INFO{$_}{'angles_total'},$DVD_INFO{$_}{'chapters_total'}));
         }
         #  find largest title
+        _debug("longestTitle: $_ => ".$DVD_INFO{$_}{'length'});
         if($DVD_INFO{$_}{'length'} > $longestLen) 
         {
             $longestLen   = $DVD_INFO{$_}{'length'};

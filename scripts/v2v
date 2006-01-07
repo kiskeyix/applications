@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.126 $
+# $Revision: 1.127 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3631,6 +3631,7 @@ sub ripdvd
         $longestTitle=prompt("Oops... Enter the Title number please : ");
     }
     #  Check if this title is multiangle ....
+    my $angle=1;
     if ( $DVD_INFO{$longestTitle}{'angles_total'} > 1 )
     { 	
         _warn("***************** WARNING!!!! *********************\n".
@@ -3639,7 +3640,7 @@ sub ripdvd
         mydie("OK ... Have a look on your DVD to find which angle you like\n Bye")
             if ( $rep ne "o" &&  $rep ne "O" && $rep ne "y" && $rep ne "Y" );
         _info(" OK ... we continue ...\n");
-        $angle = prompt(" There is $angles angles which one do you want? ");
+        $angle = prompt("There are $DVD_INFO{$longestTitle}{'angles_total'} angles which one do you want? [$angle]: ");
     }
     $rep="N";
     if ( $DVD_INFO{$longestTitle}{'chapter_total'} > 1 )

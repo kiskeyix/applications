@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.5 $
-# $Date: 2006-01-09 19:03:58 $
+# $Revision: 1.6 $
+# $Date: 2006-01-09 19:07:55 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: start/stop or removes services in Linux (all distros)
@@ -35,6 +35,8 @@ B<service>  [-v,--version]
 
 use strict;
 $|++;
+
+$ENV{'PATH'} .= ":/sbin:/usr/sbin";
 
 my $revision = "1.0"; # version
 my %redhat_commands = (

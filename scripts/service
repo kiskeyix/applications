@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.4 $
-# $Date: 2005-12-23 05:02:39 $
+# $Revision: 1.5 $
+# $Date: 2006-01-09 19:03:58 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: start/stop or removes services in Linux (all distros)
@@ -18,8 +18,8 @@ service - service script for starting, stoping adding and removing services in L
 B<service>  [-v,--version]
                 [-D,--debug] 
                 [-h,--help]
-                {start|stop|restart|reset|remove|off|on}
-                {service1 service2 ... serviceN}
+                <start|stop|restart|reset|remove|off|on>
+                <service1 service2 ... serviceN>
 
 =head1 DESCRIPTION 
 
@@ -51,10 +51,11 @@ my %debian_commands = (
 # now assign commands accordingly
 # NOTE: key 1 is output of lsb_release -i
 my %distros = (
-    'SUSE LINUX'=>\%redhat_commands,
-    'FedoraCore'=>\%redhat_commands,
-    'Debian'=>\%debian_commands,
-    'Ubuntu'=>\%debian_commands,
+    'redhat'=>\%redhat_commands,
+    'suselinux'=>\%redhat_commands,
+    'fedoracore'=>\%redhat_commands,
+    'debian'=>\%debian_commands,
+    'ubuntu'=>\%debian_commands,
 );
 
 #---------------------------------------------------------------------------#
@@ -127,9 +128,10 @@ if ( not defined($ACTION) or $ACTION !~ /start|stop|reload|status|off|on|reset|r
 if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
 
 # what distro are we?
-my $release_info = qx/lsb_release -i/;
+my $release_info = lc( qx/lsb_release -i/ );
 chomp($release_info);
 $release_info =~ s/.*:\s+//;
+$release_info =~ s/\s+//;
 print $release_info,"\n" if ($DEBUG);
 
 if ($DEBUG)

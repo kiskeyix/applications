@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.131 $
+# $Revision: 1.132 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3542,14 +3542,36 @@ sub _collect_title_info
     my @subtitles;
     my @chapters = ('00:00:00.000');
 
-#FIXME commented out until i find some useful way of getting this information - LM
-#     # TODO this will be useful when video is out of sync
-#     if ( -d $dir ) {
-#         foreach my $file (glob("$dir/*.[VvOoBb]")) # .vob too...
-#         {
-#             open(INFO,"tcprobe -H 50 -i $file 2>&1 |");
-    if ( -b $dvd )
-    {
+    if ( -d $dir ) {
+        # since this is a directory, we fake the information
+        push(@audio_type,"ac3");
+        push(@audio_lang,"en");
+        push(@audio_chan,"6");
+        push(@subtitles,"en");
+        # fake 2 hours of chapters
+        push(@chapters,"00:10:00.000");
+        push(@chapters,"00:20:00.000");
+        push(@chapters,"00:30:00.000");
+        push(@chapters,"00:40:00.000");
+        push(@chapters,"00:50:00.000");
+        push(@chapters,"01:00:00.000");
+        push(@chapters,"01:10:00.000");
+        push(@chapters,"01:20:00.000");
+        push(@chapters,"01:30:00.000");
+        push(@chapters,"01:40:00.000");
+        push(@chapters,"01:50:00.000");
+        push(@chapters,"02:00:00.000");
+        $DVD_INFO{'titles_total'} = 1;
+        $DVD_INFO{$title}{'chapters_total'} = 1; 
+        $DVD_INFO{$title}{'angles_total'} = 1;
+        $DVD_INFO{$title}{'vts'} = 1;
+        $DVD_INFO{$title}{'length'} = 7200; # fake movie length in seconds (2 hours). This will be used for calculating the audio
+        foreach my $file (glob("$dir/*.[VvOoBb]")) # .vob too...
+        {
+            my @_stat = stat($file);
+            $DVD_INFO{$title}{'sectors'} += ($_stat[7] / 2048); # fake sector size. stat() returns bytes for us.
+        }
+    } else {
         # /dev/dvd or similar...
         open(INFO,"tcprobe -T $title -H 50 -i $dvd 2>&1 |");
         my @lines = <INFO>;

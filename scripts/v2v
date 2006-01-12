@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.132 $
+# $Revision: 1.133 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3542,7 +3542,7 @@ sub _collect_title_info
     my @subtitles;
     my @chapters = ('00:00:00.000');
 
-    if ( -d $dir ) {
+    if ( -d $dvd ) {
         # since this is a directory, we fake the information
         push(@audio_type,"ac3");
         push(@audio_lang,"en");
@@ -3566,7 +3566,7 @@ sub _collect_title_info
         $DVD_INFO{$title}{'angles_total'} = 1;
         $DVD_INFO{$title}{'vts'} = 1;
         $DVD_INFO{$title}{'length'} = 7200; # fake movie length in seconds (2 hours). This will be used for calculating the audio
-        foreach my $file (glob("$dir/*.[VvOoBb]")) # .vob too...
+        foreach my $file (glob("$dvd/*.[VvOoBb]")) # .vob too...
         {
             my @_stat = stat($file);
             $DVD_INFO{$title}{'sectors'} += ($_stat[7] / 2048); # fake sector size. stat() returns bytes for us.
@@ -3879,7 +3879,13 @@ sub dvd9to5
 
     # pick a title for our DVD
     my $dvdtitle = which("dvdtitle");
-    my $DISC_TITLE = ( -x $dvdtitle ) ? qx/ $dvdtitle / : "V2V"; # default title
+    my $DISC_TITLE = undef;
+    if ( defined($DVD) and $DVD !~ /^\s*$/ )
+    {
+        $DISC_TITLE = $DVD;
+    } else {
+        $DISC_TITLE = ( -x $dvdtitle ) ? qx/ $dvdtitle / : "V2V"; # default title
+    }
     # sanitize DISC_TITLE name
     chomp($DISC_TITLE);
     $DISC_TITLE =~ s,[\s\-]+,_,g; # replace whitespaces and dashes with _
@@ -4398,6 +4404,7 @@ GetOptions(
     'blued'                     =>  \$BLUED,
     # strings
     'D|directory=s'             => \$ROOT_DIRECTORY,
+    'disctitle=s'               => \$DVD,
     's|source-video-format=s'   => \$SVIDEO_FORMAT,
     'x|x-video=s'               => \$DIVX,
     'F|x-video-opts=s'          => \$DIVX_OPT,
@@ -4416,7 +4423,7 @@ GetOptions(
     'M|make-dvd=s'              => \$DVD,
     # numbers
     'a|default-audio-channel=i' => \$DEF_AUDIOCHANNEL,
-    'title=i'                => \$title,
+    'title=i'                   => \$title,
     'n|nice=i'                  => \$nice,
     'start-chapter=i'           => \$START_CHAPTER,
     'dvd5-size=i'               => \$DVD5SIZE,
@@ -4610,6 +4617,7 @@ if ($MPLAYER > 0 || $RIP =~ /mplayer/)
     exit(0);
 }
 
+# if --dvd9-to-dvd5 was given, we won't reach here
 if ( defined($DVD) && $DVD !~ m/^\s+$/i && -d $ARGV[0] )
 {
     make_dvd($ARGV[0],$DVD);

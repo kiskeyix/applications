@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.130 $
+# $Revision: 1.131 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3974,13 +3974,13 @@ sub dvd9to5
             die("We need mplex for now... tcmplex support to come later \n");
         }
  
-        my $audio_size = $DVD_INFO{$title}{'length'} * 128 * 125; # for channel 1 and 2
-        my $video_size= $DVD_INFO{$title}{'sectors'} * 2048 - $audio_size;
+        my $audio_size = $DVD_INFO{$_}{'length'} * 128 * 125; # for channel 1 and 2
+        my $video_size= $DVD_INFO{$_}{'sectors'} * 2048 - $audio_size;
         my $factor = video_requant_factor($video_size,$audio_size);
 
-        _info("Number of angles in title $title: ".$DVD_INFO{$title}{'angles_total'});
-        _info("Number of chapters in title $title: ".$DVD_INFO{$title}{'chapters_total'});
-        _info("Number of sectors in title $title: ".$DVD_INFO{$title}{'sectors'});
+        _info("Number of angles in title $_: ".$DVD_INFO{$_}{'angles_total'});
+        _info("Number of chapters in title $_: ".$DVD_INFO{$_}{'chapters_total'});
+        _info("Number of sectors in title $_: ".$DVD_INFO{$_}{'sectors'});
         _info("Video size (sectors*2048): ".$video_size);
         _info("Audio size (length*128*125): ".$audio_size);
         _info("Target DVD5 size: ".$DVD5SIZE);
@@ -3992,17 +3992,17 @@ sub dvd9to5
 
         # audio extract
         my $audio_track = 0; # default audio track
-        my $audio_total = (@{$DVD_INFO{$title}{'audio_type'}}+0);
+        my $audio_total = (@{$DVD_INFO{$_}{'audio_type'}}+0);
         _info("Number of audio tracks: ".$audio_total);
         if ($audio_total > 1)
         {
             print STDOUT ("Choose audio track:\n");
             AUDIO:
-            for(my $i=0;$i<@{$DVD_INFO{$title}{'audio_type'}}+0;$i++)
+            for(my $i=0;$i<@{$DVD_INFO{$_}{'audio_type'}}+0;$i++)
             {
-                print STDOUT ($i.")\t".$DVD_INFO{$title}{'audio_type'}->[$i].
-                "\t lang: ".$DVD_INFO{$title}{'audio_lang'}->[$i].
-                "\tchannels: ".$DVD_INFO{$title}{'audio_chan'}->[$i]);
+                print STDOUT ($i.")\t".$DVD_INFO{$_}{'audio_type'}->[$i].
+                "\t lang: ".$DVD_INFO{$_}{'audio_lang'}->[$i].
+                "\tchannels: ".$DVD_INFO{$_}{'audio_chan'}->[$i]);
                 print STDOUT (" (*)") if ($i == $audio_track);
                 print STDOUT ("\n");
             }
@@ -4012,7 +4012,7 @@ sub dvd9to5
                 or $audio_rep < 0 or $audio_rep >= $audio_total);
             $audio_track=$audio_rep;
         }
-        push(@_extract,"nice -n $nice $BUFFER $BUFFER_ARGS -i $audio_vob_fifo | nice -n $nice tcextract -t vob -x ".${$DVD_INFO{$title}{'audio_type'}}[$audio_track]." -a $audio_track > $audio &");
+        push(@_extract,"nice -n $nice $BUFFER $BUFFER_ARGS -i $audio_vob_fifo | nice -n $nice tcextract -t vob -x ".${$DVD_INFO{$_}{'audio_type'}}[$audio_track]." -a $audio_track > $audio &");
         
         # subtitles extract
         #push(@_extract,"nice -n $nice $BUFFER $BUFFER_ARGS -i $subtitle_vob_fifo | nice -n $nice tcextract -a 0 -x ps1 -t vob > $subtitle &");
@@ -4030,7 +4030,7 @@ sub dvd9to5
         _debug($_tc_sys);
         system($_tc_sys);
        
-        print DVDAUTHOR ("<vob file=\"$mpg_file\" chapters=\"$DVD_INFO{$title}{'chapters'}\" />");
+        print DVDAUTHOR ("<vob file=\"$mpg_file\" chapters=\"$DVD_INFO{$_}{'chapters'}\" />");
         print DVDAUTHOR ("
                         <post>
                             jump chapter 1;
@@ -4052,7 +4052,7 @@ sub dvd9to5
         # nice -n $nice subtitle2pgm -i $subtitle -o SUBPGM/$PROJNAME -X$TVRES -g 5 -t 1
         # nice -n $nice spumux spumux.xml < $video > $video.muxed.mpeg
 
-    } # end foreach $title
+    } # end foreach $_
     
     my $_dvdauthor_sys_2 = "nice -n $nice dvdauthor -T -o $DISC_TITLE";
     _debug($_dvdauthor_sys_2);

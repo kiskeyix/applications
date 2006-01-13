@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.133 $
+# $Revision: 1.134 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3569,7 +3569,7 @@ sub _collect_title_info
         foreach my $file (glob("$dvd/*.[VvOoBb]")) # .vob too...
         {
             my @_stat = stat($file);
-            $DVD_INFO{$title}{'sectors'} += ($_stat[7] / 2048); # fake sector size. stat() returns bytes for us.
+            $DVD_INFO{'1'}{'sectors'} += ($_stat[7] / 2048); # fake sector size. stat() returns bytes for us.
         }
     } else {
         # /dev/dvd or similar...

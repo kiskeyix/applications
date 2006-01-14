@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.135 $
+# $Revision: 1.136 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3566,7 +3566,7 @@ sub _collect_title_info
         $DVD_INFO{$title}{'angles_total'} = 1;
         $DVD_INFO{$title}{'vts'} = 1;
         $DVD_INFO{$title}{'length'} = 7200; # fake movie length in seconds (2 hours). This will be used for calculating the audio
-        print "$dvd\n";
+        
         foreach my $file (glob("$dvd/*.{VOB,vob}")) # .vob too...
         {
             my @_stat = stat($file);

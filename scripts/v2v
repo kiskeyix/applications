@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.134 $
+# $Revision: 1.135 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3566,10 +3566,11 @@ sub _collect_title_info
         $DVD_INFO{$title}{'angles_total'} = 1;
         $DVD_INFO{$title}{'vts'} = 1;
         $DVD_INFO{$title}{'length'} = 7200; # fake movie length in seconds (2 hours). This will be used for calculating the audio
-        foreach my $file (glob("$dvd/*.[VvOoBb]")) # .vob too...
+        print "$dvd\n";
+        foreach my $file (glob("$dvd/*.{VOB,vob}")) # .vob too...
         {
             my @_stat = stat($file);
-            $DVD_INFO{'1'}{'sectors'} += ($_stat[7] / 2048); # fake sector size. stat() returns bytes for us.
+            $DVD_INFO{$title}{'sectors'} += ($_stat[7] / 2048); # fake sector size. stat() returns bytes for us.
         }
     } else {
         # /dev/dvd or similar...
@@ -3938,9 +3939,8 @@ sub dvd9to5
     foreach(split(/\s*,\s*/,$title))
     {
         next if ( $_ !~ /^\d+$/); # sanity check
-        
-        _collect_title_info($dir,$_); # TODO make sure we don't collect this information twice
-
+        _collect_title_info($dir,$_)
+            unless ( exists($DVD_INFO{$_}{'sectors'}) and $DVD_INFO{$_}{'sectors'} > 0 );
         open(DVDAUTHOR,">dvdauthor.xml");
         print DVDAUTHOR ("<dvdauthor dest=\"$DISC_TITLE\">
         <vmgm />
@@ -4014,7 +4014,7 @@ sub dvd9to5
         _info("Target DVD5 size: ".$DVD5SIZE);
         _debug("1.05 * ( video_size / (dvd5size - (audio_size + 10MB)) )");
         _info("Requant factor: ".$factor);
-
+        
         # do video extract
         push(@_extract,"nice -n $nice $BUFFER $BUFFER_ARGS -i $video_vob_fifo | nice -n $nice tcextract -t vob -x mpeg2 | nice -n $nice tcrequant -f $factor > $video &");
 

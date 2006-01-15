@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.137 $
+# $Revision: 1.138 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -4135,7 +4135,7 @@ sub dvd9to5
     BURN:
     if ( $rep_burn =~ m/^y/i and $rep_iso =~ m/^y/i )
     {
-        my $_cmd = "growisofs -V $DISC_TITLE -dvd-compat -udf -Z /dev/dvd=$DISC_TITLE.iso";
+        my $_cmd = "growisofs -Z /dev/dvd=$DISC_TITLE.iso";
         _debug($_cmd);
         system($_cmd)
     } elsif ($rep_burn =~ m/^y/i) {

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.59 $
+# $Revision: 1.60 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -12,6 +12,7 @@
 
 use strict;
 $|++;
+use sigtrap qw(handler _exit_safe normal-signals error-signals);
 
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
@@ -33,12 +34,14 @@ B<update-host>
 [--host <hostname>] 
 [-h,--help]
 [--hosts-file <path/to/file>]
+[-k,--key]
 [-l,--local]
 [--local-path]
 [-L,--links,--symlinks]
 [-m,--master] 
 [--print-files]
 [-r,--remove]
+[-s,--send-key]
 [-u,--username USER]
 [-U,--usage]
 [-V,--verbose]
@@ -88,6 +91,8 @@ my $HELP=0;
 my $MASTER_HOST = "http://lems.kiskeyix.org";
 my $LOCAL_PATH  = "$ENV{'HOME'}/Shared/software/settings";
 my $REMOTE_HOSTS_FILE = "$ENV{'HOME'}/.remote-hosts";
+my $PG_KEY=""; # when empty adds all for us... $ENV{'HOME'}."/.ssh/id_rsa";
+
 # path to temporary directory
 my $TMP="tmp";
 # ary of systems to be excluded from updating
@@ -136,6 +141,9 @@ my $REMOVE_FILES=0;
 my $DOLINKS=0;
 my $MASTER=0; # update current host from $MASTER_HOST
 my $LOCAL=0; # do not get any new copies, use the local files instead
+my $PKEY=0;  # should we push our id_rsa.pub key to the remote host?
+my $_ssh_agent = 0; # should we kill ssh-agent when done?
+my $_ssh_id = 0;    # should we remove id when done?
 my $RED = "\033[1;31m";
 my $NORM = "\033[0;39m";
 my $GREEN = "\033[0;32m";
@@ -165,15 +173,15 @@ Prints this help and exits
 
 =item --host URL
 
-Sets $MASTER_HOST to URL
+Sets $MASTER_HOST to URL. This is the URL from where the original files will be downloaded.
 
 =item --hosts-file FILE
 
 Uses FILE instead of ~/.remote-hosts as our hosts file. This file is in the same format as /etc/hosts.
 
-=item -m,--master
+=item -k,--key KEY
 
-Update localhost from master. Default is to upgrade all the computers found in ~/.remote-hosts. @see --host
+Uses private key KEY instead of ~/.ssh/id_rsa for ssh-agent
 
 =item -l,--local
 
@@ -201,6 +209,10 @@ Do symlinks instead of unpacking bashrc.tar.bz2, vimrc.tar.bz2, muttrc.tar.bz2. 
 
 See @_CONFIG_FILES
 
+=item -m,--master
+
+Update localhost from master. Default is to upgrade all the computers found in ~/.remote-hosts. @see --host
+
 =item --print-files
 
 Prints a list of files and exits. @see --files
@@ -208,6 +220,10 @@ Prints a list of files and exits. @see --files
 =item -r,--remove
 
 Remove all temporary files after updating
+
+=item -s,--send-key
+
+Pushes local ~/.ssh/id_rsa.pub key to remote host ~/.ssh/authorized_keys file and exits
 
 =item -u,--username USER
 
@@ -237,11 +253,13 @@ GetOptions(
     'D|debug'           =>  \$DEBUG,
     'r|remove'          =>  \$REMOVE_FILES,
     'V|verbose'         =>  \$VERBOSE,
-    'm|master|localhost'    =>  \$MASTER,
+    'm|master|localhost'=>  \$MASTER,
     'l|local'           =>  \$LOCAL,
     'print-files'       =>  \$PRINT_FILES,
     'L|symlinks|links'  =>  \$DOLINKS,
+    's|send-key'        =>  \$PKEY,
     # strings
+    'k|key=s'           =>  \$PG_KEY,
     'host=s'            =>  \$MASTER_HOST,
     'files=s'           =>  \$CONF_FILES,
     'local-path=s'      =>  \$LOCAL_PATH,
@@ -263,6 +281,47 @@ if ( $USAGE ) {
     use Pod::Usage;
     pod2usage(1);
     exit 0;
+}
+
+# setup SSH
+if ( !exists($ENV{'SSH_AUTH_SOCK'}) )
+{
+    my $_ssh_agent_env = qx/ssh-agent -s/;
+    $_ssh_agent_env =~ m/SSH_AUTH_SOCK=(.*); /gmi;
+    $ENV{'SSH_AUTH_SOCK'} = $1 if ( !exists($ENV{'SSH_AUTH_SOCK'}) );
+    $_ssh_agent_env =~ m/SSH_AGENT_PID=(.*); /gmi;
+    $ENV{'SSH_AGENT_PID'} = $1 if ( !exists($ENV{'SSH_AGENT_PID'}) );
+    $_ssh_agent = 1; # we should kill the agent when done
+}
+die("Please run: ssh-agent $0\n") if ( !exists($ENV{'SSH_AUTH_SOCK'}) );
+$_ssh_id = system("ssh-add -l > /dev/null");
+if ( $_ssh_id != 0 )
+{
+    system("ssh-add $PG_KEY"); # if $PG_KEY is blank ssh-add adds all private keys
+    die ("Failed to authenticate\n") if ( $? != 0 );
+    $_ssh_id = 1; # we need to know that this agent should be killed later
+}
+# end setup SSH
+
+if ( $PKEY )
+{
+    print STDERR ("host argument missing.\nUsage: update-host --send-key HOST1 [HOST2 ...]") 
+        and exit(1) if ( !defined($HOST) or $HOST =~ /^\s*$/ );
+   
+    # generate RSA keys if none found. I don't care about people who use DSA :-P
+    system("ssh-keygen -t rsa -b 1024") if ( ! -f "$ENV{'HOME'}/.ssh/id_rsa.pub" );
+
+    system("cat $ENV{'HOME'}/.ssh/id_rsa.pub | ssh ".$USERNAME."@".$HOST." 'cat - >> .ssh/authorized_keys'");
+    print STDERR ("failed to send key to $HOST") and exit($?) if ( $? != 0 );
+    
+    # if we have more hosts, keep going
+    foreach my $host (@ARGV)
+    {
+        system("cat $ENV{'HOME'}/.ssh/id_rsa.pub | ssh ".$USERNAME."@".$host." 'cat - >> .ssh/authorized_keys'");
+        print STDERR ("failed to send key to $HOST") and exit($?) if ( $? != 0 );
+    }
+
+    exit(0);
 }
 
 if ( $VERBOSE )
@@ -628,3 +687,17 @@ sub _do_links
         }
     }
 }
+
+sub _exit_safe
+{
+    if ( $_ssh_id == 1 )
+    {
+        system("ssh-add -D"); # delete identities
+    }
+
+    if ( $_ssh_agent == 1 )
+    {
+        kill(15,$ENV{'SSH_AGENT_PID'});
+    }
+}
+

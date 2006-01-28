@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.139 $
+# $Revision: 1.140 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3873,8 +3873,8 @@ sub dvd9to5
 
     if ( ! defined($dir) or ! -e $dir )
     {
-        _warn("No DVD device or Directory given as argument for video extraction. Falling back to $DVD");
-        $dir = $DVD;
+        _warn("No DVD device or Directory given as argument for video extraction. Falling back to $DVDDEV");
+        $dir = $DVDDEV;
     }
     $dir =~ s#/+$##; # removes the trailing slashes
     if ( -d $dir )

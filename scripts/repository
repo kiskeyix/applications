@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.6 $
-# $Date: 2006-01-29 11:07:41 $
+# $Revision: 1.7 $
+# $Date: 2006-01-29 11:50:37 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: easy repository builder
@@ -185,7 +185,7 @@ if ($distro =~ /ubuntu|debian/i)
             }
         }
     }
-
+    system("reprepro createsymlinks --delete") if ( $cmd eq "reprepro" );
 } else {
     print STDERR ("Distribution $distro not supported\n");
     print STDERR ("is lsb_release installed? try: lsb_release -i\n");

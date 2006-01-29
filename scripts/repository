@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.2 $
-# $Date: 2006-01-29 10:14:50 $
+# $Revision: 1.3 $
+# $Date: 2006-01-29 10:24:48 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: easy repository builder
@@ -150,36 +150,38 @@ if ($distro =~ /ubuntu|debian/i)
         # adding all files in "incoming"
         # .changes:
         print STDERR ("Adding .changes files\n") if ($DEBUG);
-        for(glob("incoming/*.changes"))
+        foreach my $file (glob("incoming/*.changes"))
         {
-            my $distrib = _get_distrib($_);
-            print STDERR ("Adding $_ to distrib $distrib\n") 
+            my $distrib = _get_distrib($file);
+            print STDERR ("Adding $file to distrib $distrib\n") 
                 if ($DEBUG);
-            system("reprepro -Vb . include $distrib $_");
-            die("Error while including $_\n") if ($? != 0);
+            system("reprepro -Vb . include $distrib $file");
+            die("Error while including $file\n") if ($? != 0);
         }
 
         # .dsc:
         print STDERR ("Adding sources files\n") if ($DEBUG);
-        for(glob("incoming/*.dsc"))
+        foreach my $file (glob("incoming/*.dsc"))
         {
-            my $distrib = _get_distrib($_);
-            print STDERR ("Adding $_ to distrib $distrib\n") 
+            my $distrib = _get_distrib($file);
+            print STDERR ("Adding $file to distrib $distrib\n") 
                 if ($DEBUG);
-            system("reprepro -Vb . includedsc $distrib $_");
-            die("Error while including sources for $_\n") if ($? != 0);
+            system("reprepro -Vb . includedsc $distrib $file");
+            die("Error while including sources for $file\n") 
+                if ($? != 0);
         }
 
         # .deb for e/a distrib:
         print STDERR ("Adding .deb files\n") if ($DEBUG);
         foreach my $distrib (@distributions)
         {
-            for(glob("incoming/$distrib/*.deb"))
+            foreach my $file (glob("incoming/$distrib/*.deb"))
             {
-                print STDERR ("Adding $_ to distrib $distrib\n")
+                print STDERR ("Adding $file to distrib $distrib\n")
                     if ($DEBUG);
-                system("reprepro -Vb . includedeb $distrib $_");
-                die("Error while including sources for $_\n") if ($? != 0);
+                system("reprepro -Vb . includedeb $distrib $file");
+                die("Error while including sources for $file\n") 
+                    if ($? != 0);
             }
         }
     }
@@ -198,11 +200,10 @@ sub _get_distrib
         or die("Could not open file $file for reading. $!\n");
     while(<FILE>)
     {
-        if ( $_ =~ /Distribution:[[:space:]]+([[:alnum:]]+)/i )
+        if ( $_ =~ /Distribution:[[:space:]]*([[:alnum:]]+)/i )
         {
             $distrib = $1;
             chomp($distrib);
-            $distrib =~ s#\s##g;
             return $distrib;
             last; # never reached
         }

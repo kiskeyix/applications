@@ -1,10 +1,10 @@
 #!/usr/bin/perl -w
-# $Revision: 1.7 $
-# $Date: 2006-01-29 11:50:37 $
+# $Revision: 1.8 $
+# $Date: 2006-01-29 11:52:55 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: easy repository builder
-# USAGE:
+# USAGE: repository <add|remove|update>
 # LICENSE: GPL
 
 =pod
@@ -29,10 +29,10 @@ use Getopt::Long;
 Getopt::Long::Configure('bundling');
 use POSIX;                  # cwd() ... man POSIX
 use File::Spec::Functions;  # abs2rel() and other dir/filename specific
-use File::Copy;
-use File::Find;     # find();
-use File::Basename; # basename() && dirname()
-use FileHandle;     # for progressbar
+# use File::Copy;
+# use File::Find;     # find();
+# use File::Basename; # basename() && dirname()
+# use FileHandle;     # for progressbar
 
 # Args:
 my $PVERSION=0;

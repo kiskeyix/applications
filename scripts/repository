@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.4 $
-# $Date: 2006-01-29 10:26:27 $
+# $Revision: 1.5 $
+# $Date: 2006-01-29 10:38:56 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: easy repository builder
@@ -152,10 +152,10 @@ if ($distro =~ /ubuntu|debian/i)
         print STDERR ("Adding .changes files\n") if ($DEBUG);
         foreach my $file (glob("incoming/*.changes"))
         {
-            my $distrib = _get_codename($file);
+            my $distrib = _get_distribution($file);
             print STDERR ("Adding $file to distrib $distrib\n") 
                 if ($DEBUG);
-            system("reprepro -Vb . include $distrib $file");
+            system("reprepro -b . include $distrib $file");
             die("Error while including $file\n") if ($? != 0);
         }
 
@@ -163,10 +163,10 @@ if ($distro =~ /ubuntu|debian/i)
         print STDERR ("Adding sources files\n") if ($DEBUG);
         foreach my $file (glob("incoming/*.dsc"))
         {
-            my $distrib = _get_codename($file);
+            my $distrib = _get_distribution($file);
             print STDERR ("Adding $file to distrib $distrib\n") 
                 if ($DEBUG);
-            system("reprepro -Vb . includedsc $distrib $file");
+            system("reprepro -b . includedsc $distrib $file");
             die("Error while including sources for $file\n") 
                 if ($? != 0);
         }
@@ -179,7 +179,7 @@ if ($distro =~ /ubuntu|debian/i)
             {
                 print STDERR ("Adding $file to distrib $distrib\n")
                     if ($DEBUG);
-                system("reprepro -Vb . includedeb $distrib $file");
+                system("reprepro -b . includedeb $distrib $file");
                 die("Error while including sources for $file\n") 
                     if ($? != 0);
             }
@@ -191,7 +191,7 @@ if ($distro =~ /ubuntu|debian/i)
     print STDERR ("is lsb_release installed? try: lsb_release -i\n");
 }
 
-sub _get_codename
+sub _get_distribution
 {
     my $file = shift;
     die("File $file not plain text\n") if (not -f $file);
@@ -200,7 +200,7 @@ sub _get_codename
         or die("Could not open file $file for reading. $!\n");
     while(<FILE>)
     {
-        if ( $_ =~ /Codename:[[:space:]]*([[:alnum:]]+)/i )
+        if ( $_ =~ /Distribution:[[:space:]]*([[:alnum:]]+)/i )
         {
             $distrib = $1;
             chomp($distrib);

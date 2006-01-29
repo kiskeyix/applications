@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
-# $Date: 2006-01-29 09:58:19 $
+# $Revision: 1.2 $
+# $Date: 2006-01-29 10:14:50 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: easy repository builder
@@ -96,7 +96,7 @@ if ( $HELP ) {
     exit 0;
 }
 
-if ( $USAGE || not defined ($FUNCTION) || $FUNCTION =~ /^\s*$/ ) { 
+if ( $USAGE or not defined ($FUNCTION) or $FUNCTION =~ /^\s*$/ ) { 
     use Pod::Usage;
     pod2usage(1);
     exit 0; # never reaches here
@@ -149,27 +149,36 @@ if ($distro =~ /ubuntu|debian/i)
     {
         # adding all files in "incoming"
         # .changes:
+        print STDERR ("Adding .changes files\n") if ($DEBUG);
         for(glob("incoming/*.changes"))
         {
             my $distrib = _get_distrib($_);
-            system("reprepro -b . include $distrib $_");
+            print STDERR ("Adding $_ to distrib $distrib\n") 
+                if ($DEBUG);
+            system("reprepro -Vb . include $distrib $_");
             die("Error while including $_\n") if ($? != 0);
         }
 
         # .dsc:
+        print STDERR ("Adding sources files\n") if ($DEBUG);
         for(glob("incoming/*.dsc"))
         {
             my $distrib = _get_distrib($_);
-            system("reprepro -b . includedsc $distrib $_");
+            print STDERR ("Adding $_ to distrib $distrib\n") 
+                if ($DEBUG);
+            system("reprepro -Vb . includedsc $distrib $_");
             die("Error while including sources for $_\n") if ($? != 0);
         }
 
         # .deb for e/a distrib:
+        print STDERR ("Adding .deb files\n") if ($DEBUG);
         foreach my $distrib (@distributions)
         {
             for(glob("incoming/$distrib/*.deb"))
             {
-                system("reprepro -b . includedsc $distrib $_");
+                print STDERR ("Adding $_ to distrib $distrib\n")
+                    if ($DEBUG);
+                system("reprepro -Vb . includedeb $distrib $_");
                 die("Error while including sources for $_\n") if ($? != 0);
             }
         }
@@ -184,15 +193,21 @@ sub _get_distrib
 {
     my $file = shift;
     die("File $file not plain text\n") if (not -f $file);
-    open(FILE,"<$file") or die("Could not open file $file for reading. $!\n");
+    my $distrib = 'unstable';
+    open(FILE,"<$file") 
+        or die("Could not open file $file for reading. $!\n");
     while(<FILE>)
     {
         if ( $_ =~ /Distribution:[[:space:]]+([[:alnum:]]+)/i )
         {
-            return $1;
+            $distrib = $1;
+            chomp($distrib);
+            $distrib =~ s#\s##g;
+            return $distrib;
             last; # never reached
         }
     }
+    return $distrib; # should never reach here
 }
 
 =pod

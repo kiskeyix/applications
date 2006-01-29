@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.5 $
-# $Date: 2006-01-29 10:38:56 $
+# $Revision: 1.6 $
+# $Date: 2006-01-29 11:07:41 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: easy repository builder
@@ -118,7 +118,7 @@ chdir($workdir) or die("Could not change into directory $workdir. $!\n");
 if ($distro =~ /ubuntu|debian/i)
 {
     my $cmd = "reprepro"; # TODO allow others to be configured from CLI
-    my $cmd_args = "";
+    my $cmd_args = " --delete ";
 
     # sanity checks
     die("No ${workdir}/conf/distributions file found. Reprepro is not installed correctly\n") 
@@ -155,7 +155,7 @@ if ($distro =~ /ubuntu|debian/i)
             my $distrib = _get_distribution($file);
             print STDERR ("Adding $file to distrib $distrib\n") 
                 if ($DEBUG);
-            system("reprepro -b . include $distrib $file");
+            system("$cmd $cmd_args -b . include $distrib $file");
             die("Error while including $file\n") if ($? != 0);
         }
 
@@ -166,7 +166,7 @@ if ($distro =~ /ubuntu|debian/i)
             my $distrib = _get_distribution($file);
             print STDERR ("Adding $file to distrib $distrib\n") 
                 if ($DEBUG);
-            system("reprepro -b . includedsc $distrib $file");
+            system("$cmd $cmd_args -b . includedsc $distrib $file");
             die("Error while including sources for $file\n") 
                 if ($? != 0);
         }
@@ -179,7 +179,7 @@ if ($distro =~ /ubuntu|debian/i)
             {
                 print STDERR ("Adding $file to distrib $distrib\n")
                     if ($DEBUG);
-                system("reprepro -b . includedeb $distrib $file");
+                system("$cmd $cmd_args -b . includedeb $distrib $file");
                 die("Error while including sources for $file\n") 
                     if ($? != 0);
             }

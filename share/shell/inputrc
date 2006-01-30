@@ -26,11 +26,11 @@ $if mode=vi
   
     # hint: use CTRL-V + <UP> to get the real key value
     #arrowup and PgUp searchs through last history
-    "[A":  reverse-search-history
+    "[A":  "kA"
     "[5~": reverse-search-history
 
     #arrow down and PgDown searchs forward in history
-    "[B": forward-search-history
+    "[B": "jA"
     "[6~": forward-search-history
     
     # right arrow: space then append

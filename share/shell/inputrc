@@ -14,7 +14,8 @@ set keymap vi
 #set history-preserve-point On
 set horizontal-scroll-mode Off
 set expand-tilde On
-set history-preserve-point On
+set show-all-if-ambiguous On
+set completion-ignore-case On 
 
 $if mode=vi
     #pressing up/down keys is equivalent to: up/down + end-of-line
@@ -22,13 +23,14 @@ $if mode=vi
     # next-history
     #previous-history: end-of-line
     #reverse-search-history: end-of-line
-   
+  
+    # hint: use CTRL-V + <UP> to get the real key value
     #arrowup and PgUp searchs through last history
-    "[A":  "kA"
+    "[A":  reverse-search-history
     "[5~": reverse-search-history
 
     #arrow down and PgDown searchs forward in history
-    "[B": "jA"
+    "[B": forward-search-history
     "[6~": forward-search-history
     
     # right arrow: space then append

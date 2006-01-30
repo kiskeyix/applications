@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.5 $
-# $Date: 2005-12-03 04:50:57 $
+# $Revision: 1.6 $
+# $Date: 2006-01-30 02:14:16 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to run tripwire interactively, and email the tripwire file and hash sum to a given email when done
@@ -75,9 +75,9 @@ die ( "You must run this as root\n" ) if ( $UID != 0 );
 
 # globals
 my $config = undef;
-if ( -r "$ENV{'HOME'}/.signaturerc" )
+if ( -r $ENV{'HOME'}."/.signaturerc" )
 {
-    my @files = ("$ENV{'HOME'}/.signaturerc"); 
+    my @files = ($ENV{'HOME'}."/.signaturerc"); 
     $config = parse_ini(\@files);
 }
 

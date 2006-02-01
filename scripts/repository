@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.10 $
-# $Date: 2006-01-29 12:04:07 $
+# $Revision: 1.11 $
+# $Date: 2006-02-01 15:56:23 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: easy repository builder
@@ -72,6 +72,18 @@ Prints this help and exits
 
 Prints usage information and exits
 
+=item add
+
+Adds all files found in incoming/$codename and incoming/*
+
+=item remove
+
+Removes old packages from the repository (reprepro deleteunreferenced)
+
+=item update
+
+Updates all packages in the repository using the defined update method. For reprepro this means having a conf/update file
+
 =back
 
 =cut
@@ -118,7 +130,7 @@ chdir($workdir) or die("Could not change into directory $workdir. $!\n");
 if ($distro =~ /ubuntu|debian/i)
 {
     my $cmd = "reprepro"; # TODO allow others to be configured from CLI
-    my $cmd_args = " --delete ";
+    my $cmd_args = " --delete --ignore=forbiddenchar ";
 
     # sanity checks
     die("No ${workdir}/conf/distributions file found. Reprepro is not installed correctly\n") 
@@ -182,9 +194,13 @@ if ($distro =~ /ubuntu|debian/i)
                 #die("Error while including sources for $file\n") if ($? != 0);
             }
         }
+    } elsif ( $FUNCTION eq 'remove' ) {
+        system("$cmd $cmd_args deleteunreferenced");
     }
+
     system("reprepro --delete createsymlinks") 
         if ( $cmd eq "reprepro" );
+
 } else {
     print STDERR ("Distribution $distro not supported\n");
     print STDERR ("is lsb_release installed? try: lsb_release -i\n");

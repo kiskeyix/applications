@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.12 $
-# $Date: 2006-02-05 02:46:47 $
+# $Revision: 1.13 $
+# $Date: 2006-02-05 06:44:32 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: easy repository builder
@@ -36,37 +36,6 @@ use Getopt::Long;
 Getopt::Long::Configure('bundling');
 use POSIX;                  # cwd() ... man POSIX
 use File::Spec::Functions;  # abs2rel() and other dir/filename specific
-
-# a very quick and dirty way to read a configuration file, search for a given string $o
-# and return its value or a default string given by $d if no such string found in 
-# rc file (or .ini file)
-# File is assumed to define variables like:
-# OPT=value
-sub _get_option
-{
-    my $o = shift;
-    my $d = shift;
-
-    # sanity checks:
-    return $d 
-        if ( not defined $o 
-            or !-r "$ENV{'HOME'}/.distribution" or !-r "/etc/distributionrc" );
-    my @files = ("/etc/distributionrc","$ENV{'HOME'}/.distributionrc");
-    foreach my $_file (@files)
-    {
-        open(FILE,"<$_file") or return $d;
-        while(<FILE>)
-        {
-            if ($_ =~ m#$o\s*=\s*(.+)#)
-            {
-                $d = $1; # we need to read ~/.distributionrc last
-            }
-        }
-        close(<FILE>);
-    }
-    $d =~ s/\s+$//; # remove trailing spaces and ugly chars
-    return $d;
-}
 
 # Args:
 my $PVERSION=0;
@@ -152,7 +121,9 @@ if ( $HELP ) {
     exit 0;
 }
 
-if ( $USAGE or not defined ($FUNCTION) or $FUNCTION =~ /^\s*$/ or !-d $WORKDIR or !-d $WORKDIR."/".$DISTRO )
+if ( $USAGE or not defined ($FUNCTION) 
+        or $FUNCTION =~ /^\s*$/ or !-d $WORKDIR 
+        or !-d File::Spec->catdir($WORKDIR,$DISTRO) )
 { 
     use Pod::Usage;
     pod2usage(1);
@@ -174,7 +145,7 @@ $distro = lc($distro);
 die("Please make sure lsb_release is installed and in our PATH\n") 
     if ( $distro =~ /^\s*$/ );
 
-my $workdir = $WORKDIR."/$distro";
+my $workdir = File::Spec->catdir($WORKDIR,$distro);
 chdir($workdir) or die("Could not change into directory $workdir. $!\n");
 
 if ($distro =~ /ubuntu|debian/i)
@@ -256,6 +227,37 @@ if ($distro =~ /ubuntu|debian/i)
     print STDERR ("is lsb_release installed? try: lsb_release -i\n");
 }
 
+# a very quick and dirty way to read a configuration file, search for a given string $o
+# and return its value or a default string given by $d if no such string found in 
+# rc file (or .ini file)
+# File is assumed to define variables like:
+# OPT=value
+sub _get_option
+{
+    my $o = shift;
+    my $d = shift;
+
+    # sanity checks:
+    return $d if ( not defined $o );
+    my @files = ("/etc/repositoryrc",File::Spec->catfile($ENV{'HOME'},".repositoryrc"));
+    foreach my $_file (@files)
+    {
+        next if (!-f $_file);
+        open(FILE,"<$_file") or return $d;
+        while(<FILE>)
+        {
+            if ($_ =~ m#$o\s*=\s*(.+)#)
+            {
+                $d = $1; # we need to read ~/.distributionrc last
+            }
+        }
+        close(<FILE>);
+    }
+    $d =~ s/\s+$//; # remove trailing spaces and ugly chars
+    return $d;
+}
+
+# returns the distribution of a .changes file
 sub _get_distribution
 {
     my $file = shift;

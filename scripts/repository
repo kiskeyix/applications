@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.11 $
-# $Date: 2006-02-01 15:56:23 $
+# $Revision: 1.12 $
+# $Date: 2006-02-05 02:46:47 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: easy repository builder
@@ -17,6 +17,13 @@ repository - repository builder script for Debian and/or Fedora
 
     This script can be used to build a repository for Linux distros quickly
 
+    To make configuration simpler, create a file called /etc/repositoryrc or ~/.repositoryrc
+    and put the following values:
+        DISTRIBUTION=my_debian_distro
+        WORKDIR=/path/to/repository
+
+    Values passed from the command line will override these.
+
 =cut
 
 use strict;
@@ -29,10 +36,37 @@ use Getopt::Long;
 Getopt::Long::Configure('bundling');
 use POSIX;                  # cwd() ... man POSIX
 use File::Spec::Functions;  # abs2rel() and other dir/filename specific
-# use File::Copy;
-# use File::Find;     # find();
-# use File::Basename; # basename() && dirname()
-# use FileHandle;     # for progressbar
+
+# a very quick and dirty way to read a configuration file, search for a given string $o
+# and return its value or a default string given by $d if no such string found in 
+# rc file (or .ini file)
+# File is assumed to define variables like:
+# OPT=value
+sub _get_option
+{
+    my $o = shift;
+    my $d = shift;
+
+    # sanity checks:
+    return $d 
+        if ( not defined $o 
+            or !-r "$ENV{'HOME'}/.distribution" or !-r "/etc/distributionrc" );
+    my @files = ("/etc/distributionrc","$ENV{'HOME'}/.distributionrc");
+    foreach my $_file (@files)
+    {
+        open(FILE,"<$_file") or return $d;
+        while(<FILE>)
+        {
+            if ($_ =~ m#$o\s*=\s*(.+)#)
+            {
+                $d = $1; # we need to read ~/.distributionrc last
+            }
+        }
+        close(<FILE>);
+    }
+    $d =~ s/\s+$//; # remove trailing spaces and ugly chars
+    return $d;
+}
 
 # Args:
 my $PVERSION=0;
@@ -40,7 +74,8 @@ my $HELP=0;
 my $USAGE=0;
 my $DEBUG=0;
 my $FUNCTION=undef; # add remove update
-my $WORKDIR='/home/Shared';
+my $WORKDIR=_get_option(WORKDIR,"/home/Shared");
+my $DISTRO=_get_option(DISTRIBUTION,"debian");
 
 =pod
 
@@ -50,6 +85,8 @@ B<repository>  [-v,--version]
                 [-D,--debug] 
                 [-h,--help]
                 [-U,--usage]
+                [-d,--distribution DISTRIB]
+                [-w,--work-dir DIR]
                 <add|remove|update>
 
 =head1 OPTIONS
@@ -64,6 +101,10 @@ Prints version and exits
 
 Enables debug mode
 
+=item -d,--distribution DISTRIB
+
+Use distribution DISTRIB instead of default (debian)
+
 =item -h,--help
 
 Prints this help and exits
@@ -71,6 +112,10 @@ Prints this help and exits
 =item -U,--usage
 
 Prints usage information and exits
+
+=item -w,--work-dir DIR
+
+Use directory DIR as the work area. This directory contains a directory named the same way as the distribution. See --distribution
 
 =item add
 
@@ -96,9 +141,8 @@ GetOptions(
     'D|debug'           =>  \$DEBUG,
     'U|usage'           =>  \$USAGE,
     # strings
-    #'o|option=s'       =>  \$NEW_OPTION,
-    # numbers
-    #'a|another-option=i'      =>  \$NEW_ANOTHER_OPTION,
+    'd|distribution=s'  =>  \$DISTRO,
+    'w|work-dir=s'      =>  \$WORKDIR,
 ) and $FUNCTION=shift;
 
 if ( $HELP ) { 
@@ -108,7 +152,8 @@ if ( $HELP ) {
     exit 0;
 }
 
-if ( $USAGE or not defined ($FUNCTION) or $FUNCTION =~ /^\s*$/ ) { 
+if ( $USAGE or not defined ($FUNCTION) or $FUNCTION =~ /^\s*$/ or !-d $WORKDIR or !-d $WORKDIR."/".$DISTRO )
+{ 
     use Pod::Usage;
     pod2usage(1);
     exit 0; # never reaches here
@@ -116,9 +161,14 @@ if ( $USAGE or not defined ($FUNCTION) or $FUNCTION =~ /^\s*$/ ) {
 
 if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
 
-my $distro = qx/lsb_release -i/;
+my $distro = $DISTRO;
+if ( $distro =~ /^\s*$/ and -x "/usr/bin/lsb_release" )
+{
+    $distro = qx#/usr/bin/lsb_release -i#;
+    $distro =~ s#Distributor\s+ID:\s+##i;
+}
+
 chomp($distro);
-$distro =~ s#Distributor\s+ID:\s+##i;
 $distro = lc($distro);
 
 die("Please make sure lsb_release is installed and in our PATH\n") 

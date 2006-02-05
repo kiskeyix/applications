@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.13 $
-# $Date: 2006-02-05 06:44:32 $
+# $Revision: 1.14 $
+# $Date: 2006-02-05 06:47:52 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: easy repository builder
@@ -43,8 +43,8 @@ my $HELP=0;
 my $USAGE=0;
 my $DEBUG=0;
 my $FUNCTION=undef; # add remove update
-my $WORKDIR=_get_option(WORKDIR,"/home/Shared");
-my $DISTRO=_get_option(DISTRIBUTION,"debian");
+my $WORKDIR=_get_option("WORKDIR","/home/Shared");
+my $DISTRO=_get_option("DISTRIBUTION","debian");
 
 =pod
 
@@ -242,7 +242,7 @@ sub _get_option
     my @files = ("/etc/repositoryrc",File::Spec->catfile($ENV{'HOME'},".repositoryrc"));
     foreach my $_file (@files)
     {
-        next if (!-f $_file);
+        next if (!-r $_file);
         open(FILE,"<$_file") or return $d;
         while(<FILE>)
         {
@@ -251,7 +251,7 @@ sub _get_option
                 $d = $1; # we need to read ~/.distributionrc last
             }
         }
-        close(<FILE>);
+        close(FILE);
     }
     $d =~ s/\s+$//; # remove trailing spaces and ugly chars
     return $d;

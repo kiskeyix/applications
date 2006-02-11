@@ -1,12 +1,11 @@
 #!/usr/bin/perl -w
-# $Revision: 1.63 $
+# $Revision: 1.64 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
 # USAGE: update-host [OPTIONS] [host1 host2 host3 ...]
 #
 # TODO:
-#  - tidy old files with @_OBSOLETE
 #  - tests host file and print their new IP to STDOUT. hint slurp_hosts() and do host lookups on the names
 # LICENSE: GPL
 
@@ -30,6 +29,7 @@ update-host - by Luis Mondesi <lemsx1@gmail.com>
 
 B<update-host>  
 [-D,--debug]
+[-d,--delete-obsolete]
 [--files <file1,file2,...>]
 [--host <hostname>] 
 [-h,--help]
@@ -258,6 +258,7 @@ GetOptions(
     'h|help'            =>  \$HELP,
     'U|usage'           =>  \$USAGE,
     'D|debug'           =>  \$DEBUG,
+    'd|delete-obsolete' =>  \$DOOBSOLETE,
     'r|remove'          =>  \$REMOVE_FILES,
     'V|verbose'         =>  \$VERBOSE,
     'm|master|localhost'=>  \$MASTER,
@@ -442,10 +443,10 @@ if ( $MASTER )
     }
     print STDERR ("\nlocalhost: These files failed: ". join ( " ",@failed )) 
         if ( $FAIL_FLAG );
-    if ( $DOLINKS )
-    {
-       _do_links("localhost"); 
-    }
+    # do special operations: 
+    _do_links("localhost") if ( $DOLINKS );
+    unlink(@_OBSOLETE) if ($DOOBSOLETE);
+     
     print STDOUT ("\n");
     exit(0);
 }
@@ -629,6 +630,13 @@ sub update_host
         }
     } 
     
+    if ($DOOBSOLETE)
+    {
+        my $joined_files = "'".join("' '",@_OBSOLETE)."'";
+        print ("deleting obsolete: ",$joined_files,"\n") if ($DEBUG);
+        system("ssh ".$USERNAME.$h." command rm -f $joined_files ".$silent);
+    }
+
     print STDOUT ("\n$h These files failed: ".join ( " ",@failed )."\n") if ( $FAIL_FLAG );
 
     if ( $DOLINKS )

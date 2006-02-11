@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.62 $
+# $Revision: 1.63 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -76,6 +76,8 @@ B<update-host> --hosts-file ~/.hosts --files "bashrc.tar.bz2,vimrc.tar.bz2"
 
 updates only bashrc and vimrc files to all hosts found in ~/.hosts
 
+B<update-host> --delete-obsolete HOST HOST2 ...
+
 =head1 BUGS
 
 * --files cannot contain spaces and must be .tar.bz2.
@@ -139,6 +141,7 @@ my $USAGE=0;
 my $PRINT_FILES=0;
 my $REMOVE_FILES=0;
 my $DOLINKS=0;
+my $DOOBSOLETE=0;
 my $MASTER=0; # update current host from $MASTER_HOST
 my $LOCAL=0; # do not get any new copies, use the local files instead
 my $PKEY=0;  # should we push our id_rsa.pub key to the remote host?
@@ -163,9 +166,13 @@ my $CONF_FILES=undef; # comma separated list
 
 Enables debug mode
 
+=item -d,--delete-obsolete
+
+Deletes the obsolete scripts from the @_OBSOLETE array (hard coded)
+
 =item --files FILES
 
-Comma separated list of files to get/upgrade instead of the defaults at @FILES.
+Comma separated list of files to get/upgrade instead of the defaults at @FILES
 
 =item -h,--help
 

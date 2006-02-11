@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.67 $
+# $Revision: 1.68 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -281,13 +281,13 @@ if ( $HELP ) {
     my $parser = Pod::Text->new (sentence => 0, width => 78);
     $parser->parse_from_file(File::Spec->catfile("$0"),
 			   \*STDOUT);
-    exit 0;
+    _exit_safe(0);
 }
 
 if ( $USAGE ) { 
     use Pod::Usage;
     pod2usage(1);
-    exit 0;
+    _exit_safe(0);
 }
 
 # setup SSH
@@ -319,7 +319,7 @@ if ( $_ssh_id != 0 )
         warn ("Failed to authenticate. ssh-gent is not running? There is no valid private key? Hint: create a key with \`ssh-keygen -t rsa -b 1024\`. And then pass the key to us with: $0 --key $ENV{HOME}/.ssh/id_rsa\n");
         if ( prompt("Do you want to continue? You will be prompted for each password needed [y/N] ") !~ /^y/i )
         {
-            _exit_safe();
+            _exit_safe(0);
         }
     }
     $_ssh_id = 1; # we need to know that this agent should be killed later
@@ -337,22 +337,22 @@ if (defined($USERNAME) and $USERNAME !~ /^\s*$/)
 if ( $PKEY )
 {
     print STDERR ("host argument missing.\nUsage: update-host --send-key HOST1 [HOST2 ...]") 
-        and exit(1) if ( !defined($HOST) or $HOST =~ /^\s*$/ );
+        and _exit_safe(1) if ( !defined($HOST) or $HOST =~ /^\s*$/ );
    
     # generate RSA keys if none found. I don't care about people who use DSA :-P
     system("ssh-keygen -t rsa -b 1024") if ( ! -f "$ENV{'HOME'}/.ssh/id_rsa.pub" );
 
     system("cat $ENV{'HOME'}/.ssh/id_rsa.pub | ssh ".$USERNAME.$HOST." 'mkdir .ssh 2> /dev/null && chmod 0700 .ssh; cat - >> .ssh/authorized_keys; chmod 0644 .ssh/authorized_keys'");
-    print STDERR ("failed to send key to $HOST") and exit($?) if ( $? != 0 );
+    print STDERR ("failed to send key to $HOST") and _exit_safe($?) if ( $? != 0 );
     
     # if we have more hosts, keep going
     foreach my $host (@ARGV)
     {
         system("cat $ENV{'HOME'}/.ssh/id_rsa.pub | ssh ".$USERNAME.$host." 'cat - >> .ssh/authorized_keys'");
-        print STDERR ("failed to send key to $HOST") and exit($?) if ( $? != 0 );
+        print STDERR ("failed to send key to $HOST") and _exit_safe($?) if ( $? != 0 );
     }
 
-    exit(0);
+    _exit_safe(0);
 }
 
 if ( $VERBOSE )
@@ -373,7 +373,7 @@ if ( defined ($CONF_FILES) )
 if ( $PRINT_FILES )
 {
     print STDOUT (join(",",@FILES),"\n");
-    exit 0;
+    _exit_safe(0);
 }
 
 my $j =0;
@@ -463,7 +463,7 @@ if ( $MASTER )
     unlink(@_OBSOLETE) if ($DOOBSOLETE);
      
     print STDOUT ("\n");
-    exit(0);
+    _exit_safe(0);
 }
 
 # update a single host or set of hosts passed from the command line
@@ -490,7 +490,7 @@ if ( $HOST )
             debug("*** SKIPPED $host");
         }
     }
-    exit(0);
+    _exit_safe(0);
 }
 
 # do all hosts
@@ -729,6 +729,8 @@ sub prompt {
 
 sub _exit_safe
 {
+    my $status = shift;
+    $status = 0 if (not defined($status));
     if ( $_ssh_id == 1 )
     {
         system("ssh-add -D"); # delete identities
@@ -738,6 +740,6 @@ sub _exit_safe
     {
         kill(15,$ENV{'SSH_AGENT_PID'});
     }
-    exit 0;
+    exit $status;
 }
 

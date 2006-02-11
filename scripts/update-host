@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.65 $
+# $Revision: 1.66 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -305,7 +305,14 @@ $_ssh_id = system("ssh-add -l > /dev/null");
 if ( $_ssh_id != 0 )
 {
     system("ssh-add $PG_KEY"); # if $PG_KEY is blank ssh-add adds all private keys
-    die ("Failed to authenticate\n") if ( $? != 0 );
+    if ( $? != 0 )
+    {
+        warn ("Failed to authenticate. ssh-gent is not running? There is no valid private key? Hint: create a key with \`ssh-keygen -t rsa -b 1024\`. And then pass the key to us with: $0 --key $ENV{HOME}/.ssh/id_rsa\n");
+        if ( prompt("Do you want to continue? You will be prompted for each password needed [y/N]") !~ /^y/i )
+        {
+            _exit_safe();
+        }
+    }
     $_ssh_id = 1; # we need to know that this agent should be killed later
 }
 # end setup SSH
@@ -700,6 +707,15 @@ sub _do_links
             system("ssh ".$USERNAME.$host." 'command rm -fr $_conf && command ln -sf $_ $_conf $silent'");
         }
     }
+}
+
+sub prompt {
+    #@param 0 string := question to prompt
+    #returns answer
+    print STDOUT (@_);
+    my $rep=<STDIN>;
+    chomp($rep);
+    return $rep;
 }
 
 sub _exit_safe

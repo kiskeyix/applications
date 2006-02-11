@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.66 $
+# $Revision: 1.67 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -291,16 +291,25 @@ if ( $USAGE ) {
 }
 
 # setup SSH
-if ( !exists($ENV{'SSH_AUTH_SOCK'}) )
+if ( !-S $ENV{'SSH_AUTH_SOCK'} )
 {
+    $ENV{'SSH_AUTH_SOCK'}="";
     my $_ssh_agent_env = qx/ssh-agent -s/;
+    debug($_ssh_agent_env);
     $_ssh_agent_env =~ m/SSH_AUTH_SOCK=(.*); /gmi;
-    $ENV{'SSH_AUTH_SOCK'} = $1 if ( !exists($ENV{'SSH_AUTH_SOCK'}) );
+    debug("SSH_AUTH_SOCK before: ",$ENV{'SSH_AUTH_SOCK'});
+    $ENV{'SSH_AUTH_SOCK'} = $1;
+    debug("SSH_AUTH_SOCK after: ",$ENV{'SSH_AUTH_SOCK'});
     $_ssh_agent_env =~ m/SSH_AGENT_PID=(.*); /gmi;
-    $ENV{'SSH_AGENT_PID'} = $1 if ( !exists($ENV{'SSH_AGENT_PID'}) );
-    $_ssh_agent = 1; # we should kill the agent when done
+    $ENV{'SSH_AGENT_PID'} = $1;
+    
+    if ( -S $ENV{'SSH_AUTH_SOCK'} )
+    {
+        $_ssh_agent = 1; # we should kill the agent when done
+    } else {
+        warn("Could not launch our ssh-agent\n");
+    }
 }
-die("Please run: ssh-agent $0\n") if ( !exists($ENV{'SSH_AUTH_SOCK'}) );
 $_ssh_id = system("ssh-add -l > /dev/null");
 if ( $_ssh_id != 0 )
 {
@@ -308,7 +317,7 @@ if ( $_ssh_id != 0 )
     if ( $? != 0 )
     {
         warn ("Failed to authenticate. ssh-gent is not running? There is no valid private key? Hint: create a key with \`ssh-keygen -t rsa -b 1024\`. And then pass the key to us with: $0 --key $ENV{HOME}/.ssh/id_rsa\n");
-        if ( prompt("Do you want to continue? You will be prompted for each password needed [y/N]") !~ /^y/i )
+        if ( prompt("Do you want to continue? You will be prompted for each password needed [y/N] ") !~ /^y/i )
         {
             _exit_safe();
         }
@@ -639,7 +648,7 @@ sub update_host
     if ($DOOBSOLETE)
     {
         my $joined_files = "'".join("' '",@_OBSOLETE)."'";
-        print ("deleting obsolete: ",$joined_files,"\n") if ($DEBUG);
+        debug("deleting obsolete: ",$joined_files,"\n");
         system("ssh ".$USERNAME.$h." command rm -f $joined_files ".$silent);
     }
 
@@ -729,5 +738,6 @@ sub _exit_safe
     {
         kill(15,$ENV{'SSH_AGENT_PID'});
     }
+    exit 0;
 }
 

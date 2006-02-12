@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.6 $
-# $Date: 2006-02-12 04:48:50 $
+# $Revision: 1.7 $
+# $Date: 2006-02-12 04:49:41 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: spits to STDOUT basic information about the current system
@@ -181,7 +181,7 @@ sub _print
         $b_open = ($BBCODE) ? "[b]":"<b>";
         $b_close = ($BBCODE) ? "[/b]":"</b>";
 
-        if ( $line =~ m/([^\:]):(.*)/ )
+        if ( $line =~ m/([^\:]+):(.*)/ )
         {
             print "${b_open}${1}${b_close}: ${2}$br\n";
         } else {
@@ -222,7 +222,7 @@ sub _print_lsb
         s/"//g;
         s/=/: /;
 
-        if ( m/([^\:]):(.*)/ )
+        if ( m/([^\:]+):(.*)/ )
         {
             print "${b_open}${1}${b_close}: ${2}$br\n";
         } else {

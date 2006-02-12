@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.6 $
-# $Date: 2006-01-30 02:14:16 $
+# $Revision: 1.7 $
+# $Date: 2006-02-12 05:10:11 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to run tripwire interactively, and email the tripwire file and hash sum to a given email when done
@@ -10,7 +10,8 @@
 use strict;
 $|++;
 
-my $revision = "1.0"; # version
+my $revision='$Revision: 1.7 $'; # version
+$revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # standard Perl modules
 use Getopt::Long;
@@ -68,7 +69,7 @@ if ( $USAGE ) {
     exit 0; # never reaches here
 }
 
-if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
+if ( $PVERSION ) { print STDOUT ($revision,"\n"); exit 0; }
 # sanity checks
 my $UID = $<;
 die ( "You must run this as root\n" ) if ( $UID != 0 );

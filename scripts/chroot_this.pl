@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.10 $
+# $Revision: 1.11 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: set up a chroot environment for a binary
@@ -85,7 +85,8 @@
 use strict;
 $|++;
 
-my $revision = "1.0"; # version
+my $revision='$Revision: 1.11 $'; # version
+$revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # standard Perl modules
 use Getopt::Long;
@@ -121,7 +122,7 @@ if ( $HELP ) {
     exit 0;
 }
 
-if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
+if ( $PVERSION ) { print STDOUT ($revision,"\n"); exit 0; }
 
 my $usage = "usage: cd /path/to/chroot && chroot_this.pl /path/to/binary";
 

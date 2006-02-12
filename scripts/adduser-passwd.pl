@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: simple way to generate user info to copy+paste in a etc/passwd and etc/shadow file
@@ -9,7 +9,8 @@
 use strict;
 $|++;
 
-my $revision = "1.0"; # version
+my $revision='$Revision: 1.3 $'; # version
+$revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # standard Perl modules
 use Getopt::Long;
@@ -40,7 +41,7 @@ if ( $HELP or !defined($UNAME) or !defined($PASSWD) ) {
     exit 0;
 }
 
-if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
+if ( $PVERSION ) { print STDOUT ($revision,"\n"); exit 0; }
 
 my @uid = (0..64534); # range of all UID we allow
 my $UID = int(1000 + rand(@uid)); # minimun UID allowed is 1000

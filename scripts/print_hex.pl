@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: prints character that represents hex number
@@ -9,7 +9,8 @@
 use strict;
 $|++;
 
-my $revision = "1.0"; # version
+my $revision='$Revision: 1.4 $'; # version
+$revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # standard Perl modules
 use Getopt::Long;
@@ -44,7 +45,7 @@ if ( $HELP or ! defined ($STR) ) {
     exit 0;
 }
 
-if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
+if ( $PVERSION ) { print STDOUT ($revision,"\n"); exit 0; }
 
 unless ( $URL_DECODE || $URL_ENCODE )
 {

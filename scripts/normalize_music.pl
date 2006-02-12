@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.26 $
-# $Date: 2005-08-30 23:17:25 $
+# $Revision: 1.27 $
+# $Date: 2006-02-12 05:10:11 $
 #
 # Luis Mondesi < lemsx1@gmail.com >
 #
@@ -11,7 +11,8 @@
 use strict;
 $|++;
 
-my $revision = "1.0"; # version
+my $revision='$Revision: 1.27 $'; # version
+$revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # standard Perl modules
 use utf8;
@@ -83,7 +84,7 @@ if ( $HELP ) {
     exit 0;
 }
 
-if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
+if ( $PVERSION ) { print STDOUT ($revision,"\n"); exit 0; }
 
 # main
 umask(0022); # fix anal permissions

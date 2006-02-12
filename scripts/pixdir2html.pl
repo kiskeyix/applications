@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.109 $
+# $Revision: 1.110 $
 # Luis Mondesi  <lemsx1@gmail.com>
 # 
 # HELP: $0 --help
@@ -141,7 +141,7 @@ if ( $HELP ) {
     exit 0;
 }
 
-if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
+if ( $PVERSION ) { print STDOUT ($revision,"\n"); exit 0; }
 # Xdialog is a better implementation than gdialog. 
 # Zenity is better than all so far... 
 my @xbinaries = ("zenity","Xdialog","xdialog","gdialog","kdialog");

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2005-Jan-23
 #
@@ -10,7 +10,8 @@
 use strict;
 $|++;
 
-my $revision = "1.0"; # version
+my $revision='$Revision: 1.9 $'; # version
+$revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # standard Perl modules
 use File::Basename; # basename() && dirname()
@@ -41,7 +42,7 @@ if ( $HELP ) {
     exit 0;
 }
 
-if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
+if ( $PVERSION ) { print STDOUT ($revision,"\n"); exit 0; }
 
 my $basename = "";
 my $dirname = "";

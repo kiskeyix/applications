@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2004-Mar-15
 #
@@ -45,7 +45,7 @@ GetOptions(
     'p|preferences=s'       =>  \$preferences
 );
 if ( $HELP ) { system("pod2text $0"); exit 0; }
-if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
+if ( $PVERSION ) { print STDOUT ($revision,"\n"); exit 0; }
 
 sub main()
 {

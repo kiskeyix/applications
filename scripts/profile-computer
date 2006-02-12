@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
+# $Revision: 1.2 $
+# $Date: 2006-02-12 03:42:07 $
 # Luis Mondesi < lemsx1@hotmail.com >
-# Last modified: 2004-Jul-20
 #
 # DESCRIPTION: spits to STDOUT basic information about the current system
 # USAGE: profile-computer.pl > `hostname`.ini
@@ -10,12 +10,84 @@
 use strict;
 $|++;
 
-print `hostname`;
-print grep( /model name/i, `cat /proc/cpuinfo` );
-print grep( /MemTotal|SwapTotal/i, `cat /proc/meminfo` );
+use Sys::Hostname qw# hostname #;
 
-my @sp = split (//, `lspci`);
-foreach my $line (@sp) {
-    ( $line = $line ) =~ s/^[0-9a-zA-Z]+ //ig;
-    print $line;
+$ENV{'PATH'} = "/bin:/usr/local/bin:/opt/bin:/usr/bin";
+
+my $unixname = qx#uname -a#;
+chomp($unixname);
+my $hostname = hostname();
+my $cpuinfo = "";
+my $memtotal = "";
+my $swaptotal = "";
+my $bogomips = 0;
+my $totalprocessors = 0;
+
+my @cpu = qx#cat /proc/cpuinfo#;
+my @mem = qx#cat /proc/meminfo#;
+my @pci = split (/\n/, qx/lspci/);
+
+foreach my $line(@cpu,@mem)
+{
+    if ( $line =~ /processor\s*:/i)
+    {
+        $totalprocessors += 1;
+    } elsif ( $line =~ /model\s+name\s*:\s*(.*)/i)
+    {
+        $cpuinfo = $1;
+    } elsif ( $line =~ /bogomips\s*:\s*([0-9]+)/i )
+    {
+        $bogomips += $1;
+    } elsif ( $line =~ /memtotal\s*:\s*([0-9]+\s+[kmobg]+)/i )
+    {
+        $memtotal = $1;
+    } elsif ( $line =~ /swaptotal\s*:\s*([0-9]+\s+[kmobg]+)/i )
+    {
+        $swaptotal = $1;
+    }
+}
+
+_print_div();
+print "Host Name: $hostname\n";
+print "System Kernel: $unixname\n";
+_print_div();
+print "CPU Info: $cpuinfo\n";
+print "Total Processors: $totalprocessors\n";
+print "Bogomips total: $bogomips\n";
+_print_div();
+print "Memory: $memtotal\n";
+print "Virtual Memory (swap): $swaptotal\n";
+_print_div();
+foreach my $line (@pci)
+{
+    #0000:01:00.0 VGA compatible controller: ATI Technologies Inc: Unknown device 4153
+    $line =~ s#^[[:xdigit:]\:\.]+\s+##g; # remove PCI id
+    print $line,"\n";
+}
+_print_div();
+_print_lsb() if (-r "/etc/lsb-release");
+_print_div();
+print "Library: libc6\n" if ( -e glob("/lib/libc-2.*.*.so") );
+print "Compiler Version: ".qx#gcc --version|head -1# if ( -x "/usr/bin/gcc" or -x "/usr/local/bin/gcc" or -x "/opt/bin/gcc" );
+
+# helper functions
+sub _print_div
+{
+    print STDOUT ("#","="x78,"#\n");
+}
+
+sub _print_lsb
+{
+    # lsb_release -a is too slow. This function is 14% faster. 
+    open(FILE,"</etc/lsb-release") or return "";
+    while(<FILE>)
+    {
+        s/DISTRIB_/Distributor /;
+        s/ELEASE/elease/;
+        s/ESCRIPTION/escription/;
+        s/ODENAME/odename/;
+        s/"//g;
+        s/=/: /;
+        print;
+    }
 }

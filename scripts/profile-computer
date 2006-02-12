@@ -1,19 +1,112 @@
 #!/usr/bin/perl -w
-# $Revision: 1.4 $
-# $Date: 2006-02-12 04:02:06 $
+# $Revision: 1.5 $
+# $Date: 2006-02-12 04:43:48 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: spits to STDOUT basic information about the current system
-# USAGE: profile-computer.pl
+# USAGE: profile-computer.pl [-H|--html]
 # LICENSE: GPL
-#
+
+=pod
+
+=head1 NAME
+
+profile-computer - script for profiling a system on the fly
+
+=head1 DESCRIPTION 
+
+    This script prints system information to STDOUT
+
+=cut
+
 use strict;
 $|++;
 
 use Sys::Hostname qw# hostname #;
+use Getopt::Long;
+Getopt::Long::Configure('bundling');
 
 $ENV{'PATH'} = "/bin:/usr/local/bin:/opt/bin:/usr/bin";
 
+# Args:
+my $PVERSION=0;
+my $HELP=0;
+my $USAGE=0;
+my $DEBUG=0;
+my $HTML=0;
+my $BBCODE=0;
+my $revision=1.4;
+
+=pod
+
+=head1 SYNOPSIS
+
+B<profile-computer>     [-v,--version]
+                        [-D,--debug] 
+                        [-h,--help]
+                        [-H,--html]
+                        [-B,--bbcode]
+                        [-U,--usage]
+
+=head1 OPTIONS
+
+=over 8
+
+=item -v,--version
+
+Prints version and exits
+
+=item -D,--debug
+
+Enables debug mode
+
+=item -h,--help
+
+Prints this help and exits
+
+=item -H,--html
+
+Print HTML compatible strings to STDOUT instead of Plain Text
+
+=item -B,--bbcode
+
+Print BBCODE compatible HTML strings to STDOUT instead of Plain Text. Implies --html
+
+=item -U,--usage
+
+Prints usage information and exits
+
+=back
+
+=cut
+
+# get options
+GetOptions(
+    # flags
+    'v|version'         =>  \$PVERSION,
+    'h|help'            =>  \$HELP,
+    'D|debug'           =>  \$DEBUG,
+    'B|bbcode'          =>  sub { $BBCODE++;$HTML++; },
+    'U|usage'           =>  \$USAGE,
+    'H|html'            =>  \$HTML,
+);
+
+if ( $HELP ) { 
+    use Pod::Text;
+    my $parser = Pod::Text->new (sentence => 0, width => 78);
+    $parser->parse_from_file($0,\*STDOUT);
+    exit 0;
+}
+
+if ( $USAGE ) { 
+    use Pod::Usage;
+    pod2usage(1);
+    exit 0; # never reaches here
+}
+
+if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
+
+my $br = ($HTML) ? "<br />":"";
 my $unixname = qx#uname -a#;
 chomp($unixname);
 my $hostname = hostname();
@@ -48,27 +141,27 @@ foreach my $line(@cpu,@mem)
 }
 
 _print_div();
-print "Host Name: $hostname\n";
-print "System Kernel: $unixname\n";
+_print("Host Name: $hostname\n");
+_print("System Kernel: $unixname\n");
 _print_div();
-print "CPU Info: $cpuinfo\n";
-print "Total Processors: $totalprocessors\n";
-print "Bogomips total: $bogomips\n";
+_print("CPU Info: $cpuinfo\n");
+_print("Total Processors: $totalprocessors\n");
+_print("Bogomips total: $bogomips\n");
 _print_div();
-print "Memory: $memtotal\n";
-print "Virtual Memory (swap): $swaptotal\n";
+_print("Memory: $memtotal\n");
+_print("Virtual Memory (swap): $swaptotal\n");
 _print_div();
 foreach my $line (@pci)
 {
     #0000:01:00.0 VGA compatible controller: ATI Technologies Inc: Unknown device 4153
     $line =~ s#^[[:xdigit:]\:\.]+\s+##g; # remove PCI id
-    print $line,"\n";
+    _print($line,"\n");
 }
 _print_div();
 _print_lsb() if (-r "/etc/lsb-release");
 _print_div();
-print "Library: libc6\n" if ( -e glob("/lib/libc-2.*.*.so") );
-print "Compiler Version: ".qx#gcc --version|head -1# if ( -x "/usr/bin/gcc" or -x "/usr/local/bin/gcc" or -x "/opt/bin/gcc" );
+_print("Library: libc6\n") if ( -e glob("/lib/libc-2.*.*.so") );
+_print("Compiler Version: ".qx#gcc --version|head -1#) if ( -x "/usr/bin/gcc" or -x "/usr/local/bin/gcc" or -x "/opt/bin/gcc" );
 
 _print_div(); # end
 
@@ -76,23 +169,74 @@ _print_div(); # end
 #           helper functions        #
 # ----------------------------------#
 
+sub _print
+{
+    my $line = shift;
+
+    my $b_open = "";
+    my $b_close = "";
+
+    if ($HTML or $BBCODE)
+    {
+        $b_open = ($BBCODE) ? "[b]":"<b>";
+        $b_close = ($BBCODE) ? "[/b]":"</b>";
+
+        if ( $line =~ m/(.*):(.*)/ )
+        {
+            print "${b_open}${1}${b_close}: ${2}$br\n";
+        } else {
+            $line =~ s/(\r|\n)//g;
+            print $line,"<br />\n";
+        }
+    } else {
+        print $line;
+    }
+}
+
 sub _print_div
 {
-    print STDOUT ("\n#","="x78,"#\n\n");
+    print STDOUT ("\n#","="x78,"#$br\n\n");
 }
 
 sub _print_lsb
 {
+
+    my $b_open = "";
+    my $b_close = "";
+   
+    if ($HTML or $BBCODE)
+    {
+        $b_open = ($BBCODE) ? "[b]":"<b>";
+        $b_close = ($BBCODE) ? "[/b]":"</b>";
+    }
+
     # lsb_release -a is too slow. This function is 14% faster. 
     open(FILE,"</etc/lsb-release") or return "";
     while(<FILE>)
     {
+        s/(\r|\n)//g;
         s/DISTRIB_/Distributor /;
         s/ELEASE/elease/;
         s/ESCRIPTION/escription/;
         s/ODENAME/odename/;
         s/"//g;
         s/=/: /;
-        print;
+
+        if ( m/(.*):(.*)/ )
+        {
+            print "${b_open}${1}${b_close}: ${2}$br\n";
+        } else {
+            $_ =~ s/(\r|\n)//g;
+            print $_,"$br\n";
+        }
     }
 }
+
+=pod
+
+=head1 AUTHORS
+
+Luis Mondesi <lemsx1@gmail.com>
+
+=cut
+

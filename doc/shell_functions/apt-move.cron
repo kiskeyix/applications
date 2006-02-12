@@ -1,131 +1,39 @@
 #!/bin/sh
-# $Revision: 1.9 $
-# Luis Mondesi < lemsx1@gmail.com >
+# Luis Mondesi <lemsx1@gmail.com> 
 #
-# DESCRIPTION: a simple wrapper for apt-move to be used together with apt-ftparchive
-# USAGE: place this in /etc/cron.daily. Change variables to proper locations
+# Inspired by:
+# http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=134694
+#
+# Log all output of apt-get 
+#
+# Remember to rotate this logfile (copy & paste in a terminal):
+# cat <<ROTATE > /etc/logrotate.d/apt
+# > /var/log/apt.log {
+# >  rotate 6
+# >  monthly
+# >  compress
+# >  missingok
+# >  notifempty
+# > }
+# >ROTATE
+#
+# Finally, set aptitude's logfile to /var/log/apt.log 
+# and if you use synaptic, then you don't need to do anything else :-)
+# Synaptic does all the logging for you ( version 0.55+cvs200411 )
+#
+# BUG
+#   if you change LOG_FILE variable below, you will need to fix the
+#   logrotate path also.
+#
+# DESCRIPTION: A simple wrapper for apt-get to log its output to /var/log/apt.log
+# USAGE: read above
 # LICENSE: GPL
 
-PATH=/bin:/usr/bin:/sbin:/usr/sbin
-LOCKFILE="/dev/shm/apt-move.lck"
-DEBUG=0     # should debugging messages be displayed? $0 0 1 see $1
-VERBOSE=0   # should informational messages be displayed? $0 1 see $2
-ARCH="i386" # default arch for this script
-MOVEFROMTMP=1
-RUNUPDATE=1
-MAKELOCALMIRROR=1
-CACHEDIR="/var/cache/apt/archives/"
-LOCALMIRROR="/home/Shared/debian" # apt-ftparchive
-LOCALRELEASE="local" # name of the local release... see below (is just a directory)
-TMPDIRS="/tmp /home/Shared/tmp /var/tmp" # path to look for deb's for apt-move (will be moved to $CACHEDIR
+export LOG_FILE="/var/log/apt.log"
 
-set -e
+echo "Logging Wrapper for apt-get [`hostname`]"
+echo "Output is logged to $LOG_FILE"
 
-## trap some signals:
-## our exit function removes the .pid file
-function _exit()        # function to run upon exit of shell
-{
-    echo "Hasta la vista apt-move.cron $HOSTNAME"
-    rm -f $LOCKFILE
-    # reenable signals
-    trap EXIT HUP TERM INT
-    exit 0
-}
-# hint: trap -l (displays signals)
-# SIGTERM (15) is sent to us from init when rebooting
-trap _exit EXIT HUP TERM INT
+(echo ; date ; echo $0 $* ; echo ) >> $LOG_FILE
 
-function debug()
-{
-    if [ $DEBUG -eq 1 ]; then
-        echo "DEBUG: $@"
-    fi
-}
-
-function info()
-{
-    if [ $VERBOSE -eq 1 ]; then
-        echo "INFO: $@"
-    fi
-}
-
-function movefiles()
-{
-    while read i; do
-        mv -u "$i" $CACHEDIR
-        if [ -f "$i" ]; then
-            # if old package, remove it from tmp dirs
-            debug "Removing $i"
-            rm -f "$i";
-        fi
-    done
-}
-
-function move_deb_from_tmp()
-{
-    debug "Entering move_deb_from_tmp()"
-    for i in $TMPDIRS; do
-        if [ -d $i ]; then
-            # move new packages into archives directory
-            find $i -maxdepth 1 -name '*.deb' -o -name '*.udeb' | movefiles
-        fi
-    done
-}
-
-if [ $1 ]; then
-    VERBOSE=$1  # pass 1 from the command line
-fi
-if [ $2 ]; then
-    DEBUG=$2    # pass 1 from the command line (after info arg)
-fi
-
-if [ -f "$LOCKFILE" ]; then
-    echo "Another instance of $0 running ... exiting. Please remove $LOCKFILE if no $0 running."
-    exit 0
-fi
-# create lock with timestamp
-date > "$LOCKFILE"
-
-if [ $MOVEFROMTMP -eq 1 ]; then
-    move_deb_from_tmp
-fi
-
-if [ $RUNUPDATE -eq 1 ]; then
-    debug "Running apt-get update and autoclean"
-    apt-get update > /dev/null 2>&1
-    apt-get autoclean  > /dev/null 2>&1
-fi
-
-debug "Running apt-move update"
-apt-move update > /dev/null 2>&1
-
-# do local dist
-if [ $MAKELOCALMIRROR -eq 1 ]; then
-    debug "Entering $LOCALMIRROR"
-    cd $LOCALMIRROR 
-    # .deb's compiled locally are found here:
-    mkdir -p dists/$LOCALRELEASE/main/binary-$ARCH  
-    # put your sources here:
-    mkdir -p dists/$LOCALRELEASE/main/source
-
-    if [ -d "incoming" ]; then
-        # TODO use find here also (and movefiles-like function)
-        for j in `/bin/ls incoming/*.deb 2> /dev/null`; do
-            mv $j dists/$LOCALRELEASE/main/binary-$ARCH > /dev/null 2>&1
-        done
-        for k in `/bin/ls incoming/*.{dsc,gz,bz2,changes} 2> /dev/null`; do 
-            mv $k dists/$LOCALRELEASE/main/source > /dev/null 2>&1
-        done
-    fi
-   
-    apt-ftparchive packages dists/$LOCALRELEASE/ | gzip > dists/$LOCALRELEASE/main/binary-$ARCH/Packages.gz
-    apt-ftparchive contents dists/$LOCALRELEASE/ | gzip > dists/$LOCALRELEASE/main/binary-$ARCH/Contents-$ARCH.gz
-    apt-ftparchive sources dists/$LOCALRELEASE/ | gzip > dists/$LOCALRELEASE/main/source/Sources.gz
-    
-    debug "Making release file"
-    apt-ftparchive release dists/$LOCALRELEASE/ > dists/$LOCALRELEASE/Release
-    info "To access your local mirror, add a line"
-    info "like this in /etc/apt/sources.list"
-    info "deb file:/$LOCALMIRROR $LOCALRELEASE main"
-fi
-rm -f "$LOCKFILE"
+/usr/bin/apt-get $* | tee -a $LOG_FILE

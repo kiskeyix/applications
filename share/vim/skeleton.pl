@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.2 $
-# $Date: 2005-11-23 19:31:29 $
+# $Revision: 1.3 $
+# $Date: 2006-02-12 04:57:37 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION:
@@ -22,7 +22,8 @@ skeleton.pl - skeleton script for Perl
 use strict;
 $|++;
 
-my $revision = "1.0"; # version
+my $revision = '$Revision: 1.3 $'; # version
+$revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # standard Perl modules
 use Getopt::Long;
@@ -111,7 +112,7 @@ if ( $USAGE ) {
     exit 0; # never reaches here
 }
 
-if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
+if ( $PVERSION ) { print STDOUT ($revision,"\n"); exit 0; }
 
 print "sample";
 

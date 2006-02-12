@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.9 $
-# $Date: 2006-02-12 04:54:10 $
+# $Revision: 1.10 $
+# $Date: 2006-02-12 04:55:41 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: spits to STDOUT basic information about the current system
@@ -35,8 +35,8 @@ my $USAGE=0;
 my $DEBUG=0;
 my $HTML=0;
 my $BBCODE=0;
-my $revision=qw/\$Revision: 1.9 $/;
-$revision =~ s/(\$|Revision:|\s)//g;
+my $revision='$Revision: 1.10 $';
+$revision =~ s/(\\|\$|Revision:|\s)//g;
 
 =pod
 
@@ -105,7 +105,7 @@ if ( $USAGE ) {
     exit 0; # never reaches here
 }
 
-if ( $PVERSION ) { print STDOUT ($revision); exit 0; }
+if ( $PVERSION ) { print STDOUT ($revision,"\n"); exit 0; }
 
 my $br = ($HTML) ? "<br />":"";
 my $unixname = qx#uname -a#;

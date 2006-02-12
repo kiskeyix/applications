@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.7 $
-# $Date: 2006-02-12 04:49:41 $
+# $Revision: 1.8 $
+# $Date: 2006-02-12 04:53:05 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: spits to STDOUT basic information about the current system
@@ -35,7 +35,8 @@ my $USAGE=0;
 my $DEBUG=0;
 my $HTML=0;
 my $BBCODE=0;
-my $revision=1.6;
+my $revision=qw/$Revision: 1.8 $/;
+$revision =~ s/(\$|Revision:|\s)//g;
 
 =pod
 

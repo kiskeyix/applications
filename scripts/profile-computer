@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.12 $
-# $Date: 2006-02-15 15:37:44 $
+# $Revision: 1.13 $
+# $Date: 2006-02-15 15:41:36 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: spits to STDOUT basic information about the current system
@@ -35,7 +35,7 @@ my $USAGE=0;
 my $DEBUG=0;
 my $HTML=0;
 my $BBCODE=0;
-my $revision='$Revision: 1.12 $';
+my $revision='$Revision: 1.13 $';
 $revision =~ s/(\\|\$|Revision:|\s)//g;
 
 =pod
@@ -157,7 +157,7 @@ foreach my $line (@pci)
     #0000:01:00.0 VGA compatible controller: ATI Technologies Inc: Unknown device 4153
     $line =~ s#^[[:xdigit:]\:\.]+\s+##g; # remove PCI id
     chomp($line);
-    _print($line,"\n");
+    _print("$line\n");
 }
 _print_div();
 _print_lsb() if (-r "/etc/lsb-release");

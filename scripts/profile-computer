@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.13 $
-# $Date: 2006-02-15 15:41:36 $
+# $Revision: 1.14 $
+# $Date: 2006-02-18 23:57:06 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: spits to STDOUT basic information about the current system
@@ -35,7 +35,7 @@ my $USAGE=0;
 my $DEBUG=0;
 my $HTML=0;
 my $BBCODE=0;
-my $revision='$Revision: 1.13 $';
+my $revision='$Revision: 1.14 $';
 $revision =~ s/(\\|\$|Revision:|\s)//g;
 
 =pod
@@ -164,7 +164,19 @@ _print_lsb() if (-r "/etc/lsb-release");
 _print_div();
 _print("Library: libc6\n") if ( -e glob("/lib/libc-2.*.*.so") );
 _print("Compiler Version: ".qx#gcc --version|head -1#) if ( -x "/usr/bin/gcc" or -x "/usr/local/bin/gcc" or -x "/opt/bin/gcc" );
-
+_print_div();
+if ( -r "/proc/cmdline" )
+{
+    if (open(CMDLINE,"</proc/cmdline"))
+    {
+        _print("/proc/cmdline\n");
+        while(<CMDLINE>)
+        {
+            _print("$_\n");
+        }
+        close(CMDLINE);
+    }
+}
 _print_div(); # end
 
 # ----------------------------------#

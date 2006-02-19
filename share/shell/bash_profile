@@ -97,10 +97,8 @@ LESS='-i -w -R -z-4 -g -e -M -X -P%t?f%f \
 ## NOTE that this is attempted now before locales are setup and before
 ## any environment varible is exported:
 HOST_PROFILE="$HOME/.profile-`hostname`"
-if [[ -r "$HOST_PROFILE" && -z "$HOST_PROFILE_LOADED" ]]; then
+if [[ -r "$HOST_PROFILE" ]]; then
     . "$HOST_PROFILE"
-    HOST_PROFILE_LOADED=1
-    export HOST_PROFILE_LOADED
 fi
 
 ## locale settings
@@ -133,18 +131,14 @@ elif [[ -f /usr/local/etc/bashrc ]]; then
 fi
 
 ## read host-specific path:
-if [[ -f "$HOME/.path.setup" && -z "$PATH_SETUP_LOADED" ]]; then
+if [[ -f "$HOME/.path.setup" ]]; then
     . "$HOME/.path.setup"
-    PATH_SETUP_LOADED=1
-    export PATH_SETUP_LOADED
 fi
 
 ## Finally, get the aliases and functions from .bashrc. This will in turn
 ## read host-specific .bashrc-`hostname` file and .alias.setup, .path.setup, and
 ## .signaturerc and possibly others... See the .bashrc provided with this file
-if [[ -f "$HOME/.bashrc" && -z "$HOME_BASHRC_LOADED" ]]; then
+if [[ -f "$HOME/.bashrc" ]]; then
 	. "$HOME/.bashrc"
-        HOME_BASHRC_LOADED=1
-        export HOME_BASHRC_LOADED
 fi
 ## EOF ##

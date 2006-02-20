@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2004-Mar-10
 #
@@ -28,11 +28,11 @@ my $CLIENT_LOG = "$LOG_DIR/client_log.$$"; # keeps btdownload* logs
 my $TRACKER_LOG = "$LOG_DIR/tracker_log.$$"; # keeps tracker logs (if running local)
 
 # applications
-my $BTMAKEMETAFILE = "btmakemetafile ";
-my $BTDOWNLOAD = "btdownloadheadless ";
+my $BTMAKEMETAFILE = "/usr/bin/maketorrent-console ";
+my $BTDOWNLOAD = "/usr/bin/bittorrent-console ";
 
 # switches for applications
-my $HOST ="www.latinomixed.com";
+my $HOST ="www.kiskeyix.org";
 my $URL ="http://$HOST"; # visible URL or public IP for tracker
 my $URL_HTTP_PORT = "81"; # standard is 80
 my $BTPORT = "6900"; # usually 6969
@@ -41,7 +41,7 @@ my $PATH_TO_DFILE = "/var/www/a/dstate"; # path to dstate file
 my $BTUPLOAD_LIMIT=" --max_upload_rate 7 "; # number of kB/s
 
 # constructing whole command for bttrack:
-my $BTTRACK = "bttrack --port $BTPORT --dfile $PATH_TO_DFILE"; 
+my $BTTRACK = "bittorrent-tracker --port $BTPORT --dfile $PATH_TO_DFILE"; 
 # constructing whole URL for tracker:
 my $TRACKER_URL=$URL.":".$BTPORT."/announce"; 
 

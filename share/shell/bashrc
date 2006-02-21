@@ -88,20 +88,16 @@ fi
 
 ## lastly, read user host-specific entries
 HOST_BASHRC="$HOME/.bashrc-`hostname`"
-if [[ -r "$HOST_BASHRC" && -z "$HOST_BASHRC_LOADED" ]]; then
+if [[ -r "$HOST_BASHRC" ]]; then
     . $HOST_BASHRC
-    HOST_BASHRC_LOADED=1
-    export HOST_BASHRC_LOADED
 fi
 # check the window size after each command and, if necessary,
 # update the values of LINES and COLUMNS.
 shopt -s checkwinsize
 
 # enable bash completion in interactive shells
-if [[ -r "/etc/bash_completion" && -z "$BASH_COMPLETION_LOADED" ]]; then
+if [[ -r "/etc/bash_completion" ]]; then
     . /etc/bash_completion
-    BASH_COMPLETION_LOADED=1
-    export BASH_COMPLETION_LOADED
 fi
 
 #---------------------------#
@@ -283,10 +279,8 @@ alias suod='sudo'
 ## get aliases for localhost
 ## format is:
 ## alias NAME='command'
-if [[ -r "$HOME/.alias.setup" && -z "HOME_ALIAS_LOADED" ]]; then
+if [[ -r "$HOME/.alias.setup" ]]; then
     . "$HOME/.alias.setup"
-    HOME_ALIAS_LOADED=1
-    export HOME_ALIAS_LOADED
 fi
 
 #----------------------#

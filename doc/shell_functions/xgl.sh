@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A script to start Xgl and a gnome session with Compiz+gnome-window-decorator
@@ -26,7 +26,8 @@ if [ $? == 0 ]; then
     xterm -display $DISPLAY -e "compiz --replace gconf" # no need to background this
     sleep 3
     xterm -display $DISPLAY -e "gnome-window-decorator &" &
-    xterm -display $DISPLAY -e "exec ssh-agent dbus-launch --exit-with-session /usr/bin/gnome-session" &
+    #xterm -display $DISPLAY -e "exec ssh-agent dbus-launch --exit-with-session /usr/bin/gnome-session" &
+    exec ssh-agent dbus-launch --exit-with-session /usr/bin/gnome-session
 else
     echo "Xgl did not launch correctly on $MY_DISPLAY?"
     echo "Try running: xterm -display $MY_DISPLAY"

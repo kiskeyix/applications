@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.14 $
-# $Date: 2006-02-18 23:57:06 $
+# $Revision: 1.15 $
+# $Date: 2006-02-23 14:51:50 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: spits to STDOUT basic information about the current system
@@ -35,7 +35,7 @@ my $USAGE=0;
 my $DEBUG=0;
 my $HTML=0;
 my $BBCODE=0;
-my $revision='$Revision: 1.14 $';
+my $revision='$Revision: 1.15 $';
 $revision =~ s/(\\|\$|Revision:|\s)//g;
 
 =pod
@@ -142,6 +142,10 @@ foreach my $line(@cpu,@mem)
 }
 
 _print_div();
+_print("# profile-computer $revision Luis Mondesi <lemsx1\@gmail.com>\n");
+_print("# http://lems.kiskeyix.org/toolbox/?f=profile-computer\&d=1\n");
+_print_div();
+
 _print("Host Name: $hostname\n");
 _print("System Kernel: $unixname\n");
 _print_div();

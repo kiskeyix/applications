@@ -1,12 +1,12 @@
 #!/usr/bin/perl -w
-# $Revision: 1.70 $
+# $Revision: 1.71 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
 # USAGE: update-host [OPTIONS] [host1 host2 host3 ...]
 #
 # TODO:
-#  - tests host file and print their new IP to STDOUT. hint slurp_hosts() and do host lookups on the names
+#  - tests host file and print their new IP to STDOUT. hint slurp_hosts() and do host lookups on the names. Allow a --reconcile-hosts option so the new IP for the hostnames can be save to the file passed from the command line.
 # LICENSE: GPL
 
 use strict;

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.69 $
+# $Revision: 1.70 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -147,6 +147,7 @@ my $LOCAL=0; # do not get any new copies, use the local files instead
 my $PKEY=0;  # should we push our id_rsa.pub key to the remote host?
 my $_ssh_agent = 0; # should we kill ssh-agent when done?
 my $_ssh_id = 0;    # should we remove id when done?
+my $ssh_port=22; # TODO add --ssh-port to allow users to change the ssh port at will
 my $RED = "\033[1;31m";
 my $NORM = "\033[0;39m";
 my $GREEN = "\033[0;32m";
@@ -349,7 +350,7 @@ if ( $PKEY )
     # if we have more hosts, keep going
     foreach my $host (@ARGV)
     {
-        system("cat $ENV{'HOME'}/.ssh/id_rsa.pub | ssh ".$USERNAME.$host." 'cat - >> .ssh/authorized_keys'");
+        system("cat $ENV{'HOME'}/.ssh/id_rsa.pub | ssh ".$USERNAME.$host." 'mkdir .ssh 2> /dev/null && chmod 0700 .ssh; cat - >> .ssh/authorized_keys'");
         print STDERR ("failed to send key to $HOST") and _exit_safe($?) if ( $? != 0 );
     }
 
@@ -471,13 +472,26 @@ if ( $MASTER )
 # and exit
 if ( $HOST )
 {
-    print update_host($HOST); # prints error if any
+    my $host = $HOST;
+    if (!$DEBUG)
+    {
+        print update_host($host); # prints error if any
+    } else {
+        debug("Doing host $host");
+        if ( is_alive($host) )
+        {
+            debug("$host, it's alive!");
+        } else {
+            debug("$host, is kaboom!");
+        }
+        debug("*** SKIPPED $host");
+    }
     # do all other hosts if any
     foreach my $host (@ARGV)
     {
         debug("Doing host $host");
         print STDERR ("WARNING! This host is in the excluded list\n") 
-        if ( grep(/$EXCLUDE/,$host) );
+            if ( grep(/$EXCLUDE/,$host) );
         if ( !$DEBUG )
         {
             print update_host($host); # prints error if any
@@ -499,11 +513,12 @@ slurp_hosts($REMOTE_HOSTS_FILE);
 
 foreach my $h ( keys %hosts )
 {
+    debug("*** DOING: $h");
     next if ( grep(/$EXCLUDE/,$h) );
-    if ( ! is_alive($h) )
+    if ( is_alive($h) != 1 )
     {
         printf STDOUT ("%20s",$h);
-        print STDOUT (" is dead\n");
+        print STDOUT (" is dead or no ssh server on port $ssh_port\n");
         next;
     }
     if ( !$DEBUG )
@@ -528,7 +543,6 @@ sub slurp_hosts
             if ( $_ =~ /(\d+.\d+.\d+.\d+)\s+(\w+)/,$_)
             {
                 $hosts{$1}{ip}=$2;
-                $hosts{$1}{alive}=-1;
             }
         }
     }
@@ -544,17 +558,35 @@ sub is_alive
     my $host = shift;
     return undef if ( not defined ( $host ) );
     $hosts{$host}{'alive'} = 0 if ( not exists ($hosts{$host}{'alive'}) );
-    if ( $hosts{$host}{'alive'} == 0  ) {
+    if ( $hosts{$host}{'alive'} == 0  )
+    {
         my $tmp_str = undef;
-        $tmp_str = qx/ping -c 1 $host/ if ( $hosts{$host}{'alive'} < 1  );
+        $tmp_str = qx/ping -w 4 -c 1 $host/ if ( $hosts{$host}{'alive'} < 1  );
         # 0 when good
         # 256 when not good
         debug ("*** pinging $host returned $?");
         # return the opposite of ping's return output
-        my $ret = ( $? ) ? 0:1;
-        $hosts{$host}{'alive'} = $ret; # save for future reference
+        $hosts{$host}{'alive'} = ( $? ) ? 0:1;
+        if ( $hosts{$host}{'alive'} > 0 )
+        {
+            # test to see if host is listening on SSH port
+            use IO::Socket;
+            my $socket =  IO::Socket::INET->new(
+                    PeerAddr=>$host,
+                    PeerPort=>$ssh_port,
+                    Proto=>"tcp",
+                    Type=>SOCK_STREAM);
+            if ( ! $socket )
+            { 
+                debug("*** couldn't connect to remove host ssh port $ssh_port. $@\n");
+                $hosts{$host}{'alive'}=0;
+            } else {
+                debug ("*** ssh to $host on port $ssh_port is possible");
+                close($socket);
+            }
+        }
     } else {
-        debug ("*** uh? We should never reach this...");
+        debug ("*** uh? We should never reach this... This means that we previously check for this host already. All checks were skipped.");
     }
     debug("is_alive returning ".$hosts{$host}{'alive'}." for $host");
     return $hosts{$host}{'alive'};
@@ -598,7 +630,8 @@ sub update_host
     my $FAIL_FLAG=0;
 
     # sanity check. make sure host is alive:
-    return "ERROR: host $h is dead\n" if ( ! is_alive($h) );
+    return "ERROR: host $h is dead or no ssh server on port $ssh_port\n" 
+        if ( ! is_alive($h) );
 
     # make sure the .backup and $TMP dir exists
     system("ssh ".$USERNAME.$h." mkdir -p $TMP .backup ".$silent);

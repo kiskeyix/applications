@@ -1,9 +1,12 @@
 [Desktop Entry]
+Version=1.0
+Encoding=UTF-8
 Name=Skype
 Comment=Skype Instant Messenger
 Exec=skype %U
 Terminal=false
 MultipleArgs=false
 Type=Application
-Icon=/usr/local/skype/icons/skype_48_32.png
+Icon=/usr/local/share/skype/icons/skype_48_32.png
 Categories=Application;Network
+GenericName[en_US]=

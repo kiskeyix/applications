@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.15 $
-# $Date: 2006-02-23 14:51:50 $
+# $Revision: 1.16 $
+# $Date: 2006-02-25 15:14:43 $
 # Luis Mondesi < lemsx1@hotmail.com >
 #
 # DESCRIPTION: spits to STDOUT basic information about the current system
@@ -35,7 +35,7 @@ my $USAGE=0;
 my $DEBUG=0;
 my $HTML=0;
 my $BBCODE=0;
-my $revision='$Revision: 1.15 $';
+my $revision='$Revision: 1.16 $';
 $revision =~ s/(\\|\$|Revision:|\s)//g;
 
 =pod
@@ -179,6 +179,16 @@ if ( -r "/proc/cmdline" )
             _print("$_\n");
         }
         close(CMDLINE);
+    }
+}
+_print_div();
+if ( -x "/usr/bin/fglrxinfo" )
+{
+    open(FGLRX,"/usr/bin/fglrxinfo |") or warn("Could not execute /usr/bin/fglrx\n");
+    while(<FGLRX>)
+    {
+        chomp();
+        _print("$_\n");
     }
 }
 _print_div(); # end

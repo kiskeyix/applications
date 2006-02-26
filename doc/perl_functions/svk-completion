@@ -24,10 +24,11 @@ _svk()
               list ls lock log merge mkdir move mv rename \
               propdel pdel propedit pedit propget pget \
               proplist plist propset pset resolved revert \
-              status switch unlock update --version'
+              smerge status switch unlock update --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
 		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
+                # TEST COMPREPLY=( $( COMP_LINE=@(COMP_WORDS) COMP_POINT=${#COMP_LINE} svk-complete.pl ${COMP_WORDS[COMP_CWORD]} ) )
 		return 0
 	fi
 
@@ -43,6 +44,7 @@ _svk()
 	helpCmds='help|--help|h|\?'
 	if [[ ${COMP_WORDS[1]} != @($helpCmds) ]] && \
 	   [[ "$cur" != -* ]] || \
+           [[ "$cur" != /* ]] || \
 	   [[ ${COMP_WORDS[COMP_CWORD-1]} == @($optsParam) ]] ; then
 		return 0
 	fi
@@ -153,6 +155,9 @@ _svk()
 		cmdOpts="-u --show-updates -v --verbose $nOpts $qOpts $pOpts \
 		         --no-ignore --ignore-externals --incremental --xml"
 		;;
+        smerge)
+                cmdOpts="-l"
+                ;;
 	switch|sw)
 		cmdOpts="--relocate $rOpts $nOpts $qOpts $pOpts --diff3-cmd"
 		;;
@@ -164,6 +169,7 @@ _svk()
                          --ignore-externals"
 		;;
 	*)
+                cmdOpts=( $( /usr/local/bin/svk-complete.pl $cur ) )
 		;;
 	esac
 

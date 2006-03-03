@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.71 $
+# $Revision: 1.72 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -558,10 +558,11 @@ sub is_alive
     my $host = shift;
     return undef if ( not defined ( $host ) );
     $hosts{$host}{'alive'} = 0 if ( not exists ($hosts{$host}{'alive'}) );
+    my $ping_args = ( qx/ping -V/ =~ /iputils/ ) ? " -w 4 " : "" ;
     if ( $hosts{$host}{'alive'} == 0  )
     {
         my $tmp_str = undef;
-        $tmp_str = qx/ping -w 4 -c 1 $host/ if ( $hosts{$host}{'alive'} < 1  );
+        $tmp_str = qx/ping $ping_args -c 1 $host/ if ( $hosts{$host}{'alive'} < 1  );
         # 0 when good
         # 256 when not good
         debug ("*** pinging $host returned $?");

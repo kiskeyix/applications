@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.141 $
+# $Revision: 1.142 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3807,7 +3807,7 @@ sub video_requant_factor
     my $s_size = 10000000; # we add 10mb for e/a title we are ripping. for now is just one main title
     # 1.05 * ( video_size / (4500000000 - (audio_size + 10)) ) for a 4.4GB DVD with 5% reserve
     my $factor = 1.05 * ( $video_size / ($DVD5SIZE - ($audio_size + $s_size)) );
-    return $factor;
+    return ( $factor < 1 ) 1.0 : $factor;
 }
 
 sub video_requant

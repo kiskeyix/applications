@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.28 $
+# $Revision: 1.29 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # URL: http://www.kiskeyix.org/downloads/find.pl.gz
@@ -60,11 +60,12 @@ GetOptions(
     'r|replace=s'      =>   \$that_string
 ) and $this_string = shift and $f_pattern = shift;
 
-die ( "Sorry. Can't search for (nul)" ) if ( defined($this_string) and $this_string =~ m/^\s*$/ );
+die ( "Sorry. Can't search for (nul)" ) 
+    if ( defined($this_string) and $this_string =~ m/^\s*$/ );
 
-if ( defined($f_pattern) and $f_pattern =~ m(^\.) )
+if ( defined($f_pattern) and $f_pattern =~ m#^[^\\]\.# )
 {
-    print "WARNING: using a dot in file pattern can match too many files. Escape dots with '\.'.\n Waiting 5 seconds before continuing\n Press CTRL+C to abort script execution\n" ;
+    print STDERR "WARNING: using a dot in file pattern can match too many files. Escape dots with '\.'.\n Waiting 5 seconds before continuing\n Press CTRL+C to abort script execution\n" ;
     sleep(5);
 }
 
@@ -78,15 +79,16 @@ $this_string = clean_string($this_string );
 
 if ( $DEBUG > 0 )
 {
-    print STDERR "s: '$this_string' ";
-    print STDERR "r: '$that_string' " if (defined($that_string));
-    print STDERR "f: '$f_pattern' " if (defined($f_pattern));
+    print STDERR "search for: '$this_string' \n";
+    print STDERR "replace with: '$that_string' \n" if (defined($that_string));
+    print STDERR "file pattern: '$f_pattern' \n" if (defined($f_pattern));
     print STDERR "\n";
     print STDERR "$RED DEBUG in place... pausing for 5 seconds$NORM\n";
     sleep(5);
 }
 
-if ($this_string =~ /\w/) {
+if ($this_string =~ /[[:alnum:]\.\_\-\(\)\[\]\{\}\"\']+/)
+{
     my $i=0;
     @ls = do_file_ary("."); # start at current directory
     print STDERR ("File list: ",join(":",@ls),"\n") if ( $DEBUG ); 
@@ -142,7 +144,7 @@ if ($this_string =~ /\w/) {
         $thisFile = undef; # reset var
     } #end for
 } else {
-    print $usage;
+    print STDERR ($usage,"\n");
 }
 
 sub clean_string

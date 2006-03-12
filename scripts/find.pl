@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.29 $
+# $Revision: 1.30 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # URL: http://www.kiskeyix.org/downloads/find.pl.gz
@@ -43,7 +43,6 @@ my $BLUE = "";
 my $usage = "Usage: find.pl [--replace=\"string\"] \"string\" [\"FILE_REGEX\"]\n NOTE use quotes to avoid the shell expanding your REGEX";
 my $modified = 0;
 
-my $thisFile = "";      # general current file
 my @new_file = ();      # lines to be printed in new file
 my @ls = ();            # array of files
 
@@ -92,41 +91,38 @@ if ($this_string =~ /[[:alnum:]\.\_\-\(\)\[\]\{\}\"\']+/)
     my $i=0;
     @ls = do_file_ary("."); # start at current directory
     print STDERR ("File list: ",join(":",@ls),"\n") if ( $DEBUG ); 
-    for (@ls) {
+    foreach my $_file (@ls)
+    {
         # yes, this is a wrapper for a standard tip!
         #
         # open e/a file if it's a regular file
         # and replace $this_string with $that_string
         # if $that_string is set
         # and keep a backup .bak for e/a file modified
-    
-        if ( $DEBUG ) { print STDERR "opening $_\n"; }
-        
         #system("perl -e 'm/$this_string/g;' $_");
         # or 
         #system("perl -e 's/$this_string/$that_string/g;' -pi.bak $_");
 
-        $thisFile = $_;
+        if ( $DEBUG ) { print STDERR "opening $_file\n"; }
 
         $i = 0;
         $modified = 0; # clear flag
 
-        open (FILE,"<$thisFile") or die "could not open $thisFile. $!\n";
+        open (FILE,"<$_file") or die "could not open $_file. $!\n";
         if ( defined($that_string) )
         {
             while(<FILE>) {
                 $i++;
-                # TODO make sure $this_string and $that_string don't contain |
                 if ($_ =~ s|$this_string|$that_string|g) {
-                    print STDOUT "$GREEN $thisFile [$i]:$NORM $_"; 
+                    print STDOUT "$GREEN $_file [$i]:$NORM $_"; 
                     $modified = 1;
                 }
                 push @new_file,$_;
             }
             close(FILE);
             if ($modified) {
-                open (NEWFILE,">$thisFile") 
-                    or die "could not write to $thisFile. $!\n";
+                open (NEWFILE,">$_file") 
+                    or die "could not write to $_file. $!\n";
                 print NEWFILE @new_file;
                 close(NEWFILE);
             }
@@ -136,12 +132,11 @@ if ($this_string =~ /[[:alnum:]\.\_\-\(\)\[\]\{\}\"\']+/)
             while(<FILE>) { 
                 $i++; 
                 if ($_ =~ m|$this_string|gi) {
-                    print STDOUT "$thisFile [$i]: $_"; 
+                    print STDOUT "$_file [$i]: $_"; 
                 }
             }
             close(FILE);
         }
-        $thisFile = undef; # reset var
     } #end for
 } else {
     print STDERR ($usage,"\n");

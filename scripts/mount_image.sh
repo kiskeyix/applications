@@ -3,7 +3,7 @@
 # Title="Mount Image"
 # Title[es]="Montar Imagen"
 #
-# $Revision: 1.15 $
+# $Revision: 1.16 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2004-Jun-09
 #
@@ -108,7 +108,7 @@ set_spanish()
 
 # determine language to use:
 if [ -n $LANG ]; then
-    if [ "`echo $LANG | grep \"^es\"`" ]; then
+    if [ 0 -eq `echo $LANG | grep -q \"^es\"; echo $?` ]; then
         echo "Using Spanish"
         set_spanish
     else
@@ -326,7 +326,7 @@ do
     # try to mount the file system
     # make directory for this image
     # directory doesn't exist?
-    mkdir -p $USERMOUNTDIR
+    mkdir -p "$USERMOUNTDIR"
 
     # try mounting the filesystem with what we know so far
 
@@ -379,8 +379,8 @@ do
                 fi
             else
                 error "$MSG_ESETLO. $MSG_EBLOCK $LOOPDEV"
-                rmdir $USERMOUNTDIR
-                rmdir $MOUNTDIR
+                rmdir "$USERMOUNTDIR"
+                rmdir "$MOUNTDIR"
             fi
         else
             # image is not encrypted... ask about filesystem format
@@ -390,18 +390,20 @@ do
             echo "Asking about filesystem type"
             mtype="`ask_filesystem`"
 
-            if [ -z $mtype ]; then
+            if [ -z "$mtype" ]; then
                 # what we do when user presses cancel
                 mtype="iso9660"
             fi
+            
+            echo "Using filesystem type $mtype"
 
             if [ "`lmount $mtype $arg $USERMOUNTDIR`" = "yes" ]; then
                 $NAUTILUS $USERMOUNTDIR
                 info "$arg $MSG_SMOUNTED"
             else
                 error "$MSG_EMOUNT $arg --> $USERMOUNTDIR"
-                rmdir $USERMOUNTDIR
-                rmdir $MOUNTDIR
+                rmdir "$USERMOUNTDIR"
+                rmdir "$MOUNTDIR"
             fi
         fi
     fi

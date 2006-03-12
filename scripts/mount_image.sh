@@ -3,7 +3,7 @@
 # Title="Mount Image"
 # Title[es]="Montar Imagen"
 #
-# $Revision: 1.16 $
+# $Revision: 1.17 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2004-Jun-09
 #
@@ -187,7 +187,8 @@ lmount()
     # @arg1 ftype
     # @arg2 loopdev
     # @arg3 path
-    if [ -b $2 ];then
+    if [ -b "$2" ];then
+        echo "DEBUG: $SU -u $SUSER -t \"${TIT_MOUNT}\" \"$MOUNT -t $1 $2 $3\"" >> /tmp/mount_image.sh.log
         $SU -u $SUSER -t "${TIT_MOUNT}" "$MOUNT -t $1 $2 $3"
         if [ "`mount | grep \"$3\"`" ]; then
             echo "yes"
@@ -195,6 +196,7 @@ lmount()
             echo "no"
         fi
     else
+        echo "DEBUG: $SU -u $SUSER -t \"${TIT_MOUNT}\" \"$MOUNT -o loop -t $1 $2 $3\"" >> /tmp/mount_image.sh.log
         # for convenience. $2 is not a block device, try to mount it
         # letting mount find a block device for us
         $SU -u $SUSER -t "${TIT_MOUNT}" "$MOUNT -o loop -t $1 $2 $3"
@@ -289,20 +291,20 @@ info()
     --text="$1"
 }
 
-for arg in $@
+for marg in $@
 do
-    arg = "`basename ${arg}`"
+    arg="`basename ${marg}`"
     USERMOUNTDIR="$MOUNTDIR/$arg"
-    file_type="`file \"${arg}\"`"
+    file_type="`file \"${marg}\"`"
 
     # if already mounted continue
-    if [ "`mount | grep \"${arg}\"`" ]; then
-        if [ "`unmount "$arg ${MSG_MOUNTED}" "$arg"`" = "yes" ]; then
-            info "$arg $MSG_UMOUNTED"
+    if [ "`mount | grep \"${marg}\"`" ]; then
+        if [ "`unmount "$marg ${MSG_MOUNTED}" "$arg"`" = "yes" ]; then
+            info "$marg $MSG_UMOUNTED"
             rmdir $USERMOUNTDIR
             rmdir $MOUNTDIR
         else
-            error "$MSG_NOTUMOUNTED $arg"
+            error "$MSG_NOTUMOUNTED $marg"
             # TODO find where is mounted and open with nautilus
             # $NAUTILUS 
         fi
@@ -313,14 +315,14 @@ do
     # if it can be detected
     case "$file_type" in
         *ISO\ 9660\ CD-ROM\ filesystem*)
-        mtype="iso9660";
-        ;;
+                mtype="iso9660";
+            ;;
         *SGI\ disk\ label*)
-        mtype="efs";
-        ;;
+                mtype="efs";
+            ;;
         *)
-        mtype="none";       # user should supply later...
-        ;;
+                mtype="none";       # user should supply later...
+            ;;
     esac;
 
     # try to mount the file system
@@ -330,9 +332,9 @@ do
 
     # try mounting the filesystem with what we know so far
 
-    if [ "`lmount $mtype $arg $USERMOUNTDIR`" = "yes" ]; then 
+    if [ "`lmount $mtype $marg $USERMOUNTDIR`" = "yes" ]; then 
         $NAUTILUS $USERMOUNTDIR
-        info "$arg $MSG_SMOUNTED"
+        info "$marg $MSG_SMOUNTED"
     else
         # if mount failed, ask about encryption and filetype
         
@@ -361,10 +363,11 @@ do
             echo "Asking about filesystem type"
             mtype="`ask_filesystem`"
 
-            if [ "`setup_enloop $LOOPDEV $arg $CYPHER`" = "yes" ]; then
+            if [ "`setup_enloop $LOOPDEV $marg $CYPHER`" = "yes" ]; then
+                echo "DEBUG: loop device $LOOPDEV for $marg"
                 if [ "`lmount $mtype $LOOPDEV $USERMOUNTDIR $CYPHERBITS`" = "yes" ]; then
                     $NAUTILUS $USERMOUNTDIR
-                    info "$arg $MSG_SMOUNTED"
+                    info "$marg $MSG_SMOUNTED"
                 else
                     error "$MSG_EMOUNT $LOOPDEV --> $USERMOUNTDIR"
                     
@@ -374,8 +377,8 @@ do
                         error "$LOOPDEV could not be released"
                     fi
                     
-                    rmdir $USERMOUNTDIR
-                    rmdir $MOUNTDIR
+                    rmdir "$USERMOUNTDIR"
+                    rmdir "$MOUNTDIR"
                 fi
             else
                 error "$MSG_ESETLO. $MSG_EBLOCK $LOOPDEV"
@@ -397,11 +400,11 @@ do
             
             echo "Using filesystem type $mtype"
 
-            if [ "`lmount $mtype $arg $USERMOUNTDIR`" = "yes" ]; then
+            if [ "`lmount $mtype $marg $USERMOUNTDIR`" = "yes" ]; then
                 $NAUTILUS $USERMOUNTDIR
-                info "$arg $MSG_SMOUNTED"
+                info "$marg $MSG_SMOUNTED"
             else
-                error "$MSG_EMOUNT $arg --> $USERMOUNTDIR"
+                error "$MSG_EMOUNT $marg --> $USERMOUNTDIR"
                 rmdir "$USERMOUNTDIR"
                 rmdir "$MOUNTDIR"
             fi

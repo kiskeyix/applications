@@ -1,10 +1,17 @@
 #!/bin/sh
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A script to start a gnome session under gdm with Compiz+gnome-window-decorator
-# Assumes that you are creating a file named:
-# $> cat > /usr/share/xsessions/compiz.desktop <<EOF
+#EOF
+# USAGE: compiz.sh
+# LICENSE: GPL
+# NOTES:
+# * http://lems.kiskeyix.org/puntoyaparte/index.php?story_id=58
+# * https://wiki.ubuntu.com/XglHowto
+# * https://wiki.nurd.se/global:howto:xgl:session
+# * Assumes that you are creating a file named:
+##> cat > /usr/share/xsessions/compiz.desktop <<EOF
 #[Desktop Entry]
 #Encoding=UTF-8
 #Name=Compiz
@@ -15,12 +22,21 @@
 #Type=Application
 #X-Ubuntu-Gettext-Domain=gnome-session-2.0
 #EOF
-# USAGE: compiz.sh
-# LICENSE: GPL
-# NOTES:    http://lems.kiskeyix.org/puntoyaparte/index.php?story_id=58
-#           https://wiki.ubuntu.com/XglHowto
-#           https://wiki.nurd.se/global:howto:xgl:session
-#           
+# 
+# Now, in gdm.conf-custom you need:
+##> cat /etc/gdm/gdm.conf-custom
+# [server-Standard]
+# name=Xgl server
+# command=/usr/bin/Xgl :1 -fullscreen -ac -accel xv -accel glx:pbuffer
+# flexible=true
+#
+# And finally, in /etc/gdm/gdm.conf you need to change:
+# 0=Standard to 1=Standard:
+##0=Standard
+#1=Standard
+#
+# Now when gdm start, make sure you select your new "compiz" session
+#
 
 MY_DISPLAY=:1
 

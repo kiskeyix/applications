@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A script to start a gnome session under gdm with Compiz+gnome-window-decorator
@@ -27,8 +27,11 @@
 ##> cat /etc/gdm/gdm.conf-custom
 # [server-Standard]
 # name=Xgl server
-# command=/usr/bin/Xgl :1 -fullscreen -ac -accel xv -accel glx:pbuffer
+# command=/usr/bin/Xgl -fullscreen -ac -accel xv -accel glx:pbuffer
 # flexible=true
+# 
+# NOTE thatt :1 is not needed here as gdm will do that for you in the following
+# line.
 #
 # And finally, in /etc/gdm/gdm.conf you need to change:
 # 0=Standard to 1=Standard:

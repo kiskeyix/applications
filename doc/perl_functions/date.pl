@@ -17,6 +17,9 @@ if ( $ARGV[0] ) {
 } else {
 
     my ($sec,$min,$hour,$mday,$mon,$year) = localtime; 
-    my $ADATE=($year+=1900)."-$mon-$mday $hour:$min:$sec"; 
-    print $ADATE;
+    $mon += 1; ## adjust Month: no 0..11 instead use natural 1..12
+    $year+=1900;
+
+    my $ADATE=sprintf("%04d",$year)."-".sprintf("%02d",$mon)."-".sprintf("%02d",$mday)." ".sprintf("%02d",$hour).":".sprintf("%02d",$min).":".sprintf("%02d",$sec); 
+    print $ADATE,"\n";
 }

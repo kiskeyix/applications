@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.72 $
+# $Revision: 1.73 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -293,7 +293,7 @@ if ( $USAGE ) {
 }
 
 # setup SSH
-if ( !-S $ENV{'SSH_AUTH_SOCK'} )
+if ( exists($ENV{'SSH_AUTH_SOCK'}) and !-S $ENV{'SSH_AUTH_SOCK'} )
 {
     $ENV{'SSH_AUTH_SOCK'}="";
     my $_ssh_agent_env = qx/ssh-agent -s/;

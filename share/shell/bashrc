@@ -150,8 +150,8 @@ function fastprompt()
 
 function powerprompt()
 {
-    #FIXME _powerprompt() 
-    #FIXME {
+    _powerprompt() 
+    {
         ## trick: first put command in command history, then find it in
         ## the list. TODO find a better way of doing this:
         LOAD=$(command uptime 2> /dev/null | sed -e "s/.*: \([^,]*\).*/\1/" -e "s/ //g")	
@@ -159,16 +159,16 @@ function powerprompt()
             LOAD="NOLOAD_CMD"
         fi
         TIME=$(command date '+%H:%M')
-    #FIXME} 
-  
-    #FIXME PROMPT_COMMAND=_powerprompt;
+    } 
+
+    PROMPT_COMMAND=_powerprompt;
     case $TERM in
-	*term | rxvt | vt100 | ansi )
-	    PS1="${cyan}[\$TIME - \$LOAD \h/\u]$NC \w \n\\$> \[\033]0;[\h/\u] \w\007\]" ;;
-	linux )
-	    PS1="${cyan}[\$TIME - \$LOAD]$NC\n[\h/\u \#] \w \n\\$> " ;;
-	* )
-	    PS1="[\$TIME - \$LOAD]\n[\h/\u \#] \w \n\\$> " ;;
+        *term | rxvt | vt100 | ansi )
+        PS1="${cyan}[\$TIME - \$LOAD \h/\u]$NC \w \n\\$> \[\033]0;[\h/\u] \w\007\]" ;;
+        linux )
+        PS1="${cyan}[\$TIME - \$LOAD]$NC\n[\h/\u \#] \w \n\\$> " ;;
+        * )
+        PS1="[\$TIME - \$LOAD]\n[\h/\u \#] \w \n\\$> " ;;
     esac
 }
 

@@ -140,9 +140,9 @@ fun BenIndent()
     elseif g:IndentStyle == "perl"
         :%!perltidy -gnu
     elseif g:IndentStyle == "html"
-        :%!tidy
+        :%!tidy -quiet -utf8 -indent -clean -asxhtml
     elseif g:IndentStyle == "php"
-        :%!tidy
+        :%!tidy -quiet -utf8 -indent -clean 
     endif
     exe ':' . oldLine
 endfun

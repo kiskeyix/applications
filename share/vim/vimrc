@@ -113,9 +113,8 @@ nmap ,utf8 !recode -q ISO-8859-1..utf-8
 "set pastetoggle=<F9>
 
 " to embelish C code
-nmap -- !indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments<CR>
-vmap -- !indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments<CR>
-
+"nmap -- !indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments<CR>
+"vmap -- !indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments<CR>
 
 " Custom functions:
 
@@ -128,10 +127,17 @@ endfun
 map ,d :call RmCR()<CR>
 
 " To indent the whole file without having the cursor move to the beginning or the end I have the following
+let IndentStyle="C"
 fun BenIndent()
     let oldLine=line('.')
     "normal(gg=G)
-    !indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments % 
+    if IndentStyle == "C"
+        !indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments % 
+    elseif IndentStyle == "perl"
+        !perltidy -gnu %
+    elseif IndentStyle == "perl"
+        !tidy %
+    endif
     exe ':' . oldLine
 endfun
 map -- :call BenIndent()<CR>
@@ -180,7 +186,7 @@ iab itime <C-R>=strftime("%H:%M")<CR>
 iab itd <Tab><td><CR><CR></td><Up><Left>
 iab itr <tr><CR><CR></tr><Up><Left>
 iab itable <table border='0'><CR><tr><td><CR></td></tr><CR></table><Up><Left>
-iab ()? ()?:;<Left><Left><Left><Left>
+iab "()?" "()?:;<Left><Left><Left><Left>"
 
 "
 " Autoload commands
@@ -205,6 +211,7 @@ augroup END
 augroup html
     if !exists("autocommands_html_loaded")
         let autocommands_html_loaded = 1
+        let IndentStyle = "html"
         au BufRead *.shtml,*.html,*.htm set formatoptions=tcqro2 autoindent
   " Show default HTML file when new.
         au BufNewFile *.shtml,*.html,*.htm 0r ~/.vim/skeleton.html
@@ -217,6 +224,7 @@ augroup END
 augroup php 
     if !exists("autocommands_php_loaded")
         let autocommands_php_loaded = 1
+        let IndentStyle = "php"
         au BufRead *.php,*.php3,*.phps set formatoptions=tcqro2 cindent cinkeys='0{,0},!^F,o,O,e' nu
         au BufEnter *.class,*.inc,*.tpl,*.php,*.php3,*.phps syntax sync fromstart 
         " set syntax higlight starting from start. 
@@ -237,6 +245,7 @@ augroup END
 augroup cprog
     if !exists("autocommands_cprog_loaded")
         let autocommands_cprog_loaded = 1
+        let IndentStyle = "C"
         " C programs should have 8 spaces as tabs. makes things better
         au BufRead *.cpp,*.c,*.h,*.cxx,*.cc,*.hh set formatoptions=croq sm sw=8 sts=8 comments=sr:/*,mb:*,el:*/,:// nu cino='t8' cindent | if filereadable("tags.vim") | so tags.vim | endif
     endif
@@ -245,6 +254,7 @@ augroup END
 augroup perl
     if !exists("autocommands_perl_loaded")
         let autocommands_perl_loaded = 1
+        let IndentStyle = "perl"
         au BufReadPre *.pl,*.ph,*.pm set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu
         " tags=./tags,tags,~/devel/tags,~/devel/CVS/bin/contrib/tags
         " Show default php file when new 
@@ -262,6 +272,7 @@ augroup END
 augroup python
     if !exists("autocommands_python_loaded")
         let autocommands_python_loaded = 1
+        let IndentStyle = "python"
         au BufReadPre *.py set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e'
     endif
 augroup END
@@ -269,6 +280,7 @@ augroup END
 augroup shell
     if !exists("autocommands_shell_loaded")
         let autocommands_shell_loaded = 1
+        let IndentStyle = "sh"
         au BufRead profile,bashrc,.profile,.bashrc,.bash_*,.kshrc,*.sh,*.ksh,*.bash,*.env,.login,.cshrc,*.csh,*.tcsh,.z*,zsh*,zlog* set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e'
         " On new files do..."  
         au BufNewFile *.sh 0r ~/.vim/skeleton.sh
@@ -278,6 +290,7 @@ augroup END
 augroup tcl
     if !exists("autocommands_tcl_loaded")
         let autocommands_tcl_loaded = 1
+        let IndentStyle = "tcl"
         au BufRead *.tcl,*.tk set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e'
         " On new files do..."  
         au BufNewFile *.tcl 0r ~/.vim/skeleton.tcl

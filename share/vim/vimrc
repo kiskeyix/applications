@@ -112,10 +112,6 @@ nmap ,utf8 !recode -q ISO-8859-1..utf-8
 
 "set pastetoggle=<F9>
 
-" to embelish C code
-"nmap -- !indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments<CR>
-"vmap -- !indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments<CR>
-
 " Custom functions:
 
 " Removes those bloody ^M's in DOS files
@@ -124,19 +120,25 @@ fun RmCR()
     exe ":%s/\r//g"
     exe ':' . oldLine
 endfun
-map ,d :call RmCR()<CR>
+map ,cr :call RmCR()<CR>
 
 " To indent the whole file without having the cursor move to the beginning or the end I have the following
-let IndentStyle="C"
+" to embelish C code
+"nmap -- !indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments<CR>
+"vmap -- !indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments<CR>
+"
+" We do it with this function for all the file types:
+
+let IndentStyle = "C"
 fun BenIndent()
     let oldLine=line('.')
     "normal(gg=G)
-    if IndentStyle == "C"
-        !indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments % 
-    elseif IndentStyle == "perl"
-        !perltidy -gnu %
-    elseif IndentStyle == "perl"
-        !tidy %
+    if g:IndentStyle == "C"
+        !indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments<CR>
+    elseif g:IndentStyle == "perl"
+        !perltidy -gnu<CR>
+    elseif g:IndentStyle == "perl"
+        !tidy<CR>
     endif
     exe ':' . oldLine
 endfun

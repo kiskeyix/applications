@@ -130,15 +130,19 @@ map ,cr :call RmCR()<CR>
 " We do it with this function for all the file types:
 
 let IndentStyle = "C"
+
 fun BenIndent()
     let oldLine=line('.')
-    "normal(gg=G)
+    " our text (whole file) is passed via STDIN (%) to script name, and the output is
+    " placed in current buffer (STDOUT)
     if g:IndentStyle == "C"
-        !indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments<CR>
+        :%!indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments
     elseif g:IndentStyle == "perl"
-        !perltidy -gnu<CR>
-    elseif g:IndentStyle == "perl"
-        !tidy<CR>
+        :%!perltidy -gnu
+    elseif g:IndentStyle == "html"
+        :%!tidy
+    elseif g:IndentStyle == "php"
+        :%!tidy
     endif
     exe ':' . oldLine
 endfun
@@ -213,10 +217,9 @@ augroup END
 augroup html
     if !exists("autocommands_html_loaded")
         let autocommands_html_loaded = 1
-        let IndentStyle = "html"
-        au BufRead *.shtml,*.html,*.htm set formatoptions=tcqro2 autoindent
+        au BufRead *.shtml,*.html,*.htm set formatoptions=tcqro2 autoindent | let IndentStyle = "html"
   " Show default HTML file when new.
-        au BufNewFile *.shtml,*.html,*.htm 0r ~/.vim/skeleton.html
+        au BufNewFile *.shtml,*.html,*.htm 0r ~/.vim/skeleton.html | let IndentStyle = "html"
 
   " Setup browser to display when writing files
   "au BufWritePost *.shtml,*.html,*.htm !netscape -remote 'openFile(%:p)'
@@ -226,14 +229,13 @@ augroup END
 augroup php 
     if !exists("autocommands_php_loaded")
         let autocommands_php_loaded = 1
-        let IndentStyle = "php"
-        au BufRead *.php,*.php3,*.phps set formatoptions=tcqro2 cindent cinkeys='0{,0},!^F,o,O,e' nu
+        au BufRead *.php,*.php3,*.phps set formatoptions=tcqro2 cindent cinkeys='0{,0},!^F,o,O,e' nu | let IndentStyle = "php"
         au BufEnter *.class,*.inc,*.tpl,*.php,*.php3,*.phps syntax sync fromstart 
         " set syntax higlight starting from start. 
         " This takes those annoying missing highlight colors for certain files. 
         " could be slow for slow connections. see help 
         " Show default php file when new 
-        au BufNewFile *.php,*.php3,*.phps 0r ~/.vim/skeleton.php
+        au BufNewFile *.php,*.php3,*.phps 0r ~/.vim/skeleton.php | let IndentStyle = "php"
 
         " Add HTML menu
         "au BufEnter  *.php,*.php3,*.phps so ~/.vim/html.vim
@@ -247,22 +249,20 @@ augroup END
 augroup cprog
     if !exists("autocommands_cprog_loaded")
         let autocommands_cprog_loaded = 1
-        let IndentStyle = "C"
         " C programs should have 8 spaces as tabs. makes things better
-        au BufRead *.cpp,*.c,*.h,*.cxx,*.cc,*.hh set formatoptions=croq sm sw=8 sts=8 comments=sr:/*,mb:*,el:*/,:// nu cino='t8' cindent | if filereadable("tags.vim") | so tags.vim | endif
+        au BufRead *.cpp,*.c,*.h,*.cxx,*.cc,*.hh set formatoptions=croq sm sw=8 sts=8 comments=sr:/*,mb:*,el:*/,:// nu cino='t8' cindent | if filereadable("tags.vim") | so tags.vim | endif | let IndentStyle = "C"
     endif
 augroup END
 
 augroup perl
     if !exists("autocommands_perl_loaded")
         let autocommands_perl_loaded = 1
-        let IndentStyle = "perl"
-        au BufReadPre *.pl,*.ph,*.pm set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu
+        au BufReadPre *.pl,*.ph,*.pm set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu | let IndentStyle = "perl"
         " tags=./tags,tags,~/devel/tags,~/devel/CVS/bin/contrib/tags
         " Show default php file when new 
 
-        au BufNewFile *.pl 0r ~/.vim/skeleton.pl
-        au BufNewFile *.pm 0r ~/.vim/skeleton.pm
+        au BufNewFile *.pl 0r ~/.vim/skeleton.pl | let IndentStyle = "perl"
+        au BufNewFile *.pm 0r ~/.vim/skeleton.pm | let IndentStyle = "perl"
 
         " au BufReadPost */CVS/lib/perl5/netapp/*.pm so ~/devel/CVS/bin/contrib/tags.vim
         " The default syntax highlight syncing scheme is too slow (which makes
@@ -274,16 +274,14 @@ augroup END
 augroup python
     if !exists("autocommands_python_loaded")
         let autocommands_python_loaded = 1
-        let IndentStyle = "python"
-        au BufReadPre *.py set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e'
+        au BufReadPre *.py set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' | let IndentStyle = "python"
     endif
 augroup END
 
 augroup shell
     if !exists("autocommands_shell_loaded")
         let autocommands_shell_loaded = 1
-        let IndentStyle = "sh"
-        au BufRead profile,bashrc,.profile,.bashrc,.bash_*,.kshrc,*.sh,*.ksh,*.bash,*.env,.login,.cshrc,*.csh,*.tcsh,.z*,zsh*,zlog* set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e'
+        au BufRead profile,bashrc,.profile,.bashrc,.bash_*,.kshrc,*.sh,*.ksh,*.bash,*.env,.login,.cshrc,*.csh,*.tcsh,.z*,zsh*,zlog* set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' | let IndentStyle = "sh"
         " On new files do..."  
         au BufNewFile *.sh 0r ~/.vim/skeleton.sh
     endif
@@ -292,10 +290,9 @@ augroup END
 augroup tcl
     if !exists("autocommands_tcl_loaded")
         let autocommands_tcl_loaded = 1
-        let IndentStyle = "tcl"
-        au BufRead *.tcl,*.tk set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e'
+        au BufRead *.tcl,*.tk set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' | let IndentStyle = "tcl"
         " On new files do..."  
-        au BufNewFile *.tcl 0r ~/.vim/skeleton.tcl
+        au BufNewFile *.tcl 0r ~/.vim/skeleton.tcl | let IndentStyle = "tcl"
     endif
 augroup END
 

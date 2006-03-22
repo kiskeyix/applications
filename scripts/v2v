@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.144 $
+# $Revision: 1.145 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3592,7 +3592,7 @@ sub _collect_title_info
                 push(@audio_chan,$3);
             }
             # (dvd_reader.c) ac3 es surround sound mode drc 48kHz 6Ch
-            if (m/(ac3|dts)\s*([[:alpha:]]{2})\s+surround\s+sound\s+mode\s+drc\s*[[:digit:]]+kHz\s*([[:digit:]]Ch)/)
+            elsif (m/(ac3|dts)\s*([[:alpha:]]{2})\s+surround\s+sound\s+mode\s+drc\s*[[:digit:]]+kHz\s*([[:digit:]]Ch)/)
             {
                 push(@audio_type,$1);
                 push(@audio_lang,$2);

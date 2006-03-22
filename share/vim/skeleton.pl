@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.4 $
-# $Date: 2006-03-22 18:23:28 $
+# $Revision: 1.5 $
+# $Date: 2006-03-22 18:38:20 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION:
@@ -22,21 +22,21 @@ skeleton.pl - skeleton script for Perl
 use strict;
 $|++;
 
-my $revision = '$Revision: 1.4 $'; # version
+my $revision = '$Revision: 1.5 $';    # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # standard Perl modules
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
-use POSIX;                  # cwd() ... man POSIX
-use File::Spec::Functions;  # abs2rel() and other dir/filename specific
+use POSIX;                    # cwd() ... man POSIX
+use File::Spec::Functions;    # abs2rel() and other dir/filename specific
 use File::Copy;
-use File::Find;     # find();
-use File::Basename; # basename() && dirname()
-use FileHandle;     # for progressbar
+use File::Find;               # find();
+use File::Basename;           # basename() && dirname()
+use FileHandle;               # for progressbar
 
 #eval "use My::Module";
-#if ($@) 
+#if ($@)
 #{
 #    print STDERR "\nERROR: Could not load the Image::Magick module.\n" .
 #    "       To install this module use:\n".
@@ -48,10 +48,10 @@ use FileHandle;     # for progressbar
 #}
 
 # Args:
-my $PVERSION=0;
-my $HELP=0;
-my $USAGE=0;
-my $DEBUG=0;
+my $PVERSION = 0;
+my $HELP     = 0;
+my $USAGE    = 0;
+my $DEBUG    = 0;
 
 =pod
 
@@ -88,21 +88,24 @@ Prints usage information and exits
 
 # get options
 GetOptions(
+
     # flags
-    'v|version'         =>  \$PVERSION,
-    'h|help'            =>  \$HELP,
-    'D|debug'           =>  \$DEBUG,
-    'U|usage'           =>  \$USAGE,
+    'v|version' => \$PVERSION,
+    'h|help'    => \$HELP,
+    'D|debug'   => \$DEBUG,
+    'U|usage'   => \$USAGE,
+
     # strings
     #'o|option=s'       =>  \$NEW_OPTION,
     # numbers
     #'a|another-option=i'      =>  \$NEW_ANOTHER_OPTION,
 );
 
-if ( $HELP ) { 
+if ($HELP)
+{
     use Pod::Text;
-    my $parser = Pod::Text->new (sentence => 0, width => 78);
-    $parser->parse_from_file($0,\*STDOUT);
+    my $parser = Pod::Text->new(sentence => 0, width => 78);
+    $parser->parse_from_file($0, \*STDOUT);
     exit 0;
 }
 
@@ -111,12 +114,13 @@ sub _usage
     use Pod::Usage;
     pod2usage(1);
 }
-if ( $USAGE ) { 
+if ($USAGE)
+{
     _usage();
-    exit 0; # never reaches here
+    exit 0;    # never reaches here
 }
 
-if ( $PVERSION ) { print STDOUT ($revision,"\n"); exit 0; }
+if ($PVERSION) { print STDOUT ($revision, "\n"); exit 0; }
 
 print "sample";
 
@@ -127,3 +131,4 @@ print "sample";
 Luis Mondesi <lemsx1@gmail.com>
 
 =cut
+

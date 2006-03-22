@@ -1,12 +1,12 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple package that exports ...
-# CONVENTIONS: 
-#               - functions starting with underscores (_) are local, 
+# CONVENTIONS:
+#               - functions starting with underscores (_) are local,
 #                 private to this module
-#               - functions starting with c_ at like setters/getters 
+#               - functions starting with c_ at like setters/getters
 #                 for our configurable properties
 # LICENSE: GPL
 
@@ -35,16 +35,16 @@ This module ...
 
 package skeleton;
 require Exporter;
-use Carp;                   # croak() cluck() carp()
+use Carp;    # croak() cluck() carp()
 
-@ISA=qw(Exporter);
-@EXPORT=qw($skeleton foo);
+@ISA    = qw(Exporter);
+@EXPORT = qw($skeleton foo);
 
 # Allows variables to be exporter one level up. they will be treated
 # as "globals"
 sub import
 {
-    $skeleton=0;
+    $skeleton = 0;
     skeleton->export_to_level(1, @_);
 }
 
@@ -64,12 +64,12 @@ sub import
 
 sub new
 {
-    my $self = shift;
-    my $class = ref($self) || $self; # works for Objects or class name
-    my $object = {@_}; # remaining args are attributes
+    my $self   = shift;
+    my $class  = ref($self) || $self;    # works for Objects or class name
+    my $object = {@_};                   # remaining args are attributes
     bless $object, $class;
 
-    $object->_define(); # initialize internal variables
+    $object->_define();                  # initialize internal variables
 
     return $object;
 }
@@ -87,11 +87,18 @@ sub new
 sub _define
 {
     my $self = shift;
-    unless ( exists $self->{'skeleton'} )
+    unless (exists $self->{'skeleton'})
     {
         $self->{'skeleton'} = 1;
     }
     $skeleton = $self->{'skeleton'};
+    
+    # here we should call _define() from e/a of the classes we imported @ISA
+    for my $class ( @ISA )
+    {
+        my $meth = $class."::_define";
+        $self->$meth(@_) if $class->can("_define");
+    }
 }
 
 =pod
@@ -110,13 +117,14 @@ sub _define
 
 sub c_skeleton_option
 {
-    my $self = shift;
-    my $key = shift;
+    my $self  = shift;
+    my $key   = shift;
     my $value = shift;
-    return undef if ( not ref $self or not defined $key );
+    return undef if (not ref $self or not defined $key);
 
-    $self->{$key} =  $value if ( defined ($value) and $value !~ /^\s*$/ );
-    # we return the current value of our variable regardless 
+    $self->{$key} = $value if (defined($value) and $value !~ /^\s*$/);
+
+    # we return the current value of our variable regardless
     # of whether we changed it or not
     return $self->{$key};
 }
@@ -136,8 +144,8 @@ sub c_skeleton_option
 sub foo
 {
     my $self = shift;
-    my $str = shift;
-    return undef if ( not ref $self );
+    my $str  = shift;
+    return undef if (not ref $self);
     print STDOUT $str;
 }
 

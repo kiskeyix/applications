@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.3 $
-# $Date: 2006-02-12 04:57:37 $
+# $Revision: 1.4 $
+# $Date: 2006-03-22 18:23:28 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION:
@@ -22,7 +22,7 @@ skeleton.pl - skeleton script for Perl
 use strict;
 $|++;
 
-my $revision = '$Revision: 1.3 $'; # version
+my $revision = '$Revision: 1.4 $'; # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # standard Perl modules
@@ -106,9 +106,13 @@ if ( $HELP ) {
     exit 0;
 }
 
-if ( $USAGE ) { 
+sub _usage
+{
     use Pod::Usage;
     pod2usage(1);
+}
+if ( $USAGE ) { 
+    _usage();
     exit 0; # never reaches here
 }
 

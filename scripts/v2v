@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.145 $
+# $Revision: 1.146 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3812,8 +3812,8 @@ sub video_requant_factor
     my $audio_size = shift;
     
     my $s_size = 10000000; # we add 10mb for e/a title we are ripping. for now is just one main title
-    # 1.05 * ( video_size / (4500000000 - (audio_size + 10)) ) for a 4.4GB DVD with 5% reserve
-    my $factor = 1.05 * ( $video_size / ($DVD5SIZE - ($audio_size + $s_size)) );
+    # 1.05 * ( ( video_size - (audio_size + 10))/4500000000 ) for a 4.4GB DVD with 5% reserve
+    my $factor = 1.05 * ( ($video_size  - ($audio_size + $s_size)) / $DVD5SIZE );
     return ( $factor < 1 ) ? 1.0 : $factor;
 }
 
@@ -4026,13 +4026,14 @@ sub dvd9to5
         }
  
         my $audio_size = $DVD_INFO{$_}{'length'} * 128 * 125; # for channel 1 and 2
-        my $video_size= $DVD_INFO{$_}{'sectors'} * 2048 - $audio_size;
+        # TODO
+        my $video_size= $DVD_INFO{$_}{'sectors'} * 2048 * 4 - $audio_size;
         my $factor = video_requant_factor($video_size,$audio_size);
 
         _info("Number of angles in title $_: ".$DVD_INFO{$_}{'angles_total'});
         _info("Number of chapters in title $_: ".$DVD_INFO{$_}{'chapters_total'});
         _info("Number of sectors in title $_: ".$DVD_INFO{$_}{'sectors'});
-        _info("Video size (sectors*2048): ".$video_size);
+        _info("Video size (sectors*2048*4): ".$video_size);
         _info("Audio size (length*128*125): ".$audio_size);
         _info("Target DVD5 size: ".$DVD5SIZE);
         _debug("1.05 * ( video_size / (dvd5size - (audio_size + 10MB)) )");

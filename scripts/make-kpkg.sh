@@ -1,7 +1,7 @@
 #!/bin/bash
 # vim: ft=sh:columns=80 :
-# $Revision: 1.46 $
-# $Date: 2006-03-25 12:44:46 $
+# $Revision: 1.47 $
+# $Date: 2006-03-25 12:45:46 $
 #
 # Luis Mondesi < lemsx1@gmail.com >
 # 
@@ -39,6 +39,10 @@
 #     so that we can use both ccache and distcc. 
 #     Make sure that $CCACHE_DIR is setup correctly (man ccache)
 # LICENSE: GPL (http://www.gnu.org/licenses/gpl.txt)
+#
+# CHANGES:
+# 2006-03-25 07:45 EST - applied Antonio Ospite patch
+#
 
 CCACHE="`command -v ccache 2> /dev/null`"
 DISTCC="`command -v distcc 2> /dev/null`"

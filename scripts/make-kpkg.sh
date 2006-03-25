@@ -1,11 +1,11 @@
 #!/bin/bash
 # vim: ft=sh:columns=80 :
-# $Revision: 1.45 $
-# $Date: 2005-12-16 07:42:14 $
+# $Revision: 1.46 $
+# $Date: 2006-03-25 12:44:46 $
 #
 # Luis Mondesi < lemsx1@gmail.com >
 # 
-# URL: http://lems.kiskeyix.org/toolbox/make-kpkg.sh
+# URL: http://lems.kiskeyix.org/toolbox/?f=make-kpkg.sh&d=1
 #
 # DESCRIPTION:  an interactive wrapper to Debian's "make-kpkg"
 #               to build a custom kernel package using 
@@ -25,6 +25,7 @@
 # TIPS:
 #   * setup a $HOME/.make-kpkg.rc with the variables found in this 
 #     script (see below) to override them
+#   * N2 is optional. It defaults to 1.0
 #
 # NOTES:
 #   * If your modules are in /usr/src/modules, then your kernel
@@ -187,7 +188,12 @@ if [[ ! -z "$1" && "$1" != "--help" ]]; then
 
     if [[ $makeit -eq 1 ]]; then
         echo -e "Building kernel [ initrd opts: $BUILD_INITRD ] \n"
-        make-kpkg --rootcmd $FAKEROOT clean
+        make-kpkg \
+        --rootcmd $FAKEROOT \
+        --append-to-version "$1" \
+        --revision $REVISION \
+        clean
+
         make-kpkg \
         --rootcmd $FAKEROOT \
         --config oldconfig \
@@ -213,8 +219,11 @@ if [[ ! -z "$1" && "$1" != "--help" ]]; then
   
     # make the modules
     if [[ $mmakeit -eq 1 ]]; then
-        make-kpkg --rootcmd $FAKEROOT clean
-        make-kpkg --rootcmd $FAKEROOT modules_clean
+        make-kpkg --rootcmd $FAKEROOT \
+        --append-to-version "$1" \
+        --revision $REVISION \
+        modules_clean
+
         make-kpkg \
         --rootcmd $FAKEROOT \
         --config oldconfig \

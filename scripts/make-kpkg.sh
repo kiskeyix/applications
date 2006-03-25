@@ -1,7 +1,7 @@
 #!/bin/bash
 # vim: ft=sh:columns=80 :
-# $Revision: 1.47 $
-# $Date: 2006-03-25 12:45:46 $
+# $Revision: 1.48 $
+# $Date: 2006-03-25 14:53:36 $
 #
 # Luis Mondesi < lemsx1@gmail.com >
 # 
@@ -41,7 +41,8 @@
 # LICENSE: GPL (http://www.gnu.org/licenses/gpl.txt)
 #
 # CHANGES:
-# 2006-03-25 07:45 EST - applied Antonio Ospite patch
+# 2006-03-25 07:45 EST - applied Antonio Ospite patch which allows newer 
+# versions of make-kpkg to do "clean" and "modules_clean"
 #
 
 CCACHE="`command -v ccache 2> /dev/null`"

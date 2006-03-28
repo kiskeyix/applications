@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
-# $Date: 2006-03-28 15:56:49 $
-# Luis Mondesi < Luis.Mondesi@americanhm.com >
+# $Revision: 1.2 $
+# $Date: 2006-03-28 15:57:11 $
+# Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: installs cfengine on remote host
 # USAGE: push-cfagent HOST

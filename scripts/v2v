@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.146 $
+# $Revision: 1.147 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3585,7 +3585,8 @@ sub _collect_title_info
         {
             #TODO (dvd_reader.c) mpeg2 ntsc 16:9 only letterboxed U0 NTSC CC 1 720x480 video
             # (dvd_reader.c) ac3 en drc 48kHz 6Ch
-            if (m/(ac3|dts)\s*([[:alpha:]]{2})\s*drc\s*[[:digit:]]+kHz\s*([[:digit:]]Ch)/)
+            # where "en" is optional
+            if (m/(ac3|dts)\s*([[:alpha:]]{0,2})\s*drc\s*[[:digit:]]+kHz\s*([[:digit:]]Ch)/)
             {
                 push(@audio_type,$1);
                 push(@audio_lang,$2);
@@ -4026,14 +4027,14 @@ sub dvd9to5
         }
  
         my $audio_size = $DVD_INFO{$_}{'length'} * 128 * 125; # for channel 1 and 2
-        # TODO
-        my $video_size= $DVD_INFO{$_}{'sectors'} * 2048 * 4 - $audio_size;
+        # TODO * 4  makes it too high ... video_requant_factor already minus $audio_size
+        my $video_size= ( $DVD_INFO{$_}{'sectors'} * 2048 );
         my $factor = video_requant_factor($video_size,$audio_size);
 
         _info("Number of angles in title $_: ".$DVD_INFO{$_}{'angles_total'});
         _info("Number of chapters in title $_: ".$DVD_INFO{$_}{'chapters_total'});
         _info("Number of sectors in title $_: ".$DVD_INFO{$_}{'sectors'});
-        _info("Video size (sectors*2048*4): ".$video_size);
+        _info("Video size (sectors*2048): ".$video_size);
         _info("Audio size (length*128*125): ".$audio_size);
         _info("Target DVD5 size: ".$DVD5SIZE);
         _debug("1.05 * ( video_size / (dvd5size - (audio_size + 10MB)) )");

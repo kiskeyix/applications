@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.73 $
+# $Revision: 1.74 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -40,6 +40,7 @@ B<update-host>
 [-L,--links,--symlinks]
 [-m,--master] 
 [--print-files]
+[--password PASSWORD]
 [-r,--remove]
 [-s,--send-key]
 [-u,--username USER]
@@ -155,6 +156,7 @@ my $VERBOSE_ARGS="";
 my $WGET_ARGS="--continue --timestamping";
 my $HOST=undef;
 my $USERNAME=undef;
+my $PASSWORD=undef;
 
 my $CONF_FILES=undef; # comma separated list
 
@@ -225,6 +227,10 @@ Update localhost from master. Default is to upgrade all the computers found in ~
 
 Prints a list of files and exits. @see --files
 
+=item --password
+
+Send this password if prompted by ssh. This is highly insecure! Use this only if you know what you are doing and trust the security of your computer. This only makes sense when sending keys to various hosts and you don't want to retype the password for the given account e/a time. Needs Expect.pm.
+
 =item -r,--remove
 
 Remove all temporary files after updating
@@ -273,7 +279,8 @@ GetOptions(
     'files=s'           =>  \$CONF_FILES,
     'local-path=s'      =>  \$LOCAL_PATH,
     'hosts-file=s'      =>  \$REMOTE_HOSTS_FILE,
-    'u|username=s'      =>  \$USERNAME
+    'u|username=s'      =>  \$USERNAME,
+    'password=s'        =>  \$PASSWORD
 ) and $HOST=shift;
 
 ## START SCRIPT ##
@@ -344,9 +351,37 @@ if ( $PKEY )
     # generate RSA keys if none found. I don't care about people who use DSA :-P
     system("ssh-keygen -t rsa -b 1024") if ( ! -f "$ENV{'HOME'}/.ssh/id_rsa.pub" );
 
-    system("cat $ENV{'HOME'}/.ssh/id_rsa.pub | ssh ".$USERNAME.$HOST." 'mkdir .ssh 2> /dev/null && chmod 0700 .ssh; cat - >> .ssh/authorized_keys; chmod 0644 .ssh/authorized_keys'");
+    my $ssh_cmd = "cat $ENV{'HOME'}/.ssh/id_rsa.pub | ssh ".$USERNAME.$HOST." 'mkdir .ssh 2> /dev/null && chmod 0700 .ssh; cat - >> .ssh/authorized_keys; chmod 0644 .ssh/authorized_keys'";
+
+    my $ret = 0;
+
+    if ( $PASSWORD )
+    {
+        # password was supplied from the command line, handle it with expect
+        use Expect;
+        my $exp = Expect->new();
+        $exp->stty(qw(raw -echo));
+        my @args = (); # no need
+        $exp->spawn($ssh_cmd, @args)
+            or die "Cannot spawn $ssh_cmd: $!\n";
+        
+        # send some string there:
+        $exp->expect( 10,
+
+            [ qr/.*\(yes.no\)/ => sub { my $self = shift;
+            $self->send("yes\n");
+            exp_continue; } ],
+
+            [ qr/.*password: / => sub { my $self = shift;
+            $self->send("$PASSWORD\n");
+            exp_continue; } ]
+        );
+        $exp->soft_close();
+    } else {
+        $ret = system($ssh_cmd);
+    }
     print STDERR ("failed to send key to $HOST") and _exit_safe($?) if ( $? != 0 );
-    
+
     # if we have more hosts, keep going
     foreach my $host (@ARGV)
     {
@@ -766,6 +801,8 @@ sub _exit_safe
 {
     my $status = shift;
     $status = 0 if (not defined($status));
+    # TODO handle more signals
+    my %exit = ( INT=>'9' );
     if ( $_ssh_id == 1 )
     {
         system("ssh-add -D"); # delete identities
@@ -775,6 +812,10 @@ sub _exit_safe
     {
         kill(15,$ENV{'SSH_AGENT_PID'});
     }
-    exit $status;
+    if ( $status =~ /^[0-9]+$/ )
+    {
+        exit $status;
+    }
+    exit $exit{$status};
 }
 

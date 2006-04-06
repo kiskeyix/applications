@@ -1,6 +1,6 @@
 #!/bin/sh
-# $Revision: 1.9 $
-# $Date: 2005-12-13 03:57:15 $
+# $Revision: 1.10 $
+# $Date: 2006-04-06 19:15:39 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: fixes gcc symlinks when updating to a new version under debian
@@ -13,6 +13,7 @@ GCC="/usr/bin/gcc-4.0"
 GPP="/usr/bin/g++-4.0"
 GCCBUG="/usr/bin/gccbug-4.0"
 GCOV="/usr/bin/gcov-4.0"
+CCACHE="/usr/bin/ccache"
 
 # to remove do:
 # sudo update-alternatives --remove-all $GCC
@@ -48,3 +49,8 @@ if [ -x ${GCCBUG} ]; then
     sudo update-alternatives --install /usr/bin/gccbug gccbug ${GCCBUG} $PRIORITY
 fi
 
+if [ -x ${CCACHE} ]; then
+    for i in gcc cc g++ c++; do
+        sudo ln -sf ${CCACHE} /usr/local/bin/$i
+    done
+fi

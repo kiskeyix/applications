@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.147 $
+# $Revision: 1.148 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -4285,6 +4285,10 @@ sub make_dvd
         system("find '$dir' -type f -exec chmod 0444 {} \\; ");
         # make iso
         system("growisofs -V '$name' -dvd-video -udf -dvd-compat -Z $DVDDEV $dir");
+        # put permissions back.
+        chmod(oct(0755),"$dir"); # oct() changes to oct-based numbers
+        system("find '$dir' -type d -exec chmod 0755 {} \\; ");
+        system("find '$dir' -type f -exec chmod 0644 {} \\; ");
     }
 } # end make_dvd()
 

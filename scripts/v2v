@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.148 $
+# $Revision: 1.149 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3812,9 +3812,10 @@ sub video_requant_factor
     my $video_size = shift;
     my $audio_size = shift;
     
-    my $s_size = 10000000; # we add 10mb for e/a title we are ripping. for now is just one main title
     # 1.05 * ( ( video_size - (audio_size + 10))/4500000000 ) for a 4.4GB DVD with 5% reserve
-    my $factor = 1.05 * ( ($video_size  - ($audio_size + $s_size)) / $DVD5SIZE );
+    # more accurate:
+    # 1.05 * ( video_size/(4500000000 -audio_size) ) for a 4.4GB DVD with 5% reserve
+    my $factor = 1.05 * ( $video_size / ($DVD5SIZE - $audio_size) );
     return ( $factor < 1 ) ? 1.0 : $factor;
 }
 
@@ -4013,7 +4014,6 @@ sub dvd9to5
         
         if ( -x $MPLEX )
         {
-            # TODO test for sync problems and pass -0 NNms argument to mplex
             my $sys = "nice -n $nice $MPLEX $MPLEXARGS $MULTIPLEXARGS -v $VERBOSITY -o $mpg_file $video $audio &";
             _debug($sys);
             system($sys);
@@ -4025,10 +4025,14 @@ sub dvd9to5
             _error("mplex not found");
             die("We need mplex for now... tcmplex support to come later \n");
         }
- 
+
+        # TODO
+        # ac3 multiplier is 128 for 1 channel or 2
+        # 384 for all others
+        # dts multiplier is 786
         my $audio_size = $DVD_INFO{$_}{'length'} * 128 * 125; # for channel 1 and 2
-        # TODO * 4  makes it too high ... video_requant_factor already minus $audio_size
-        my $video_size= ( $DVD_INFO{$_}{'sectors'} * 2048 );
+        # TODO why do we need to use a 2.05 factor here? it works like a charm
+        my $video_size= ( $DVD_INFO{$_}{'sectors'} * 2048 * 2.05 ) - $audio_size;
         my $factor = video_requant_factor($video_size,$audio_size);
 
         _info("Number of angles in title $_: ".$DVD_INFO{$_}{'angles_total'});
@@ -4037,7 +4041,8 @@ sub dvd9to5
         _info("Video size (sectors*2048): ".$video_size);
         _info("Audio size (length*128*125): ".$audio_size);
         _info("Target DVD5 size: ".$DVD5SIZE);
-        _debug("1.05 * ( video_size / (dvd5size - (audio_size + 10MB)) )");
+        #_debug("1.05 * ( video_size / (dvd5size - (audio_size + 10MB)) )");
+        _debug("1.05 * ( video_size / (dvd5size - audio_size) )");
         _info("Requant factor: ".$factor);
         
         # do video extract

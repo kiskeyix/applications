@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.149 $
+# $Revision: 1.150 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -4038,7 +4038,7 @@ sub dvd9to5
         _info("Number of angles in title $_: ".$DVD_INFO{$_}{'angles_total'});
         _info("Number of chapters in title $_: ".$DVD_INFO{$_}{'chapters_total'});
         _info("Number of sectors in title $_: ".$DVD_INFO{$_}{'sectors'});
-        _info("Video size (sectors*2048): ".$video_size);
+        _info("Video size (sectors*2048*2.05): ".$video_size);
         _info("Audio size (length*128*125): ".$audio_size);
         _info("Target DVD5 size: ".$DVD5SIZE);
         #_debug("1.05 * ( video_size / (dvd5size - (audio_size + 10MB)) )");

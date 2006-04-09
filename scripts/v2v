@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.150 $
+# $Revision: 1.151 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -59,7 +59,7 @@ my $OKCLUSTER=0;
 my $TEST = 0;
 my $DVD9TO5 = 0;
 my $VOLIDMAXLENGTH=32; # max num of char for DVD names
-my $DVD5SIZE = 4400000000; # bytes
+my $DVD5SIZE = 4500000000; # bytes
 my $DVDDEV = "/dev/dvd"; # default device 
 my $DVDBACKUP = 0;
 my $MPLAYER = 0;
@@ -3812,8 +3812,6 @@ sub video_requant_factor
     my $video_size = shift;
     my $audio_size = shift;
     
-    # 1.05 * ( ( video_size - (audio_size + 10))/4500000000 ) for a 4.4GB DVD with 5% reserve
-    # more accurate:
     # 1.05 * ( video_size/(4500000000 -audio_size) ) for a 4.4GB DVD with 5% reserve
     my $factor = 1.05 * ( $video_size / ($DVD5SIZE - $audio_size) );
     return ( $factor < 1 ) ? 1.0 : $factor;
@@ -4038,10 +4036,9 @@ sub dvd9to5
         _info("Number of angles in title $_: ".$DVD_INFO{$_}{'angles_total'});
         _info("Number of chapters in title $_: ".$DVD_INFO{$_}{'chapters_total'});
         _info("Number of sectors in title $_: ".$DVD_INFO{$_}{'sectors'});
-        _info("Video size (sectors*2048*2.05): ".$video_size);
+        _info("Video size ((sectors*2048*2.05) - audio_size): ".$video_size);
         _info("Audio size (length*128*125): ".$audio_size);
         _info("Target DVD5 size: ".$DVD5SIZE);
-        #_debug("1.05 * ( video_size / (dvd5size - (audio_size + 10MB)) )");
         _debug("1.05 * ( video_size / (dvd5size - audio_size) )");
         _info("Requant factor: ".$factor);
         

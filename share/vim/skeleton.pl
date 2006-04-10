@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.5 $
-# $Date: 2006-03-22 18:38:20 $
+# $Revision: 1.6 $
+# $Date: 2006-04-10 05:36:13 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION:
@@ -22,7 +22,7 @@ skeleton.pl - skeleton script for Perl
 use strict;
 $|++;
 
-my $revision = '$Revision: 1.5 $';    # version
+my $revision = '$Revision: 1.6 $';    # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # standard Perl modules
@@ -40,7 +40,7 @@ use FileHandle;               # for progressbar
 #{
 #    print STDERR "\nERROR: Could not load the Image::Magick module.\n" .
 #    "       To install this module use:\n".
-#    "       Use: perl -e shell -MCPAN to install it.\n".
+#    "       perl -e shell -MCPAN\n".
 #    "       On Debian just: apt-get install perlmagic \n\n".
 #    "       FALLING BACK to 'convert'\n\n";
 #    print STDERR "$@\n";

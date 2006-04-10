@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.74 $
+# $Revision: 1.75 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -358,7 +358,17 @@ if ( $PKEY )
     if ( $PASSWORD )
     {
         # password was supplied from the command line, handle it with expect
-        use Expect;
+        eval "use Expect";
+        if ($@)
+        {
+            print STDERR "\n$0 ERROR: Could not load the Expect.pm module.\n" .
+            "       To install this module use:\n".
+            "       perl -e shell -MCPAN\n".
+            "       On Debian just: \n".
+            "       apt-get install libexpect-perl libio-stty-perl \n\n";
+            print STDERR "$@\n";
+            exit 1;
+        }
         my $exp = Expect->new();
         $exp->stty(qw(raw -echo));
         my @args = (); # no need

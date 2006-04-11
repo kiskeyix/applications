@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.151 $
+# $Revision: 1.152 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -4029,14 +4029,14 @@ sub dvd9to5
         # 384 for all others
         # dts multiplier is 786
         my $audio_size = $DVD_INFO{$_}{'length'} * 128 * 125; # for channel 1 and 2
-        # TODO why do we need to use a 2.05 factor here? it works like a charm
-        my $video_size= ( $DVD_INFO{$_}{'sectors'} * 2048 * 2.05 ) - $audio_size;
+        # TODO why do we sometimes need to use a 2.05 factor here?
+        my $video_size= ( $DVD_INFO{$_}{'sectors'} * 2048 ) - $audio_size;
         my $factor = video_requant_factor($video_size,$audio_size);
 
         _info("Number of angles in title $_: ".$DVD_INFO{$_}{'angles_total'});
         _info("Number of chapters in title $_: ".$DVD_INFO{$_}{'chapters_total'});
         _info("Number of sectors in title $_: ".$DVD_INFO{$_}{'sectors'});
-        _info("Video size ((sectors*2048*2.05) - audio_size): ".$video_size);
+        _info("Video size ((sectors*2048) - audio_size): ".$video_size);
         _info("Audio size (length*128*125): ".$audio_size);
         _info("Target DVD5 size: ".$DVD5SIZE);
         _debug("1.05 * ( video_size / (dvd5size - audio_size) )");

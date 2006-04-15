@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.15 $
-# $Date: 2006-02-12 05:10:11 $
+# $Revision: 1.16 $
+# $Date: 2006-04-15 17:58:49 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: easy repository builder
@@ -29,23 +29,23 @@ repository - repository builder script for Debian and/or Fedora
 use strict;
 $|++;
 
-my $revision='$Revision: 1.15 $'; # version
+my $revision = '$Revision: 1.16 $';    # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # standard Perl modules
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
-use POSIX;                  # cwd() ... man POSIX
-use File::Spec::Functions;  # abs2rel() and other dir/filename specific
+use POSIX;                    # cwd() ... man POSIX
+use File::Spec::Functions;    # abs2rel() and other dir/filename specific
 
 # Args:
-my $PVERSION=0;
-my $HELP=0;
-my $USAGE=0;
-my $DEBUG=0;
-my $FUNCTION=undef; # add remove update
-my $WORKDIR=_get_option("WORKDIR","/home/Shared");
-my $DISTRO=_get_option("DISTRIBUTION","debian");
+my $PVERSION = 0;
+my $HELP     = 0;
+my $USAGE    = 0;
+my $DEBUG    = 0;
+my $FUNCTION = undef;                                    # add remove update
+my $WORKDIR  = _get_option("WORKDIR", "/home/Shared");
+my $DISTRO   = _get_option("DISTRIBUTION", "debian");
 
 =pod
 
@@ -57,7 +57,7 @@ B<repository>  [-v,--version]
                 [-U,--usage]
                 [-d,--distribution DISTRIB]
                 [-w,--work-dir DIR]
-                <add|remove|update>
+                <add|remove|update> [file1 file2 ... fileN]
 
 =head1 OPTIONS
 
@@ -89,11 +89,11 @@ Use directory DIR as the work area. This directory contains a directory named th
 
 =item add
 
-Adds all files found in incoming/$codename and incoming/*
+Adds all files found in the directories incoming/$codename and incoming/*
 
-=item remove
+=item remove [file]
 
-Removes old packages from the repository (reprepro deleteunreferenced)
+Removes old packages from the repository (reprepro deleteunreferenced). If file name is passed, it will remove only that package from all the $codenames found in conf/distributions
 
 =item update
 
@@ -105,36 +105,42 @@ Updates all packages in the repository using the defined update method. For repr
 
 # get options
 GetOptions(
-    # flags
-    'v|version'         =>  \$PVERSION,
-    'h|help'            =>  \$HELP,
-    'D|debug'           =>  \$DEBUG,
-    'U|usage'           =>  \$USAGE,
-    # strings
-    'd|distribution=s'  =>  \$DISTRO,
-    'w|work-dir=s'      =>  \$WORKDIR,
-) and $FUNCTION=shift;
 
-if ( $HELP ) { 
+    # flags
+    'v|version' => \$PVERSION,
+    'h|help'    => \$HELP,
+    'D|debug'   => \$DEBUG,
+    'U|usage'   => \$USAGE,
+
+    # strings
+    'd|distribution=s' => \$DISTRO,
+    'w|work-dir=s'     => \$WORKDIR,
+  )
+  and $FUNCTION = shift;
+
+if ($HELP)
+{
     use Pod::Text;
-    my $parser = Pod::Text->new (sentence => 0, width => 78);
-    $parser->parse_from_file($0,\*STDOUT);
+    my $parser = Pod::Text->new(sentence => 0, width => 78);
+    $parser->parse_from_file($0, \*STDOUT);
     exit 0;
 }
 
-if ( $USAGE or not defined ($FUNCTION) 
-        or $FUNCTION =~ /^\s*$/ or !-d $WORKDIR 
-        or !-d File::Spec->catdir($WORKDIR,$DISTRO) )
-{ 
+if (   $USAGE
+    or not defined($FUNCTION)
+    or $FUNCTION =~ /^\s*$/
+    or !-d $WORKDIR
+    or !-d File::Spec->catdir($WORKDIR, $DISTRO))
+{
     use Pod::Usage;
     pod2usage(1);
-    exit 0; # never reaches here
+    exit 0;    # never reaches here
 }
 
-if ( $PVERSION ) { print STDOUT ($revision,"\n"); exit 0; }
+if ($PVERSION) { print STDOUT ($revision, "\n"); exit 0; }
 
 my $distro = $DISTRO;
-if ( $distro =~ /^\s*$/ and -x "/usr/bin/lsb_release" )
+if ($distro =~ /^\s*$/ and -x "/usr/bin/lsb_release")
 {
     $distro = qx#/usr/bin/lsb_release -i#;
     $distro =~ s#Distributor\s+ID:\s+##i;
@@ -143,53 +149,57 @@ if ( $distro =~ /^\s*$/ and -x "/usr/bin/lsb_release" )
 chomp($distro);
 $distro = lc($distro);
 
-die("Please make sure lsb_release is installed and in our PATH\n") 
-    if ( $distro =~ /^\s*$/ );
+die("Please make sure lsb_release is installed and in our PATH\n")
+  if ($distro =~ /^\s*$/);
 
-my $workdir = File::Spec->catdir($WORKDIR,$distro);
+my $workdir = File::Spec->catdir($WORKDIR, $distro);
 chdir($workdir) or die("Could not change into directory $workdir. $!\n");
 
 if ($distro =~ /ubuntu|debian/i)
 {
-    my $cmd = "reprepro"; # TODO allow others to be configured from CLI
+    my $cmd = "reprepro";    # TODO allow others to be configured from CLI
     my $cmd_args = " --delete --ignore=forbiddenchar ";
 
     # sanity checks
-    die("No ${workdir}/conf/distributions file found. Reprepro is not installed correctly\n") 
-        if (not -f "conf/distributions");
-   
+    die("No ${workdir}/conf/distributions file found. Reprepro is not installed correctly\n"
+       )
+      if (not -f "conf/distributions");
+
     # We read conf/distributions from reprepro to support .deb's for multiple distributions:
     # sarge, woody, etch, breezy, etc...
     # Then the directories in incoming would be split like:
     # incoming/$codename
     # Where codename is a name like the ones from above
-    open(FILE,"<","conf/distributions") 
-        or die("Could not read ${workdir}/conf/distributions file. $!\n");
+    open(FILE, "<", "conf/distributions")
+      or die("Could not read ${workdir}/conf/distributions file. $!\n");
 
     my @distributions = ();
-    while(<FILE>)
+    while (<FILE>)
     {
-        if ( $_ =~ /Codename:[[:space:]]*([[:alnum:]]+)/i)
+        if ($_ =~ /Codename:[[:space:]]*([[:alnum:]]+)/i)
         {
-            push(@distributions,$1);
+            push(@distributions, $1);
         }
     }
     close(FILE);
-   
-    print STDERR ("Distributions in conf/distributions: ",join(" ",@distributions),"\n") 
-        if ( $DEBUG );
 
-    if ( $FUNCTION eq 'add' )
+    print STDERR ("Distributions in conf/distributions: ",
+                  join(" ", @distributions), "\n")
+      if ($DEBUG);
+
+    if ($FUNCTION eq 'add')
     {
+
         # adding all files in "incoming"
         # .changes:
         print STDERR ("Adding .changes files\n") if ($DEBUG);
         foreach my $file (glob("incoming/*.changes"))
         {
             my $distrib = _get_distribution($file);
-            print STDERR ("Adding $file to distrib $distrib\n") 
-                if ($DEBUG);
+            print STDERR ("Adding $file to distrib $distrib\n")
+              if ($DEBUG);
             system("$cmd $cmd_args -b . include $distrib $file");
+
             #die("Error while including $file\n") if ($? != 0);
         }
 
@@ -198,9 +208,10 @@ if ($distro =~ /ubuntu|debian/i)
         foreach my $file (glob("incoming/*.dsc"))
         {
             my $distrib = _get_distribution($file);
-            print STDERR ("Adding $file to distrib $distrib\n") 
-                if ($DEBUG);
+            print STDERR ("Adding $file to distrib $distrib\n")
+              if ($DEBUG);
             system("$cmd $cmd_args -b . includedsc $distrib $file");
+
             #die("Error while including sources for $file\n") if ($? != 0);
         }
 
@@ -211,25 +222,45 @@ if ($distro =~ /ubuntu|debian/i)
             foreach my $file (glob("incoming/$distrib/*.deb"))
             {
                 print STDERR ("Adding $file to distrib $distrib\n")
-                    if ($DEBUG);
+                  if ($DEBUG);
                 system("$cmd $cmd_args -b . includedeb $distrib $file");
+
                 #die("Error while including sources for $file\n") if ($? != 0);
             }
         }
-    } elsif ( $FUNCTION eq 'remove' ) {
-        system("$cmd $cmd_args deleteunreferenced");
+    }
+    elsif ($FUNCTION eq 'remove')
+    {
+        if ((@ARGV + 0) > 0)
+        {
+            for my $file (@ARGV)
+            {
+                for my $d (@distributions)
+                {
+
+                    # TODO make this silently...
+                    system("$cmd $cmd_args remove $d $file ");
+                }
+            }
+        }
+        else
+        {
+            system("$cmd $cmd_args deleteunreferenced");
+        }
     }
 
-    system("reprepro --delete createsymlinks") 
-        if ( $cmd eq "reprepro" );
+    system("reprepro --delete createsymlinks")
+      if ($cmd eq "reprepro");
 
-} else {
+}
+else
+{
     print STDERR ("Distribution $distro not supported\n");
     print STDERR ("is lsb_release installed? try: lsb_release -i\n");
 }
 
 # a very quick and dirty way to read a configuration file, search for a given string $o
-# and return its value or a default string given by $d if no such string found in 
+# and return its value or a default string given by $d if no such string found in
 # rc file (or .ini file)
 # File is assumed to define variables like:
 # OPT=value
@@ -239,22 +270,23 @@ sub _get_option
     my $d = shift;
 
     # sanity checks:
-    return $d if ( not defined $o );
-    my @files = ("/etc/repositoryrc",File::Spec->catfile($ENV{'HOME'},".repositoryrc"));
+    return $d if (not defined $o);
+    my @files =
+      ("/etc/repositoryrc", File::Spec->catfile($ENV{'HOME'}, ".repositoryrc"));
     foreach my $_file (@files)
     {
         next if (!-r $_file);
-        open(FILE,"<$_file") or return $d;
-        while(<FILE>)
+        open(FILE, "<$_file") or return $d;
+        while (<FILE>)
         {
             if ($_ =~ m#$o\s*=\s*(.+)#)
             {
-                $d = $1; # we need to read ~/.distributionrc last
+                $d = $1;    # we need to read ~/.distributionrc last
             }
         }
         close(FILE);
     }
-    $d =~ s/\s+$//; # remove trailing spaces and ugly chars
+    $d =~ s/\s+$//;         # remove trailing spaces and ugly chars
     return $d;
 }
 
@@ -264,19 +296,19 @@ sub _get_distribution
     my $file = shift;
     die("File $file not plain text\n") if (not -f $file);
     my $distrib = 'unstable';
-    open(FILE,"<$file") 
-        or die("Could not open file $file for reading. $!\n");
-    while(<FILE>)
+    open(FILE, "<$file")
+      or die("Could not open file $file for reading. $!\n");
+    while (<FILE>)
     {
-        if ( $_ =~ /Distribution:[[:space:]]*([[:alnum:]]+)/i )
+        if ($_ =~ /Distribution:[[:space:]]*([[:alnum:]]+)/i)
         {
             $distrib = $1;
             chomp($distrib);
             return $distrib;
-            last; # never reached
+            last;    # never reached
         }
     }
-    return $distrib; # should never reach here
+    return $distrib;    # should never reach here
 }
 
 =pod

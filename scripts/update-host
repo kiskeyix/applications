@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.75 $
+# $Revision: 1.76 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -380,11 +380,11 @@ if ( $PKEY )
 
             [ qr/.*\(yes.no\)/ => sub { my $self = shift;
             $self->send("yes\n");
-            exp_continue; } ],
+            exp_continue(); } ],
 
             [ qr/.*password: / => sub { my $self = shift;
             $self->send("$PASSWORD\n");
-            exp_continue; } ]
+            exp_continue(); } ]
         );
         $exp->soft_close();
     } else {

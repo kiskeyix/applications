@@ -26,28 +26,6 @@ MAIL="/var/mail/${USER:?}"
 
 HISTSIZE=1500
 
-## compiling
-# the number of gcc/cc threads that make will create
-# this is needed by distcc/ccache and on SMP systems
-if [[ -z "$CONCURRENCY_LEVEL" ]]; then
-    CONCURRENCY_LEVEL=8
-fi
-## setup ccache in a shared cache dir:
-if [[ -x "`command -v ccache 2> /dev/null`" ]]; then
-    CCACHE_DIR="/tmp/ccache"
-fi
-if [[ -x "`command -v distcc 2> /dev/null`" ]]; then
-    CCACHE_PREFIX="distcc"
-    if [[ -x "`command -v ccache 2> /dev/null`" ]]; then
-        MAKEFLAGS="$MAKEFLAGS CCACHE_PREFIX=distcc -j$CONCURRENCY_LEVEL"
-    fi
-fi
-## attempt to read hosts for distcc:
-if [[ -f "$HOME/.distcc/hosts" ]]; then
-    DISTCC_HOSTS="`cat \"$HOME/.distcc/hosts\"`"
-fi
-## end compiling
-
 ## setup temporary directory:
 ## 1. attempt to find $HOME/tmp
 ## 2. if that doesn't work, make a directory in /dev/shm (RAM disk)
@@ -113,6 +91,28 @@ LANG="${DEFAULT_LANG:-C}"
 LC_ALL="${DEFAULT_LC_ALL:-C}"
 
 ## end locale settings
+
+## compiling
+# the number of gcc/cc threads that make will create
+# this is needed by distcc/ccache and on SMP systems
+if [[ -z "$CONCURRENCY_LEVEL" ]]; then
+    CONCURRENCY_LEVEL=8
+fi
+## setup ccache in a shared cache dir:
+if [[ -x "`command -v ccache 2> /dev/null`" ]]; then
+    CCACHE_DIR="/tmp/ccache"
+fi
+if [[ -x "`command -v distcc 2> /dev/null`" ]]; then
+    CCACHE_PREFIX="distcc"
+    if [[ -x "`command -v ccache 2> /dev/null`" ]]; then
+        MAKEFLAGS="$MAKEFLAGS CCACHE_PREFIX=distcc -j$CONCURRENCY_LEVEL"
+    fi
+fi
+## attempt to read hosts for distcc:
+if [[ -f "$HOME/.distcc/hosts" ]]; then
+    DISTCC_HOSTS="`cat \"$HOME/.distcc/hosts\"`"
+fi
+## end compiling
 
 ## one big export:
 export BASH_ENV PATH CVS_RSH EDITOR MAIL MANPATH HISTSIZE LC_ALL \

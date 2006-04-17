@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.152 $
+# $Revision: 1.153 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -4260,10 +4260,12 @@ sub make_dvd
 {
     #@param 0 string := directory containing dvd tree (output of dvdauthor)
     #@param 1 string := name for DVD. Defaults to "V2V"
-    
+
     my $dir = shift;
     my $name = shift;
- 
+
+    return undef if ( not defined $dir or not defined $name or not -d $dir or not $name );
+
     my $UNLINK_CONFIG=0; # will be useful later
 
     $name = ($name ne "") ? $name : "V2V";
@@ -4271,24 +4273,24 @@ sub make_dvd
     ($name = $name) =~ s,[\s-]+,_,g; # replace whitespaces with _
     ($name = $name) =~ y/a-z/A-Z/; #uppercase $name
     $name = substr($name,0,$VOLIDMAXLENGTH); # limit no. of characters
-    
+
     # mk tmp directory
     _info("DVD name : $name");
 
     # make DVD
     my $args = ( ! $DEBUG ) ? ">/dev/null 2>&1" :"";
-    
+
     # make DVD Image
     if ( "$name/VIDEO_TS/VIDEO_TS.IFO" )
     {
         # fix permissions. TODO use find() later to avoid system()
-        chmod(oct(0555),"$dir"); # oct() changes to oct-based numbers
+        chmod(oct(0555),$dir); # oct() changes to oct-based numbers
         system("find '$dir' -type d -exec chmod 0555 {} \\; ");
         system("find '$dir' -type f -exec chmod 0444 {} \\; ");
         # make iso
         system("growisofs -V '$name' -dvd-video -udf -dvd-compat -Z $DVDDEV $dir");
         # put permissions back.
-        chmod(oct(0755),"$dir"); # oct() changes to oct-based numbers
+        chmod(oct(0755),$dir); # oct() changes to oct-based numbers
         system("find '$dir' -type d -exec chmod 0755 {} \\; ");
         system("find '$dir' -type f -exec chmod 0644 {} \\; ");
     }

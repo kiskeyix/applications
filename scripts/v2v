@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.154 $
+# $Revision: 1.155 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3595,6 +3595,14 @@ sub _collect_title_info
             }
             # (dvd_reader.c) ac3 es surround sound mode drc 48kHz 6Ch
             elsif (m/($audio_formats_regex)\s*([[:alpha:]]{2})\s+surround\s+sound\s+mode\s+drc\s*[[:digit:]]+kHz\s*([[:digit:]]Ch)/)
+            {
+                push(@audio_type,$1);
+                push(@audio_lang,$2);
+                push(@audio_chan,$3);
+            }
+            # (dvd_reader.c) lpcm en 16bit 48kHz 2Ch
+            # FIXME tcextract doesn't really support lpcm!?
+            elsif (m/($audio_formats_regex)\s*([[:alpha:]]{2}).*[[:digit:]]+kHz\s*([[:digit:]]Ch)/)
             {
                 push(@audio_type,$1);
                 push(@audio_lang,$2);

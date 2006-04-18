@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.6 $
-# $Date: 2006-02-12 05:10:11 $
+# $Revision: 1.7 $
+# $Date: 2006-04-18 05:30:53 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: simple way to mount a File Vault on Linux $HOME/Vault directory for the current user
@@ -10,7 +10,7 @@
 use strict;
 $|++;
 
-my $revision='$Revision: 1.6 $'; # version
+my $revision='$Revision: 1.7 $'; # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # standard Perl modules
@@ -29,7 +29,7 @@ my $ENC_IMAGE = "/home/Shared/pri/ehd/$USER.img";
 my $ENC_KEY_FILE = "/etc/ehd/$USER.key";
 my $EXTRA_MOUNT_OPTIONS=undef;
 # find unused loop device
-my $LOOP_DEV = qx/losetup -f/; # "/dev/loop".int(rand(7));
+my $LOOP_DEV = qx/sudo losetup -f/; # "/dev/loop".int(rand(7));
 chomp($LOOP_DEV);
 
 # get options

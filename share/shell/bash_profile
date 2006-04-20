@@ -99,7 +99,7 @@ if [[ -z "$CONCURRENCY_LEVEL" ]]; then
     CONCURRENCY_LEVEL=8
 fi
 ## setup ccache in a shared cache dir:
-if [[ -x "`command -v ccache 2> /dev/null`" ]]; then
+if [[ -z "$CCACHE_DIR" -a -x "`command -v ccache 2> /dev/null`" ]]; then
     CCACHE_DIR="/tmp/ccache"
 fi
 if [[ -x "`command -v distcc 2> /dev/null`" ]]; then
@@ -110,7 +110,7 @@ if [[ -x "`command -v distcc 2> /dev/null`" ]]; then
 fi
 ## attempt to read hosts for distcc:
 if [[ -f "$HOME/.distcc/hosts" ]]; then
-    DISTCC_HOSTS="`cat \"$HOME/.distcc/hosts\"`"
+    DISTCC_HOSTS="$DISTCC_HOSTS `cat \"$HOME/.distcc/hosts\"`"
 fi
 ## end compiling
 

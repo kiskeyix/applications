@@ -1,16 +1,16 @@
 #!/usr/bin/perl -w
-# $Revision: 1.7 $
-# $Date: 2006-04-18 05:30:53 $
+# $Revision: 1.8 $
+# $Date: 2006-04-20 03:24:27 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: simple way to mount a File Vault on Linux $HOME/Vault directory for the current user
-# USAGE: $0 --help
+# USAGE: mount_vault --help
 # LICENSE: GPL
 
 use strict;
 $|++;
 
-my $revision='$Revision: 1.7 $'; # version
+my $revision='$Revision: 1.8 $'; # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # standard Perl modules

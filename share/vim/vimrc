@@ -442,8 +442,8 @@ if has("autocmd")
     \ endif
 endif " has("autocmd")
 
-" include other vim commands specific to this host:
+" include other vim commands specific to this host (~/.vimrc-`hostname`)
 let hostname = hostname()
-if filereadable(".vimrc-".hostname)
-    exe 'source '.".vimrc-".hostname
+if filereadable(expand("~/").".vimrc-".hostname)
+    exe 'source '.expand("~/").".vimrc-".hostname
 endif

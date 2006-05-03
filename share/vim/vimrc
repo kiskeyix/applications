@@ -451,7 +451,9 @@ let hostname = hostname()
 if hostname == "zion" || hostname == "minime"
     iab ime Luis Mondesi <luis.mondesi@americanhm.com>
     iab idebian -- Luis Mondesi <lemsx1@gmail.com>  <C-R>=strftime("%a, %d %b %Y %H:%M:%S %z")<CR>
+    iab irpm * <C-R>=strftime("%a %b %d %Y")<CR> Luis Mondesi <lemsx1@gmail.com>
 else
     iab ime Luis Mondesi <lemsx1@gmail.com>
     iab idebian -- Luis Mondesi <lemsx1@gmail.com>  <C-R>=strftime("%a, %d %b %Y %H:%M:%S %z")<CR>
+    iab irpm * <C-R>=strftime("%a %b %d %Y")<CR> Luis Mondesi <lemsx1@gmail.com>
 endif

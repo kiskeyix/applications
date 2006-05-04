@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.3 $
-# $Date: 2006-05-04 17:23:09 $
+# $Revision: 1.4 $
+# $Date: 2006-05-04 19:44:35 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A script to convert a hosts file (/etc/hosts, /etc/bb-hosts) to a DNS zone
@@ -11,7 +11,7 @@
 use strict;
 $|++;
 
-my $revision='$Revision: 1.3 $'; # version
+my $revision='$Revision: 1.4 $'; # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # standard Perl modules
@@ -51,7 +51,6 @@ if ( $PVERSION ) { print STDOUT ($revision,"\n"); exit 0; }
 
 my ($sec,$min,$hour,$mday,$mon,$year) = localtime; 
 my $serial = ($year+=1900).sprintf("%02d",$mon).sprintf("%02d",$mday).$hour;#.$min.$sec;
-my $zone = (split(/\./,$DOMAIN))[0];
 my $hostname = hostname();
 my %hosts=();
 
@@ -65,54 +64,61 @@ foreach my $file (@ARGV)
     }
 }
 
-warn("Overriding file db.$zone\n") if (-e "db.$zone");
-warn("Overriding file db.$zone.reverse\n") if (-e "db.$zone.reverse");
+warn("Overriding file db.$DOMAIN\n") if (-e "db.$DOMAIN");
+warn("Overriding file db.$DOMAIN.reverse\n") if (-e "db.$DOMAIN.reverse");
 
 # forward dns file
-open(DNS,">db.$zone") or die("Could not open file /etc/bind/db.$zone");
+open(DNS,">db.$DOMAIN") 
+    or die("Could not open file /etc/bind/db.$DOMAIN");
 # DNS header
 if ( defined($DNS_HEADER) and -r $DNS_HEADER )
 {
     # copy header
-    open(FILE,"<",$DNS_HEADER ) or die("Could not open file $DNS_HEADER. $!\n");
+    open(FILE,"<",$DNS_HEADER ) 
+        or die("Could not open file $DNS_HEADER. $!\n");
     while(<FILE>) { 
         s/\@serial@/$serial/g;
+        s/\@domain@/$DOMAIN/g;
         print DNS $_;
     }
     close(FILE);
 } else {
     print DNS ("\$TTL    604800
-    @    IN    SOA    $DOMAIN.   hostmaster.$DOMAIN. (
+@    IN    SOA    $DOMAIN.   hostmaster.$DOMAIN. (
         $serial      ; serial number, in date form
         10800           ; refresh 4 minutes
         3600            ; retry interval 2 minutes
         604800          ; expire
         3600            ; default ttl
-    )
+        )
 
-    ;NS
-    @                       IN      NS      $hostname.$DOMAIN.
-    @                       IN      MX      10 mail
-    @                       IN      A       10.10.121.45
-    \$ORIGIN $DOMAIN.
-
-    ");
+;NS
+@                       IN      NS      $hostname.$DOMAIN.
+@                       IN      MX      10 mail
+@                       IN      A       10.10.121.45
+\$ORIGIN $DOMAIN.
+"
+    );
 }
 
 # reverse dns file
-open(RDNS,">db.$zone.reverse") or die("Could not open file /etc/bind/db.$zone");
+open(RDNS,">db.$DOMAIN.reverse") 
+    or die("Could not open file /etc/bind/db.$DOMAIN.reverse");
 # RDNS header
 if ( defined($RDNS_HEADER) and -r $RDNS_HEADER )
 {
-    open(FILE,"<",$RDNS_HEADER ) or die("Could not open file $RDNS_HEADER. $!\n");
+    open(FILE,"<",$RDNS_HEADER ) 
+        or die("Could not open file $RDNS_HEADER. $!\n");
     while(<FILE>) { 
         s/\@serial@/$serial/g;
+        s/\@domain@/$DOMAIN/g;
+
         print RDNS $_;
     }
     close(FILE);
 } else {
     print RDNS ("\$TTL    604800
-    @       IN      SOA     $DOMAIN. hostmaster.$DOMAIN. (
+@       IN      SOA     $DOMAIN. hostmaster.$DOMAIN. (
         $serial         ; Serial
         10800          ; Refresh
         3600           ; Retry
@@ -120,13 +126,13 @@ if ( defined($RDNS_HEADER) and -r $RDNS_HEADER )
         3600           ; Cache TTL
     )
 
-    ;NS
-    @                       IN      NS      $hostname.$DOMAIN.
-    @                       IN      MX      10 mail
-    @                       IN      A       10.10.121.45
-    \$ORIGIN 10.in-addr.arpa.
-
-    ");
+;NS
+@                       IN      NS      $hostname.$DOMAIN.
+@                       IN      MX      10 mail
+@                       IN      A       10.10.121.45
+\$ORIGIN 10.in-addr.arpa.
+"
+    );
 }
 
 # loop through hosts
@@ -143,10 +149,10 @@ close(RDNS);
 # helper for reverse dns
 sub flip
 {
-    my ($zone)=shift;
-    my ($network,@rz,@ipc);
-    (@rz)=split(/\./,$zone);
-    (@ipc)=reverse(splice(@rz,0,3));
+    my $ip=shift;
+    my $network;
+    my @rz=split(/\./,$ip);
+    my @ipc=reverse(splice(@rz,1,3));
     $network=join(".",@ipc);
     return $network;
 }
@@ -181,9 +187,9 @@ hosts_to_zone - hosts_to_zone script for Perl
 B<hosts_to_zone>  [-v,--version]
                 [-D,--debug] 
                 [-h,--help]
-                {-d,--domain test.com}
                 [--forward-header /path/to/forward-header-file]
                 [--reverse-header /path/to/reverse-header-file]
+                <-d,--domain test.com>
                 FILE [FILE ... ]
 
 =head1 DESCRIPTION 

@@ -1,0 +1,40 @@
+# Luis Mondesi <luis.mondesi@americanhm.com> 
+# 2006-05-04 12:06 EDT 
+#
+# USAGE: place inside /etc/dhcp3/dhclient-enter-hooks.d. 
+# DESCRIPTION: A script to create the file needed to send our new IP to a remote box
+# it creates output file: /tmp/newip-dhclient-script-`hostname`
+# LICENSE: GPL
+
+# To enable this script set the following variable to "yes"
+RUN="yes"
+LOGFILE=/tmp/newip-dhclient-script-`hostname`
+URL=http://trinity.americanhm.com/cgi-bin/xmlrpc-getip.cgi
+
+if [ "$RUN" = "yes" ]; then
+    #reason interface medium alias_ip_address new_ip_address \
+    #	new_subnet_mask new_domain_name new_domain_name_servers \
+    #	new_routers new_static_routes old_ip_address old_subnet_mask \
+    #	old_domain_name old_domain_name_servers old_routers \
+    #	old_static_routes
+
+    # No need to continue if we're called with an unsupported option
+
+    if [ "$reason" != BOUND ] && [ "$reason" != RENEW ] \
+        && [ "$reason" != REBIND ] && [ "$reason" != REBOOT ] \
+        && [ "$reason" != EXPIRE ] && [ "$reason" != FAIL ]
+    then
+        exit
+    fi
+
+    if [ "x$new_ip_address" != "x" ]; then
+        echo reason=$reason > $LOGFILE
+        echo new_ip_address=$new_ip_address >> $LOGFILE
+        echo old_ip_address=$old_ip_address >> $LOGFILE
+    fi
+
+    SENDIP="/usr/local/bin/xmlrpc-sendip"
+    if [ -x $SENDIP ]; then
+        $SENDIP $URL $LOGFILE
+    fi
+fi

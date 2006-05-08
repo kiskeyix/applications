@@ -304,6 +304,10 @@ endif " end if has(autocmd)
 
 let myscriptsfile = "~/.vim/myscripts.vim"
 
+" generate tags file with:
+" ctags -R -f ~/.vim/systags /usr/include /usr/local/include
+set tags += ~/.vim/systags
+
 "
 " Colors
 "

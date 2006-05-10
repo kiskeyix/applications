@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.2 $
-# $Date: 2006-03-28 15:57:11 $
-# Luis Mondesi < lemsx1@gmail.com >
+# $Revision: 1.3 $
+# $Date: 2006-05-10 18:22:36 $
+# Luis Mondesi < Luis.Mondesi@americanhm.com >
 #
 # DESCRIPTION: installs cfengine on remote host
 # USAGE: push-cfagent HOST
@@ -19,10 +19,11 @@ B<push-cfagent>  [-v,--version]
                 [-D,--debug] 
                 [-h,--help]
                 [-k,--key KEY]
+                [-q,--quiet]
                 [-s,--send-key]
                 [-u,--username USERNAME]
                 [-U,--update-agent]
-                <HOST>
+                <HOST|FILE> [HOST ... [FILE ...]]
 
 =head1 DESCRIPTION 
 
@@ -47,19 +48,23 @@ B<push-cfagent>  [-v,--version]
 
 =item -v,--version
 
-prints version and exits
+Prints version and exits
 
 =item -D,--debug
 
-enables debug mode
+Enables debug mode
 
 =item -h,--help
 
-prints this help and exits
+Prints this help and exits
 
 =item -k,--key
 
 Use identity key KEY instead of default ~/.ssh/id_rsa
+
+=item -q,--quiet
+
+Do not print informational strings
 
 =item -s,--send-key
 
@@ -67,11 +72,15 @@ Pushes local ~/.ssh/id_rsa.pub key to remote host ~/.ssh/authorized_keys file an
 
 =item -u,--username USER
 
-connect to remote server using USER instead of the effective username
+Connect to remote server using USER instead of the effective username
 
 =item -U,--update-agent
 
-force the installation of cfengine even if the remote host has it installed already
+Force the installation of cfengine even if the remote host has it installed already
+
+=item HOST or FILE
+
+Hostname or list of host names or ips from FILE to which cfengine will be pushed (via ssh)
 
 =back
 
@@ -110,6 +119,7 @@ my $ssh_port = 22;
 my $HOST=undef;
 my $USERNAME=undef;
 my $FORCE_INSTALL_AGENT=0;
+my $QUIET=0;
 
 my $MASTERFILES=catdir(dirname($0),"..");
 
@@ -122,6 +132,7 @@ GetOptions(
     'V|verbose'         =>  \$VERBOSE,
     's|send-key'        =>  \$PKEY,
     'U|update-agent'    =>  \$FORCE_INSTALL_AGENT,
+    'q|quiet'           =>  \$QUIET,
     # strings
     'k|key=s'           =>  \$PG_KEY,
     'u|username=s'      =>  \$USERNAME,
@@ -151,175 +162,196 @@ if ( defined($USERNAME) )
     $USERNAME=""; # avoids warning
 }
 
-if ( is_alive($HOST) )
+if ( -r $HOST )
 {
-    # TODO find out a way on how to connect via ssh once and keep the session open
-
-    # 1. what OS is this host running?
-    my @release = ("/etc/redhat-release","/etc/lsb-release","/etc/debian_version");
-    my $OS = undef;
-
-    # attempts to use ssh-agent to load our keys
-    # setup SSH
-    if ( !exists($ENV{'SSH_AUTH_SOCK'}) )
+    warn("Reading hosts from file $HOST\n");
+    open(FILE,"<",$HOST) 
+        or warn("Failed to read file $HOST. $!\n");
+    while (<FILE>)
     {
-        _setup_ssh_agent();
+        my @hosts = split(/\s+|\n/,$_);
+        foreach my $host (@hosts)
+        {
+            push(@ARGV,$host);# if (is_alive($host)); # we check alive later
+        }
     }
-    if ( !-S $ENV{'SSH_AUTH_SOCK'} )
+    close(FILE);
+}
+
+foreach my $HOST ($HOST,@ARGV)
+{
+    print STDOUT ("Pushing cfagent to $HOST\n") if (!$QUIET and !-r $HOST);
+    if ( is_alive($HOST) )
     {
-        _setup_ssh_agent();
-    }
-    # generate RSA keys if none found. I don't care about people who use DSA :-P
-    system("ssh-keygen -t rsa -b 1024") 
+        # TODO find out a way on how to connect via ssh once and keep the session open
+
+        # 1. what OS is this host running?
+        my @release = ("/etc/redhat-release","/etc/lsb-release","/etc/debian_version");
+        my $OS = undef;
+
+        # attempts to use ssh-agent to load our keys
+        # setup SSH
+        if ( !exists($ENV{'SSH_AUTH_SOCK'}) )
+        {
+            _setup_ssh_agent();
+        }
+        if ( !-S $ENV{'SSH_AUTH_SOCK'} )
+        {
+            _setup_ssh_agent();
+        }
+        # generate RSA keys if none found. I don't care about people who use DSA :-P
+        system("ssh-keygen -t rsa -b 1024") 
         if ( !-f "$ENV{'HOME'}/.ssh/id_rsa.pub" and !-f $PG_KEY );
 
-    $_ssh_id = system("ssh-add -l > /dev/null");
-    if ( $_ssh_id != 0 )
-    {
-        system("ssh-add $PG_KEY"); # if $PG_KEY is blank ssh-add adds all private keys
-        if ( $? != 0 )
+        $_ssh_id = system("ssh-add -l > /dev/null");
+        if ( $_ssh_id != 0 )
         {
-            warn ("Failed to authenticate. ssh-gent is not running? There is no valid private key? Hint: create a key with \`ssh-keygen -t rsa -b 1024\`. And then pass the key to us with: $0 --key $ENV{HOME}/.ssh/id_rsa\n");
-            if ( prompt("Do you want to continue? You will be prompted for each password needed [y/N] ") !~ /^y/i )
+            system("ssh-add $PG_KEY"); # if $PG_KEY is blank ssh-add adds all private keys
+            if ( $? != 0 )
             {
-                _exit_safe(0);
+                warn ("Failed to authenticate. ssh-gent is not running? There is no valid private key? Hint: create a key with \`ssh-keygen -t rsa -b 1024\`. And then pass the key to us with: $0 --key $ENV{HOME}/.ssh/id_rsa\n");
+                if ( prompt("Do you want to continue? You will be prompted for each password needed [y/N] ") !~ /^y/i )
+                {
+                    _exit_safe(0);
+                }
             }
+            $_ssh_id = 1; # we need to know that this agent should be killed later
         }
-        $_ssh_id = 1; # we need to know that this agent should be killed later
-    }
-    # end setup SSH
+        # end setup SSH
 
-    # send our public key over to the remove host so that we can login with no password
-    if ( $PKEY )
-    {
-        system("cat $ENV{'HOME'}/.ssh/id_rsa.pub | ssh ".$USERNAME.$HOST." 'mkdir .ssh 2> /dev/null && chmod 0700 .ssh; cat - >> .ssh/authorized_keys; chmod 0644 .ssh/authorized_keys'");
-        print_error ("failed to send key to $HOST") and _exit_safe($?) if ( $? != 0 );
-    } 
-    
-    foreach my $file (@release)
-    {
-        # TODO use lsb_release to know the system distro
-        my $output = send_cmd($HOST,"cat $file");
-        next if ( ! defined($output) or $output =~ /^\s*$|.*No such file.*/mig );
-        if ( $output =~ /Fedora Core release 1/mig )
+        # send our public key over to the remove host so that we can login with no password
+        if ( $PKEY )
         {
-            $OS="FC1";
-            last;
-        } elsif ( $output =~ /Fedora Core release 2/mig ) {
-            $OS="FC2";
-            last;
-        } elsif ( $output =~ /Fedora Core release 3/mig ) {
-            $OS="FC3";
-            last;
-        } elsif ( $output =~ /Fedora Core release 4/mig ) {
-            $OS="FC4";
-            last;
-        } elsif ( $output =~ /Fedora Core release 5/mig ) {
-            $OS="FC5";
-            last;
-        } elsif ( $output =~ /Red Hat Linux release 9/mig ) {
-            $OS="RH9";
-            last;
-        } elsif ( $file eq "/etc/debian_version" and $output =~ /3\./mig ) {
-            $OS="debian";
-            last;
-        } else {
-            print_error ("no such file $HOST:$file ...") if ($VERBOSE or $DEBUG);
-        }
+            system("cat $ENV{'HOME'}/.ssh/id_rsa.pub | ssh ".$USERNAME.$HOST." 'mkdir .ssh 2> /dev/null && chmod 0700 .ssh; cat - >> .ssh/authorized_keys; chmod 0644 .ssh/authorized_keys'");
+            print_error ("failed to send key to $HOST") and _exit_safe($?) if ( $? != 0 );
+        } 
 
-        last if (defined($OS));
-    }
-    $OS = "unknown" if (not defined($OS));
-    
-    print_info ("$HOST is $OS");
-
-    # 2. install cfengine
-    my $INSTALLED = 0;
-    my $remote_tmp_dir="/tmp/cfengine-install-".time();
-
-    if ( defined($OS) and $OS ne "unknown" )
-    {
-        if ( $OS ne "debian" )
+        foreach my $file (@release)
         {
-            my $RPM_DIR = "RPMS/$OS/";
-            DIR:
-                $RPM_DIR = prompt("Please enter local path to directory holding RPMs to install on $HOST (type none to use apt-get|yum): [RPMS/FC1/] ") if ( !-d $RPM_DIR ); 
-            goto DIR if ( $RPM_DIR !~ /none/g and ! -d $RPM_DIR );
-            
-            print_error ($RPM_DIR) if ($DEBUG);
-            
-            if ( ! $FORCE_INSTALL_AGENT )
+            # TODO use lsb_release to know the system distro
+            my $output = send_cmd($HOST,"cat $file");
+            next if ( ! defined($output) or $output =~ /^\s*$|.*No such file.*/mig );
+            if ( $output =~ /Fedora Core release 1/mig )
             {
+                $OS="FC1";
+                last;
+            } elsif ( $output =~ /Fedora Core release 2/mig ) {
+                $OS="FC2";
+                last;
+            } elsif ( $output =~ /Fedora Core release 3/mig ) {
+                $OS="FC3";
+                last;
+            } elsif ( $output =~ /Fedora Core release 4/mig ) {
+                $OS="FC4";
+                last;
+            } elsif ( $output =~ /Fedora Core release 5/mig ) {
+                $OS="FC5";
+                last;
+            } elsif ( $output =~ /Red Hat Linux release 9/mig ) {
+                $OS="RH9";
+                last;
+            } elsif ( $file eq "/etc/debian_version" and $output =~ /3\./mig ) {
+                $OS="debian";
+                last;
+            } else {
+                print_error ("no such file $HOST:$file ...") if ($VERBOSE or $DEBUG);
+            }
+
+            last if (defined($OS));
+        }
+        $OS = "unknown" if (not defined($OS));
+
+        print_info ("$HOST is $OS");
+
+        # 2. install cfengine
+        my $INSTALLED = 0;
+        my $remote_tmp_dir="/tmp/cfengine-install-".time();
+
+        if ( defined($OS) and $OS ne "unknown" )
+        {
+            if ( $OS ne "debian" )
+            {
+                my $RPM_DIR = "RPMS/$OS/";
+                DIR:
+                $RPM_DIR = prompt("Please enter local path to directory holding RPMs to install on $HOST (type none to use apt-get|yum): [RPMS/FC1/] ") if ( !-d $RPM_DIR ); 
+                goto DIR if ( $RPM_DIR !~ /none/g and ! -d $RPM_DIR );
+
+                print_error ($RPM_DIR) if ($DEBUG);
+
+                if ( ! $FORCE_INSTALL_AGENT )
+                {
+                    send_cmd($HOST,"test -x /usr/sbin/cfagent");
+                    $INSTALLED = 1 if ( $? == 0 );
+                    send_cmd($HOST,"rpm -q cfengine > /dev/null");
+                    $INSTALLED = 1 if ( $? == 0 ); 
+                }
+
+                if ( ! $INSTALLED and -d $RPM_DIR )
+                {
+                    # push RPMs to host 
+                    send_cmd($HOST,"mkdir $remote_tmp_dir");
+                    if ( $? != 0 )
+                    {
+                        print_error ("Couldn't create remote directory $remote_tmp_dir on $HOST");
+                        _exit_safe(1);
+                    }
+                    system("scp $RPM_DIR/*.rpm ${USERNAME}${HOST}:$remote_tmp_dir/");
+                    die ("Could not copy RPMs to $HOST\n") if ($? != 0);
+                    send_cmd($HOST,"rpm -U $remote_tmp_dir/*.rpm");
+                    if ( $? == 0 )
+                    {
+                        $INSTALLED = 1 ;
+                    } else {
+                        # try apt-get or yum
+                        send_cmd($HOST,"apt-get -y install cfengine || yum install cfengine");
+                        $INSTALLED = 1 if ( $? == 0 );
+                    }
+                }
+            } elsif ($OS eq "debian") {
                 send_cmd($HOST,"test -x /usr/sbin/cfagent");
                 $INSTALLED = 1 if ( $? == 0 );
-                send_cmd($HOST,"rpm -q cfengine > /dev/null");
-                $INSTALLED = 1 if ( $? == 0 ); 
-            }
-            
-            if ( ! $INSTALLED and -d $RPM_DIR )
-            {
-                # push RPMs to host 
-                send_cmd($HOST,"mkdir $remote_tmp_dir");
-                if ( $? != 0 )
+
+                if ( !$INSTALLED )
                 {
-                    print_error ("Couldn't create remote directory $remote_tmp_dir on $HOST");
-                    _exit_safe(1);
-                }
-                system("scp $RPM_DIR/*.rpm ${USERNAME}${HOST}:$remote_tmp_dir/");
-                die ("Could not copy RPMs to $HOST\n") if ($? != 0);
-                send_cmd($HOST,"rpm -U $remote_tmp_dir/*.rpm");
-                if ( $? == 0 )
-                {
-                    $INSTALLED = 1 ;
-                } else {
-                    # try apt-get or yum
-                    send_cmd($HOST,"apt-get -y install cfengine || yum install cfengine");
+                    # say yes to all prompts
+                    send_cmd($HOST,"apt-get -y install cfengine2");
                     $INSTALLED = 1 if ( $? == 0 );
                 }
             }
-        } elsif ($OS eq "debian") {
-            send_cmd($HOST,"test -x /usr/sbin/cfagent");
-            $INSTALLED = 1 if ( $? == 0 );
-
-            if ( !$INSTALLED )
-            {
-                # say yes to all prompts
-                send_cmd($HOST,"apt-get -y install cfengine2");
-                $INSTALLED = 1 if ( $? == 0 );
-            }
         }
-    }
-    # 3. configure cfengine and run it for the first time
-    if ( $INSTALLED )
-    {
-        my $update_conf = "inputs/update.conf";
-        if ( ! -f $update_conf )
+        # 3. configure cfengine and run it for the first time
+        if ( $INSTALLED )
         {
-            UPDATE:
+            my $update_conf = "inputs/update.conf";
+            if ( ! -f $update_conf )
+            {
+                UPDATE:
                 $update_conf = prompt("Please enter local path to update.conf file: [inputs/update.conf] ");
                 goto UPDATE if ( ! -f $update_conf );
                 # TODO use cfagent -pf to test the syntax of file before uploading?
-        }
-        # copy update.conf
+            }
+            # copy update.conf
 
-        my $inputs_dir = ($OS ne "debian") ? "/var/cfengine/inputs":"/etc/cfengine";
-        send_cmd($HOST,"mkdir -p $inputs_dir");
-        # all this hackish stuff is to avoid having to use root to run this script:
-        system("scp $update_conf ${USERNAME}${HOST}:$inputs_dir");
-        
-        # run cfagent for the first time after making sure the symlinks are removed from
-        # /var/cfengine/bin/cfagent
-        send_cmd($HOST,"/bin/rm -f /var/cfengine/bin/cf*");
-        send_cmd($HOST,"/usr/sbin/cfagent -q");
+            my $inputs_dir = ($OS ne "debian") ? "/var/cfengine/inputs":"/etc/cfengine";
+            send_cmd($HOST,"mkdir -p $inputs_dir");
+            # all this hackish stuff is to avoid having to use root to run this script:
+            system("scp $update_conf ${USERNAME}${HOST}:$inputs_dir");
 
-        # cleanup
-        send_cmd($HOST,"/bin/rm -fr $remote_tmp_dir")
+            # run cfagent for the first time after making sure the symlinks are removed from
+            # /var/cfengine/bin/cfagent
+            send_cmd($HOST,"/bin/rm -f /var/cfengine/bin/cf*");
+            send_cmd($HOST,"/usr/sbin/cfagent -q");
+
+            # cleanup
+            send_cmd($HOST,"/bin/rm -fr $remote_tmp_dir")
             if (!$DEBUG);
+        } else {
+            print_error ("cfengine could not be installed on $HOST");
+        }
     } else {
-        print_error ("cfengine could not be installed on $HOST");
+        print_error ("Could not connect to host $HOST") 
+            if ( !-r $HOST );
     }
-} else {
-    print_error ("Could not connect to host $HOST");
 }
 
 # helper functions #

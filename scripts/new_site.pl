@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.11 $
-# $Date: 2006-05-11 09:43:06 $
+# $Revision: 1.12 $
+# $Date: 2006-05-11 09:54:13 $
 #
 # Luis Mondesi < lemsx1@gmail.com >
 #
@@ -153,17 +153,17 @@ if ( $CONFIRM !~ m/^ *y|^ *o/i){
 
 # user was created using the following:
 #
-# useradd -m -d /home/$WEBMASTER -s /bin/false -g popusers $WEBMASTER
+# useradd -m -d /home/$WEBMASTER -s /bin/false -g users $WEBMASTER
 # passwd $WEBMASTER
 # mkdir -p /home/$WEBMASTER/$SITE/html
 # 
 # if LDAP user, just put "cpu" in front of "useradd" above and change
-# -g popusers to -g GID (500). Also, note that cpu asks for a password
+# -g users to -g GID (500). Also, note that cpu asks for a password
 
 if ( $USE_CPU ) {
     system("cpu useradd -m -d /home/$WEBMASTER -s /bin/false -g 500 $WEBMASTER ");
 } elsif ( $USE_USERADD ) {
-    system("useradd -m -d /home/$WEBMASTER -s /bin/false -g popusers $WEBMASTER ");
+    system("useradd -m -d /home/$WEBMASTER -s /bin/false -g users $WEBMASTER ");
     system("passwd $WEBMASTER");
 }
 

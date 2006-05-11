@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.8 $
-# $Date: 2006-05-11 09:32:03 $
+# $Revision: 1.9 $
+# $Date: 2006-05-11 09:34:37 $
 #
 # Luis Mondesi < lemsx1@gmail.com >
 #
@@ -9,7 +9,9 @@
 # USAGE:    launch and answer questions
 # LICENSE: GPL
 # CHANGELOG:
-# 2003/09/13 03:50:02 
+# 2006-05-11 05:32 EDT 
+# - changed to use Debian's apache2 multi-site setup
+# 2003-09-13 03:50 EST
 # - initial creation 
 
 use Term::ReadLine;
@@ -154,6 +156,7 @@ if ( open (APACHE,">>$APACHE_CONF") )
     print APACHE $APACHE_HOST_TEMPLATE,"\n";
     print APACHE $APACHE_WWW_HOST_TEMPLATE,"\n";
     close(APACHE);
+    print STDOUT "Use 'a2ensite $SITE' to enable this site\n";
 } else {
     warn "File $APACHE_CONF could not be open for writing\n";
 }

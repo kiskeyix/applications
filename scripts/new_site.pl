@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.10 $
-# $Date: 2006-05-11 09:35:27 $
+# $Revision: 1.11 $
+# $Date: 2006-05-11 09:43:06 $
 #
 # Luis Mondesi < lemsx1@gmail.com >
 #
@@ -98,8 +98,11 @@ SetEnvIfNoCase Referer "^http.?://$SITE/" local_img_ref=1
 
     # 3 MB for POST and GET
     #LimitRequestBody 3145728
-    <Directory />
+    <Directory /home/Shared/Sites/$SITE>
         AllowOverride FileInfo AuthConfig Limit Options
+        Options MultiViews Indexes
+        Order allow,deny
+	allow from all
     </Directory>
     # stop image pouchers!
     # http://apache-server.com/tutorials/ATimage-theft.html
@@ -108,6 +111,20 @@ SetEnvIfNoCase Referer "^http.?://$SITE/" local_img_ref=1
         Deny from all
         Allow from env=local_img_ref
     </FilesMatch>
+
+    # note alias goes to documentroot
+    Alias /incoming /home/Shared/Sites/$SITE
+    <Location /incoming>
+        DAV On
+	AuthType Basic
+	AuthName "$SITE private section"
+	AuthUserFile /home/Shared/Sites/$SITE/.webdav.users
+	Require valid-user
+#         <LimitExcept GET PUT POST PROPFIND PROPPATCH HEAD OPTIONS>
+#             Order allow,deny
+#             allow from all
+#         </LimitExcept>
+    </Location>
 </VirtualHost>
 );
 #my $APACHE_HOST_TEMPLATE="\n<VirtualHost $SERVER_IP>\n\tThrottlePolicy Volume $VOLUME $PERIOD\n\tServerAdmin $WEBMASTER_EMAIL\n\tDocumentRoot /home/$WEBMASTER/$SITE/html\n\tServerName $SITE\n\tErrorLog /var/log/apache/$SITE-error.log\n\tCustomLog /var/log/apache/$SITE-access_log combined\n\t<Directory />\n\t\tAllowOverride FileInfo AuthConfig Limit Options\n\t</Directory>\n</VirtualHost>\n";

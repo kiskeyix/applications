@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.9 $
-# $Date: 2006-05-11 09:34:37 $
+# $Revision: 1.10 $
+# $Date: 2006-05-11 09:35:27 $
 #
 # Luis Mondesi < lemsx1@gmail.com >
 #
@@ -154,7 +154,7 @@ if ( $USE_CPU ) {
 if ( open (APACHE,">>$APACHE_CONF") )
 {
     print APACHE $APACHE_HOST_TEMPLATE,"\n";
-    print APACHE $APACHE_WWW_HOST_TEMPLATE,"\n";
+    #print APACHE $APACHE_WWW_HOST_TEMPLATE,"\n";
     close(APACHE);
     print STDOUT "Use 'a2ensite $SITE' to enable this site\n";
 } else {

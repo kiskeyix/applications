@@ -306,7 +306,9 @@ let myscriptsfile = "~/.vim/myscripts.vim"
 
 " generate tags file with:
 " ctags -R -f ~/.vim/systags /usr/include /usr/local/include
-set tags += ~/.vim/systags
+if filereadable(expand("~/").".vim/systags")
+    set tags += ~/.vim/systags
+endif
 
 "
 " Colors

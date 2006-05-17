@@ -1,12 +1,12 @@
 #!/usr/bin/perl -w
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple package that exports ...
 # CONVENTIONS:
 #               - functions starting with underscores (_) are local,
 #                 private to this module
-#               - functions starting with c_ at like setters/getters
+#               - options are configured with setters/getters
 #                 for our configurable properties
 # LICENSE: GPL
 
@@ -103,7 +103,7 @@ sub _define
 
 =pod
 
-=item c_skeleton_option()
+=item skeleton_option()
 
 @desc setter/getter for our configuration option skeleton. configuration function to set hash variables or get their current value
 
@@ -115,7 +115,7 @@ sub _define
 
 =cut
 
-sub c_skeleton_option
+sub skeleton_option
 {
     my $self  = shift;
     my $key   = shift;
@@ -127,6 +127,51 @@ sub c_skeleton_option
     # we return the current value of our variable regardless
     # of whether we changed it or not
     return $self->{$key};
+}
+
+=pod
+
+=item get_option()
+
+@desc convenience function to get the value of a given key
+
+@param $key string key name we are modifying
+
+@param $value string value to assign to $key (optional)
+
+@return current value for $key
+
+=cut
+
+sub get_option
+{
+    my $self = shift;
+    my $key = shift;
+
+    return $self->arcus_option($key);
+}
+
+=pod
+
+=item set_option()
+
+@desc convenience function to set the value of a given key
+
+@param $key string key name we are modifying
+
+@param $value string value to assign to $key (optional)
+
+@return current value for $key
+
+=cut
+
+sub set_option
+{
+    my $self = shift;
+    my $key = shift;
+    my $value = shift;
+
+    return $self->arcus_option($key,$value);
 }
 
 =pod 

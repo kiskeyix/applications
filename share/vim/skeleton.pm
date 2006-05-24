@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple package that exports ...
@@ -34,19 +34,33 @@ This module ...
 =cut
 
 package skeleton;
+
+use 5.008000;
+use strict;
+use warnings;
+use Carp qw(carp croak); # croak dies nicely. carp warns nicely
+
 require Exporter;
-use Carp;    # croak() cluck() carp()
 
-@ISA    = qw(Exporter);
-@EXPORT = qw($skeleton foo);
+# inherit functions from these packages:
+our @ISA = qw ( Exporter );
 
-# Allows variables to be exporter one level up. they will be treated
-# as "globals"
-sub import
-{
-    $skeleton = 0;
-    skeleton->export_to_level(1, @_);
-}
+# This allows declaration       use Foo::Bar ':all';
+# If you do not need this, moving things directly into @EXPORT or @EXPORT_OK
+# will save memory.
+our %EXPORT_TAGS = ( 'all' => [ qw(
+    foo
+    skeleton_option get_option set_option
+    ) ],
+    'minimal' => [ qw(
+    )]
+);
+
+our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
+
+our @EXPORT = qw ( );
+
+our $VERSION = '0.02';
 
 =pod
 

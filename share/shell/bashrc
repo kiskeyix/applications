@@ -205,7 +205,7 @@ alias make="make -j$CONCURRENCY_LEVEL"
 alias swinstall="apt-get install "
 alias swremove="apt-get remove "
 
-alias btdownloadheadless='btdownloadheadless --max_upload_rate 4'
+alias bittorrent-console='bittorrent-console --max_upload_rate 4 --save_in .'
 
 alias ww=printusers
 

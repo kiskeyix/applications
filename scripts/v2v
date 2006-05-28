@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.156 $
+# $Revision: 1.157 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3553,6 +3553,7 @@ sub _collect_title_info
     # the ripping process to "tccat"
     if ( -d $dvd and ! -e "$dvd/VIDEO_TS.IFO" and ! -e "$dvd/VIDEO_TS/VIDEO_TS.IFO" )
     {
+        _info("Getting information about Video files (VOB)");
         # since this is a directory, we fake the information
         push(@audio_type,"ac3");
         push(@audio_lang,"en");
@@ -3825,7 +3826,7 @@ sub video_requant_factor
     # @return requantization factor
     my $video_size = shift;
     my $audio_size = shift;
-    
+
     # 1.05 * ( video_size/(4500000000 -audio_size) ) for a 4.4GB DVD with 5% reserve
     my $factor = 1.05 * ( $video_size / ($DVD5SIZE - $audio_size) );
     return ( $factor < 1 ) ? 1.0 : $factor;

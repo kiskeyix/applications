@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.158 $
+# $Revision: 1.159 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3537,7 +3537,7 @@ sub config
 sub _collect_title_info
 {
     my $dvd = shift;
-    my $title = shift;
+    my $title = shift || 1;
     my $audio_formats_regex = "ac3|mpeg2ext|lpcm|dts|mp3";
     my @audio_type;
     my @audio_lang;
@@ -3577,7 +3577,7 @@ sub _collect_title_info
         $DVD_INFO{$title}{'angles_total'} = 1;
         $DVD_INFO{$title}{'vts'} = 1;
         $DVD_INFO{$title}{'length'} = 7200; # fake movie length in seconds (2 hours). This will be used for calculating the audio
-        
+
         foreach my $file (glob("$dvd/*.{VOB,vob}")) # .vob too...
         {
             my @_stat = stat($file);
@@ -3585,9 +3585,11 @@ sub _collect_title_info
         }
     } else {
         # /dev/dvd or similar...
+
         open(INFO,"tcprobe -T $title -H 50 -i $dvd 2>&1 |");
         my @lines = <INFO>;
         close(INFO);
+
         foreach(@lines)
         {
             #TODO (dvd_reader.c) mpeg2 ntsc 16:9 only letterboxed U0 NTSC CC 1 720x480 video
@@ -3640,14 +3642,14 @@ sub _collect_title_info
                 $DVD_INFO{$title}{'sectors'}++; # fix sector off-by-one
                 push(@chapters,$2) if ($2 ne '00:00:00.000');
             } 
-        }
-    }
-    # collect arrays
-    $DVD_INFO{$title}{'audio_type'} = \@audio_type;
-    $DVD_INFO{$title}{'audio_lang'} = \@audio_lang;
-    $DVD_INFO{$title}{'audio_chan'} = \@audio_chan;
-    $DVD_INFO{$title}{'subtitles'}  = \@subtitles;
-    $DVD_INFO{$title}{'chapters'} = join(",",@chapters);
+        } # ends foreach lines
+        # collect arrays
+        $DVD_INFO{$title}{'audio_type'} = \@audio_type;
+        $DVD_INFO{$title}{'audio_lang'} = \@audio_lang;
+        $DVD_INFO{$title}{'audio_chan'} = \@audio_chan;
+        $DVD_INFO{$title}{'subtitles'}  = \@subtitles;
+        $DVD_INFO{$title}{'chapters'} = join(",",@chapters);
+    } # ends if/else
 } # end _collect_title_info()
 
 # returns the longest title of a given DVD
@@ -3923,6 +3925,13 @@ sub dvd9to5
     # flag
     my $UNLINK_CONFIG=0; # if we created this file, unlink it
     
+    if ( ! defined($dir) or ! -e $dir )
+    {
+        _warn("No DVD device or Directory given as argument for video extraction.\nFalling back to $DVDDEV");
+        $dir = $DVDDEV;
+    }
+    $dir =~ s#/+$##; # removes the trailing slashes
+
     # extra arguments to pass to tccat 
     # different for dirs and special files (blocks)
     #
@@ -3933,15 +3942,7 @@ sub dvd9to5
     # TODO FIRST_CHAPTER might be different for different titles
     my $TCCAT_EXTRA_ARGS = ( -b $dir ) ? " -T \%d".$FIRST_CHAPTER." -L ":"";  
  
-    if ( ! defined($dir) or ! -e $dir )
-    {
-        _warn("No DVD device or Directory given as argument for video extraction.\nFalling back to $DVDDEV");
-        $dir = $DVDDEV;
-    }
-    $dir =~ s#/+$##; # removes the trailing slashes
-
     my $VERBOSITY = ( $DEBUG == 0 ) ? 0 : 2;
-
     
     # pick a title for our DVD
     my $dvdtitle = which("dvdtitle");
@@ -3962,9 +3963,6 @@ sub dvd9to5
 
     v2v_mkdir($DISC_TITLE);
     
-    _collect_title_info($dir,$_)
-        unless ( exists($DVD_INFO{$_}{'sectors'}) and $DVD_INFO{$_}{'sectors'} > 0 );
-    
     open(DVDAUTHOR,">dvdauthor.xml");
     print DVDAUTHOR ("<dvdauthor dest=\"$DISC_TITLE\"><vmgm /><titleset><titles><pgc>");
 
@@ -3977,9 +3975,9 @@ sub dvd9to5
     _info("Longest title: $title");
 
     my @titles = ();
-    my @_found_titles = keys %DVD_INFO;
+    my @_found_titles = sort { $a > $b } grep (/^\d+$/,keys %DVD_INFO);
 
-    _info("Number of titles in DVD: ".(@_found_titles+0));
+    _info("Number of titles in DVD: ".$DVD_INFO{'titles_total'});
 
     # TODO add way to avoid this question if possible
     if ( (@_found_titles+0) > 1 )
@@ -3988,7 +3986,8 @@ sub dvd9to5
         PROMPT_VIDEO:
         foreach my $_title (@_found_titles)
         {
-            print STDOUT ($_title.")\t"." Size: ".($DVD_INFO{$_title}{'sectors'}*2048));
+            next if ( $_title !~ /^\d+$/);
+            print STDOUT ($_title.")\t"." Size: ".($DVD_INFO{$_title}{'sectors'}*2048 / 1000 / 1000). " MiB ");
             print STDOUT (" Chapters: ".$DVD_INFO{$_title}{'chapters_total'});
             print STDOUT (" Sectors: ".$DVD_INFO{$_title}{'sectors'});
 
@@ -4005,6 +4004,25 @@ sub dvd9to5
     undef @_found_titles; 
 
     _info("Number of titles we are extracting: ".(@titles+0));
+
+    # calculate requant factor for all selected titles
+    my $audio_size = 0;
+    my $video_size = 0;
+
+    foreach my $_title ( @titles )
+    {
+        # TODO
+        # ac3 multiplier is 128 for 1 channel or 2
+        # 384 for all others
+        # dts multiplier is 786
+        $audio_size += $DVD_INFO{$_title}{'length'} * 128 * 125; # for channel 1 and 2
+        # TODO why do we sometimes need to use a 2.05 factor here?
+        $video_size += ( $DVD_INFO{$_title}{'sectors'} * 2048 ) - $audio_size;
+    }
+    my $factor = video_requant_factor($video_size,$audio_size);
+
+    _debug("1.05 * ( video_size / (dvd5size - audio_size) )");
+    _info("Requant factor: ".$factor);
 
     foreach my $_title ( @titles )
     {
@@ -4065,20 +4083,16 @@ sub dvd9to5
         # ac3 multiplier is 128 for 1 channel or 2
         # 384 for all others
         # dts multiplier is 786
-        my $audio_size = $DVD_INFO{$_title}{'length'} * 128 * 125; # for channel 1 and 2
+        my $_audio_size = $DVD_INFO{$_title}{'length'} * 128 * 125; # for channel 1 and 2
         # TODO why do we sometimes need to use a 2.05 factor here?
-        my $video_size= ( $DVD_INFO{$_title}{'sectors'} * 2048 ) - $audio_size;
-        my $factor = video_requant_factor($video_size,$audio_size);
+        my $_video_size= ( $DVD_INFO{$_title}{'sectors'} * 2048 ) - $audio_size;
 
         _info("Number of angles in title $_title: ".$DVD_INFO{$_title}{'angles_total'});
         _info("Number of chapters in title $_title: ".$DVD_INFO{$_title}{'chapters_total'});
         _info("Number of sectors in title $_title: ".$DVD_INFO{$_title}{'sectors'});
-        _info("Video size ((sectors*2048) - audio_size): ".$video_size);
-        _info("Audio size (length*128*125): ".$audio_size);
+        _info("Title $_title Video size ((sectors*2048) - audio_size): ".$_video_size);
+        _info("Title $_title Audio size (length*128*125): ".$_audio_size);
         
-        _debug("1.05 * ( video_size / (dvd5size - audio_size) )");
-        _info("Requant factor: ".$factor);
-
         # do video extract
         push(@_extract,"nice -n $nice $BUFFER $BUFFER_ARGS -i $video_vob_fifo | nice -n $nice tcextract -t vob -x mpeg2 | nice -n $nice tcrequant -f $factor > $video &");
 

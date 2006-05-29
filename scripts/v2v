@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.160 $
+# $Revision: 1.161 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3939,9 +3939,7 @@ sub dvd9to5
     # -P get all data for title -T
     my $FIRST_CHAPTER = ($START_CHAPTER =~/^\d+$/ 
         and $START_CHAPTER > 0 ) ? ",".$START_CHAPTER:"";
-    # TODO FIRST_CHAPTER might be different for different titles
-    my $TCCAT_EXTRA_ARGS = ( -b $dir ) ? " -T \%d".$FIRST_CHAPTER." -L ":"";  
- 
+     
     my $VERBOSITY = ( $DEBUG == 0 ) ? 0 : 2;
     
     # pick a title for our DVD
@@ -4132,16 +4130,24 @@ sub dvd9to5
 
         my $named_pipes = join(" ",@fifo_files);
 
-        if ( $TCCAT_EXTRA_ARGS =~ /%/ )
+        # TODO FIRST_CHAPTER might be different for different titles
+        my $TCCAT_EXTRA_ARGS = "";
+        if ( -b $dir )
         {
-            $TCCAT_EXTRA_ARGS = sprintf($TCCAT_EXTRA_ARGS,$_title);
+            $TCCAT_EXTRA_ARGS = " -T $_title".$FIRST_CHAPTER." -L "
         }
 
+        # when doing multiple titles, we can't pull all titles at once. do one at a time:
         my $_tc_sys = "nice -n $nice tccat -i $dir $TCCAT_EXTRA_ARGS | tee $named_pipes  > /dev/null &";
         _debug($_tc_sys);
         system($_tc_sys);
 
-        print DVDAUTHOR ("<vob file=\"$mpg_file\" chapters=\"$DVD_INFO{$_title}{'chapters'}\" />");
+        # this should stop us until the whole file is saved (one title at a time)
+        my $_cat_sys = "cat $mpg_file > $mpg_file.vob";
+        _debug($_cat_sys);
+        system($_cat_sys);
+
+        print DVDAUTHOR ("<vob file=\"$mpg_file.vob\" chapters=\"$DVD_INFO{$_title}{'chapters'}\" />");
 
 #         if ( -d $dir )
 #         {

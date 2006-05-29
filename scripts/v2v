@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.159 $
+# $Revision: 1.160 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -4084,7 +4084,6 @@ sub dvd9to5
         # 384 for all others
         # dts multiplier is 786
         my $_audio_size = $DVD_INFO{$_title}{'length'} * 128 * 125; # for channel 1 and 2
-        # TODO why do we sometimes need to use a 2.05 factor here?
         my $_video_size= ( $DVD_INFO{$_title}{'sectors'} * 2048 ) - $audio_size;
 
         _info("Number of angles in title $_title: ".$DVD_INFO{$_title}{'angles_total'});
@@ -4176,8 +4175,6 @@ sub dvd9to5
     # if ( !-f "$subtitle") { _warn("Subtitle file $subtitle missing"); }
     # nice -n $nice subtitle2pgm -i $subtitle -o SUBPGM/$PROJNAME -X$TVRES -g 5 -t 1
     # nice -n $nice spumux spumux.xml < $video > $video.muxed.mpeg
-
-    #} # end foreach $_
     
     my $_dvdauthor_sys_2 = "nice -n $nice dvdauthor -T -o $DISC_TITLE";
     _debug($_dvdauthor_sys_2);

@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.157 $
+# $Revision: 1.158 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3893,38 +3893,6 @@ sub dvd9to5
     my $dir = shift;
     my $title = shift;
 
-    if ( ! defined($dir) or ! -e $dir )
-    {
-        _warn("No DVD device or Directory given as argument for video extraction.\nFalling back to $DVDDEV");
-        $dir = $DVDDEV;
-    }
-    $dir =~ s#/+$##; # removes the trailing slashes
-
-    my $VERBOSITY = ( $DEBUG == 0 ) ? 0 : 2;
-
-    # TODO make sure that $dir is a block before using _longest_title();
-    $title = ( defined($title) and $title =~ /^\s*[[:digit:],]+$/) ? 
-        $title : _longest_title($dir);
-
-    _info("Longest title: $title");
-
-    # pick a title for our DVD
-    my $dvdtitle = which("dvdtitle");
-    my $DISC_TITLE = undef;
-    if ( defined($DVD) and $DVD !~ /^\s*$/ )
-    {
-        $DISC_TITLE = $DVD;
-    } else {
-        $DISC_TITLE = ( -x $dvdtitle ) ? qx/ $dvdtitle / : "V2V"; # default title
-    }
-    # sanitize DISC_TITLE name
-    chomp($DISC_TITLE);
-    $DISC_TITLE =~ s,[\s\-]+,_,g; # replace whitespaces and dashes with _
-    $DISC_TITLE =~ y/a-z/A-Z/; # uppercase
-    $DISC_TITLE = substr($DISC_TITLE ,0,$VOLIDMAXLENGTH); # limit no. of characters
-
-    $DVD_INFO{'disc_title'} = $DISC_TITLE;
-
     my $TCMPLEX = which("tcmplex");
     my $TCMPLEXARGS = "";
     my $MPLEX = which("mplex");
@@ -3962,36 +3930,98 @@ sub dvd9to5
     # -P get all data for title -T
     my $FIRST_CHAPTER = ($START_CHAPTER =~/^\d+$/ 
         and $START_CHAPTER > 0 ) ? ",".$START_CHAPTER:"";
-    my $TCCAT_EXTRA_ARGS = ( -b $dir ) ? " -T $title".$FIRST_CHAPTER." -L ":"";  
+    # TODO FIRST_CHAPTER might be different for different titles
+    my $TCCAT_EXTRA_ARGS = ( -b $dir ) ? " -T \%d".$FIRST_CHAPTER." -L ":"";  
  
+    if ( ! defined($dir) or ! -e $dir )
+    {
+        _warn("No DVD device or Directory given as argument for video extraction.\nFalling back to $DVDDEV");
+        $dir = $DVDDEV;
+    }
+    $dir =~ s#/+$##; # removes the trailing slashes
+
+    my $VERBOSITY = ( $DEBUG == 0 ) ? 0 : 2;
+
+    
+    # pick a title for our DVD
+    my $dvdtitle = which("dvdtitle");
+    my $DISC_TITLE = undef;
+    if ( defined($DVD) and $DVD !~ /^\s*$/ )
+    {
+        $DISC_TITLE = $DVD;
+    } else {
+        $DISC_TITLE = ( -x $dvdtitle ) ? qx/ $dvdtitle / : "V2V"; # default title
+    }
+    # sanitize DISC_TITLE name
+    chomp($DISC_TITLE);
+    $DISC_TITLE =~ s,[\s\-]+,_,g; # replace whitespaces and dashes with _
+    $DISC_TITLE =~ y/a-z/A-Z/; # uppercase
+    $DISC_TITLE = substr($DISC_TITLE ,0,$VOLIDMAXLENGTH); # limit no. of characters
+
+    $DVD_INFO{'disc_title'} = $DISC_TITLE;
+
     v2v_mkdir($DISC_TITLE);
     
-    foreach(split(/\s*,\s*/,$title))
+    _collect_title_info($dir,$_)
+        unless ( exists($DVD_INFO{$_}{'sectors'}) and $DVD_INFO{$_}{'sectors'} > 0 );
+    
+    open(DVDAUTHOR,">dvdauthor.xml");
+    print DVDAUTHOR ("<dvdauthor dest=\"$DISC_TITLE\"><vmgm /><titleset><titles><pgc>");
+
+    _info("Target DVD5 size: ".$DVD5SIZE);
+
+    # TODO make sure that $dir is a block before using _longest_title();
+    $title = ( defined($title) and $title =~ /^\s*[[:digit:],]+$/) ? 
+        $title : _longest_title($dir);
+
+    _info("Longest title: $title");
+
+    my @titles = ();
+    my @_found_titles = keys %DVD_INFO;
+
+    _info("Number of titles in DVD: ".(@_found_titles+0));
+
+    # TODO add way to avoid this question if possible
+    if ( (@_found_titles+0) > 1 )
     {
-        next if ( $_ !~ /^\d+$/); # sanity check
-        _collect_title_info($dir,$_)
-            unless ( exists($DVD_INFO{$_}{'sectors'}) and $DVD_INFO{$_}{'sectors'} > 0 );
-        open(DVDAUTHOR,">dvdauthor.xml");
-        print DVDAUTHOR ("<dvdauthor dest=\"$DISC_TITLE\">
-        <vmgm />
-        <titleset>
-            <titles>
-                <pgc>");
-        
-        my $mpg_file =  sprintf($template_mpg_file ,$_);
+        print STDOUT ("Choose titles:\n");
+        PROMPT_VIDEO:
+        foreach my $_title (@_found_titles)
+        {
+            print STDOUT ($_title.")\t"." Size: ".($DVD_INFO{$_title}{'sectors'}*2048));
+            print STDOUT (" Chapters: ".$DVD_INFO{$_title}{'chapters_total'});
+            print STDOUT (" Sectors: ".$DVD_INFO{$_title}{'sectors'});
+
+            print STDOUT (" (*)") if ($_title == $title);
+            print STDOUT ("\n");
+        }
+        my $v_rep = prompt("What video titles should we use (separate by spaces) [$title]: ");
+        $v_rep = $title if ($v_rep eq ""); # user pressed ENTER
+        goto PROMPT_VIDEO if ( $v_rep !~ /^[[:digit:],\ ]+$/);
+        @titles = split(/\s+/,$v_rep);
+    }
+    # free up memory
+    @_found_titles = ();
+    undef @_found_titles; 
+
+    _info("Number of titles we are extracting: ".(@titles+0));
+
+    foreach my $_title ( @titles )
+    {
+        my $mpg_file =  sprintf($template_mpg_file ,$_title);
 
         # we only support one audio track
         # TODO add support for multiple audio tracks. hint: $title_audio_$audio_track
-        my $audio =  sprintf($template_audio ,$_);
-        my $audio_vob_fifo = sprintf($template_audio_vob_fifo ,$_);
+        my $audio =  sprintf($template_audio ,$_title);
+        my $audio_vob_fifo = sprintf($template_audio_vob_fifo ,$_title);
 
-        my $video = sprintf($template_video ,$_);
-        my $video_vob_fifo = sprintf($template_video_vob_fifo ,$_);
+        my $video = sprintf($template_video ,$_title);
+        my $video_vob_fifo = sprintf($template_video_vob_fifo ,$_title);
 
         # we only support one subtitle track
         # TODO add support for multiple subtitle track. hint: $title_subtitle_$sub_track
-        my $subtitle = sprintf($template_subtitle ,$_);
-        my $subtitle_vob_fifo = sprintf($template_subtitle_vob_fifo ,$_);
+        my $subtitle = sprintf($template_subtitle ,$_title);
+        my $subtitle_vob_fifo = sprintf($template_subtitle_vob_fifo ,$_title);
 
         # clean up old FIFOs
         unlink($mpg_file) if ( -e $mpg_file );
@@ -4016,7 +4046,7 @@ sub dvd9to5
         push(@fifo_files,$audio_vob_fifo);
         push(@fifo_files,$video_vob_fifo);
 #FIXME    push(@fifo_files,$subtitle_vob_fifo);
-        
+
         if ( -x $MPLEX )
         {
             my $sys = "nice -n $nice $MPLEX $MPLEXARGS $MULTIPLEXARGS -v $VERBOSITY -o $mpg_file $video $audio &";
@@ -4035,47 +4065,47 @@ sub dvd9to5
         # ac3 multiplier is 128 for 1 channel or 2
         # 384 for all others
         # dts multiplier is 786
-        my $audio_size = $DVD_INFO{$_}{'length'} * 128 * 125; # for channel 1 and 2
+        my $audio_size = $DVD_INFO{$_title}{'length'} * 128 * 125; # for channel 1 and 2
         # TODO why do we sometimes need to use a 2.05 factor here?
-        my $video_size= ( $DVD_INFO{$_}{'sectors'} * 2048 ) - $audio_size;
+        my $video_size= ( $DVD_INFO{$_title}{'sectors'} * 2048 ) - $audio_size;
         my $factor = video_requant_factor($video_size,$audio_size);
 
-        _info("Number of angles in title $_: ".$DVD_INFO{$_}{'angles_total'});
-        _info("Number of chapters in title $_: ".$DVD_INFO{$_}{'chapters_total'});
-        _info("Number of sectors in title $_: ".$DVD_INFO{$_}{'sectors'});
+        _info("Number of angles in title $_title: ".$DVD_INFO{$_title}{'angles_total'});
+        _info("Number of chapters in title $_title: ".$DVD_INFO{$_title}{'chapters_total'});
+        _info("Number of sectors in title $_title: ".$DVD_INFO{$_title}{'sectors'});
         _info("Video size ((sectors*2048) - audio_size): ".$video_size);
         _info("Audio size (length*128*125): ".$audio_size);
-        _info("Target DVD5 size: ".$DVD5SIZE);
+        
         _debug("1.05 * ( video_size / (dvd5size - audio_size) )");
         _info("Requant factor: ".$factor);
-        
+
         # do video extract
         push(@_extract,"nice -n $nice $BUFFER $BUFFER_ARGS -i $video_vob_fifo | nice -n $nice tcextract -t vob -x mpeg2 | nice -n $nice tcrequant -f $factor > $video &");
 
-        # audio extract
+        # do audio extract
         my $audio_track = 0; # default audio track
-        my $audio_total = (@{$DVD_INFO{$_}{'audio_type'}}+0);
+        my $audio_total = (@{$DVD_INFO{$_title}{'audio_type'}}+0);
         _info("Number of audio tracks: ".$audio_total);
         if ($audio_total > 1)
         {
             print STDOUT ("Choose audio track:\n");
             AUDIO:
-            for(my $i=0;$i<@{$DVD_INFO{$_}{'audio_type'}}+0;$i++)
+            for(my $i=0;$i<@{$DVD_INFO{$_title}{'audio_type'}}+0;$i++)
             {
-                print STDOUT ($i.")\t".$DVD_INFO{$_}{'audio_type'}->[$i].
-                "\t lang: ".$DVD_INFO{$_}{'audio_lang'}->[$i].
-                "\tchannels: ".$DVD_INFO{$_}{'audio_chan'}->[$i]);
+                print STDOUT ($i.")\t".$DVD_INFO{$_title}{'audio_type'}->[$i].
+                    "\t lang: ".$DVD_INFO{$_title}{'audio_lang'}->[$i].
+                    "\tchannels: ".$DVD_INFO{$_title}{'audio_chan'}->[$i]);
                 print STDOUT (" (*)") if ($i == $audio_track);
                 print STDOUT ("\n");
             }
             my $audio_rep = prompt("What audio track should we use [$audio_track]: ");
             $audio_rep = $audio_track if ($audio_rep eq ""); # user pressed ENTER
             goto AUDIO if ( $audio_rep !~ /^[[:digit:]]+$/
-                or $audio_rep < 0 or $audio_rep >= $audio_total);
+                    or $audio_rep < 0 or $audio_rep >= $audio_total);
             $audio_track=$audio_rep;
         }
-        push(@_extract,"nice -n $nice $BUFFER $BUFFER_ARGS -i $audio_vob_fifo | nice -n $nice tcextract -t vob -x ".${$DVD_INFO{$_}{'audio_type'}}[$audio_track]." -a $audio_track > $audio &");
-        
+        push(@_extract,"nice -n $nice $BUFFER $BUFFER_ARGS -i $audio_vob_fifo | nice -n $nice tcextract -t vob -x ".${$DVD_INFO{$_title}{'audio_type'}}[$audio_track]." -a $audio_track > $audio &");
+
         # subtitles extract
         #push(@_extract,"nice -n $nice $BUFFER $BUFFER_ARGS -i $subtitle_vob_fifo | nice -n $nice tcextract -a 0 -x ps1 -t vob > $subtitle &");
 
@@ -4086,54 +4116,54 @@ sub dvd9to5
             system($cmd);
             sleep(1);
         }
-        
-        if ( -d $dir )
-        {
-            foreach(glob("$dir/*.{IFO,BUP,ifo,bup}"),
-                glob("$dir/*/*.{IFO,BUP,ifo,bup}"))
-            {
-                my $_ifo = "/tmp/".basename($_);
-                print STDERR ("Moving file $_ to $_ifo\n");
-                system("mv $_ $_ifo");
-                if ( $? == 0 )
-                {
-                    print STDERR ("Moved $_ to $_ifo successfully\n"); 
-                } else {
-                    _error("Please remove $_ before continuing. Hint: mv $dir/*.{IFO,BUP,ifo,bup} /tmp/.");
-                    _error("When done press ENTER to continue... ");
-                    my $rep= <STDIN>;
-                }
-            }
-        }
 
         my $named_pipes = join(" ",@fifo_files);
+
+        if ( $TCCAT_EXTRA_ARGS =~ /%/ )
+        {
+            $TCCAT_EXTRA_ARGS = sprintf($TCCAT_EXTRA_ARGS,$_title);
+        }
+
         my $_tc_sys = "nice -n $nice tccat -i $dir $TCCAT_EXTRA_ARGS | tee $named_pipes  > /dev/null &";
         _debug($_tc_sys);
         system($_tc_sys);
-       
-        print DVDAUTHOR ("<vob file=\"$mpg_file\" chapters=\"$DVD_INFO{$_}{'chapters'}\" />");
-        print DVDAUTHOR ("
-                        <post>
-                            jump chapter 1;
-                        </post>
-                    </pgc>
-                </titles>
-            </titleset>
-            </dvdauthor>");
-        
-        close(DVDAUTHOR);
 
-        my $_dvdauthor_sys = "nice -n $nice dvdauthor -x $dvdauthor_xml";
-        _debug($_dvdauthor_sys);
-        system($_dvdauthor_sys);
+        print DVDAUTHOR ("<vob file=\"$mpg_file\" chapters=\"$DVD_INFO{$_title}{'chapters'}\" />");
+
+#         if ( -d $dir )
+#         {
+#             foreach my $_extra (glob("$dir/*.{IFO,BUP,ifo,bup}"),
+#                 glob("$dir/*/*.{IFO,BUP,ifo,bup}"))
+#             {
+#                 my $_ifo = "/tmp/".basename($_extra);
+#                 print STDERR ("Moving file $_extra to $_ifo\n");
+#                 system("mv $_extra $_ifo");
+#                 if ( $? == 0 )
+#                 {
+#                     print STDERR ("Moved $_extra to $_ifo successfully\n"); 
+#                 } else {
+#                     _error("Please remove $_extra before continuing. Hint: mv $dir/*.{IFO,BUP,ifo,bup} /tmp/.");
+#                     _error("When done press ENTER to continue... ");
+#                     my $rep= <STDIN>;
+#                 }
+#             }
+#         }
+    } # end foreach @titles
+
+    print DVDAUTHOR ("<post>jump chapter 1;</post></pgc></titles></titleset></dvdauthor>");
+    close(DVDAUTHOR);
+
+    my $_dvdauthor_sys = "nice -n $nice dvdauthor -x $dvdauthor_xml";
+    _debug($_dvdauthor_sys);
+    system($_dvdauthor_sys);
 
 # FIXME
-        # deal with mux'ing subtitles: 
-        # if ( !-f "$subtitle") { _warn("Subtitle file $subtitle missing"); }
-        # nice -n $nice subtitle2pgm -i $subtitle -o SUBPGM/$PROJNAME -X$TVRES -g 5 -t 1
-        # nice -n $nice spumux spumux.xml < $video > $video.muxed.mpeg
+    # deal with mux'ing subtitles: 
+    # if ( !-f "$subtitle") { _warn("Subtitle file $subtitle missing"); }
+    # nice -n $nice subtitle2pgm -i $subtitle -o SUBPGM/$PROJNAME -X$TVRES -g 5 -t 1
+    # nice -n $nice spumux spumux.xml < $video > $video.muxed.mpeg
 
-    } # end foreach $_
+    #} # end foreach $_
     
     my $_dvdauthor_sys_2 = "nice -n $nice dvdauthor -T -o $DISC_TITLE";
     _debug($_dvdauthor_sys_2);

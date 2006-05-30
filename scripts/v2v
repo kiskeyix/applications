@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.164 $
+# $Revision: 1.165 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -4120,7 +4120,6 @@ sub dvd9to5
         push(@_extract,"nice -n $nice $BUFFER $BUFFER_ARGS -i $video_vob_fifo | nice -n $nice tcextract -t vob -x mpeg2 | nice -n $nice tcrequant -f $factor > $video &");
 
         # do audio extract
-        
         push(@_extract,"nice -n $nice $BUFFER $BUFFER_ARGS -i $audio_vob_fifo | nice -n $nice tcextract -t vob -x ".${$DVD_INFO{$_title}{'audio_type'}}[$DVD_INFO{$_title}{'audio_track'}]." -a $DVD_INFO{$_title}{'audio_track'} > $audio &");
 
         # subtitles extract

@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.165 $
+# $Revision: 1.166 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -4003,8 +4003,6 @@ sub dvd9to5
 
     _info("Number of titles we are extracting: ".(@titles+0));
 
-    _info("Number of audio tracks: ".$audio_total);
-
     # calculate requant factor for all selected titles
     my $audio_size = 0;
     my $video_size = 0;
@@ -4024,6 +4022,7 @@ sub dvd9to5
 
         my $audio_track = 0; # default audio track
         my $audio_total = (@{$DVD_INFO{$_title}{'audio_type'}}+0);
+        _info("Number of audio tracks in title $_title: ".$audio_total);
         if ($audio_total > 1)
         {
             print STDOUT ("Choose audio track for title $_title:\n");

@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.166 $
+# $Revision: 1.167 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -4148,7 +4148,7 @@ sub dvd9to5
 
         # this should stop us until the whole file is saved (one title at a time)
         _info("Creating file $mpg_file.vob. Please wait...");
-        my $_cat_sys = "cat $mpg_file > $mpg_file.vob &";
+        my $_cat_sys = "cat $mpg_file > $mpg_file.vob";
         _debug($_cat_sys);
         system($_cat_sys);
         _info("$mpg_file.vob done.");

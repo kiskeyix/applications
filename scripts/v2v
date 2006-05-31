@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.167 $
+# $Revision: 1.168 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3905,9 +3905,7 @@ sub dvd9to5
     my $BUFFER = which("buffer");
     my $BUFFER_ARGS = " -s 64k -m 16m ";
 
-    # supporting variables
-    my @fifo_files = (); # FIFOs that tccat must know about
-    my @_extract = (); # array of tcextract commands we care
+    # supporting variables 
     my $audio_opts = " -a ac3+en "; # audio options for dvdauthor
 
     # files
@@ -4051,6 +4049,9 @@ sub dvd9to5
     {
         my $mpg_file =  sprintf($template_mpg_file ,$_title);
 
+        my @fifo_files = (); # FIFOs that tccat must know about
+        my @_extract = (); # array of tcextract commands we care
+
         # we only support one audio track
         # TODO add support for multiple audio tracks. hint: $title_audio_$audio_track
         my $audio =  sprintf($template_audio,$_title);
@@ -4193,18 +4194,18 @@ sub dvd9to5
     system($_dvdauthor_sys_2);
 
     # fifo cleanups
-    my $mpg_file =  glob(sprintf($template_mpg_file ,"*"));
-    my $audio =  glob(sprintf($template_audio ,"*"));
-    my $audio_vob_fifo = glob(sprintf($template_audio_vob_fifo ,"*"));
-    my $video = glob(sprintf($template_video ,"*"));
-    my $video_vob_fifo = glob(sprintf($template_video_vob_fifo ,"*"));
+    my @mpg_files =  glob(sprintf($template_mpg_file ,"*"));
+    my @audios =  glob(sprintf($template_audio ,"*"));
+    my @audios_vob_fifo = glob(sprintf($template_audio_vob_fifo ,"*"));
+    my @videos = glob(sprintf($template_video ,"*"));
+    my @videos_vob_fifo = glob(sprintf($template_video_vob_fifo ,"*"));
     #FIXME my $subtitle = glob(sprintf($template_subtitle ,"*"));
     #FIXME my $subtitle_vob_fifo = glob(sprintf($template_subtitle_vob_fifo ,"*"));
-    unlink($mpg_file,
-        $audio,
-        $audio_vob_fifo,
-        $video,
-        $video_vob_fifo,
+    unlink(@mpg_files,
+        @audios,
+        @audios_vob_fifo,
+        @videos,
+        @videos_vob_fifo,
         #FIXME $subtitle,
         #FIXME $subtitle_vob_fifo,
         $dvdauthor_xml

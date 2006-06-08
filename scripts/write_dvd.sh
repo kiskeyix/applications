@@ -1,5 +1,5 @@
 #!/bin/sh
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to burn a .iso DVD Video to the drive
@@ -7,10 +7,10 @@
 # CHANGELOG:
 # LICENSE: GPL
 
-if [ -f $1 ]; then
+if [ -f "$1" ]; then
     growisofs -dvd-compat -Z "/dev/dvd=$1"
-elif [ -d $1 ]; then
-    growisofs -dvd-video -udf -dvd-compat -Z /dev/dvd $1
+elif [ -d "$1" ]; then
+    growisofs -V "$1" -dvd-video -udf -dvd-compat -Z /dev/dvd "$1"
 else 
     echo "Usage: write_dvd.sh {dvd.iso|directory}"
 fi

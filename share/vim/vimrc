@@ -258,8 +258,10 @@ augroup perl
     if !exists("autocommands_perl_loaded")
         let autocommands_perl_loaded = 1
         au BufReadPre *.pl,*.ph,*.pm set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu | let IndentStyle = "perl"
-        " tags=./tags,tags,~/devel/tags,~/devel/CVS/bin/contrib/tags
-        " Show default php file when new 
+        " using ptags, generate a "tags" file in the same directory as the
+        " Perl script is. To view what tags file are used, type: <ESC> :echo &tags
+        " To set tag files use: set tags=./tags,tags 
+        " or: set tags+=~/.vim/systags
 
         au BufNewFile *.pl 0r ~/.vim/skeleton.pl | let IndentStyle = "perl"
         au BufNewFile *.pm 0r ~/.vim/skeleton.pm | let IndentStyle = "perl"
@@ -307,7 +309,7 @@ let myscriptsfile = "~/.vim/myscripts.vim"
 " generate tags file with:
 " ctags -R -f ~/.vim/systags /usr/include /usr/local/include
 if filereadable(expand("~/").".vim/systags")
-    set tags += ~/.vim/systags
+    set tags+=~/.vim/systags
 endif
 
 "

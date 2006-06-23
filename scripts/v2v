@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.169 $
+# $Revision: 1.170 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -4147,14 +4147,23 @@ sub dvd9to5
         _debug($_tc_sys);
         system($_tc_sys);
 
-        # this should stop us until the whole file is saved (one title at a time)
-        #_info("Creating file $mpg_file.vob. Please wait...");
-        #my $_cat_sys = "cat $mpg_file > $mpg_file.vob";
-        #_debug($_cat_sys);
-        #system($_cat_sys);
-        #_info("$mpg_file.vob done.");
+        # Note that when we are ripping multiple titles, the process seems to crap
+        # out on us. So, this way we ensure that only one title is ripped at a time
+        # and at the end we will put it all together. The drawback is that you need
+        # 8GB of free space to make a 4GB DVD ... live with it - lems
+        if ( (@titles+0) > 1 )
+        {
+            # this should stop us until the whole file is saved (one title at a time)
+            _info("Creating file $mpg_file.vob. Please wait...");
+            my $_cat_sys = "cat $mpg_file > $mpg_file.vob";
+            _debug($_cat_sys);
+            system($_cat_sys);
+            _info("$mpg_file.vob done.");
 
-        print DVDAUTHOR ("<vob file=\"$mpg_file\" chapters=\"$DVD_INFO{$_title}{'chapters'}\" />");
+            print DVDAUTHOR ("<vob file=\"$mpg_file.vob\" chapters=\"$DVD_INFO{$_title}{'chapters'}\" />");
+        } else {
+            print DVDAUTHOR ("<vob file=\"$mpg_file\" chapters=\"$DVD_INFO{$_title}{'chapters'}\" />");
+        }
 
 #         if ( -d $dir )
 #         {

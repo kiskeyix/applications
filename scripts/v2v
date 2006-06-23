@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.170 $
+# $Revision: 1.171 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -3900,7 +3900,7 @@ sub dvd9to5
     my $MPLEX = which("mplex");
     # -S 4400 # split at 4.4GB. 0 means 'do not split"
     # -f 8 # produce dvdauthor compliant/navigational MPEG-2
-    my $MPLEXARGS = " -f 8 -S 0 ";
+    my $MPLEXARGS = " -f 8 ";
 
     my $BUFFER = which("buffer");
     my $BUFFER_ARGS = " -s 64k -m 16m ";

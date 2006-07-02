@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.112 $
+# $Revision: 1.113 $
 # Luis Mondesi  <lemsx1@gmail.com>
 # 
 # HELP: $0 --help
@@ -605,7 +605,7 @@ sub mkthumb {
         $PROGRESS++; 
         # get base directory
         $BASE = dirname($ls[$i]);
-        print STDERR ("DEBUG: base directory in mkthumb() is $BASE\n");
+        print STDERR ("DEBUG: base directory in mkthumb() is $BASE\n") if ($DEBUG);
         # BASE is blank if we are already inside the directory
         # for which to do thumbnails, thus:
         if ( not defined ($BASE) or $BASE eq "" or ! -d $BASE ) 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.110 $
+# $Revision: 1.111 $
 # Luis Mondesi  <lemsx1@gmail.com>
 # 
 # HELP: $0 --help
@@ -9,11 +9,13 @@
 use strict;
 $|++; # disable buffer (autoflush)
 
+my $DEBUG = 0;
+
 # standard Perl modules
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
-use POSIX qw(getcwd);
-use File::Spec::Functions  qw(splitpath curdir updir catfile catdir abs2rel);
+use POSIX qw/ getcwd /;
+use File::Spec::Functions  qw/ splitpath curdir updir catfile catdir abs2rel /;
 use File::Copy;
 use File::Find;     # find();
 use File::Basename; # basename() && dirname()
@@ -249,6 +251,7 @@ sub main {
 
     # setup our internal variables:
     my $create_config = ( ! -f File::Spec->catfile($ROOT_DIRECTORY,$CONFIG_FILE) ) ? "true":"false";
+    print STDERR ("DEBUG: main() reading config file at dir $ROOT_DIRECTORY\n") if ($DEBUG);
     init_config($ROOT_DIRECTORY,$create_config);
 
     # --------------------------- STEPS -----------------------------#
@@ -373,6 +376,7 @@ sub init_config {
     $config{"$ROOT"}{"strlimit"}=( $STR_LIMIT ) ? $STR_LIMIT : 32;
     $config{"$ROOT"}{"cutdirs"}=( $CUT_DIRS ) ? $CUT_DIRS : 0 ;
 
+    print STDERR ("DEBUG: init_config() root $ROOT\n") if ($DEBUG);
     my $config_file = File::Spec->catfile($ROOT,$CONFIG_FILE);
     if ( -f $config_file )
     {
@@ -463,6 +467,8 @@ sub mkindex {
         {
             # this should rarely happen
             print $LOGFILE "++ mkindex() Reading config for '$this_base'\n";
+            print STDERR ("DEBUG: mkindex() reading config file at dir '$this_base'\n")
+                if ($DEBUG);
             init_config($this_base,"false");
         }
         # "serialization"
@@ -570,6 +576,7 @@ sub mkthumb {
         next if ($this_file =~ m/$EXCEPTION_LIST/);
         next if ($_ =~ m/\b$THUMBNAIL\b/i);
         next if ($this_file !~ m/$EXT_INCL_EXPR$/i);
+        print STDERR ("DEBUG: mkthumb() adding pixfile $_\n") if ($DEBUG);
         push @ls,$_;
         $this_file = "";
     } #end images array creation
@@ -598,6 +605,7 @@ sub mkthumb {
         $PROGRESS++; 
         # get base directory
         $BASE = dirname($ls[$i]);
+        print STDERR ("DEBUG: base directory in mkthumb() is $BASE\n");
         # BASE is blank if we are already inside the directory
         # for which to do thumbnails, thus:
         if ( not defined ($BASE) or $BASE eq "" or ! -d $BASE ) 
@@ -621,6 +629,8 @@ sub mkthumb {
             if ( ! exists $config{$BASE} )
             {
                 print $LOGFILE "+ mkthumb Reading config for '$BASE'\n";
+                print STDERR ("DEBUG: mkthumb() reading config file at dir $BASE\n") 
+                    if ($DEBUG);
                 init_config($BASE,"false");
             }
         } # end if base not equal tmp_base
@@ -662,10 +672,14 @@ sub mkthumb {
             print $LOGFILE ("= Wrote $_thumb_pix_name_tmp\n"); 
         } 
         # end if thumbnail file
-        
+       
+        print STDERR ("DEBUG: mkthumb() saving base to \%thumbfiles{$BASE}\n") 
+            if ($DEBUG);
+        print STDERR ("DEBUG: mkthumb() saving pix file $_thumb_pix_name_tmp\n") 
+            if ($DEBUG);
         # save pixname for the index.html file
-        push (@{$thumbfiles{abs2rel($BASE,$ROOT_DIRECTORY)}}, 
-            abs2rel($_thumb_pix_name_tmp,$ROOT_DIRECTORY));
+        # NOTE: do not use abs2rel here because it makes a crazy path
+        push (@{$thumbfiles{$BASE}},$_thumb_pix_name_tmp);
         # update flags
         $LAST_BASE = $BASE;
         # update progressbar
@@ -766,6 +780,8 @@ sub mkthumb_files {
         if ( ! exists $config{$BASE} ) 
         {
             print $LOGFILE "+ mkthumb_files Reading config for '$BASE'\n";
+            print STDERR ("DEBUG: mkthumb_files() reading config file at dir $BASE\n") 
+                    if ($DEBUG);
             init_config($BASE,'false');
         }
         
@@ -1307,10 +1323,12 @@ sub process_file {
         && $base_name !~ m/^\.[a-zA-Z0-9]+$/ # skip dot files
         ) 
     {
-        s/^\.\/*//g;
-        push @pixfiles,abs2rel($_,$ROOT_DIRECTORY);
+        s#^\.\/*##; # no ./
+        my $relative = abs2rel($_,$ROOT_DIRECTORY);
+        print STDERR ("DEBUG: $relative\n") if ($DEBUG);
+        push(@pixfiles,$relative);
     }
-} #end process_file
+} # end process_file
 
 sub cut_dirs {
     # call like cut_dirs($ts,$CUT_DIRS);

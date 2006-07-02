@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.111 $
+# $Revision: 1.112 $
 # Luis Mondesi  <lemsx1@gmail.com>
 # 
 # HELP: $0 --help
@@ -1043,10 +1043,11 @@ sub menu_file_or_string
         # Note that we use the URI here and not try to guess the relative path...
         $MENU_STR .= $config{"$ROOT_DIRECTORY"}{"table"}.
             "\n<tr>\n\t<td align='center'>\n<div align='center'>\n"; 
+        # assumes menu is one directory above the current dir
         $MENU_STR .= "\t\t<a class='pdlink' href='".
-            $config{"$ROOT_DIRECTORY"}{"uri"}.$MENU_NAME.".".
+            "../".$MENU_NAME.".".
             $config{"$ROOT_DIRECTORY"}{"ext"}.
-            "'>Back to Menu</a>\n</div>\n";
+            "'>Back to Previous</a>\n</div>\n";
         $MENU_STR .= "\t</td>\n</tr>\n</table>\n";
     } else {
         # classic is default menu type

@@ -1,5 +1,5 @@
 #!/usr/bin/perl 
-# $Revision: 1.113 $
+# $Revision: 1.114 $
 # Luis Mondesi  <lemsx1@gmail.com>
 # 
 # HELP: $0 --help
@@ -52,8 +52,13 @@ if ( exists $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'}
     ($nautilus_root = $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'} ) =~ s#%([0-9A-Fa-f]{2})#chr(hex($1))#ge;
     # remove file:// from full Nautilus URI: file:///tmp -> /tmp
     $nautilus_root =~ s#^file://##g;
+    warn "The path from env variable NAUTILUS_SCRIPT_CURRENT_URI is not in the current directory\n" 
+        if ($nautilus_root ne getcwd());
 }
+
 my $ROOT_DIRECTORY= ( -d $nautilus_root ) ? $nautilus_root : getcwd();
+chdir($ROOT_DIRECTORY);
+
 my $LOG="$ROOT_DIRECTORY/pixdir2html.log";
 my $CONFIG_FILE=".pixdir2htmlrc";
 my $THUMBNAIL="t";  # individual thumnails files will be placed here
@@ -567,6 +572,8 @@ sub mkthumb {
     print $LOGFILE ("= Making thumbnails in $ROOT \n");
     if ( ! defined $pixfiles[0] or ! -f $pixfiles[0] ) 
     {
+        print STDERR ("DEBUG: can't read Pixfile ".$pixfiles[0]."\n") 
+            if ($DEBUG);
         mydie("Sorry, do_file_ary() didn't do its job\n","mkthumb");
     }
 
@@ -1400,6 +1407,7 @@ sub mydie
     my $msg = shift;
     my $fun = shift;
     print LOGFILE "DIE: $fun : $msg\n";
+    print STDERR ("DIE: $fun : $msg\n") if ($DEBUG);
     die("Stopping execution $fun");
 }
 

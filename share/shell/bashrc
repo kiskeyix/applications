@@ -98,6 +98,8 @@ shopt -s checkwinsize
 # enable bash completion in interactive shells
 if [[ -r "/etc/bash_completion" ]]; then
     . /etc/bash_completion
+elif [[ -r "/usr/local/etc/bash_completion" ]]; then
+    . /usr/local/etc/bash_completion
 fi
 
 #---------------------------#

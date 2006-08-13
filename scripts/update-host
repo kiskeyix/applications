@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.77 $
+# $Revision: 1.78 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -23,7 +23,7 @@ use File::Basename qw/ basename /;
 
 =head1 update-host
 
-update-host - by Luis Mondesi <lemsx1@gmail.com>
+update-host - by Luis Mondesi L<<lemsx1@gmail.com>>
 
 =head1 SYNOPSIS
 
@@ -766,9 +766,9 @@ sub _do_links
     my $host = shift;
     return undef if (!defined($host));
     chdir($ENV{'HOME'}) if ($host eq "localhost");
-    foreach(@_CONFIG_FILES)
+    foreach my $_config_file (@_CONFIG_FILES)
     {
-        my $_conf = ".".basename($_); # dot file
+        my $_conf = ".".basename($_config_file); # dot file
         if ( $host eq "localhost" )
         {
             if ( ! -l $_conf )
@@ -791,10 +791,11 @@ sub _do_links
                 # for now, we simply remove the link
                 next if (!unlink($_conf));
             }
-            symlink($_,$_conf);
+            symlink($_config_file,$_conf);
         } else {
             # dealing with a remote hosts
-            system("ssh ".$USERNAME.$host." 'command rm -fr $_conf && command ln -sf $_ $_conf $silent'");
+            system("ssh ".$USERNAME.$host." 'command rm -fr $_conf;".
+                "command ln -sf $_config_file $_conf $silent'");
         }
     }
 }

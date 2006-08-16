@@ -1,5 +1,5 @@
 #!/usr/bin/perl  -w
-# $Revision: 1.172 $
+# $Revision: 1.173 $
 # vi: formatoptions=croq:expandtab:sts=4:sw=4 :
 #
 # DESCRIPTION: A simple script to transform from a video type to another.
@@ -354,22 +354,28 @@ sub prompt
     return $rep;
 }
 
+sub _print
+{
+    # takes a string a prints a message:
+   print STDOUT ("@_\n");
+}
+
 sub _info
 {
     # takes a string a prints a green message:
-   print STDOUT "$GREEN @_ $NORM\n" ;
+   print STDOUT ("$GREEN @_ $NORM\n");
 }
 
 sub _debug 
 {   
     # prints a string only if $DEBUG is true
-    print STDERR "$RED + @_ $NORM\n" if ( $DEBUG );
+    print STDERR ("$RED + @_ $NORM\n") if ( $DEBUG );
 }
 
 sub _warn
 {
     # takes a string and prints a red warn message
-    print STDOUT "$RED @_ $NORM\n";
+    print STDOUT ("$RED @_ $NORM\n");
 }
 
 sub _error
@@ -3979,7 +3985,7 @@ sub dvd9to5
     # TODO add way to avoid this question if possible
     if ( (@_found_titles+0) > 1 )
     {
-        print STDOUT ("Choose titles:\n");
+        _print("Choose titles:\n");
         PROMPT_VIDEO:
         foreach my $_title (@_found_titles)
         {
@@ -4024,7 +4030,7 @@ sub dvd9to5
         _info("Number of audio tracks in title $_title: ".$audio_total);
         if ($audio_total > 1)
         {
-            print STDOUT ("Choose audio track for title $_title:\n");
+            _print("Choose audio track for title $_title:\n");
             AUDIO:
             for(my $i=0;$i<@{$DVD_INFO{$_title}{'audio_type'}}+0;$i++)
             {
@@ -4093,11 +4099,11 @@ sub dvd9to5
         if ( -x $MPLEX )
         {
             my $sys = "nice -n $nice $MPLEX $MPLEXARGS $MULTIPLEXARGS -v $VERBOSITY -o $mpg_file $video $audio &";
-            _debug($sys);
+            _print($sys,"\n");
             system($sys);
         } elsif ( -x $TCMPLEX ) {
             my $sys = "nice -n $TCMPLEX $TCMPLEXARGS -d $VERBOSITY -o $mpg_file -i $video -p $audio -m d $MULTIPLEXARGS";
-            _debug($sys);
+            _print($sys,"\n");
             system($sys);
         } else {
             _error("mplex not found");
@@ -4129,7 +4135,7 @@ sub dvd9to5
         # ready environment to do all extraction
         foreach my $cmd (@_extract)
         { 
-            _debug($cmd);
+            _print($cmd,"\n");
             system($cmd);
             sleep(1);
         }
@@ -4145,7 +4151,7 @@ sub dvd9to5
 
         # when doing multiple titles, we can't pull all titles at once. do one at a time:
         my $_tc_sys = "nice -n $nice tccat -i $dir $TCCAT_EXTRA_ARGS | tee $named_pipes  > /dev/null &";
-        _debug($_tc_sys);
+        _print($_tc_sys,"\n");
         system($_tc_sys);
 
         # Note that when we are ripping multiple titles, the process seems to crap
@@ -4157,7 +4163,7 @@ sub dvd9to5
             # this should stop us until the whole file is saved (one title at a time)
             _info("Creating file $mpg_file.vob. Please wait...");
             my $_cat_sys = "cat $mpg_file > $mpg_file.vob";
-            _debug($_cat_sys);
+            _print($_cat_sys,"\n");
             system($_cat_sys);
             _info("$mpg_file.vob done.");
 
@@ -4190,7 +4196,7 @@ sub dvd9to5
     close(DVDAUTHOR);
 
     my $_dvdauthor_sys = "nice -n $nice dvdauthor -x $dvdauthor_xml";
-    _debug($_dvdauthor_sys);
+    _print($_dvdauthor_sys,"\n");
     system($_dvdauthor_sys);
 
 # FIXME
@@ -4200,7 +4206,7 @@ sub dvd9to5
     # nice -n $nice spumux spumux.xml < $video > $video.muxed.mpeg
     
     my $_dvdauthor_sys_2 = "nice -n $nice dvdauthor -T -o $DISC_TITLE";
-    _debug($_dvdauthor_sys_2);
+    _print($_dvdauthor_sys_2,"\n");
     system($_dvdauthor_sys_2);
 
     # fifo cleanups
@@ -4234,7 +4240,7 @@ sub dvd9to5
     if ( $rep_iso =~ m/^y/i )
     {
         my $_cmd = "nice -n $nice mkisofs -dvd-video -udf -o $DISC_TITLE.iso -V $DISC_TITLE $DISC_TITLE";
-        _debug($_cmd);
+        _print($_cmd,"\n");
         system($_cmd);
     }
     # TODO make sure growisofs is installed
@@ -4244,7 +4250,7 @@ sub dvd9to5
     if ( $rep_burn =~ m/^y/i and $rep_iso =~ m/^y/i )
     {
         my $_cmd = "growisofs -Z $DVDDEV=$DISC_TITLE.iso";
-        _debug($_cmd);
+        _print($_cmd,"\n");
         system($_cmd)
     } elsif ($rep_burn =~ m/^y/i) {
         make_dvd($DISC_TITLE,$DISC_TITLE); 
@@ -4560,7 +4566,7 @@ $Res_DIVX_OPT=1 if ( $DIVX ne "" && $DIVX_OPT eq "" );
 # Show release and exit
 if ( $VERSION )
 {
-    print STDOUT "v2v v$release\n";
+    _print("v2v v$release");
     exit(0);
 }
 
@@ -4763,7 +4769,7 @@ if (
     || $HELP == 1
 )
 {
-    print STDOUT "$usage";
+    _print($usage);
     exit(1);
 }
 

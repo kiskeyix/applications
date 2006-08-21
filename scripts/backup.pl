@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.44 $
+# $Revision: 1.45 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Mar-13
 #
@@ -275,8 +275,7 @@ if (!-f $TMP_LOCK)
     # write lock file:
     open(FILE, "> $TMP_LOCK")
       or die_with_message("could not open $TMP_LOCK. $! \n");
-    print FILE $year . "-" . $mon . "-" . $mday . " " . $hour . ":" . $min . ":"
-      . $sec;
+    print FILE get_simple_date();
     close(FILE);
 
     # cleanup name
@@ -340,6 +339,7 @@ if (!-f $TMP_LOCK)
         # next system() call to the background and move on
         # with backup
         # emit an audible alert
+	my ($sec, $min, $hour, $mday, $mon, $year) = localtime;
         system(  "/usr/bin/flite -t 'Starting backup process at " . $hour . " "
                . $min
                . "' &");
@@ -773,5 +773,4 @@ sub get_simple_date
       . sprintf("%02d", $mon) . "-"
       . sprintf("%02d", $mday);
 
-    #." ".sprintf("%02d",$hour).":".sprintf("%02d",$min).":".sprintf("%02d",$sec);
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.42 $
+# $Revision: 1.43 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Mar-13
 #
@@ -171,7 +171,7 @@ $MY_CONFIG{"BACKUPDIR"} = $MY_CONFIG{"BAK"} =
 # in your .backuprc file like:
 # BACKUPDIR="/other/dir"
 # tar EXCL list regexp. specify EXCLUDES in your .backuprc to modify
-$MY_CONFIG{"EXCLUDES"} = '(\.pid|\.soc|\.log)$';
+$MY_CONFIG{"EXCLUDES"} = '\.pid$|\.soc$|\.log$';
 
 $MY_CONFIG{"COMPRESS_LEVEL"} = "9";    # default compression level
 
@@ -745,6 +745,7 @@ sub clean_regex
     $string =~ s/\\d/[0-9]/g;
     $string =~ s/\$//g;
     $string =~ s/\\//g;
+    $string =~ s/\(|\)//g; # remove parenthesis
     return $string;
 }
 

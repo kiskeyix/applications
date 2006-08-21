@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.41 $
+# $Revision: 1.42 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Mar-13
 #
@@ -269,7 +269,7 @@ if (!-f $TMP_LOCK)
     $year += 1900;
 
     my $MIDDLE_STR = "";
-    if ($FREQ =~ /^(daily|weekly|monthly|yearly)$/i)
+    if ($FREQ and $FREQ =~ /^(daily|weekly|monthly|yearly)$/i)
     {
         $MIDDLE_STR = $1;
     }

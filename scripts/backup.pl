@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.43 $
+# $Revision: 1.44 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Mar-13
 #
@@ -145,10 +145,9 @@ my $ARCHIVE_TAR = 1;    # assume yes
 eval "use Archive::Tar";
 if ($@)
 {
-    warn
-      "Archive::Tar Perl module not found. ".
-      "You must use TAR=/usr/bin/tar and ".
-      "COMPRESS_DO=/usr/bin/gzip in your ~/.backuprc\n";
+    warn "Archive::Tar Perl module not found. "
+      . "You must use TAR=/usr/bin/tar and "
+      . "COMPRESS_DO=/usr/bin/gzip in your ~/.backuprc\n";
     $ARCHIVE_TAR = 0;
 }
 
@@ -162,10 +161,10 @@ my %MY_CONFIG   = ();
 my $CONFIG_FILE = $ENV{"HOME"} . "/.backuprc";
 
 $MY_CONFIG{"NAME"} = hostname();    # default name
-$MY_CONFIG{"NAME"} =~ s/\..+$//;    # our hostname is only the first part of name
+$MY_CONFIG{"NAME"} =~ s/\..+$//;   # our hostname is only the first part of name
 
 $MY_CONFIG{"BACKUPDIR"} = $MY_CONFIG{"BAK"} =
-  "/home/backup";                 # default backup directory
+  "/home/backup";                  # default backup directory
 
 # you might want to change this
 # in your .backuprc file like:
@@ -263,19 +262,14 @@ else
 
 if (!-f $TMP_LOCK)
 {
-
-    my ($sec, $min, $hour, $mday, $mon, $year) = localtime;    # get date
-    $mon  += 1;      ## adjust Month: no 0..11 instead use natural 1..12
-    $year += 1900;
-
-    my $MIDDLE_STR = "";
+    my $MIDDLE_STR = "daily";
     if ($FREQ and $FREQ =~ /^(daily|weekly|monthly|yearly)$/i)
     {
         $MIDDLE_STR = $1;
     }
     else
     {
-        $MIDDLE_STR = $year . "-" . $mon . "-" . $mday;
+        $MIDDLE_STR = get_simple_date();
     }
 
     # write lock file:
@@ -287,7 +281,7 @@ if (!-f $TMP_LOCK)
 
     # cleanup name
     # no spaces allowed here
-    $CONFIG{"NAME"} =~ s/ +//g;
+    $CONFIG{"NAME"} =~ s/[[:blank:]]+//g;
 
     # look for other strange characters...
     #$CONFIG{"NAME"} = clean($CONFIG{"NAME"});
@@ -745,7 +739,7 @@ sub clean_regex
     $string =~ s/\\d/[0-9]/g;
     $string =~ s/\$//g;
     $string =~ s/\\//g;
-    $string =~ s/\(|\)//g; # remove parenthesis
+    $string =~ s/\(|\)//g;                                  # remove parenthesis
     return $string;
 }
 
@@ -762,4 +756,22 @@ sub die_with_msg
 {
     unlink "$TMP_LOCK" or die "could not remove " . $TMP_LOCK . ". $!\n";
     die shift;
+}
+
+# given an epoch (UNIX epoch) returns a string like: YYYY-MM-DD
+# (iso 8660 date format). See: date -I
+sub get_simple_date
+{
+    my $time = shift || time;
+
+    my ($sec, $min, $hour, $mday, $mon, $year) = localtime($time);
+    $mon  += 1;      ## adjust Month: no 0..11 instead use natural 1..12
+    $year += 1900;
+
+    return
+      sprintf("%04d",   $year) . "-"
+      . sprintf("%02d", $mon) . "-"
+      . sprintf("%02d", $mday);
+
+    #." ".sprintf("%02d",$hour).":".sprintf("%02d",$min).":".sprintf("%02d",$sec);
 }

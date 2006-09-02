@@ -29,6 +29,7 @@ if ( $file =~ m/\.nes$/i )
         display_error("Fceu could not open '$file'");
     }
 } else {
+    # snes9x -joymap1 2 1 3 0 4 5 9 8 
     system("zsnes '$file'");
     if ( $? != 0 ) 
     {

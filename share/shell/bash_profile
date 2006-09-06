@@ -22,6 +22,11 @@ BASH_ENV="$HOME/.bashrc"
 CVS_RSH="ssh"
 EDITOR="vim"
 
+# ah, fix Cygwin's lack of USER env var
+if [[ -z "$USER" ]]; then
+    export USER=`/usr/bin/id | /bin/sed 's/uid=[[:digit:]]\+(\([[:alpha:]]\+\)).*/\1/g'`
+fi
+
 MAIL="/var/mail/${USER:?}"
 
 HISTSIZE=1500
@@ -34,9 +39,9 @@ TMP="/tmp"
 if [[ -d "$HOME/tmp" ]]; then
     TMP="$HOME/tmp"
 elif [[ -d "/dev/shm/" ]]; then
-    mkdir -p -m 0700 "/dev/shm/$USER/tmp" > /dev/null 2>&1
-    if [[ -d "/dev/shm/$USER/tmp" ]]; then
-        TMP="/dev/shm/$USER/tmp"
+    mkdir -p -m 0700 "/dev/shm/${USER:?}/tmp" > /dev/null 2>&1
+    if [[ -d "/dev/shm/${USER:?}/tmp" ]]; then
+        TMP="/dev/shm/${USER:?}/tmp"
     fi
 fi
 

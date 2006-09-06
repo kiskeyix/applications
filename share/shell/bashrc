@@ -63,6 +63,11 @@ RECODE=0    # should we recode from iso to utf8?
                         # this line
 ## end signature setup
 
+# ah, fix Cygwin's lack of USER env var
+if [[ -z "$USER" ]]; then
+    export USER=`/usr/bin/id | /bin/sed 's/uid=[[:digit:]]\+(\([[:alpha:]]\+\)).*/\1/g'`
+fi
+
 # pretty print logged in users when you login interactively?
 PRINTUSERS=0
 

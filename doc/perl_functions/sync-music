@@ -1,9 +1,23 @@
 #!/usr/bin/perl -w
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: syncs the music from my imac to this computer
 # LICENSE: GPL
+
+use strict;
+$|++;
+use sigtrap qw(handler _exit_safe normal-signals error-signals);
+
+my $LOCK_FILE = "/tmp/sync-music.lock";
+
+print STDERR ("$0: ERROR There is a lock file already $LOCK_FILE\n") 
+    and exit(1) if ( -e $LOCK_FILE );
+
+open(LOCK,"> $LOCK_FILE") 
+    or die ("Could not create lock file $LOCK_FILE. $!\n");
+print LOCK (my $date = localtime(),"\n");
+close(LOCK);
 
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
@@ -41,6 +55,8 @@ if ( defined($host) and is_alive($host) )
         system("rsync -auz /home/Shared/Music/ $path/ > /dev/null 2>&1");
     }
 }
+
+_exit_safe(0);
 
 # @desc checks whether a given host is alive by pinging it. 
 #  pinging to a given host will be cached/saved for us so that we don't 
@@ -92,4 +108,20 @@ sub debug
 {
     my $msg = "@_";
     print STDERR ("$RED $msg $NORM\n")  if ( $DEBUG );
+}
+
+sub _exit_safe
+{
+    my $status = shift;
+    $status = 0 if (not defined($status));
+
+    unlink($LOCK_FILE) if ( -e $LOCK_FILE );
+
+    # TODO handle more signals
+    my %exit = ( INT=>'9' );
+    if ( $status =~ /^[0-9]+$/ )
+    {
+        exit $status;
+    }
+    exit $exit{$status};
 }

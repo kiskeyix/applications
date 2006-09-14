@@ -1,27 +1,45 @@
 #!/usr/bin/perl -w
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: syncs the music from my imac to this computer
 # LICENSE: GPL
 
+use Getopt::Long;
+Getopt::Long::Configure('bundling');
+
 my $DEBUG = 0;
-my $host = $ARGV[0];
+my $host = undef; #$ARGV[0];
 my %hosts = ();
 my $RED = "\033[1;31m";
 my $NORM = "\033[0;39m";
 my $GREEN = "\033[0;32m";
 my $ssh_port=22;
 my $path = "/mnt/auto/imac-shared/Music/";
+my $REVERSE = 0;
 
+GetOptions(
+    # flags
+    'r|reverse'    => \$REVERSE,
+) and $host=shift;
+ 
 #$host = "imac" if ( not defined $host );
-debug("host $host");
+debug("host $host") if (defined $host);
 
 if ( defined($host) and is_alive($host) )
 {
     system("rsync -e ssh -auz $host:/home/Shared/Music/ /home/Shared/Music/ > /dev/null 2>&1");
+    if ($REVERSE)
+    {
+        system("rsync -e ssh -auz /home/Shared/Music/ $host:/home/Shared/Music/ > /dev/null 2>&1");
+    }
+
 } elsif ( -e $path ) {
-    system("rsync -e ssh -auz $path /home/Shared/Music/ > /dev/null 2>&1");
+    system("rsync -auz $path /home/Shared/Music/ > /dev/null 2>&1");
+    if ($REVERSE)
+    {
+        system("rsync -auz /home/Shared/Music/ $path/ > /dev/null 2>&1");
+    }
 }
 
 # @desc checks whether a given host is alive by pinging it. 

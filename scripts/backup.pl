@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.45 $
+# $Revision: 1.46 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Mar-13
 #
@@ -189,7 +189,6 @@ $MY_CONFIG{"SYSTEM"} = "/etc /var/mail /var/spool /var/lib/iptables /root";
 #           No need to modify anything below here             #
 #-------------------------------------------------------------#
 
-my $TMP_LOCK = ".backup-lock";
 my $FREQ     = "daily";
 
 ## GET OPTIONS ##
@@ -246,9 +245,24 @@ if ($DEBUG)
     }
 }
 
+# cleanup name
+# no spaces allowed here
+$CONFIG{"NAME"} =~ s/[[:blank:]]+//g;
+
+# TODO is there a better way of locking this process?
+# if our backup is going to a NFS shared disk, we don't
+# want to allow two of the same processes running from
+# the same host. So this lock has to be unique, but 
+# consistent (so if we run from a cron, we know we are still
+# running. mktemp is not a good choice).
+my $TMP_LOCK = ".".$CONFIG{'NAME'}."-backup-lock";
+
 # be backward compatible
-$CONFIG{"BACKUPDIR"} =
-  (-d $CONFIG{"BAK"}) ? $CONFIG{"BAK"} : $CONFIG{"BACKUPDIR"};
+if (-d $CONFIG{"BAK"})
+{
+    $CONFIG{"BACKUPDIR"} = $CONFIG{"BAK"};
+}
+delete $CONFIG{"BAK"};
 
 # change to backup directory
 if (-d $CONFIG{"BACKUPDIR"})
@@ -257,10 +271,10 @@ if (-d $CONFIG{"BACKUPDIR"})
 }
 else
 {
-    die("could not change working dir to " . $CONFIG{"BACKUPDIR"} . " $!");
+    die("$0: could not change working dir to " . $CONFIG{"BACKUPDIR"} . " $!");
 }
 
-if (!-f $TMP_LOCK)
+if (!-e $TMP_LOCK)
 {
     my $MIDDLE_STR = "daily";
     if ($FREQ and $FREQ =~ /^(daily|weekly|monthly|yearly)$/i)
@@ -277,10 +291,6 @@ if (!-f $TMP_LOCK)
       or die_with_message("could not open $TMP_LOCK. $! \n");
     print FILE get_simple_date();
     close(FILE);
-
-    # cleanup name
-    # no spaces allowed here
-    $CONFIG{"NAME"} =~ s/[[:blank:]]+//g;
 
     # look for other strange characters...
     #$CONFIG{"NAME"} = clean($CONFIG{"NAME"});
@@ -604,7 +614,7 @@ if (!-f $TMP_LOCK)
 }
 else
 {
-    die("Lock file " . $CONFIG{"BAK"} . "/$TMP_LOCK exists... exiting.\n");
+    die("Lock file " . $CONFIG{"BACKUPDIR"} . "/$TMP_LOCK exists... exiting.\n");
 }
 
 #------------------------------------------------------#
@@ -643,6 +653,7 @@ sub init_config
     else
     {
         print STDERR "Could not open $CONFIG_FILE\n";
+        # TODO if not running interactively do not prompt
         my $response = prompt("Do you want to continue? [y/N] ");
         if ($response ne 'y')
         {

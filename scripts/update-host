@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.78 $
+# $Revision: 1.79 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -645,14 +645,14 @@ sub which
     # @param 0 string := binary to find in $ENV{PATH}
     # returns binary path or -1 if not found
     my $binary = shift;
-    my $path = "-1"; # holds string to return when found. 
+    my $path = undef; # holds string to return when found. 
     foreach my $binary_path ( split(/:/,$ENV{"PATH"}) )
     {
-        next if ( -x "$path" ); # a quick way out. after finding
         # first binary in $ENV{PATH}
         if ( -x "$binary_path"."/$binary")
         {
             $path = "$binary_path"."/$binary";
+            last;
         }
     }
     return $path; # -1 means not found

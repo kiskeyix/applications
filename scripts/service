@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.13 $
-# $Date: 2006-09-30 06:59:25 $
+# $Revision: 1.14 $
+# $Date: 2006-09-30 07:05:35 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: start/stop or removes services in Linux (all distros)
@@ -18,13 +18,24 @@ service - service script for starting, stoping adding and removing services in L
 B<service>  [-v,--version]
             [-D,--debug] 
             [-h,--help]
-            [--list-all]
-            [--list-running]
-            [--list-runlevel]
-            [--list-on]
-            [--list-off]
-                <start|stop|restart|reset|remove|off|on>
+            <[--list-all] |
+            [--list-running] |
+            [--list-runlevel] |
+            [--list-on] |
+            [--list-off]> | <start|stop|restart|reset|remove|off|on>
                 <service1 service2 ... serviceN>
+
+=head1 EXAMPLES
+
+    service stop apache2 squid gnump3d shorewall
+
+    service off fingerd telnetd wu-ftpd
+
+    service --list-all
+
+    service --list-running 
+
+    service --list-runlevel # is the same as service --list-on --list-off
 
 =head1 DESCRIPTION 
 
@@ -43,7 +54,7 @@ $|++;
 
 $ENV{'PATH'} .= ":/sbin:/usr/sbin";
 
-my $revision = '$Revision: 1.13 $';    # version
+my $revision = '$Revision: 1.14 $';    # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 my %redhat_commands = (
@@ -105,13 +116,23 @@ adds the initrc scripts to the system using chkconfig or update-rc.d depending o
 
 =item --list-all
 
+List all services in /etc/init.d/*
+
 =item --list-on
+
+List all services set to start in our current run level
 
 =item --list-off
 
+List all services set to stop in our current run level
+
 =item --list-running
 
+List all processes running which have startup scripts in /etc/init.d/*
+
 =item --list-runlevel
+
+Same as --list-off --list-on
 
 =cut
 

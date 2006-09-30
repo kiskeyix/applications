@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.14 $
-# $Date: 2006-09-30 07:05:35 $
+# $Revision: 1.15 $
+# $Date: 2006-09-30 07:08:14 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: start/stop or removes services in Linux (all distros)
@@ -54,7 +54,7 @@ $|++;
 
 $ENV{'PATH'} .= ":/sbin:/usr/sbin";
 
-my $revision = '$Revision: 1.14 $';    # version
+my $revision = '$Revision: 1.15 $';    # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 my %redhat_commands = (
@@ -113,6 +113,10 @@ removes the initrc scripts from the system using chkconfig or update-rc.d depend
 =item add,on
 
 adds the initrc scripts to the system using chkconfig or update-rc.d depending on the distribution
+
+=item reset
+
+same as remove and add. This ensures that the proper links are created for a given run level
 
 =item --list-all
 
@@ -309,7 +313,6 @@ elsif ($ACTION =~ /add/)
     $KEY = "on";
 }
 
-# main
 foreach (@ARGV)
 {
     if ($ACTION =~ /\breset\b/

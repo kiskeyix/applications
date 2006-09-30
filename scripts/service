@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.7 $
-# $Date: 2006-02-12 05:10:11 $
+# $Revision: 1.8 $
+# $Date: 2006-09-30 05:25:35 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: start/stop or removes services in Linux (all distros)
@@ -16,8 +16,11 @@ service - service script for starting, stoping adding and removing services in L
 =head1 SYNOPSIS
 
 B<service>  [-v,--version]
-                [-D,--debug] 
-                [-h,--help]
+            [-D,--debug] 
+            [-h,--help]
+            [--list-all]
+            [--list-running]
+            [--list-runlevel]
                 <start|stop|restart|reset|remove|off|on>
                 <service1 service2 ... serviceN>
 
@@ -38,7 +41,7 @@ $|++;
 
 $ENV{'PATH'} .= ":/sbin:/usr/sbin";
 
-my $revision='$Revision: 1.7 $'; # version
+my $revision='$Revision: 1.8 $'; # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 my %redhat_commands = (
@@ -67,12 +70,6 @@ my %distros = (
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
 use File::Spec::Functions;  # abs2rel() and other dir/filename specific
-
-# Args:
-my $PVERSION=0;
-my $HELP=0;
-my $DEBUG=0;
-my $ACTION=undef;
 
 =pod
 
@@ -104,7 +101,22 @@ removes the initrc scripts from the system using chkconfig or update-rc.d depend
 
 adds the initrc scripts to the system using chkconfig or update-rc.d depending on the distribution
 
+=item --list-all
+
+=item --list-running
+
+=item --list-runlevel
+
 =cut
+
+# Args:
+my $PVERSION=0;
+my $HELP=0;
+my $DEBUG=0;
+my $ACTION=undef;
+my $LIST_ALL=undef;
+my $LIST_RUN=undef;
+my $LIST_LEV=undef;
 
 # get options
 GetOptions(
@@ -112,6 +124,9 @@ GetOptions(
     'v|version'         =>  \$PVERSION,
     'h|help'            =>  \$HELP,
     'D|debug'           =>  \$DEBUG,
+    'list-all'          =>  \$LIST_ALL,
+    'list-running'      =>  \$LIST_RUN,
+    'list-runlevel'     =>  \$LIST_LEV,
 ) and $ACTION=shift;
 
 if ( $HELP )

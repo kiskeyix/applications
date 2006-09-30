@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.9 $
-# $Date: 2006-09-30 06:17:48 $
+# $Revision: 1.10 $
+# $Date: 2006-09-30 06:31:26 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: start/stop or removes services in Linux (all distros)
@@ -43,7 +43,7 @@ $|++;
 
 $ENV{'PATH'} .= ":/sbin:/usr/sbin";
 
-my $revision = '$Revision: 1.9 $';    # version
+my $revision = '$Revision: 1.10 $';    # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 my %redhat_commands = (
@@ -166,11 +166,23 @@ if (not defined($ACTION)
 if ($PVERSION) { print STDOUT ($revision, "\n"); exit 0; }
 
 # what distro are we?
-my $release_info = lc(qx/lsb_release -i/);
-chomp($release_info);
-$release_info =~ s/.*:\s+//;
-$release_info =~ s/\s+//;
-print $release_info, "\n" if ($DEBUG);
+open(LSB,"</etc/lsb-release") or open(LSB,"lsb_release -i") 
+    or die("Cannot get distributor id ",$!,"\n");
+
+my $release_info = undef;
+
+while(<LSB>)
+{
+    print $_;
+    chomp;
+    if (/\s*distrib(utor)*[[:blank:]\_]*ID\s*[\:\=]{1}\s*([^[:blank:]]+)/i)
+    {
+        $release_info = lc($2);
+        $release_info =~ s/\s+//;
+        last;
+    }
+}
+print "Distributor ID: ",$release_info, "\n" if ($DEBUG);
 
 if ($DEBUG)
 {

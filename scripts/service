@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.11 $
-# $Date: 2006-09-30 06:36:28 $
+# $Revision: 1.12 $
+# $Date: 2006-09-30 06:47:52 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: start/stop or removes services in Linux (all distros)
@@ -43,7 +43,7 @@ $|++;
 
 $ENV{'PATH'} .= ":/sbin:/usr/sbin";
 
-my $revision = '$Revision: 1.11 $';    # version
+my $revision = '$Revision: 1.12 $';    # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 my %redhat_commands = (
@@ -215,6 +215,11 @@ if ($LIST_ALL or $LIST_RUN or $LIST_LEV or $LIST_ON or $LIST_OFF)
         my $DIR = "/etc/rc$RUNLEVEL.d";    # LSB
                                            # TODO use distro specific
         opendir(DIR, $DIR) or die("Cannot open $DIR. $!\n");
+
+        print '-'x64,"\n";
+        print sprintf("\%s\t%32s\t%s\n","Pri","Service Name","Status");
+        print '-'x64,"\n";
+
         while (my $file = readdir(DIR))
         {
             next if (-d "$DIR/$file");
@@ -224,11 +229,11 @@ if ($LIST_ALL or $LIST_RUN or $LIST_LEV or $LIST_ON or $LIST_OFF)
 
             if ($file =~ /^S(\d+)([^[:blank:]]+)/)
             {
-                print "$1\t$2\t\t\tOn\n";
+                print sprintf("\%s\t%32s\t%s\n",$1,$2,"On");
             }
             elsif ($file =~ /^K(\d+)([^[:blank:]]+)/)
             {
-                print "$1\t$2\t\t\tOff\n";
+                print sprintf("\%s\t%32s\t%s\n",$1,$2,"Off");
             }
         }
     }

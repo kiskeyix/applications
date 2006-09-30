@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.12 $
-# $Date: 2006-09-30 06:47:52 $
+# $Revision: 1.13 $
+# $Date: 2006-09-30 06:59:25 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: start/stop or removes services in Linux (all distros)
@@ -43,7 +43,7 @@ $|++;
 
 $ENV{'PATH'} .= ":/sbin:/usr/sbin";
 
-my $revision = '$Revision: 1.12 $';    # version
+my $revision = '$Revision: 1.13 $';    # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 my %redhat_commands = (
@@ -135,9 +135,9 @@ GetOptions(
     'D|debug'       => \$DEBUG,
     'list-all'      => \$LIST_ALL,
     'list-running'  => \$LIST_RUN,
-    'list-runlevel' => \$LIST_LEV,
-    'list-on'       => \$LIST_ON,
-    'list-off'      => \$LIST_OFF,
+    'list-runlevel' => sub { $LIST_LEV++; $LIST_ON++; $LIST_OFF++; },
+    'list-on'       => sub { $LIST_LEV++; $LIST_ON++; },
+    'list-off'      => sub { $LIST_LEV++; $LIST_OFF++; },
 ) and $ACTION = shift;
 
 if ($HELP)
@@ -151,7 +151,7 @@ if ($HELP)
 if ($PVERSION) { print STDOUT ($revision, "\n"); exit 0; }
 
 # what distro are we?
-open(LSB,"</etc/lsb-release") or open(LSB,"lsb_release -i") 
+open(LSB,"</etc/lsb-release") or open(LSB,"lsb_release -i|") 
     or die("Cannot get distributor id ",$!,"\n");
 
 my $release_info = undef;
@@ -196,6 +196,28 @@ if ($LIST_ALL or $LIST_RUN or $LIST_LEV or $LIST_ON or $LIST_OFF)
             print "$DIR/", $file, "\n";
         }
     }
+
+    if ($LIST_RUN)
+    {
+        print "All services running\n";
+
+        # TODO use distro specific
+
+        my $DIR = "/etc/init.d";    # LSB
+                                    # TODO use distro specific
+
+        # TODO attempt to find some names by reading the initrc files... 
+        # will take a lot of time to finish.
+        open(PROC,"ps ax --format \%c | sort | uniq|") or die($!,"\n");
+        while (my $file = <PROC>)
+        {
+            chomp($file);
+            next if (!-x "$DIR/$file");
+
+            print "$DIR/$file\n";
+        }
+    }
+
     if ($LIST_LEV)
     {
         my $RUNLEVEL = undef;
@@ -227,11 +249,11 @@ if ($LIST_ALL or $LIST_RUN or $LIST_LEV or $LIST_ON or $LIST_OFF)
             next if ($file =~ /\.dpkg-old$/);
             next if ($file =~ /\.rpmsave$/);
 
-            if ($file =~ /^S(\d+)([^[:blank:]]+)/)
+            if ($LIST_ON and $file =~ /^S(\d+)([^[:blank:]]+)/)
             {
                 print sprintf("\%s\t%32s\t%s\n",$1,$2,"On");
             }
-            elsif ($file =~ /^K(\d+)([^[:blank:]]+)/)
+            elsif ($LIST_OFF and $file =~ /^K(\d+)([^[:blank:]]+)/)
             {
                 print sprintf("\%s\t%32s\t%s\n",$1,$2,"Off");
             }

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.9 $
+# $Revision: 1.10 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: syncs the music from my imac to this computer
@@ -31,6 +31,8 @@ my $GREEN = "\033[0;32m";
 my $ssh_port=22;
 my $path = "/mnt/auto/imac-shared/Music/";
 my $REVERSE = 0;
+my $RSYNC_ARGS = " --compress --delete --delete-excluded --force --exclude=.[a-zA-Z0-9]* ";
+my $RSYNC_REVERSE_ARGS = " --compress --exclude=.[a-zA-Z0-9]* ";
 
 GetOptions(
     # flags
@@ -42,17 +44,17 @@ debug("host $host") if (defined $host);
 
 if ( defined($host) and is_alive($host) )
 {
-    system("rsync -e ssh -auz $host:/home/Shared/Music/ /home/Shared/Music/ > /dev/null 2>&1");
+    system("rsync -e ssh -au $RSYNC_ARGS $host:/home/Shared/Music/ /home/Shared/Music/ > /dev/null 2>&1");
     if ($REVERSE)
     {
-        system("rsync -e ssh -auz /home/Shared/Music/ $host:/home/Shared/Music/ > /dev/null 2>&1");
+        system("rsync -e ssh -au $RSYNC_REVERSE_ARGS /home/Shared/Music/ $host:/home/Shared/Music/ > /dev/null 2>&1");
     }
 
 } elsif ( -e $path ) {
-    system("rsync -auz $path /home/Shared/Music/ > /dev/null 2>&1");
+    system("rsync -au $path $RSYNC_ARGS /home/Shared/Music/ > /dev/null 2>&1");
     if ($REVERSE)
     {
-        system("rsync -auz /home/Shared/Music/ $path/ > /dev/null 2>&1");
+        system("rsync -au $RSYNC_REVERSE_ARGS /home/Shared/Music/ $path/ > /dev/null 2>&1");
     }
 }
 

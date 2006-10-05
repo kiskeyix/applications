@@ -1,12 +1,16 @@
 #!/usr/bin/perl -w
-# $Revision: 1.1 $
+# $Revision: 1.2 $
 # Luis Mondesi <lemsx1@gmail.com> 
 #
-# Adds user to ldap server running on (tls) ldap://$LDAPSERVER:389
+# DESCRIPTION: Adds user to ldap server running on (tls) 
+# ldap://$LDAPSERVER:389
 # This is NOT a POSIX user, just a regular user to allow chatting
 #
 # This is a modified version of my original script, adduser-ldap.pl
 # http://lems.kiskeyix.org/toolbox/?f=adduser-ldap.pl
+# USAGE: from browser
+# LICENSE: GPL
+###
 
 use strict;
 $|++;    # disable buffer (autoflush)

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.2 $
+# $Revision: 1.3 $
 # Luis Mondesi <lemsx1@gmail.com> 
 #
 # DESCRIPTION: Adds user to ldap server running on (tls) 
@@ -221,7 +221,7 @@ sub print_form
         my $_f = lc($_);
         $_f =~ s/[^[:alnum:]]//g;
         print STDOUT ($html->start_Tr(), "\n", $html->td($_ . ': '), "\n",);
-        if ($_f eq "username")
+        if ($_f eq "username" or $_f eq "email")
         {
 
             # allows changing of username (see javascript code)
@@ -383,8 +383,8 @@ if ($html->param())
     my $uid       = $html->param('username');
     my $password  = $html->param('password');
     my $email     = $html->param('email');
-    my $domain    = $DOMAIN;                    # if (!$html->params('domain'));
-    my $telephone = "555.555.5555";
+    my $domain    = $DOMAIN;
+    my $telephone = $html->param('telephone');
 
     print STDERR (
         "Missing first name and/or last name. Click back in your browser to fix it.\n"

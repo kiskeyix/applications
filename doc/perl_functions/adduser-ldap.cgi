@@ -1,21 +1,21 @@
 #!/usr/bin/perl -w
-# $Revision: 1.3 $
-# Luis Mondesi <lemsx1@gmail.com> 
+# $Revision: 1.4 $
+# Luis Mondesi <luis.mondesi@americanhm.com>
 #
-# DESCRIPTION: Adds user to ldap server running on (tls) 
+# DESCRIPTION: Adds user to ldap server running on (tls)
 # ldap://$LDAPSERVER:389
 # This is NOT a POSIX user, just a regular user to allow chatting
 #
 # This is a modified version of my original script, adduser-ldap.pl
-# http://lems.kiskeyix.org/toolbox/?f=adduser-ldap.pl
-# USAGE: from browser
+# Get latest from:
+# http://lems.kiskeyix.org/toolbox/?f=adduser-ldap.cgi
+# USAGE: from browser 
 # LICENSE: GPL
 ###
 
 use strict;
 $|++;    # disable buffer (autoflush)
 
-use Carp;                     # croak() cluck() carp()
 eval "use Net::LDAP";
 if ($@)
 {
@@ -52,38 +52,38 @@ if ($@)
 my $DEBUG = 0;
 
 my $MAILHOST      = "localhost";                          # use this mail server
-my $FROM          = "AccountControl\@example.com";
-my $CC            = "Security\@example.com";
-my $SUBJECT       = "New chat.example.com Account";
+my $FROM          = "AccountControl\@americanhm.com";
+my $CC            = "SecurityEngineering\@americanhm.com";
+my $SUBJECT       = "New chat.americanhm.com Account";
 my $TIMEOUT       = 90;                                   # smtp timeout
 my $TEMPLATE_MESSAGE = <<EOF;
 Hello \@firstname\@,
 
-Your new chat.example.com account is:
+Your new chat.americanhm.com account is:
 
 User Name:  \@username\@
 Password:   \@password\@
-Server:     chat.example.com
+Server:     chat.americanhm.com
 Port:       5222
 
 Encryption is required (TLS)
 
 Notes:
+* Do not share your password with anybody
 * Clients that are known to work
     - Exodus 0.9.1 (http://www.jabberstudio.org/projects/exodus/releases/)
     - Gaim 2.0b3   (http://sourceforge.net/project/showfiles.php?group_id=235)
 
-* To search for other Chat users, use the server "search.chat.example.com"
+* To search for other AHM users, use the server "search.chat.americanhm.com"
 EOF
 
 my $LDAPADMINCN =
-  "uid=admin,ou=Administrators,ou=TopologyManagement,o=netscapeRoot";
+  "uid=cadmin,ou=Administrators,ou=TopologyManagement,o=netscapeRoot";
 my $LDAPPASSWORDFILE = "/etc/adduser-ldap.secret";
-# man Net::LDAP
-my $LDAPCACERT       = '/etc/ldap/cacerts/5eb9559f.0';
-my $LDAPSERVER       = "ldap.example.com";
+my $LDAPCACERT       = '/etc/ldap/cacerts/5be5959f.0';
+my $LDAPSERVER       = "css3.americanhm.com";
 my $OU               = "People";
-my $DOMAIN           = "example.com";
+my $DOMAIN           = "americanhm.com";
 
 my $PASS_SCHEME      = "{crypt}";
 
@@ -98,42 +98,39 @@ my $html = new CGI;
 #
 # Note that "domain" was explicitly left out
 my @fields =
-  ("First Name", "Last Name", "User Name", "Password", "E-Mail", "Telephone");
+  ("First Name*", "Last Name*", "User Name*", "Password", "E-Mail*", "Telephone");
+
+my $intro = <<EOF;
+<pre class='code'>
+Welcome to the chat.americanhm.com creation page
+
+This form is used to create new accounts for American Home Mortgage (AHM)
+Chat server or for reseting passwords to existing users.
+
+Details on how to configure the chat client will be sent to the user when
+this form is completed.
+
+Users should archive the email they receive as they have no way to change
+their own passwords.
+
+When creating accounts here:
+
+- fields marked with an asterisk (*) are required
+- if password is left blank, one will be generated and emailed to the user
+- a message will be sent to the E-Mail address provided
+- the email will be shown as coming from: $FROM
+- the email subject will be: $SUBJECT
+
+</pre>
+EOF
 
 my $style = <<EOF;
-SELECT,TEXTAREA
-{
-    font-family : Verdana, "hoefler text", Tahoma, Helvetica, sans-serif;
-    font-size : 10pt;
-    color : #808080;
-    text-decoration : none;
-}
-BODY
-{
-    font-family : Verdana, "hoefler text", Tahoma, Helvetica, sans-serif;
-    font-size : 11pt;
-    color : #808080;
-    text-decoration : none;
-    background: #ffffff;
-}
-input {
-    border: #000 1px solid;
-    margin: 3px;
-}
-hr {
-    color:  #808080;
-    height: 1px;
-    width: 80%;
-}
-.template {
-    font-family : Arial,Verdana, "hoefler text", Tahoma, Helvetica, sans-serif;
-    font-size : 12pt;
-    color : #000000;
-    text-decoration : none;
-    background: #ffffff;
+.code {
+    background-color: lightyellow;
+    width: 70%;
 }
 .smalltext {
-        font-size: 6pt;
+        font-size: 8pt;
         font-family: sans-serif;
 }
 .errortext {
@@ -151,7 +148,6 @@ hr {
         font-family: sans-serif;
         color: green;
 }
-
 EOF
 
 my $jscript = <<EOF;
@@ -169,7 +165,7 @@ my $jscript = <<EOF;
 
         if (document.form1.email)
         {
-            document.form1.email.value = fname + '.' + lname + '\@example\.com';
+            document.form1.email.value = fname + '.' + lname + '\@americanhm\.com';
         }
         if (document.form1.firstname)
         {
@@ -211,7 +207,8 @@ EOF
 
 sub print_form
 {
-    print $html->h1("Add chat.example.com User");
+    print $html->h1("Add chat.americanhm.com User");
+    print $intro;
     print $html->hr();
     print $html->start_form('-name'   => "form1",
                             '-action' => "/cgi-bin/adduser-chat.cgi");
@@ -242,6 +239,8 @@ sub print_form
     print $html->end_table();
     print $html->p({'-class' => 'smalltext'},
                    "Sample password: " . random_password(8));
+    print ($html->p($html->checkbox('-name'=>'password_reset',
+                '-label'=>"Password Reset")),"\n");
     print $html->reset() . " " . $html->submit() . "\n";
     print $html->end_form();
     print $html->hr();
@@ -279,9 +278,9 @@ sub hash_password
 sub _create_entry
 {
     my ($ldap, $dn, $whatToCreate) = @_;
-    if (0)
+    if ($DEBUG)
     {
-        print "<pre>";
+        print "DEBUG: _create_entry <pre>";
         print("dn: ", $dn, "\n");
         foreach (@$whatToCreate)
         {
@@ -291,6 +290,39 @@ sub _create_entry
     }
     my $result = $ldap->add($dn, 'attr' => [@$whatToCreate]);
     return $result;
+}
+
+# @param whatToModify a hashref like " userPassword => 'foo' "
+sub _modify_entry
+{
+    my ($ldap, $dn, $whatToModify) = @_;
+    my $result = $ldap->modify($dn, 'replace' => { %$whatToModify });
+    return $result;
+}
+
+sub _ldap_search
+{
+    my ($ldap,$searchString,$attrs,$base) = @_;
+    # if they dont pass a base... set it for them
+    if (!$base)
+    { 
+        $base = "ou=$OU, dc=americanhm, dc=com";
+    }
+    # if they dont pass an array of attributes...
+    # set up something for them
+    if (!$attrs ) { $attrs = [ 'cn','mail' ]; }
+    my $result = $ldap->search ( 
+        'base'    => $base,
+        'scope'   => "sub",
+        'filter'  => $searchString,
+        'attrs'   =>  $attrs
+    );
+    return $result;
+}
+
+sub _reset_password
+{
+    my ($user,$password) = @_;
 }
 
 sub _get_password
@@ -364,10 +396,10 @@ sub _debug
 # main ()
 print $html->header();
 print $html->start_html(
-                        '-title'  => 'New chat.example.com account',
+                        '-title'  => 'New chat.americanhm.com account',
                         '-script' => $jscript,
                         '-style'  => {
-                                     '-src'  => "/styles/style.css",
+                                     '-src'  => "/styles/mail-ahm.css",
                                      '-code' => $style
                                     }
                        );
@@ -383,7 +415,7 @@ if ($html->param())
     my $uid       = $html->param('username');
     my $password  = $html->param('password');
     my $email     = $html->param('email');
-    my $domain    = $DOMAIN;
+    my $domain    = $DOMAIN;                    # if (!$html->params('domain'));
     my $telephone = $html->param('telephone');
 
     print STDERR (
@@ -438,7 +470,7 @@ userPassword: ${PASS_SCHEME}${hash_password}
 \n";
 
     # this is used by Net::LDAP
-    my $create_dn = "uid=${uid},${ou}${domain_joined}";
+    my $_dn = "uid=${uid},${ou}${domain_joined}";
     my $create_ary = [
                    objectClass =>
                      [ "top", "person", "organizationalPerson", "inetorgperson" ],
@@ -458,9 +490,8 @@ userPassword: ${PASS_SCHEME}${hash_password}
 
     # TODO make sure we have the right access level to read
     # cafile below!
-    #
-    # you can comment this out if you have problems with TLS
-    $ldap->start_tls('cafile' => $LDAPCACERT);
+    #$ldap->start_tls('cafile' => $LDAPCACERT);
+
 
     _debug($LDAPADMINCN); 
     _debug(_get_password($LDAPPASSWORDFILE));
@@ -499,48 +530,90 @@ userPassword: ${PASS_SCHEME}${hash_password}
 
         if ($FOUND_UID)
         {
-
-            # $mesg->error_text() yields success now...
-            print $html->p({'-class' => 'errortext'},
-                           "An user with uid $uid already exits");
-            if ($DEBUG)
+            # is the password_reset checkbox actually checked?
+            if ( $html->param("password_reset") 
+                    and $html->param("password_reset") eq "on" )
             {
-                print $html->start_table();
+                # password reset
+                # first get the actual dn
+                my $result_search = _ldap_search($ldap,"uid=$uid");
 
-                # already got my $max = $mesg->count();
-                for (my $i = 0 ; $i < $max ; $i++)
-                {
-                    my $entry = $mesg->entry($i);
-                    foreach my $attr ($entry->attributes())
-                    {
-                        next if ($attr =~ /passw/);    # skip password printing
-                        print STDOUT (
-                                      $html->Tr(
-                                              $html->td($attr),
-                                              $html->td(
-                                                  $html->span(
-                                                      {'-class' => 'errortext'},
-                                                      $entry->get_value($attr)
-                                                  )
-                                              )
-                                      ),
-                                      "\n"
-                                     );
-                    }
+                # we should only find 1 entry
+                if ( $result_search->count() != 1 )
+                { 
+                    print($html->p(
+                            {'-class' => 'errortext'},
+                            " Error while reseting password for uid $uid on $LDAPSERVER: "
+                            . $result_search->error_text()
+                            . ". User $uid was not found in the database\n"
+                        ));
+                    goto EXIT; 
                 }
-                print $html->end_table();
+                my @entries = $result_search->entries;
+                my $_dn = $entries[0]->dn(); # yes.. get the DN
+                # now do the fields that we will modify
+                my %_modify_hash = ( 'userPassword' => "${PASS_SCHEME}${hash_password}" );
+
+                my $entry_result = _modify_entry($ldap, $_dn, \%_modify_hash);
+                if ($entry_result->code())
+                {
+                    print($html->p(
+                            {'-class' => 'errortext'},
+                            " Error while reseting password for uid $uid on $LDAPSERVER: "
+                            . $entry_result->error_text()
+                        )
+                    );
+
+                    _debug(". Server message => code: ".$entry_result->code().". name: ".$entry_result->error_name().". text: ".$entry_result->error_text());
+                    goto EXIT;
+                }
+                print $html->p({'-class' => "successtext"},
+                       "Password reset successfully for user $uid (email: $mid\@$domain)");
+                # email user
+                goto SUCCESS;
+            } else {
+                # $mesg->error_text() yields success now...
+                print $html->p({'-class' => 'errortext'},
+                    "An user with uid $uid already exits");
+                if ($DEBUG)
+                {
+                    print $html->start_table();
+
+                    # already got my $max = $mesg->count();
+                    for (my $i = 0 ; $i < $max ; $i++)
+                    {
+                        my $entry = $mesg->entry($i);
+                        foreach my $attr ($entry->attributes())
+                        {
+                            next if ($attr =~ /passw/);    # skip password printing
+                            print STDOUT (
+                                $html->Tr(
+                                    $html->td($attr),
+                                    $html->td(
+                                        $html->span(
+                                            {'-class' => 'errortext'},
+                                            $entry->get_value($attr)
+                                        )
+                                    )
+                                ),
+                                "\n"
+                            );
+                        }
+                    }
+                    print $html->end_table();
+                }
             }
             goto EXIT;
         }
 
         # at this point we can create the account
-        my $entry_result = _create_entry($ldap, $create_dn, $create_ary);
+        my $entry_result = _create_entry($ldap, $_dn, $create_ary);
         if ($entry_result->code())
         {
             print($html->p(
                      {'-class' => 'errortext'},
                      " Error while creating entry for uid $uid on $LDAPSERVER: "
-                       . $mesg->error_text()
+                       . $entry_result->error_text()
                  )
             );
 
@@ -551,6 +624,7 @@ userPassword: ${PASS_SCHEME}${hash_password}
         print $html->p({'-class' => "successtext"},
                        "User $uid created (email: $mid\@$domain)");
         
+        SUCCESS:
         my $_message = $TEMPLATE_MESSAGE;
        
         $_message =~ s/\@fullname\@/$full_name/mi;

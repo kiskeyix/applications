@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 # http://blog.neontology.com/articles/2006/05/10/beautiful-ruby-in-textmate
+# http://www.arachnoid.com/ruby/rubyBeautifier.html
 #
 # Ruby beautifier, version 1.3, 04/03/2006
 # Copyright (c) 2006, P. Lutus

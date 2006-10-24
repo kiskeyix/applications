@@ -1,0 +1,132 @@
+2006-10-24 10:30  luigi
+
+	* rubybeautifier.rb, skeleton.rb, vimrc: adds support for Ruby
+
+2006-06-23 04:15  luigi
+
+	* plugin/svncommand.vim, syntax/svn.vim, syntax/svnlog.vim: first
+	  commit
+
+2006-06-23 02:39  luigi
+
+	* doc/cvscommand.txt, plugin/cvscommand.vim,
+	  syntax/CVSAnnotate.vim: new version of cvs plugin
+
+2006-06-13 03:02  luigi
+
+	* vimrc: fixes tags file
+
+2006-05-24 10:53  luigi
+
+	* skeleton.pm: modernized
+
+2006-05-17 15:07  luigi
+
+	* skeleton.pm: modernized
+
+2006-05-13 02:12  luigi
+
+	* vimrc: minor fixes
+
+2006-05-08 14:30  luigi
+
+	* vimrc: how to generate system tags file
+
+2006-05-03 15:28  luigi
+
+	* vimrc: fixes minor bug
+
+2006-05-03 15:09  luigi
+
+	* vimrc: read local files
+
+2006-05-03 14:56  luigi
+
+	* vimrc: deals with RPM %changelog format
+
+2006-04-10 01:36  luigi
+
+	* skeleton.pl: fixes comments
+
+2006-03-22 13:38  luigi
+
+	* skeleton.pl, skeleton.pm: cleaned up with indent
+
+2006-03-22 13:23  luigi
+
+	* skeleton.pl: adds _usage() for those cases when you need to print
+	  how to use your script
+
+2006-03-17 13:22  luigi
+
+	* vimrc: tidy formats HTML/php files better
+
+2006-03-17 13:13  luigi
+
+	* vimrc: fixes minor bugs in filtering text with BenIndent()
+
+2006-03-17 12:19  luigi
+
+	* vimrc: minor fixes
+
+2006-03-17 12:11  luigi
+
+	* vimrc: different way to indent lines
+
+2006-02-11 23:57  luigi
+
+	* skeleton.pl: prints CVS Revision
+
+2006-01-04 12:40  luigi
+
+	* vimrc: recode my files
+
+2006-01-03 13:11  luigi
+
+	* skeleton.html: IE doesn't like the xml string
+
+2005-12-16 23:57  luigi
+
+	* vimrc: no way to tell vi to format like indent or indent like
+	  vi... what a mess. this uses both. -- and =. -- should be used
+	  minimally followed by visual(:0G=)
+
+2005-12-16 20:22  luigi
+
+	* vimrc: standarize all my commands to be used in normal mode
+	  starting with a ,. others are commented out because i never use them
+
+2005-12-16 19:58  luigi
+
+	* vimrc: cino=t8 <--- makes type for function returns in .c be
+	  indented to 8 spaces
+
+2005-12-14 09:54  luigi
+
+	* skeleton.sh: standarize skeleton file
+
+2005-11-23 14:31  luigi
+
+	* skeleton.pl: adds usage. splits =pod comments better
+
+2005-11-23 12:14  luigi
+
+	* pager: who cares about line numbers in man pages?
+
+2005-11-18 02:52  luigi
+
+	* filetype.vim, vimrc: new php indenting and turns off numbering
+	  all files by default
+
+2005-09-25 18:10  luigi
+
+	* README, vimrc: first commit
+
+2005-09-25 18:07  luigi
+
+	* filetype.vim, gvimrc, menu.vim, myscripts.vim, pager,
+	  skeleton.html, skeleton.php, skeleton.pl, skeleton.pm,
+	  skeleton.sh, skeleton.tcl, doc/cvscommand.txt, doc/taglist.txt,
+	  plugin/CVSAnnotate.vim, plugin/cvscommand.vim,
+	  plugin/taglist.vim, syntax/CVSAnnotate.vim: first commit
+

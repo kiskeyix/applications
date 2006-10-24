@@ -143,6 +143,8 @@ fun BenIndent()
         :%!tidy -quiet -utf8 -indent -clean -asxhtml
     elseif g:IndentStyle == "php"
         :%!tidy -quiet -utf8 -indent -clean 
+    elseif g:IndentStyle == "ruby"
+        :%!~/.vim/rubybeautifier.rb
     endif
     exe ':' . oldLine
 endfun
@@ -270,6 +272,15 @@ augroup perl
         " The default syntax highlight syncing scheme is too slow (which makes
         " backwards scrolling very slow), so we reset it to something faster
         " au BufReadPost *.pm,*.pl syntax sync clear | syntax sync lines=30
+    endif
+augroup END
+
+augroup ruby
+    if !exists("autocommands_ruby_loaded")
+        let autocommands_ruby_loaded = 1
+        au BufReadPre *.rb set sw=3 sts=3 nu | let IndentStyle = "ruby"
+        
+        au BufNewFile *.rb 0r ~/.vim/skeleton.rb | let IndentStyle = "ruby"
     endif
 augroup END
 

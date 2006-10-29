@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.5 $
+# $Revision: 1.6 $
 # Luis Mondesi <lemsx1@gmail.com>
 #
 # DESCRIPTION: Adds user to ldap server running on (tls)
@@ -330,11 +330,6 @@ sub _ldap_search
                     'attrs'  => $attrs
                    );
     return $result;
-}
-
-sub _reset_password
-{
-    my ($user, $password) = @_;
 }
 
 sub _get_password

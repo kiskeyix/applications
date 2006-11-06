@@ -1,5 +1,7 @@
 #!/usr/bin/perl -w
-#
+# DESCRIPTION: renames file names
+# USAGE: rename 'REGEX' FILE_LIST
+# LICENSE: Perl
 #  This script was developed by Robin Barker (Robin.Barker@npl.co.uk),
 #  from Larry Wall's original script eg/rename from the perl source.
 #
@@ -9,10 +11,13 @@
 # Larry(?)'s RCS header:
 #  RCSfile: rename,v   Revision: 4.1   Date: 92/08/07 17:20:30 
 #
-# $RCSfile: rename,v $$Revision: 1.1 $$Date: 2002-11-07 06:46:57 $
+# $RCSfile: rename,v $$Revision: 1.2 $$Date: 2006-11-06 14:25:27 $
 #
 # $Log: rename,v $
-# Revision 1.1  2002-11-07 06:46:57  luigi
+# Revision 1.2  2006-11-06 14:25:27  luigi
+# added vars
+#
+# Revision 1.1  2002/11/07 06:46:57  luigi
 # rename script from perl distrib
 #
 # Revision 1.5  1998/12/18 16:16:31  rmb1

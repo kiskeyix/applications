@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.9 $
-# $Date: 2006-01-03 03:58:02 $
+# $Revision: 1.10 $
+# $Date: 2006-11-11 15:05:37 $
 # Luis Mondesi <lemsx1@gmail.com>
 #
 # DESCRIPTION: Use this to add a file or series of files to
@@ -21,6 +21,7 @@ use Getopt::Long;
 Getopt::Long::Configure('bundling');
 
 my $DEBUG = 0;
+my $HELP = 0;
 my $INCLUDE_DIRS=0;
 my $EXCEPTIONS_REGEX = "(.*\.swp\$|.*\.o\$|.*\.so\$)";
 my @FILES = ();
@@ -29,7 +30,7 @@ my $CVS_COMMAND = "cvs -q -w -z3 ";
 GetOptions(
     # flags
 #    'v|version'         =>  \$PVERSION,
-#    'h|help'            =>  \$HELP,
+    'h|help'            =>  \$HELP,
     'D|debug'           =>  \$DEBUG,
     'd|include-dirs'    =>  \$INCLUDE_DIRS,
     # strings
@@ -37,6 +38,18 @@ GetOptions(
     # numbers
     #'a|another-option=i'      =>  \$NEW_ANOTHER_OPTION,
 );
+
+sub _usage
+{
+    use Pod::Usage;
+    pod2usage(1);
+}
+
+if ($HELP)
+{
+    _usage();
+    exit 0;    # never reaches here
+}
 
 sub is_image
 {

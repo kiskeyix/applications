@@ -48,7 +48,7 @@ Associative::~Associative ()
              m_str_array.begin (); i != m_str_array.end (); i++)
         {
                 std::cout << "Destroyed " << i->first << std::endl;
-                //delete i->second->value; ?? this causes double-free error
+                delete i->second;
         }
 }
 

@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.4 $
+# $Revision: 1.5 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple package that exports ...
@@ -105,7 +105,6 @@ sub _define
     {
         $self->{'skeleton'} = 1;
     }
-    $skeleton = $self->{'skeleton'};
     
     # here we should call _define() from e/a of the classes we imported @ISA
     for my $class ( @ISA )
@@ -219,3 +218,7 @@ Luis Mondesi <lemsx1@gmail.com>
 =cut
 
 1;
+
+#package main;
+#my $foo = skeleton->new('skeleton' => 1, 'debug' => 0);
+#$foo->foo("hello world\n");

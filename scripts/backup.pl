@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.46 $
+# $Revision: 1.47 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Mar-13
 #
@@ -135,29 +135,37 @@
 #   COMPRESS_LEVEL will be used for either "tar" or Archive::Tar
 # LICENSE: GPL
 
+=pod
+
+=head1 NAME
+
+backup.pl - UNIX backup script
+
+=head1 DESCRIPTION 
+
+    This script allows you to backup a POSIX system running Perl. It can be configure from the default location ~/.backuprc and it takes care of backing up user's $HOME directories as well as important system directories.
+
+=cut
+
 use strict;
 $|++;
+
+my $revision = '$Revision: 1.47 $';    # version
+$revision =~ s/(\\|Revision:|\s|\$)//g;
+
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
-
-# test whether we should use Archive::Tar
-my $ARCHIVE_TAR = 1;    # assume yes
-eval "use Archive::Tar";
-if ($@)
-{
-    warn "Archive::Tar Perl module not found. "
-      . "You must use TAR=/usr/bin/tar and "
-      . "COMPRESS_DO=/usr/bin/gzip in your ~/.backuprc\n";
-    $ARCHIVE_TAR = 0;
-}
 
 use Sys::Hostname;
 use File::Find;         # find();
 use File::Basename;     # basename();
 
-my $DEBUG = 0;          # set to 1 to print debugging messages
+my $DEBUG     = 0;      # set to 1 to print debugging messages. see --debug
+my $VERBOSE   = 0;      # --verbose
+my $HELP      = 0;
+my $USAGE     = 0;
 
-my %MY_CONFIG   = ();
+my %MY_CONFIG = ();
 my $CONFIG_FILE = $ENV{"HOME"} . "/.backuprc";
 
 $MY_CONFIG{"NAME"} = hostname();    # default name
@@ -189,17 +197,82 @@ $MY_CONFIG{"SYSTEM"} = "/etc /var/mail /var/spool /var/lib/iptables /root";
 #           No need to modify anything below here             #
 #-------------------------------------------------------------#
 
-my $FREQ     = "daily";
+my $FREQ = "daily";
+
+=pod
+
+=head1 SYNOPSIS
+
+B<backup.pl>    [-c,--config FILE]
+                [-D,--debug] 
+                [-h,--help]
+                [-U,--usage]
+                [-v,--version]
+                [-V,--verbose]
+                [frequency]
+
+=head1 OPTIONS
+
+=over 8
+
+=item -c,--config FILE
+
+Use this configuration file instead of the default ~/.backuprc
+
+=item -v,--version
+
+Prints version and exits
+
+=item -V,--verbose
+
+Prints extra messages about what's being done
+
+=item -D,--debug
+
+Enables debug mode
+
+=item -h,--help
+
+Prints this help and exits
+
+=item -U,--usage
+
+Prints usage information and exits
+
+=item frequency
+
+How often is this backup run. Note that this is just a string identifying the resulting file. Good examples are: weekly (when running from a weekly cron job), daily (for daily crons), etc...
+This will result in files like: system-daily.tar.gz. Instead of the default: system-`date -I`.tar.gz
+
+=back
+
+=cut
 
 ## GET OPTIONS ##
 GetOptions(
 
     # flags
-    'D|debug' => \$DEBUG,
+    'D|debug'   => \$DEBUG,
+    'V|verbose' => \$VERBOSE,
 
     # strings
     'c|config=s' => \$CONFIG_FILE
 ) and $FREQ = shift;
+
+# test whether we should use Archive::Tar
+my $ARCHIVE_TAR = 1;    # assume yes
+eval "use Archive::Tar";
+if ($@)
+{
+    if ($VERBOSE)
+    {
+        warn "Archive::Tar Perl module not found. "
+        . "You must use TAR=/usr/bin/tar and "
+        . "COMPRESS_DO=/usr/bin/gzip in your ~/.backuprc\n";
+    }
+    $ARCHIVE_TAR = 0;
+}
+
 
 # init defaults from $CONFIG_FILE
 my %TMP_CONFIG = init_config($CONFIG_FILE);    # override defaults with...
@@ -222,7 +295,7 @@ foreach my $hashref (\%MY_CONFIG, \%TMP_CONFIG)
 {
     while (($k, $v) = each %$hashref)
     {
-        if ($DEBUG && exists $CONFIG{$k})
+        if ($DEBUG and exists $CONFIG{$k})
         {
             print STDERR
               "Warning: $k seen twice.  Using the second definition.\n";
@@ -252,10 +325,10 @@ $CONFIG{"NAME"} =~ s/[[:blank:]]+//g;
 # TODO is there a better way of locking this process?
 # if our backup is going to a NFS shared disk, we don't
 # want to allow two of the same processes running from
-# the same host. So this lock has to be unique, but 
+# the same host. So this lock has to be unique, but
 # consistent (so if we run from a cron, we know we are still
 # running. mktemp is not a good choice).
-my $TMP_LOCK = ".".$CONFIG{'NAME'}."-backup-lock";
+my $TMP_LOCK = "." . $CONFIG{'NAME'} . "-backup-lock";
 
 # be backward compatible
 if (-d $CONFIG{"BAK"})
@@ -299,7 +372,7 @@ if (!-e $TMP_LOCK)
     # if you are using one of those, then change this to "-e" (exists)
     # or something similar... you have been warned! Solaris?
     # Same for the -x in the following statement
-    if (exists $CONFIG{"TAR"} && -x $CONFIG{"TAR"})
+    if (exists $CONFIG{"TAR"} and -x $CONFIG{"TAR"})
     {
         $USE_TAR = 1;
 
@@ -320,14 +393,14 @@ if (!-e $TMP_LOCK)
             "%s -clps --same-owner --atime-preserve -f - %s  xxFILESxx 2> /dev/null ",
             $CONFIG{"TAR"}, $TMP_EXCLUDES);
     }
-    elsif (exists $CONFIG{"TAR"} && $DEBUG)
+    elsif (exists $CONFIG{"TAR"} and $DEBUG)
     {
-        print STDERR "Tar was given but not found! \n";
+        print STDERR "Tar was given (".$CONFIG{"TAR"}.") but not found! \n";
     }
 
     if (   exists $CONFIG{"COMPRESS_DO"}
-        && $USE_TAR
-        && -x $CONFIG{"COMPRESS_DO"})
+        and $USE_TAR
+        and -x $CONFIG{"COMPRESS_DO"})
     {
 
         # reuse COMMAND from above and
@@ -336,9 +409,9 @@ if (!-e $TMP_LOCK)
                            $COMMAND, $CONFIG{"COMPRESS_DO"},
                            $CONFIG{"COMPRESS_LEVEL"});
     }
-    elsif (exists $CONFIG{"COMPRESS_DO"} && $DEBUG)
+    elsif (exists $CONFIG{"COMPRESS_DO"} and $DEBUG)
     {
-        print STDERR "Compress utility not found! \n";
+        print STDERR "Compress utility not found! (".$CONFIG{"COMPRESS_DO"}.")\n";
     }
 
     # ========== START BACKUP PROCESS ================= #
@@ -349,7 +422,7 @@ if (!-e $TMP_LOCK)
         # next system() call to the background and move on
         # with backup
         # emit an audible alert
-	my ($sec, $min, $hour, $mday, $mon, $year) = localtime;
+        my ($sec, $min, $hour, $mday, $mon, $year) = localtime;
         system(  "/usr/bin/flite -t 'Starting backup process at " . $hour . " "
                . $min
                . "' &");
@@ -367,7 +440,7 @@ if (!-e $TMP_LOCK)
         # check for two spaces or commas in list
         @tmp_dirs = split(/ +|,+/, $CONFIG{"SYSTEM"});
 
-        print STDOUT "Backing up system files \n";
+        print STDOUT "Backing up system files \n" if ($VERBOSE);
         if ($USE_TAR)
         {
 
@@ -436,7 +509,7 @@ if (!-e $TMP_LOCK)
         #print "$r[0]:$r[1]:$r[2]:$r[3]:$r[6]:$r[7]:$r[8]\n";
         if (
 
-            $r[0] !~ m/$users_excluded_pattern/i && $CONFIG{"LOW_UID"} <= $r[2]
+            $r[0] !~ m/$users_excluded_pattern/i and $CONFIG{"LOW_UID"} <= $r[2]
            )
         {
             $user{$r[0]} = $r[7];
@@ -449,7 +522,7 @@ if (!-e $TMP_LOCK)
     print STDOUT join("\n", %user) . "\n" if ($DEBUG);
 
     # Users backup
-    print STDOUT "Backing up users files... \n";
+    print STDOUT "Backing up users files... \n" if ($VERBOSE);
 
     # foreach user, put the list of their files in this array
     my ($k, $v) = "";
@@ -530,7 +603,7 @@ if (!-e $TMP_LOCK)
         # check for two spaces or commas in list
         @tmp_dirs = split(/ +|,+/, $CONFIG{"DIRS"});
 
-        printf STDOUT "Backing up other files %s \n", $CONFIG{"DIRS"};
+        printf STDOUT ("Backing up other files %s \n", $CONFIG{"DIRS"}) if ($VERBOSE);
 
         if ($USE_TAR)
         {
@@ -605,16 +678,18 @@ if (!-e $TMP_LOCK)
         system("dpkg --get-selections \\* > $sel &");
         if ($? == 0)
         {
-            print STDOUT "Debian selections file created as:"
+            print STDOUT ("Debian selections file created as:"
               . " $sel.\n "
               . " Use:\n dpkg --set-selections < $sel"
-              . " && dselect install \n to restore from this list.\n";
+              . " && dselect install \n to restore from this list.\n") if ($VERBOSE);
         }
     }
 }
 else
 {
-    die("Lock file " . $CONFIG{"BACKUPDIR"} . "/$TMP_LOCK exists... exiting.\n");
+    die(  "Lock file "
+        . $CONFIG{"BACKUPDIR"}
+        . "/$TMP_LOCK exists... exiting.\n");
 }
 
 #------------------------------------------------------#
@@ -653,6 +728,7 @@ sub init_config
     else
     {
         print STDERR "Could not open $CONFIG_FILE\n";
+
         # TODO if not running interactively do not prompt
         my $response = prompt("Do you want to continue? [y/N] ");
         if ($response ne 'y')
@@ -699,7 +775,7 @@ sub process_file
 
     #my $base_name = basename($_);
     if ($_ !~ m,$CONFIG{"EXCLUDES"},g
-        && -f $_)
+        and -f $_)
     {
         push @tmp_files, clean("$_");
 

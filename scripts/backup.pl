@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.48 $
+# $Revision: 1.49 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Mar-13
 #
@@ -110,7 +110,7 @@ BACKUPDIR=/dir/to/store/backups
 use strict;
 $|++;
 
-my $revision = '$Revision: 1.48 $';    # version
+my $revision = '$Revision: 1.49 $';    # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 use Getopt::Long;
@@ -179,14 +179,6 @@ B<backup.pl>    [-c,--config FILE]
 
 Use this configuration file instead of the default ~/.backuprc
 
-=item -v,--version
-
-Prints version and exits
-
-=item -V,--verbose
-
-Prints extra messages about what's being done
-
 =item -D,--debug
 
 Enables debug mode
@@ -198,6 +190,14 @@ Prints this help and exits
 =item -U,--usage
 
 Prints usage information and exits
+
+=item -v,--version
+
+Prints version and exits
+
+=item -V,--verbose
+
+Prints extra messages about what's being done
 
 =item frequency
 

@@ -1,138 +1,10 @@
 #!/usr/bin/perl -w
-# $Revision: 1.47 $
+# $Revision: 1.48 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Mar-13
 #
-# DESCRIPTION: backups a UNIX system using Perl's Archive::Tar
-#               or a user specified command archiver ( tar? )
-#
-#              it will create files in the form:
-#
-#               backup-system-%date-tar.bz2
-#               backup-user-USER1-%date-tar.bz2
-#               backup-user-USER2-%date-tar.bz2
-#               ...
-#               backup-other-%date-tar.bz2
-#
-#               or
-#
-#               backup-system-daily-tar.bz2
-#               backup-user-USER1-daily-tar.bz2
-#               ...
-#               backup-other-daily-tar.bz2
-#
-#               Run from a cronjob daily by passing the "daily"
-#               argument, or weekly/monthly whatever without
-#               the daily argument
-#
+# DESCRIPTION: backups a UNIX system using Perl's Archive::Tar or a user specified command archiver like tar. See --help for more
 # USAGE: backup.pl [daily]
-#
-# SAMPLE CONFIGURATION:
-# ##Example $HOME/.backuprc
-# # --- CUT HERE --- #
-# # uncommend below what you want to customize
-# # BACKUPDIR must be specify for the script to work properly.
-# # unless you want to put the files in /home/backup
-# #TAR=/usr/local/bin/tar
-# #COMPRESS_LEVEL=9
-# ## bzip2 or gzip? or don't define if no compression is needed
-# #COMPRESS_DO=/bin/gzip
-# ## prefix to name of the file
-# #NAME=imac-home
-#
-# ## Users must define this
-# BACKUPDIR=/dir/to/store/backups
-# ##perl compatible + shell regex
-# #EXCLUDES=.*contain-this.*|\.ends-in-that$|starts-with.*|[0-9]*|.[a-z]*$
-#
-# #DIRS=other_dirs_to_backup_separated_by_spaces_or_commas
-# #SYSTEM=system_directories_separated_by_spaces_or_commas
-# #LOW_UID=lowest_uid_number_to_backup
-# #EXC_ULIST=exclude_users_from_list_separated_by_|
-# # --- END CUT --- #
-#
-# TIPS:
-# * If you have "tar" or any other archive utility in your system,
-#   using that makes this process faster than using Archive::Tar...
-#   you have been warned!
-# * Setting the script in debugging mode doesn't create any tar.gz
-#   files.
-# * To override a default value, just specify what you want
-#   in your .backuprc file. For instance:
-#     SYSTEM="".
-#   Would cause the SYSTEM list of directories to be disregarded.
-#   And:
-#     SYSTEM=/dir/1 /dir/2 /dir/3
-#   Would backup only those directories
-#
-# * Do not use quotes in your .backuprc except for the regexp strings
-#
-# * MacOS X users should first make sure they have Archive::Tar
-#   installed
-#   issue the command:
-#     > sudo perl -e shell -MCPAN
-#
-#   and when in CPAN prompt, type:
-#     > install Archive::Tar
-#     > install IO::Zlib
-#
-#   Then follow the prompts.
-#
-# * On any UNIX system you can always opt to defined your own version
-#   of tar like (faster than Archive::Tar):
-#     TAR = /usr/bin/tar
-#   and whether you want to use gzip or bzip2
-#     COMPRESS_DO = /usr/bin/gzip
-#   and your compression level low "0" & "9" highest
-#     COMPRESS_LEVEL=9
-#
-# * The script defaults should be enough for a Debian system :-D
-#   In debian you will need to have installed:
-#       libarchive-tar-perl
-#       libio-zlib-perl (only for unstable)
-#       libcompress-zlib-perl (only for Woody)
-#
-# BUGS:
-# * UNIX has a limit of arguments that can be passed from a command line
-#   or any app. This is usually 131,072 items. To circumbent that
-#   we are:
-#     1. using " --exclude='' " in tar and passing whole directories
-#        to the argument via de system() call
-#     2. if you use Archive::Tar this problem is not an issue
-#
-#     Make sure you have a version of Tar that has --exclude support.
-#     This is version 1.13.25 ( tar --version )
-#     If your version of UNIX ships with a version older than this, or
-#     if it doesn't include this switch, then just use Archive::Tar (
-#     note that this is slower, but works... )
-# * PATTERNS for Perl regexs are different from those used by the shell;
-#   so, if you are using regex like:
-#       [0-9]+.*
-#   To match a file that starts with one or more numbers followed by
-#   anything, in a SHELL this will look like:
-#       [0-9]*.*
-#   As seen by this script. Which could be wrong because the dot (.)
-#   in a SHELL has not the same meaning than in a PCRE. So be carefull
-#   in what pattern you choose to exclude.
-#
-#   Note that this script will attempt to convert from Perl regex to
-#   shell pattern as much as possible, but, you will have to test
-#   that your regex/patterns are actually doing what you intend.
-#   The best way to test this is to create a $HOME/.backuprc file
-#   and put a line like:
-#       EXCLUDES=\.pid$|\.soc$|\.log$|[0-9]+.*
-#   This will work correctly in both the shell and Perl's regex. Again,
-#   because this script will convert that to a shell pattern in the form:
-#       EXCLUDES=*.pid|*.soc|*.log|[0-9]*.*
-#   To use either TAR (faster) or Archive::Tar perl module, all you have
-#   to do in your $HOME/.backuprc is to set the "TAR" variable to point
-#   to the tar binary you want to use, and while at it, also set the
-#   COMPRESS_DO if you want to use compression:
-#       TAR=/usr/bin/tar
-#       COMPRESS_DO=/usr/bin/bzip2
-#
-#   Commenting these two will force the script to use Archive::Tar
-#   COMPRESS_LEVEL will be used for either "tar" or Archive::Tar
 # LICENSE: GPL
 
 =pod
@@ -143,14 +15,102 @@ backup.pl - UNIX backup script
 
 =head1 DESCRIPTION 
 
-    This script allows you to backup a POSIX system running Perl. It can be configure from the default location ~/.backuprc and it takes care of backing up user's $HOME directories as well as important system directories.
+This script allows you to backup a POSIX system using tar or Archive::Tar. It can be configure from the default location ~/.backuprc and it takes care of backing up user's $HOME directories as well as important system directories.
+
+Example: backup.pl daily
+
+=head1 TIPS
+
+* If you have "tar" or any other archive utility in your system,
+  using that makes this process faster than using Archive::Tar...
+  you have been warned!
+
+* Setting the script in debugging mode doesn't create any tar.gz
+  files.
+
+* To override a default value, just specify what you want
+  in your .backuprc file. For instance:
+    SYSTEM="".
+  Would cause the SYSTEM list of directories to be disregarded.
+  And:
+    SYSTEM=/dir/1 /dir/2 /dir/3
+  Would backup only those directories
+
+* Do not use quotes in your .backuprc except for the regexp strings
+
+* MacOS X users should first make sure they have Archive::Tar
+  installed
+  issue the command:
+    > sudo perl -e shell -MCPAN
+
+  and when in CPAN prompt, type:
+    > install Archive::Tar
+    > install IO::Zlib
+
+  Then follow the prompts.
+
+* On any UNIX system you can always opt to defined your own version
+  of tar like (faster than Archive::Tar):
+    TAR = /usr/bin/tar
+  and whether you want to use gzip or bzip2
+    COMPRESS_DO = /usr/bin/gzip
+  and your compression level low "0" & "9" highest
+    COMPRESS_LEVEL=9
+
+* The script defaults should be enough for a Debian system :-D
+  In debian you will need to have installed:
+      libarchive-tar-perl
+      libio-zlib-perl (only for unstable)
+      libcompress-zlib-perl (only for Woody)
+
+=head1 SAMPLE CONFIGURATION
+
+##Example $HOME/.backuprc
+
+# --- CUT HERE --- #
+
+# uncommend below what you want to customize
+
+# BACKUPDIR must be specify for the script to work properly.
+
+# unless you want to put the files in /home/backup
+
+#TAR=/usr/local/bin/tar
+
+#COMPRESS_LEVEL=9
+
+## bzip2 or gzip? or don't define if no compression is needed
+
+#COMPRESS_DO=/bin/gzip
+
+## prefix to name of the file
+
+#NAME=imac-home
+
+## Users must define this
+
+BACKUPDIR=/dir/to/store/backups
+
+##perl compatible + shell regex
+
+#EXCLUDES=.*contain-this.*|\.ends-in-that$|starts-with.*|[0-9]*|.[a-z]*$
+
+#DIRS=other_dirs_to_backup_separated_by_spaces_or_commas
+
+#SYSTEM=system_directories_separated_by_spaces_or_commas
+
+#LOW_UID=lowest_uid_number_to_backup
+
+#EXC_ULIST=exclude_users_from_list_separated_by_|
+
+# --- END CUT --- #
 
 =cut
 
 use strict;
 $|++;
 
-my $revision = '$Revision: 1.47 $';    # version
+my $revision = '$Revision: 1.48 $';    # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 use Getopt::Long;
@@ -164,7 +124,7 @@ my $DEBUG     = 0;      # set to 1 to print debugging messages. see --debug
 my $VERBOSE   = 0;      # --verbose
 my $HELP      = 0;
 my $USAGE     = 0;
-
+my $PVERSION  = 0;
 my %MY_CONFIG = ();
 my $CONFIG_FILE = $ENV{"HOME"} . "/.backuprc";
 
@@ -254,10 +214,34 @@ GetOptions(
     # flags
     'D|debug'   => \$DEBUG,
     'V|verbose' => \$VERBOSE,
-
+    'v|version' => \$PVERSION,
+    'h|help'    => \$HELP,
+    'U|usage'   => \$USAGE,
     # strings
     'c|config=s' => \$CONFIG_FILE
 ) and $FREQ = shift;
+
+if ($HELP)
+{
+    use Pod::Text;
+    my $parser = Pod::Text->new(sentence => 0, width => 78);
+    $parser->parse_from_file($0, \*STDOUT);
+    exit 0;
+}
+
+sub _usage
+{
+    use Pod::Usage;
+    pod2usage(1);
+}
+
+if ($USAGE)
+{
+    _usage();
+    exit 0;    # never reaches here
+}
+
+if ($PVERSION) { print STDOUT ($revision, "\n"); exit 0; }
 
 # test whether we should use Archive::Tar
 my $ARCHIVE_TAR = 1;    # assume yes
@@ -861,3 +845,55 @@ sub get_simple_date
       . sprintf("%02d", $mday);
 
 }
+
+=pod
+
+=head1 BUGS
+
+* UNIX has a limit of arguments that can be passed from a command line
+  or any app. This is usually 131,072 items. To circumbent that
+  we are:
+    1. using " --exclude='' " in tar and passing whole directories
+       to the argument via de system() call
+    2. if you use Archive::Tar this problem is not an issue
+
+    Make sure you have a version of Tar that has --exclude support.
+    This is version 1.13.25 ( tar --version )
+    If your version of UNIX ships with a version older than this, or
+    if it doesn't include this switch, then just use Archive::Tar (
+    note that this is slower, but works... )
+* PATTERNS for Perl regexs are different from those used by the shell;
+  so, if you are using regex like:
+      [0-9]+.*
+  To match a file that starts with one or more numbers followed by
+  anything, in a SHELL this will look like:
+      [0-9]*.*
+  As seen by this script. Which could be wrong because the dot (.)
+  in a SHELL has not the same meaning than in a PCRE. So be carefull
+  in what pattern you choose to exclude.
+
+  Note that this script will attempt to convert from Perl regex to
+  shell pattern as much as possible, but, you will have to test
+  that your regex/patterns are actually doing what you intend.
+  The best way to test this is to create a $HOME/.backuprc file
+  and put a line like:
+      EXCLUDES=\.pid$|\.soc$|\.log$|[0-9]+.*
+  This will work correctly in both the shell and Perl's regex. Again,
+  because this script will convert that to a shell pattern in the form:
+      EXCLUDES=*.pid|*.soc|*.log|[0-9]*.*
+  To use either TAR (faster) or Archive::Tar perl module, all you have
+  to do in your $HOME/.backuprc is to set the "TAR" variable to point
+  to the tar binary you want to use, and while at it, also set the
+  COMPRESS_DO if you want to use compression:
+      TAR=/usr/bin/tar
+      COMPRESS_DO=/usr/bin/bzip2
+
+  Commenting these two will force the script to use Archive::Tar
+  COMPRESS_LEVEL will be used for either "tar" or Archive::Tar
+
+=head1 AUTHORS
+
+Luis Mondesi <lemsx1@gmail.com>
+
+=cut
+

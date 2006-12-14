@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.49 $
+# $Revision: 1.50 $
 # Luis Mondesi < lemsx1@hotmail.com >
 # Last modified: 2005-Mar-13
 #
@@ -110,7 +110,7 @@ BACKUPDIR=/dir/to/store/backups
 use strict;
 $|++;
 
-my $revision = '$Revision: 1.49 $';    # version
+my $revision = '$Revision: 1.50 $';    # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 use Getopt::Long;
@@ -202,7 +202,7 @@ Prints extra messages about what's being done
 =item frequency
 
 How often is this backup run. Note that this is just a string identifying the resulting file. Good examples are: weekly (when running from a weekly cron job), daily (for daily crons), etc...
-This will result in files like: system-daily.tar.gz. Instead of the default: system-`date -I`.tar.gz
+This will result in files like: $CONFIG{NAME}-system-daily.tar.gz. Instead of the default: $CONFIG{NAME}-system-`date -I`.tar.gz. $CONFIG{NAME} is defined in ~/.backuprc with NAME=foo.
 
 =back
 

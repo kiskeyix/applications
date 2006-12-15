@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.27 $
-# $Date: 2006-02-12 05:10:11 $
+# $Revision: 1.28 $
+# $Date: 2006-12-15 18:28:24 $
 #
 # Luis Mondesi < lemsx1@gmail.com >
 #
@@ -11,7 +11,7 @@
 use strict;
 $|++;
 
-my $revision='$Revision: 1.27 $'; # version
+my $revision='$Revision: 1.28 $'; # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # standard Perl modules
@@ -70,7 +70,7 @@ GetOptions(
     'V|verbose'             =>  sub { $VERBOSE++; $SHOW_DUPS++; },
     'S|show-duplicates'     =>  \$SHOW_DUPS,
     'R|remove-empty-dirs'   =>  \$REMOVE_EMPTY_DIRS,
-    'r|remove-duplicates'   =>  sub { $REMOVE_DUPS++; $SHOW_DUPS++; },
+    'r|remove-duplicates'   =>  \$REMOVE_DUPS,
     # strings
     #'o|option=s'           =>  \$NEW_OPTION,
     # numbers

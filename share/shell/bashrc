@@ -330,7 +330,10 @@ if [[ -n "$PRINTUSERS" && $PRINTUSERS -eq 1 && -n "$PS1" && $SHLVL -gt 0 ]]; the
     printusers
 fi
 
-# freeup memory
+#----------------------#
+#      Freeup memory   #
+#----------------------#
+
 unset PRINTUSERS NAME POSITION COMPANY PHONE EMAIL QUOTE DEFAULT_QUOTE DEFAULT_LANG DEFAULT_LC_ALL DEFAULT_LANGUAGE HOST_PROFILE HOST_BASHRC SIGNATURE
  
 ## EOF ##

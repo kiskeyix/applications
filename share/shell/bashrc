@@ -35,7 +35,7 @@
 #===============================================================#
 
 # if we are not in an interactive shell, that we do nothing
-if [[ -z "$PS1" ]]; then return; fi
+if [[ -z "${PS1:-}" ]]; then return; fi
 
 #-----------------------------------#
 #     Source Global Definitions     #
@@ -64,7 +64,7 @@ RECODE=0    # should we recode from iso to utf8?
 ## end signature setup
 
 # ah, fix Cygwin's lack of USER env var
-if [[ -z "$USER" ]]; then
+if [[ -z "${USER:-}" ]]; then
     export USER=`/usr/bin/id | /bin/sed 's/uid=[[:digit:]]\+(\([[:alpha:]]\+\)).*/\1/g'`
 fi
 
@@ -162,12 +162,11 @@ function powerprompt()
         ## trick: first put command in command history, then find it in
         ## the list. TODO find a better way of doing this:
         LOAD=$(command uptime 2> /dev/null | sed -e "s/.*: \([^,]*\).*/\1/" -e "s/ //g")	
-        if [[ -z "$LOAD" ]]; then
+        if [[ -z "${LOAD:-}" ]]; then
             LOAD="NOLOAD_CMD"
         fi
         TIME=$(command date '+%H:%M')
     } 
-
     PROMPT_COMMAND=_powerprompt;
     case $TERM in
         *term | rxvt | vt100 | ansi )
@@ -179,9 +178,9 @@ function powerprompt()
     esac
 }
 
+#fastprompt
 powerprompt	# this is the default prompt - might be slow
 		# If too slow, use fastprompt instead....
-
 
 #-------------------#
 # Personal Aliases  #
@@ -194,7 +193,7 @@ alias ssh='ssh -c blowfish'
 alias cvs='cvs -q -w -z3'
 
 alias diff='diff -burN'
-if [[ -z "$CONCURRENCY_LEVEL" ]]; then
+if [[ -z "${CONCURRENCY_LEVEL:-}" ]]; then
     CONCURRENCY_LEVEL=8
 fi
 alias make="make -j$CONCURRENCY_LEVEL"
@@ -202,15 +201,24 @@ alias make="make -j$CONCURRENCY_LEVEL"
 # we setup MAKEFLAGS for debian to be able to use
 # multiple jobs in make (-j8) and distcc+ccache
 # 2005-12-05 01:15 EST - it happens to create problems.
-# if [[ ! -z "$MAKEFLAGS" ]]; then
+# if [[ ! -z "${MAKEFLAGS:-}" ]]; then
 #     alias debuild="debuild -e MAKEFLAGS"
 # fi
 
 # TODO if apt-get not install, then use lsb_release
 # to know what distro we are running and set alias
 # accordingly using yast2, yum or even rpm and dpkg
-alias swinstall="apt-get install "
-alias swremove="apt-get remove "
+if [[ -f /etc/debian_release ]]; then
+    alias swinstall="apt-get install "
+    alias swremove="apt-get remove "
+elif [[ -f /etc/redhat-release ]]; then
+    # assume Fedora
+    alias swinstall="yum install "
+    alias swremove="yum remove "
+else
+    alias swinstall="echo command not found"
+    alias swremove="echo command not found"
+fi
 
 alias bittorrent-console='bittorrent-console --max_upload_rate 4 --save_in .'
 
@@ -322,5 +330,8 @@ if [[ -n "$PRINTUSERS" && $PRINTUSERS -eq 1 && -n "$PS1" && $SHLVL -gt 0 ]]; the
     printusers
 fi
 
+# freeup memory
+unset PRINTUSERS NAME POSITION COMPANY PHONE EMAIL QUOTE DEFAULT_QUOTE DEFAULT_LANG DEFAULT_LC_ALL DEFAULT_LANGUAGE HOST_PROFILE HOST_BASHRC SIGNATURE
+ 
 ## EOF ##
 

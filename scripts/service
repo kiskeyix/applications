@@ -1,11 +1,14 @@
 #!/usr/bin/perl -w
-# $Revision: 1.15 $
-# $Date: 2006-09-30 07:08:14 $
+# $Revision: 1.16 $
+# $Date: 2007-01-05 18:42:26 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
-# DESCRIPTION: start/stop or removes services in Linux (all distros)
-# USAGE: service <start|stop|restart|remove> <service1 [service2 ... serviceN]>
+# DESCRIPTION: Advanced drop-in replacement for "service" command line utility found on RedHat systems. Use to start/stop or removes services in Linux. Works on all Linux distributions.
+# USAGE: service <start|stop|restart|remove|reload|status|on|off> <service1 [service2 ... serviceN]>
 # LICENSE: GPL
+# BUGS:
+# - A service cannot be called: start, stop, restart, remove, reload, off, on, status
+# - script will do first action found in list (start stop reload...) all other actions are removed
 
 =pod
 
@@ -22,12 +25,18 @@ B<service>  [-v,--version]
             [--list-running] |
             [--list-runlevel] |
             [--list-on] |
-            [--list-off]> | <start|stop|restart|reset|remove|off|on>
+            [--list-off]> | <start|stop|restart|reset|remove|off|on|reload>
                 <service1 service2 ... serviceN>
 
 =head1 EXAMPLES
 
+    # new style like:
+
     service stop apache2 squid gnump3d shorewall
+
+    # or classic RedHat style:
+
+    service apache2 stop
 
     service off fingerd telnetd wu-ftpd
 
@@ -40,6 +49,7 @@ B<service>  [-v,--version]
 =head1 DESCRIPTION 
 
     This script is used for sending commands to a given service or to remove/add a service to the SysV style startup script directories. This script should work well for all Linux distributions. Tested on: RedHat/FedoraCore, SuSe, Ubuntu and Debian.
+    This is a drop-in replacement for the "service" command line utility on RedHat-based systems.
     
     Adding more distributions is as simple as:
     
@@ -50,22 +60,25 @@ B<service>  [-v,--version]
 =cut
 
 use strict;
+use File::Basename qw/ basename /;
 $|++;
 
 $ENV{'PATH'} .= ":/sbin:/usr/sbin";
 
-my $revision = '$Revision: 1.15 $';    # version
+my $revision = '$Revision: 1.16 $';    # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
+# service is the template for the command to execute
+# /etc/init.d/service_name action
 my %redhat_commands = (
                        'on'      => 'chkconfig %s on',
                        'off'     => 'chkconfig %s off',
-                       'service' => '/etc/init.d/%s %s',
+                       'service' => '/etc/init.d/%s %s'
                       );
 my %debian_commands = (
                        'on'      => 'update-rc.d %s defaults',
                        'off'     => 'update-rc.d -f %s remove',
-                       'service' => '/etc/init.d/%s %s',
+                       'service' => '/etc/init.d/%s %s'
                       );
 
 # now assign commands accordingly
@@ -102,7 +115,7 @@ enables debug mode
 
 prints this help and exits
 
-=item start,stop,restart,status
+=item start,stop,restart,status,reload
 
 sends these arguments to the given services
 
@@ -163,7 +176,7 @@ GetOptions(
     'list-runlevel' => sub { $LIST_LEV++; $LIST_ON++; $LIST_OFF++; },
     'list-on'       => sub { $LIST_LEV++; $LIST_ON++; },
     'list-off'      => sub { $LIST_LEV++; $LIST_OFF++; },
-) and $ACTION = shift;
+);# and $ACTION = shift;
 
 if ($HELP)
 {
@@ -287,14 +300,26 @@ if ($LIST_ALL or $LIST_RUN or $LIST_LEV or $LIST_ON or $LIST_OFF)
     exit(0);
 }
 
+my $_args = join(",",@ARGV);
+
+if ( $_args =~ /(\bstart\b|\bstop\b|\breload\b|\bstatus\b|\boff\b|\bon\b|\breset\b|\bremove\b|\badd\b)/)
+{
+    $ACTION = $1;
+}
+
 # sanity checks before action is taken
 if (not defined($ACTION)
-        or $ACTION !~ /start|stop|reload|status|off|on|reset|remove|add/)
+        or $ACTION !~ /^(start|stop|reload|status|off|on|reset|remove|add)$/)
 {
     use Pod::Usage;
     pod2usage(1);
     exit 0;
 }
+
+# remove all other actions from $_args
+$_args =~ s/,?(\bstart\b|\bstop\b|\breload\b|\bstatus\b|\boff\b|\bon\b|\breset\b|\bremove\b|\badd\b)//g;
+
+print "Remaining arguments: ",$_args,"\n" if ($DEBUG);
 
 my $KEY = $ACTION;
 
@@ -313,15 +338,15 @@ elsif ($ACTION =~ /add/)
     $KEY = "on";
 }
 
-foreach (@ARGV)
+foreach (split(",",$_args))
 {
     if ($ACTION =~ /\breset\b/
       )    # reset means to make sure the service has the proper initrc links
     {
         my $error = 0;
-        system(sprintf($distros{$release_info}->{'off'}, $_, $ACTION));
+        system(sprintf($distros{$release_info}->{'off'}, basename($_), $ACTION));
         $error++ if ($? != 0);
-        system(sprintf($distros{$release_info}->{'on'}, $_, $ACTION));
+        system(sprintf($distros{$release_info}->{'on'}, basename($_), $ACTION));
         $error++ if ($? != 0);
         if (!$error)
         {
@@ -338,13 +363,21 @@ foreach (@ARGV)
 
         # when removing a service we turn it off as well
         print "Turning off service $_\n" if ($DEBUG);
-        system(sprintf($distros{$release_info}->{'service'}, $_, 'stop'));
+        system(sprintf($distros{$release_info}->{$KEY}, basename($_), 'stop'));
     }
-    my $service_cmd = sprintf($distros{$release_info}->{$KEY}, $_, $ACTION);
+     
+# TODO sanity check: see if command exists
+#     my $service_cmd = sprintf($distros{$release_info}->{$KEY}, basename($_), $ACTION);
+#     $service_cmd =~ s/^(\S+).*$/$1/;
+#     if ( ! -x $service_cmd )
+#     {
+#         print STDERR "No such command $service_cmd\n";
+#         next;
+#     } 
 
-    # TODO check if service script exists
-    #print "ERROR: script doesn't exists: $service_cmd \n" if ( !-x );
-    system($service_cmd );
+    my $system_cmd = sprintf($distros{$release_info}->{$KEY}, basename($_), $ACTION);
+    print "Executing cmd: $system_cmd\n" if ($DEBUG);
+    system($system_cmd);
     if ($? != 0)
     {
         print "ERROR: $_ service was not $ACTION" . "ed\n";
@@ -354,6 +387,12 @@ foreach (@ARGV)
 =pod
 
 =back
+
+=head1 BUGS
+
+* Service names cannot be any of: start stop reload status off on reset remove add
+
+* First action found in list (start stop reload...) will be executed and all other actions are removed
 
 =head1 AUTHORS
 

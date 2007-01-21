@@ -178,8 +178,8 @@ function powerprompt()
     esac
 }
 
-fastprompt
-#powerprompt	# this is the default prompt - might be slow
+#fastprompt
+powerprompt	# this is the default prompt - might be slow
 		# If too slow, use fastprompt instead....
 
 #-------------------#

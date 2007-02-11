@@ -165,16 +165,18 @@ function powerprompt()
         if [[ -z "${LOAD:-}" ]]; then
             LOAD="NOLOAD_CMD"
         fi
-        TIME=$(command date '+%H:%M')
+        #TIME=$(command date '+%H:%M') now \t
     } 
     PROMPT_COMMAND=_powerprompt;
     case $TERM in
         *term | rxvt | vt100 | ansi )
-        PS1="${cyan}[\$TIME - \$LOAD \h/\u]$NC \w \n\\$> \[\033]0;[\h/\u] \w\007\]" ;;
+        PS1="${cyan}[\t - \$LOAD \u@\h]$NC \w \n\\$> " ;;
+        # FIXME\[\033]0;[\h/\u] \w\007\]" ;; this creates a problem on Ubuntu 6.06/6.10's Gnome-Terminal. The first 32 (or so) characters typed cause the cursor to re-scan the number of characters from beginning to ending rapidly, causing a weird (ie annoying) visual effect
         linux )
-        PS1="${cyan}[\$TIME - \$LOAD]$NC\n[\h/\u \#] \w \n\\$> " ;;
+        PS1="${cyan}[\t - \$LOAD]$NC\n[\u@\h \#] \w \n\\$> " ;;
         * )
-        PS1="[\$TIME - \$LOAD]\n[\h/\u \#] \w \n\\$> " ;;
+        # sets no terminal title and has no color
+        PS1="[\t - \$LOAD \u@\h] \w \n\\$> " ;;
     esac
 }
 

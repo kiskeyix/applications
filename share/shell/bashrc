@@ -165,18 +165,28 @@ function powerprompt()
         if [[ -z "${LOAD:-}" ]]; then
             LOAD="NOLOAD_CMD"
         fi
-        #TIME=$(command date '+%H:%M') now \t
+        #TIME=$(command date '+%H:%M') # replaced with \t now
+        case $TERM in 
+            *term | rxvt* )
+                echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD/$HOME/~}\007" ;;
+        esac
     } 
+
     PROMPT_COMMAND=_powerprompt;
     case $TERM in
-        *term | rxvt | vt100 | ansi )
-        PS1="${cyan}[\t - \$LOAD \u@\h]$NC \w \n\\$> " ;;
-        # FIXME\[\033]0;[\h/\u] \w\007\]" ;; this creates a problem on Ubuntu 6.06/6.10's Gnome-Terminal. The first 32 (or so) characters typed cause the cursor to re-scan the number of characters from beginning to ending rapidly, causing a weird (ie annoying) visual effect
+        *term | rxvt* | vt100 | ansi )
+            PS1="${cyan}[\t - \$LOAD \u@\h]$NC \w \n\\$> " ;;
+            # \[\033]0;[\h/\u] \w\007\]" ;; this creates a problem 
+            # on Ubuntu 6.06/6.10's Gnome-Terminal. The first 32 (or so) 
+            # characters typed cause the cursor to re-scan the number 
+            # of characters from beginning to ending rapidly, 
+            # causing a weird (ie annoying) visual effect. 
+            # Now echo -ne '' in _powerprompt fixes this.
         linux )
-        PS1="${cyan}[\t - \$LOAD]$NC\n[\u@\h \#] \w \n\\$> " ;;
+            PS1="${cyan}[\t - \$LOAD]$NC\n[\u@\h \#] \w \n\\$> " ;;
         * )
-        # sets no terminal title and has no color
-        PS1="[\t - \$LOAD \u@\h] \w \n\\$> " ;;
+            # sets no terminal title and has no color
+            PS1="[\t - \$LOAD \u@\h] \w \n\\$> " ;;
     esac
 }
 

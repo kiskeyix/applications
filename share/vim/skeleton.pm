@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.5 $
-# Luis Mondesi < lemsx1@gmail.com >
+# $Revision: 1.6 $
+# NAME < email@example.com >
 #
 # DESCRIPTION: A simple package that exports ...
 # CONVENTIONS:
@@ -213,7 +213,7 @@ sub foo
 
 =head1 AUTHOR
 
-Luis Mondesi <lemsx1@gmail.com>
+NAME <email@example.com>
 
 =cut
 

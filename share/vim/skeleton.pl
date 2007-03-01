@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.7 $
-# $Date: 2006-11-11 15:09:33 $
-# Luis Mondesi < lemsx1@gmail.com >
+# $Revision: 1.8 $
+# $Date: 2007-03-01 21:41:46 $
+# NAME < email@example.com >
 #
 # DESCRIPTION:
 # USAGE:
@@ -22,7 +22,7 @@ skeleton.pl - skeleton script for Perl
 use strict;
 $|++;
 
-my $revision = '$Revision: 1.7 $';    # version
+my $revision = '$Revision: 1.8 $';    # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # standard Perl modules

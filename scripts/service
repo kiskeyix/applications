@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
-# $Revision: 1.16 $
-# $Date: 2007-01-05 18:42:26 $
+# $Revision: 1.17 $
+# $Date: 2007-03-10 22:30:11 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: Advanced drop-in replacement for "service" command line utility found on RedHat systems. Use to start/stop or removes services in Linux. Works on all Linux distributions.
@@ -65,7 +65,7 @@ $|++;
 
 $ENV{'PATH'} .= ":/sbin:/usr/sbin";
 
-my $revision = '$Revision: 1.16 $';    # version
+my $revision = '$Revision: 1.17 $';    # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # service is the template for the command to execute
@@ -340,6 +340,8 @@ elsif ($ACTION =~ /add/)
 
 foreach (split(",",$_args))
 {
+    print "_argument: '$_'\n" if ($DEBUG);
+    next if (/^[[:blank:]]*$/);
     if ($ACTION =~ /\breset\b/
       )    # reset means to make sure the service has the proper initrc links
     {

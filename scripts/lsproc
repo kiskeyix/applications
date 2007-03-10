@@ -7,10 +7,12 @@
 #
 
 PS='ps -eo pid,user,rss,args'
+SORT='sort --key=3 --reverse --numeric-sort'
 
 if [ ! -z $1 ]; then
-    $PS | grep PID | grep -v grep # put the header
-    $PS | grep -v lsproc | grep -v PID | grep -v grep | grep  $1
+    $PS | head -1 # put the header
+    $PS | grep -v lsproc | grep -v PID | grep -v grep | grep  $1 | $SORT
 else
-    $PS | grep -v lsproc | grep -v grep 
+    $PS | head -1 # put the header
+    $PS | grep -v lsproc | grep -v PID | grep -v grep | $SORT
 fi

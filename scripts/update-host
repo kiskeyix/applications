@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.79 $
+# $Revision: 1.80 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help
@@ -63,7 +63,7 @@ The format of the remote-hosts file is the same as /etc/hosts.
 
 B<update-host>  --master --links --local
 
-updates localhost using files from the default local settings folder ($ENV{"HOME"}/Shared/software/settings. See --local-path) and creates symlinks from Applications/share/* to the respective locations.
+updates localhost using files from the default local settings folder ($ENV{"HOME"}/Shared/Software/settings. See --local-path) and creates symlinks from Applications/share/* to the respective locations.
 
 B<update-host>  --master --host URL
 
@@ -92,7 +92,7 @@ B<update-host> --delete-obsolete HOST HOST2 ...
 my $PVERSION=0;
 my $HELP=0;
 my $MASTER_HOST = "http://lems.kiskeyix.org";
-my $LOCAL_PATH  = "$ENV{'HOME'}/Shared/software/settings";
+my $LOCAL_PATH  = "$ENV{'HOME'}/Shared/Software/settings";
 my $REMOTE_HOSTS_FILE = "$ENV{'HOME'}/.remote-hosts";
 my $PG_KEY=""; # when empty adds all for us... $ENV{'HOME'}."/.ssh/id_rsa";
 
@@ -200,7 +200,7 @@ Use copies in $LOCAL_PATH instead of remote $MASTER_HOST. @see --local-path
 
 =item --local-path PATH
 
-Sets $LOCAL_PATH to PATH instead of the default $ENV{"HOME"}/Shared/software/settings
+Sets $LOCAL_PATH to PATH instead of the default $ENV{"HOME"}/Shared/Software/settings
 
 =item -L,--symlinks,--links
 

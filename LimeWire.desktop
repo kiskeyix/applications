@@ -1,0 +1,15 @@
+
+[Desktop Entry]
+Encoding=UTF-8
+Version=1.0
+Type=Application
+Terminal=false
+Icon[en_US]=/usr/share/pixmaps/LimeWire.png
+Name[en_US]=LimeWire
+Comment[en_US]=LimeWire peer-to-peer client
+Exec=/opt/LimeWire/runLime.sh
+Name=LimeWire
+Comment=LimeWire peer-to-peer client
+Icon=/usr/share/pixmaps/LimeWire.png
+Categories=Application;Network;
+

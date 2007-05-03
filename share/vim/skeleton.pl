@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
-# $Revision: 1.9 $
-# $Date: 2007-05-03 20:13:36 $
-# NAME < email@example.com >
+# $Revision: 1.10 $
+# $Date: 2007-05-03 20:37:08 $
+# my_name < email@example.com >
 #
 # DESCRIPTION:
 # USAGE:
@@ -22,7 +22,7 @@ skeleton.pl - skeleton script for Perl
 use strict;
 $|++;
 
-my $revision = '$Revision: 1.9 $';    # version
+my $revision = '$Revision: 1.10 $';    # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # standard Perl modules
@@ -129,7 +129,7 @@ print "sample";
 
 =head1 AUTHORS
 
-NAME < email@example.com >
+my_name < email@example.com >
 
 =cut
 

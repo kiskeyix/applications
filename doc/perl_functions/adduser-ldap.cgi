@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.6 $
+# $Revision: 1.7 $
 # Luis Mondesi <lemsx1@gmail.com>
 #
 # DESCRIPTION: Adds user to ldap server running on (tls)
@@ -7,7 +7,6 @@
 # This is NOT a POSIX user, just a regular user to allow chatting
 #
 # This is a modified version of my original script, adduser-ldap.pl
-# Get latest from:
 # http://lems.kiskeyix.org/toolbox/?f=adduser-ldap.cgi
 # USAGE: from browser
 # LICENSE: GPL
@@ -22,7 +21,7 @@ if ($@)
     print STDERR "\nERROR: Could not load the Net::LDAP module.\n"
       . "       To install this module use:\n"
       . "       Use: perl -e shell -MCPAN to install it.\n"
-      . "       On Debian just: apt-get install perl-modules \n\n"
+      . "       On Debian just: apt-get install libnet-ldap-perl \n\n"
       . print STDERR "$@\n";
     exit 1;
 }
@@ -43,7 +42,7 @@ if ($@)
                   "\nERROR: Could not load the Net::SMTP module.\n",
                   "       To install this module use:\n",
                   "       perl -e shell -MCPAN.\n",
-                  "       On Debian just: apt-get install perl-modules \n\n",
+                  "       On Debian just: apt-get install libnet-smtp-perl \n\n",
                   "\n"
                  );
     exit 1;
@@ -51,41 +50,44 @@ if ($@)
 
 my $DEBUG = 0;
 
-my $MAILHOST         = "localhost";                      # use this mail server
-my $FROM             = "Accounts\@example.com";
-my $CC               = "Security\@example.com";
-my $SUBJECT          = "New chat.example.com Account";
-my $TIMEOUT          = 90;                               # smtp timeout
-my $TEMPLATE_MESSAGE = <<EOF;
-Hello \@firstname\@,
-
-Your new chat.example.com account is:
-
-User Name:  \@username\@
-Password:   \@password\@
-Server:     chat.example.com
-Port:       5222
-
-Encryption is required (TLS)
-
-Notes:
-* Do not share your password with anybody
-* Clients that are known to work
-    - Exodus 0.9.1 (http://www.jabberstudio.org/projects/exodus/releases/)
-    - Gaim 2.0b3   (http://sourceforge.net/project/showfiles.php?group_id=235)
-
-* To search for other CompanyInitials users, use the server "search.chat.example.com"
-EOF
-
+my $CHATSERVER = "chat.example.com";
 my $LDAPADMINCN =
   "uid=cadmin,ou=Administrators,ou=TopologyManagement,o=netscapeRoot";
 my $LDAPPASSWORDFILE = "/etc/adduser-ldap.secret";
-my $LDAPCACERT       = '/etc/ldap/cacerts/hash_here.0';
-my $LDAPSERVER       = "css3.example.com";
+my $LDAPCACERT       = '/etc/ldap/cacerts/CERT';
+my $LDAPSERVER       = "chat.example.com";
 my $OU               = "People";
 my $DOMAIN           = "example.com";
 
 my $PASS_SCHEME = "{crypt}";
+
+my $MAILHOST = "localhost";                              # use this mail server
+my $FROM     = "Accounts\@example.com";
+my $CC       = "support\@example.com";
+my $SUBJECT  = "$CHATSERVER Account";
+my $TIMEOUT  = 90;                                       # smtp timeout
+my $TEMPLATE_MESSAGE = <<EOF;
+Hello \@firstname\@,
+
+Your $CHATSERVER account is:
+
+User Name:  \@username\@\@$CHATSERVER
+Password:   \@password\@
+Server:     $CHATSERVER
+Port:       5222
+Protocol:   XMPP
+
+** TLS Encryption is required **
+
+Notes:
+* Do not share your password with anybody
+* Clients that are known to work
+
+    - Pidgin: http://pidgin.im/pidgin/download  (Officially supported)
+    - Exodus: http://www.jabberstudio.org/projects/exodus/releases/ (Deprecated. Use at your own risk)
+
+* To search for other users, use the server "search.$CHATSERVER"
+EOF
 
 # ------------------------------------------------------------------- #
 #                   DO NOT MODIFY BELOW THIS LINE                     #
@@ -104,9 +106,9 @@ my @fields = (
 
 my $intro = <<EOF;
 <pre class='code'>
-Welcome to the chat.example.com creation page
+<center><b>Manage $CHATSERVER Users</b></center>
 
-This form is used to create new accounts for CompanyName (CompanyInitials)
+This form is used to create new accounts for $domain
 Chat server or for reseting passwords to existing users.
 
 Details on how to configure the chat client will be sent to the user when
@@ -115,13 +117,25 @@ this form is completed.
 Users should archive the email they receive as they have no way to change
 their own passwords.
 
-When creating accounts here:
+When creating accounts:
 
 - fields marked with an asterisk (*) are required
 - if password is left blank, one will be generated and emailed to the user
 - a message will be sent to the E-Mail address provided
 - the email will be shown as coming from: $FROM
 - the email subject will be: $SUBJECT
+
+When reseting passwords:
+
+- if the user account does not exists, the account will not be created
+- if the password field is left blank, a password will be generated
+- a message will be sent to the E-Mail address provided
+
+When deleting accounts:
+
+- delete takes precedence over 'reset'
+- only User Name is needed
+- this will not delete POSIX accounts
 
 </pre>
 EOF
@@ -149,6 +163,21 @@ my $style = <<EOF;
         font-size: 10pt;
         font-family: sans-serif;
         color: green;
+}
+
+/* structural blocks */
+
+#intro {
+    margin-left: 50px; 
+}
+#form {
+    margin-left: 50px; 
+}
+#statusblock {
+    margin-left: 700px; 
+    position: absolute; 
+    bottom: 0px; 
+    right: 0px;
 }
 EOF
 
@@ -209,11 +238,13 @@ EOF
 
 sub print_form
 {
-    print $html->h1("Add chat.example.com User");
+    print "<div id='intro'>";
     print $intro;
-    print $html->hr();
+    print "</div>";
+
+    print "<div id='form'>";
     print $html->start_form('-name'   => "form1",
-                            '-action' => "/cgi-bin/adduser-chat.cgi");
+                            '-action' => "/cgi-bin/adduser-ldap.cgi");
     print $html->start_table(), "\n";
     foreach (@fields)
     {
@@ -224,7 +255,7 @@ sub print_form
         {
 
             # allows changing of username (see javascript code)
-            print $html->td ($html->textfield('-name' => $_f));
+            print $html->td($html->textfield('-name' => $_f));
         }
         else
         {
@@ -247,11 +278,17 @@ sub print_form
                                    '-label' => "Password Reset"
                                   )
                   ),
+          $html->p(
+                   $html->checkbox(
+                                   '-name'  => 'delete_user',
+                                   '-label' => "Delete User"
+                                  )
+                  ),
           "\n"
          );
     print $html->reset() . " " . $html->submit() . "\n";
     print $html->end_form();
-    print $html->hr();
+    print "</div>";
 }
 
 sub random_password
@@ -316,7 +353,8 @@ sub _ldap_search
     # if they dont pass a base... set it for them
     if (!$base)
     {
-        $base = ($OU) ? "ou=$OU, dc=example, dc=com" : "dc=example, dc=com";
+        $base =
+          ($OU) ? "ou=$OU, dc=example, dc=com" : "dc=example, dc=com";
     }
 
     # if they dont pass an array of attributes...
@@ -330,6 +368,11 @@ sub _ldap_search
                     'attrs'  => $attrs
                    );
     return $result;
+}
+
+sub _reset_password
+{
+    my ($user, $password) = @_;
 }
 
 sub _get_password
@@ -403,10 +446,10 @@ sub _debug
 # main ()
 print $html->header();
 print $html->start_html(
-                        '-title'  => 'New chat.example.com account',
+                        '-title'  => "New $CHATSERVER account",
                         '-script' => $jscript,
                         '-style'  => {
-                                     '-src'  => "/styles/mail-ahm.css",
+                                     '-src'  => "/styles/styles.css",
                                      '-code' => $style
                                     }
                        );
@@ -417,81 +460,8 @@ print_form();
 # handle POST
 if ($html->param())
 {
-    my $first     = $html->param('firstname');
-    my $last      = $html->param('lastname');
-    my $uid       = $html->param('username');
-    my $password  = $html->param('password');
-    my $email     = $html->param('email');
-    my $domain    = $DOMAIN;                    # if (!$html->params('domain'));
-    my $telephone = $html->param('telephone');
 
-    print STDERR (
-        "Missing first name and/or last name. Click back in your browser to fix it.\n"
-      )
-      and exit(1)
-      if ($first eq "" || $last eq "");         # || $domain eq "");
-
-    # set some internal vars:
-    my @domain_parts = split(/\./, $domain);
-
-    # create UID and MID using scheme:
-    #   (first letter of first name) + (last name)
-    $uid = ($uid) ? $uid : lc(substr($first, 0, 1) . $last);
-    my $mid = lc($first) . '.' . lc($last);
-
-    my $full_name = ucfirst($first) . " " . ucfirst($last);
-
-    #my $initials  = substr($first, 0, 1) . substr($last, 0, 1);
-
-    my $ou = ($OU) ? "ou=$OU, " : "ou=People, ";
-    my $domain_joined = "";
-    foreach (@domain_parts)
-    {
-        $domain_joined .= "dc=$_, ";
-    }
-    $domain_joined =~ s/, $//;
-
-    my $RANDOM_PASSWORD_USED = 0;    # set when user forgets to set password
-
-    if (!$password)
-    {
-        $RANDOM_PASSWORD_USED = 1;
-        $password             = random_password(8);
-    }
-
-    my $hash_password = hash_password($password);
-
-    my $ldif = "
-dn: uid=${uid},${ou}${domain_joined}
-objectClass: top
-objectClass: person
-objectClass: organizationalPerson
-objectClass: inetorgperson
-cn: $full_name
-sn: $last
-givenName: $first
-uid: $uid
-mail: $mid\@$domain
-telephoneNumber: $telephone
-userPassword: ${PASS_SCHEME}${hash_password}
-\n";
-
-    # this is used by Net::LDAP
-    my $_dn = "uid=${uid},${ou}${domain_joined}";
-    my $create_ary = [
-                   objectClass =>
-                     ["top", "person", "organizationalPerson", "inetorgperson"],
-                   cn              => $full_name,
-                   uid             => $uid,
-                   givenName       => $first,
-                   sn              => $last,
-                   mail            => "${mid}\@${domain}",
-                   telephoneNumber => $telephone,
-                   userPassword    => "${PASS_SCHEME}${hash_password}"
-    ];
-
-    # make connection to LDAP server and handle uid creation
-    print STDOUT ("<!-- \n", $ldif, "\n -->\n");
+    # start local variables
 
     my $ldap = Net::LDAP->new($LDAPSERVER);
 
@@ -499,68 +469,198 @@ userPassword: ${PASS_SCHEME}${hash_password}
     # cafile below!
     #$ldap->start_tls('cafile' => $LDAPCACERT);
 
-    _debug($LDAPADMINCN);
-    _debug(_get_password($LDAPPASSWORDFILE));
+    my $domain       = $DOMAIN;                # if (!$html->params('domain'));
+                                               # set some internal vars:
+    my @domain_parts = split(/\./, $domain);
 
-    my $mesg =
-      $ldap->bind(
-                  $LDAPADMINCN,
-                  'password' => _get_password($LDAPPASSWORDFILE),
-                  'version'  => '3'
-                 );    # if bind() it binds anonymously
-    $mesg =
-      $ldap->search('base'   => "${domain_joined}",
-                    'filter' => "uid=$uid");
+    my $domain_joined = "";
+    foreach (@domain_parts)
+    {
+        $domain_joined .= "dc=$_, ";
+    }
+    $domain_joined =~ s/, $//;
 
-    if (!$mesg->code())
+    # end local variables
+
+    # only status messages printed from now on
+    print STDOUT ("<div id='statusblock'>\n");
+
+    my $uid = $html->param('username');
+
+    print STDOUT (
+            $html->p(
+                     {'-class' => 'errortext'},
+                     "Missing username. Click back in your browser to fix it.\n"
+                    )
+                 )
+      and goto EXIT
+      if ($uid eq "" or $uid !~ /^[^[:blank:]]+$/);
+
+    if ($html->param('delete_user') and $html->param("delete_user") eq "on")
     {
 
-        # no errors were reported when we connected with the last
-        # search(), now we need to know if the result matches
+        # we are deleting this account
+        # Note that we do not delete POSIX users here
 
-        my $FOUND_UID = 0;
-        my $max       = $mesg->count();
-        for (my $i = 0 ; $i < $max ; $i++)
+        # we need to know if the user exist in the db and this is not
+        # a POSIX account, then we can delete it, else we print a warning
+        # and we do not delete this
+
+        _debug($LDAPADMINCN);
+        _debug(_get_password($LDAPPASSWORDFILE));
+
+        my $mesg =
+          $ldap->bind(
+                      $LDAPADMINCN,
+                      'password' => _get_password($LDAPPASSWORDFILE),
+                      'version'  => '3'
+                     );    # if bind() it binds anonymously
+
+        # first get the actual dn
+        my $result_search =
+          _ldap_search($ldap, "uid=$uid", ['uid', 'objectClass']);
+
+        # we should only find 1 entry
+        if ($result_search->count() != 1)
         {
-            my $entry = $mesg->entry($i);
-            foreach my $attr ($entry->attributes())
+            print($html->p(
+                           {'-class' => 'errortext'},
+                           " Error while deleting uid $uid on $LDAPSERVER: "
+                             . $result_search->error_text()
+                             . ". User $uid was not found in the database\n"
+                          )
+                 );
+            goto EXIT;
+        }
+        my @entries = $result_search->entries;
+
+        # if this is a posixAccount, print error and go to EXIT
+        my @attributes = $entries[0]->get_value('objectClass');
+        foreach my $_attrs (@attributes)
+        {
+            if ($_attrs eq 'posixAccount')
             {
-                next if ($attr !~ /uid/);
-                if ($uid eq $entry->get_value($attr))
-                {
-                    $FOUND_UID++;
-                    last;
-                }
+                print STDOUT (
+                    $html->p(
+                             {'-class' => 'errortext'},
+                             " Cannot delete user $uid on $LDAPSERVER. This is a POSIX account "
+                            )
+                );
+                goto EXIT;
             }
         }
 
-        if ($FOUND_UID)
+        my $_dn = $entries[0]->dn();    # yes.. get the DN
+                                        #if ($entries[0]->exists('uid'))
+
+        my $entry_result = $ldap->delete($_dn);
+        if ($entry_result->code())
+        {
+            print($html->p(
+                           {'-class' => 'errortext'},
+                           " Error while deleting user $uid on $LDAPSERVER: "
+                             . $entry_result->error_text()
+                          )
+                 );
+
+            _debug(  ". Server message => code: "
+                   . $entry_result->code()
+                   . ". name: "
+                   . $entry_result->error_name()
+                   . ". text: "
+                   . $entry_result->error_text());
+            goto EXIT;
+        }
+        print $html->p({'-class' => "successtext"},
+                       "User $uid deleted successfully");
+    }
+    else
+    {
+
+        # we are creating a user
+        my $first     = $html->param('firstname');
+        my $last      = $html->param('lastname');
+        my $uid       = $html->param('username');
+        my $password  = $html->param('password');
+        my $email     = $html->param('email');
+        my $telephone = $html->param('telephone');
+
+        my $RANDOM_PASSWORD_USED = 0;
+
+        print STDOUT (
+            $html->p(
+                     {'-class' => 'errortext'},
+                     "Missing first name and/or last name. Click back in your browser to fix it.\n"
+                    )
+          )
+          and goto EXIT
+          if (   $first eq ""
+              or $last eq ""
+              or $first !~ /^[^[:blank:]]+$/
+              or $last !~ /^[^[:blank:]]+$/);
+
+        print STDOUT (
+               $html->p(
+                        {'-class' => 'errortext'},
+                        "Missing email. Click back in your browser to fix it.\n"
+                       )
+                     )
+          and goto EXIT
+          if ($email eq "" or $email !~ /^[^[:blank:]]+\@[^[:blank:]]+$/);
+
+        print STDOUT (
+               $html->p(
+                     {'-class' => 'errortext'},
+                     "Missing username. Click back in your browser to fix it.\n"
+               )
+          )
+          and goto EXIT
+          if ($uid eq "" or $uid !~ /^[^[:blank:]]+$/);
+
+        # create UID and MID using scheme:
+        #   (first letter of first name) + (last name)
+        $uid = ($uid) ? $uid : lc(substr($first, 0, 1) . $last);
+        my $mid = lc($first) . '.' . lc($last);
+
+        my $full_name = ucfirst($first) . " " . ucfirst($last);
+
+        #my $initials  = substr($first, 0, 1) . substr($last, 0, 1);
+
+        my $ou = ($OU) ? "ou=$OU, " : "ou=People, ";
+        if (!$password)
+        {
+            $RANDOM_PASSWORD_USED = 1;
+            $password             = random_password(8);
+        }
+
+        my $hash_password = hash_password($password);
+
+        _debug($LDAPADMINCN);
+
+        #_debug(_get_password($LDAPPASSWORDFILE));
+
+        my $mesg =
+          $ldap->bind(
+                      $LDAPADMINCN,
+                      'password' => _get_password($LDAPPASSWORDFILE),
+                      'version'  => '3'
+                     );    # if bind() it binds anonymously
+
+        my $result_search =
+          _ldap_search($ldap, "uid=$uid", ['uid', 'email', 'cn']);
+
+        if (    $html->param("password_reset")
+            and $html->param("password_reset") eq "on")
         {
 
-            # is the password_reset checkbox actually checked?
-            if (    $html->param("password_reset")
-                and $html->param("password_reset") eq "on")
+            # we are reseting a password here, does the user exists and
+            # only 1 user has this uid?
+            if ($result_search->count() == 1)
             {
-
-                # password reset
-                # first get the actual dn
-                my $result_search = _ldap_search($ldap, "uid=$uid");
-
-                # we should only find 1 entry
-                if ($result_search->count() != 1)
-                {
-                    print($html->p(
-                            {'-class' => 'errortext'},
-                            " Error while reseting password for uid $uid on $LDAPSERVER: "
-                              . $result_search->error_text()
-                              . ". User $uid was not found in the database\n"
-                        )
-                    );
-                    goto EXIT;
-                }
                 my @entries = $result_search->entries;
                 my $_dn     = $entries[0]->dn();         # yes.. get the DN
-                     # now do the fields that we will modify
+
+                # now do the fields that we will modify
                 my %_modify_hash =
                   ('userPassword' => "${PASS_SCHEME}${hash_password}");
 
@@ -591,21 +691,38 @@ userPassword: ${PASS_SCHEME}${hash_password}
             }
             else
             {
+                print($html->p(
+                             {'-class' => 'errortext'},
+                             " Error no user with uid $uid found on $LDAPSERVER. Try creating it first. "
+                    )
+                );
 
-                # $mesg->error_text() yields success now...
+                # bail out
+                goto EXIT;
+            }
+        }
+        else
+        {
+
+            # we are creating new users, does the user already exists?
+            if ($result_search->count() == 1)
+            {
+
+                # bail out
                 print $html->p({'-class' => 'errortext'},
                                "An user with uid $uid already exits");
                 if ($DEBUG)
                 {
                     print $html->start_table();
 
-                    # already got my $max = $mesg->count();
+                    my $max = $mesg->count();
                     for (my $i = 0 ; $i < $max ; $i++)
                     {
                         my $entry = $mesg->entry($i);
                         foreach my $attr ($entry->attributes())
                         {
-                            next if ($attr =~ /passw/); # skip password printing
+                            next
+                              if ($attr =~ /passw/);    # skip password printing
                             print STDOUT (
                                           $html->Tr(
                                               $html->td($attr),
@@ -622,34 +739,87 @@ userPassword: ${PASS_SCHEME}${hash_password}
                     }
                     print $html->end_table();
                 }
+
+                goto EXIT;
             }
-            goto EXIT;
+            elsif ($result_search->count() > 1)
+            {
+                print STDOUT (
+                    $html->p(
+                        {'-class' => 'errortext'},
+                        " Error while creating entry for uid $uid on $LDAPSERVER: "
+                          . "More than one user with that uid"
+                    )
+                );
+
+                goto EXIT;
+            }
+            else
+            {
+
+                # at this point we can create the account
+                my $ldif = "
+dn: uid=${uid},${ou}${domain_joined}
+objectClass: top
+objectClass: person
+objectClass: organizationalPerson
+objectClass: inetorgperson
+cn: $full_name
+sn: $last
+givenName: $first
+uid: $uid
+mail: $mid\@$domain
+telephoneNumber: $telephone
+userPassword: ${PASS_SCHEME}${hash_password}
+\n";
+
+                print STDOUT ("<!-- \n", $ldif, "\n -->\n");
+                my $_dn = "uid=${uid},${ou}${domain_joined}";
+                my $create_ary = [
+                    objectClass => [
+                        "top", "person", "organizationalPerson", "inetorgperson"
+                                   ],
+                    cn              => $full_name,
+                    uid             => $uid,
+                    givenName       => $first,
+                    sn              => $last,
+                    mail            => "${mid}\@${domain}",
+                    telephoneNumber => $telephone,
+                    userPassword    => "${PASS_SCHEME}${hash_password}"
+                ];
+
+                my $entry_result = _create_entry($ldap, $_dn, $create_ary);
+                if ($entry_result->code())
+                {
+                    print($html->p(
+                            {'-class' => 'errortext'},
+                            " Error while creating entry for uid $uid on $LDAPSERVER: "
+                              . $entry_result->error_text()
+                        )
+                    );
+
+                    _debug(  ". Server message => code: "
+                           . $entry_result->code()
+                           . ". name: "
+                           . $entry_result->error_name()
+                           . ". text: "
+                           . $entry_result->error_text());
+                    goto EXIT;
+                }
+
+                print $html->p({'-class' => "successtext"},
+                               "User $uid created (email: $mid\@$domain)");
+            }
         }
-
-        # at this point we can create the account
-        my $entry_result = _create_entry($ldap, $_dn, $create_ary);
-        if ($entry_result->code())
-        {
-            print($html->p(
-                     {'-class' => 'errortext'},
-                     " Error while creating entry for uid $uid on $LDAPSERVER: "
-                       . $entry_result->error_text()
-                 )
-            );
-
-            _debug(  ". Server message => code: "
-                   . $entry_result->code()
-                   . ". name: "
-                   . $entry_result->error_name()
-                   . ". text: "
-                   . $entry_result->error_text());
-            goto EXIT;
-        }
-
-        print $html->p({'-class' => "successtext"},
-                       "User $uid created (email: $mid\@$domain)");
 
       SUCCESS:
+
+        # some last minute messages
+        print $html->p(
+                       {'-class' => "successtext"},
+                       "Random password used is $password. This was emailed to the end-user $mid\@$domain"
+                      ) if ($RANDOM_PASSWORD_USED);
+
         my $_message = $TEMPLATE_MESSAGE;
 
         $_message =~ s/\@fullname\@/$full_name/mi;
@@ -671,32 +841,13 @@ userPassword: ${PASS_SCHEME}${hash_password}
 
         _send_email(\%message);
     }
-    else
-    {
-        print($html->p(
-                       {'-class' => 'errortext'},
-                       " Error while searching for uid $uid on $LDAPSERVER: "
-                         . $mesg->error_text()
-                      )
-             );
 
-        goto EXIT;
-    }
-
-    # some last minute messages
-    print $html->hr();
-    print $html->p(
-                   {'-class' => "successtext"},
-                   "Random password used is $password. This was emailed to the end-user $mid\@$domain"
-                  ) if ($RANDOM_PASSWORD_USED);
+    print "</div>\n";
 
   EXIT:
-    $mesg = $ldap->unbind();    # take down session
+    $ldap->unbind();    # take down session
     $ldap->disconnect();
-
-    #print STDERR ("Failed to create LDIF for $uid\@$domain");
 }
 
 print($html->end_html(), "\n");
 
-# connect to LDAP server and do your thing

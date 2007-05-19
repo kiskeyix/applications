@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.7 $
+# $Revision: 1.8 $
 # my_name < email@example.com >
 #
 # DESCRIPTION: A simple package that exports ...
@@ -124,7 +124,7 @@ sub _define
 
 @param $value string value to assign to $key (optional)
 
-@return current table
+@return current value
 
 =cut
 
@@ -161,7 +161,7 @@ sub get_option
     my $self = shift;
     my $key = shift;
 
-    return $self->arcus_option($key);
+    return $self->skeleton_option($key);
 }
 
 =pod
@@ -184,7 +184,7 @@ sub set_option
     my $key = shift;
     my $value = shift;
 
-    return $self->arcus_option($key,$value);
+    return $self->skeleton_option($key,$value);
 }
 
 =pod 

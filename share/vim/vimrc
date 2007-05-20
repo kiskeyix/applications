@@ -259,7 +259,7 @@ augroup END
 augroup perl
     if !exists("autocommands_perl_loaded")
         let autocommands_perl_loaded = 1
-        au BufReadPre *.pl,*.ph,*.pm set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu | let IndentStyle = "perl"
+        au BufReadPre *.pl,*.ph,*.pm,*.t set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu | let IndentStyle = "perl"
         " using ptags, generate a "tags" file in the same directory as the
         " Perl script is. To view what tags file are used, type: <ESC> :echo &tags
         " To set tag files use: set tags=./tags,tags 
@@ -267,6 +267,7 @@ augroup perl
 
         au BufNewFile *.pl 0r ~/.vim/skeleton.pl | let IndentStyle = "perl"
         au BufNewFile *.pm 0r ~/.vim/skeleton.pm | let IndentStyle = "perl"
+        au BufNewFile *.t  0r ~/.vim/skeleton.t  | let IndentStyle = "perl"
 
         " au BufReadPost */CVS/lib/perl5/netapp/*.pm so ~/devel/CVS/bin/contrib/tags.vim
         " The default syntax highlight syncing scheme is too slow (which makes

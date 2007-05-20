@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.9 $
+# $Revision: 1.10 $
 # my_name < email@example.com >
 #
 # DESCRIPTION: A simple package that exports ...
@@ -39,7 +39,7 @@ package skeleton;
 use 5.008000;
 use strict;
 use warnings;
-use Carp qw(carp croak); # croak dies nicely. carp warns nicely
+use Carp qw(carp croak);    # croak dies nicely. carp warns nicely
 
 require Exporter;
 
@@ -49,15 +49,20 @@ our @ISA = qw ( Exporter );
 # This allows declaration       use Foo::Bar ':all';
 # If you do not need this, moving things directly into @EXPORT or @EXPORT_OK
 # will save memory.
-our %EXPORT_TAGS = ( 'all' => [ qw(
-    foo
-    skeleton_option get_option set_option
-    ) ],
-    'minimal' => [ qw(
-    )]
+our %EXPORT_TAGS = (
+    'all' => [
+        qw(
+          foo
+          skeleton_option get_option set_option
+          )
+    ],
+    'minimal' => [
+        qw(
+          )
+    ]
 );
 
-our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
+our @EXPORT_OK = (@{$EXPORT_TAGS{'all'}});
 
 our @EXPORT = qw ( );
 
@@ -106,11 +111,11 @@ sub _define
     {
         $self->{'skeleton'} = 1;
     }
-    
+
     # here we should call _define() from e/a of the classes we imported @ISA
-    for my $class ( @ISA )
+    for my $class (@ISA)
     {
-        my $meth = $class."::_define";
+        my $meth = $class . "::_define";
         $self->$meth(@_) if $class->can("_define");
     }
 }
@@ -160,7 +165,7 @@ sub skeleton_option
 sub get_option
 {
     my $self = shift;
-    my $key = shift;
+    my $key  = shift;
 
     return $self->skeleton_option($key);
 }
@@ -181,11 +186,11 @@ sub get_option
 
 sub set_option
 {
-    my $self = shift;
-    my $key = shift;
+    my $self  = shift;
+    my $key   = shift;
     my $value = shift;
 
-    return $self->skeleton_option($key,$value);
+    return $self->skeleton_option($key, $value);
 }
 
 =pod 
@@ -212,7 +217,7 @@ sub foo
 
 =back
 
-=head1 AUTHOR
+=head1 AUTHORS
 
 my_name <email@example.com>
 

@@ -1,8 +1,9 @@
 #!/usr/bin/perl -w
-# $Revision: 1.8 $
+# $Revision: 1.9 $
 # my_name < email@example.com >
 #
 # DESCRIPTION: A simple package that exports ...
+# USAGE: see SYNOPSIS
 # CONVENTIONS:
 #               - functions starting with underscores (_) are local,
 #                 private to this module
@@ -203,7 +204,7 @@ sub foo
 {
     my $self = shift;
     my $str  = shift;
-    return undef if (not ref $self);
+    return undef if (not ref $self or not defined $str);
     print STDOUT $str;
 }
 

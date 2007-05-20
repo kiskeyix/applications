@@ -122,6 +122,17 @@ fun RmCR()
 endfun
 map ,cr :call RmCR()<CR>
 
+" in your custom .vimrc-`hostname` file create a function like:
+"fun ReplMe()
+"    let oldLine=line('.')
+"    exe ":%s/my_name\\s*<\\s*email\@example\.com\\s*>/NAME <EMAIL@example.com>/g"
+"    exe ':' . oldLine
+" endfun
+" map ,me :call ReplMe()<CR>
+"
+" This takes care of all the templates (skeleton.*) emails. Note
+" double-escapes for \\s
+
 " To indent the whole file without having the cursor move to the beginning or the end I have the following
 " to embelish C code
 "nmap -- !indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments<CR>

@@ -1,14 +1,15 @@
 #!/usr/bin/perl -w
-# $Revision: 1.2 $
+# vi: ft=perl :
+# $Revision: 1.3 $
 # my_name < email@example.com >
 #
 # DESCRIPTION: A simple test script
 # Use this to test skeleton.pm API
 # USAGE: ./skeleton.t
 # LICENSE: GPL
-
+use strict;
 #use lib '.';
-use Test::More no_plan;
+use Test::More qw(no_plan);
 
 use skeleton qw(:all);
 

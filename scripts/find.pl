@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.31 $
+# $Revision: 1.32 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # URL: http://www.kiskeyix.org/downloads/find.pl.gz
@@ -167,7 +167,9 @@ sub _process_file
             {
                 if ($_ =~ s|$this_string|$that_string|g)
                 {
-                    print STDOUT "$GREEN $_file [$i]:$NORM $_";
+                    my $_local = $_; # beautify display
+                    $_local =~ s/^\s+//;
+                    print STDOUT "$GREEN $_file [$i]:$NORM $_local";
                     $modified = 1;
                 }
                 open(NEWFILE, ">>$_file_tmp")
@@ -179,7 +181,9 @@ sub _process_file
             {
                 if ($_ =~ m|$this_string|gi)
                 {
-                    print STDOUT "$BLUE $_file [$i]:$NORM $_";
+                    my $_local = $_; # beautify display
+                    $_local =~ s/^\s+//;
+                    print STDOUT "$BLUE $_file [$i]:$NORM $_local";
                 }
             }
         }

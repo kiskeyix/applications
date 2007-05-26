@@ -1,0 +1,17 @@
+#!/bin/sh
+# $Revision: 1.1 $
+# $Date: 2007-05-26 05:38:12 $
+# Luis Mondesi <lemsx1@gmail.com>
+#
+# DESCRIPTION: a simple script for ~/.gnome2/nautilus-scripts that will attach the selected file
+# to an email and send it to you
+# USAGE: select file in Nautilus and right click, then choose this script
+# LICENSE: GPL
+
+[ -r ~/.signaturerc ] && . ~/.signaturerc
+
+FILES="$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS"
+
+for i in $FILES; do
+    date | mutt -a "$i" -s "$i" ${EMAIL:-$USER}
+done

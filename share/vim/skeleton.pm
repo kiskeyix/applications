@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.11 $
+# $Revision: 1.12 $
 # my_name < email@example.com >
 #
 # DESCRIPTION: A simple package that exports ...
@@ -56,7 +56,7 @@ use Carp qw(carp croak);    # croak dies nicely. carp warns nicely
 require Exporter;
 
 # inherit functions from these packages:
-our @ISA = qw ( Exporter );
+our @ISA = qw( Exporter );
 
 # This allows declaration       use Foo::Bar ':all';
 # If you do not need this, moving things directly into @EXPORT or @EXPORT_OK

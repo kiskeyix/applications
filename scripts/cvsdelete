@@ -1,20 +1,41 @@
 #!/bin/sh
-# $Revision: 1.7 $
-# $Date: 2007-06-05 10:38:31 $
+# $Revision: 1.8 $
+# $Date: 2007-06-06 02:57:30 $
 # Luis Mondesi <lemsx1@gmail.com>
 # DESCRIPTION: Use this to delete a file from CVS in one shot!
 # USAGE: cvsdelete <filename> [filename2 ...]
 # LICENSE: GPL
-if [ -f "$1" ]; then
-    for file in $*
-    do
-        if  [ -f "${file}" ]; then
-            echo "Removing ${file} from current tree"
-            /bin/rm "${file}"
-            cvs delete "${file}"
-            cvs commit -m "file deleted from current tree" "${file}"
+# BUGS: 
+# - can't cope with files that has spaces in their name. tries
+#   to do one file with space in their name at a time.
+
+rm_file ()
+{
+    if [ -f "${1}" ]; then
+        echo "Removing ${1} from current tree"
+        /bin/rm "${1}"
+        cvs delete "${1}"
+        cvs commit -m "file deleted from current tree" "${1}"
+        if [ $? = 0 ]; then
+            return 0
         fi
-    done
+    fi
+
+    echo "File not found: ${1}"
+    return 1
+}
+
+if [ -f "$1" -o -f "$*" ]; then
+    if [ -f "$*" ]; then
+        rm_file "$*" 
+    else
+        for file in $*
+        do
+            if  [ -f "${file}" ]; then
+                rm_file "${file}"
+            fi
+        done
+    fi
 else
     echo "Usage: cvsdelete <filename> [filename2 ... filenameN]"
 fi

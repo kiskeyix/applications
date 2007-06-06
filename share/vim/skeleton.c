@@ -1,6 +1,6 @@
 /*
- * $Revision: 1.1 $
- * $Date: 2007-06-06 03:08:01 $
+ * $Revision: 1.2 $
+ * $Date: 2007-06-06 03:10:46 $
  * vi: ft=c :
  * my_name < email@example.com >
  *
@@ -13,6 +13,6 @@
 int
 main (int argc, char **argv)
 {
-        printf ("sample");
+        printf ("sample\n");
         return 0;
 }

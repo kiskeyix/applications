@@ -269,6 +269,12 @@ augroup cprog
     endif
 augroup END
 
+augroup java
+    if !exists("autocommands_java_loaded")
+        au BufNewFile *.java 0r ~/.vim/skeleton.java
+    endif
+augroup END
+
 augroup perl
     if !exists("autocommands_perl_loaded")
         let autocommands_perl_loaded = 1

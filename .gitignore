@@ -1,0 +1,14 @@
+ICAClient
+Changelog
+ChangeLog
+*.log
+*.bak
+share
+lib
+JPL
+etc
+.*.swp
+.DS_Store
+bin
+include
+man

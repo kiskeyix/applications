@@ -1,0 +1,68 @@
+This is a generic set of tools and configuration files for all accounts on all UNIX systems.
+
+It was written from the ground up to work well with all shells on all UNIX OSes known, including but not limited to:
+
+- Linux
+- MacOS X
+- FreeBSD/*BSD
+- CygWin
+
+To use this scripts, just copy this folder to ~/Applications and make some simple setup steps:
+
+cd ~/
+ln -s Applications/share/shell/bashrc .bashrc
+ln -s Applications/share/shell/bash_profile .bash_profile
+ln -s Applications/share/shell/dir_colors .dir_colors
+ln -s Applications/share/shell/inputrc .inputrc
+
+(there are other sample files in Applications/share/shell/ that you might want to copy or symlink)
+
+You might want to use other share items like vim and mutt files:
+
+cd ~/
+ln -s Applications/share/vim .vim
+ln -s .vim/vimrc .vimrc
+ln -s .vim/gvimrc .gvimrc
+
+ln -s Applications/share/mutt .mutt
+
+All changes needed to modify your environment should be done on local files. For instance, to modify your bashrc settings:
+
+touch ~/.bashrc-`hostname`
+
+And add your changes to this new .bashrc-`hostname` file.
+
+The same applies to vimrc, muttrc and other main configuration files.
+
+There is a command called "update-host" that pulls changes from the main repository on my own website: http://lems.kiskeyix.org
+
+update-host --master --links
+
+--master means: gets changes from master server
+--links creates all the links as described above (if they don't exist)
+
+The actual files are saved to:
+ls ~/Shared/Software/settings/
+Applications.tar.bz2  bashrc.tar.bz2  muttrc.tar.bz2  vimrc.tar.bz2
+
+Applications.tar.bz2 is the whole directory
+bashrc.tar.bz2 is only the shell part
+muttrc.tar.bz2 is only mutt's configuration files
+vimrc.tar.bz2 is only vim's configuration files
+
+That means that you can now use update-host to push your changes to local computers with:
+
+update-host [--send-key] --links system1.example.com system2.example.com system{3..10}.example.com
+
+NOTE: --send-key is optional and it should be used only once. It sends your public key to the ~/.ssh/authorized_keys file on the remote host.
+
+And you will see as the script attempts to send the local files to each system via SSH (using ssh-agent to keep the session open so you are not prompted for passwords/passphrases).
+
+Ideas patches and the like, should be submitted to myself at:
+
+Luis Mondesi < lemsx1 !! gmail !! c0m >
+
+(Sorry for the mangled email address, but you as a human will be able to type the address correctly)
+
+
+2007-06-07 11:59 EDT 

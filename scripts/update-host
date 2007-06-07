@@ -135,8 +135,6 @@ my @_OBSOLETE = (
     "Applications/scripts/regex-test.pl",
     "Applications/scripts/profile-computer.pl",
     "Applications/scripts/leet.pl",
-    "Applications/scripts/ntpdate",
-    "Applications/scripts/motion.sh",
 );
 my %hosts; # global multi-dimensional hash to store hosts' information
 my $VERBOSE=0;

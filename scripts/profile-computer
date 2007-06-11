@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 # $Revision: 1.18 $
 # $Date: 2006-05-08 16:29:06 $
-# Luis Mondesi < lemsx1@hotmail.com >
+# Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: spits to STDOUT basic information about the current system
 # USAGE: profile-computer.pl [-H|--html]
@@ -15,7 +15,7 @@ profile-computer - script for profiling a system on the fly
 
 =head1 DESCRIPTION 
 
-    This script prints system information to STDOUT
+    This script prints system information to STDOUT. It attempts to use Perl calls using standard modules or POSIX commands if no Perl functions exists
 
 =cut
 
@@ -23,19 +23,23 @@ use strict;
 $|++;
 
 use Sys::Hostname qw# hostname #;
+use POSIX qw/ uname /;
+use File::Spec::Functions qw/ catfile /
+  ;    #qw/ splitpath curdir updir catfile catdir abs2rel /;
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
 
-$ENV{'PATH'} = "/bin:/usr/local/bin:/opt/bin:/usr/bin:/sbin:/usr/sbin";
+#$ENV{'PATH'} = "/bin:/usr/local/bin:/opt/bin:/usr/bin:/sbin:/usr/sbin";
 
 # Args:
-my $PVERSION=0;
-my $HELP=0;
-my $USAGE=0;
-my $DEBUG=0;
-my $HTML=0;
-my $BBCODE=0;
-my $revision='$Revision: 1.18 $';
+my $PVERSION = 0;
+my $HELP     = 0;
+my $USAGE    = 0;
+my $DEBUG    = 0;
+my $HTML     = 0;
+my $BBCODE   = 0;
+my $PCIINFO  = 1;
+my $revision = '$Revision: 1.18 $';
 $revision =~ s/(\\|\$|Revision:|\s)//g;
 
 =pod
@@ -48,6 +52,7 @@ B<profile-computer>     [-v,--version]
                         [-H,--html]
                         [-B,--bbcode]
                         [-U,--usage]
+                        [--no-pci]
 
 =head1 OPTIONS
 
@@ -83,59 +88,71 @@ Prints usage information and exits
 
 # get options
 GetOptions(
+
     # flags
-    'v|version'         =>  \$PVERSION,
-    'h|help'            =>  \$HELP,
-    'D|debug'           =>  \$DEBUG,
-    'B|bbcode'          =>  sub { $BBCODE++;$HTML++; },
-    'U|usage'           =>  \$USAGE,
-    'H|html'            =>  \$HTML,
+    'v|version' => \$PVERSION,
+    'h|help'    => \$HELP,
+    'D|debug'   => \$DEBUG,
+    'B|bbcode'  => sub { $BBCODE++; $HTML++; },
+    'U|usage'   => \$USAGE,
+    'H|html'    => \$HTML,
+    'no-pci'    => sub { $PCIINFO = 0 },
 );
 
-if ( $HELP ) { 
+if ($HELP)
+{
     use Pod::Text;
-    my $parser = Pod::Text->new (sentence => 0, width => 78);
-    $parser->parse_from_file($0,\*STDOUT);
+    my $parser = Pod::Text->new(sentence => 0, width => 78);
+    $parser->parse_from_file($0, \*STDOUT);
     exit 0;
 }
 
-if ( $USAGE ) { 
+if ($USAGE)
+{
     use Pod::Usage;
     pod2usage(1);
-    exit 0; # never reaches here
+    exit 0;    # never reaches here
 }
 
-if ( $PVERSION ) { print STDOUT ($revision,"\n"); exit 0; }
+if ($PVERSION) { print STDOUT ($revision, "\n"); exit 0; }
 
-my $br = ($HTML) ? "<br />":"";
-my $unixname = qx#uname -a#;
-chomp($unixname);
-my $hostname = hostname();
-my $cpuinfo = "";
-my $memtotal = "";
-my $swaptotal = "";
-my $bogomips = 0;
+my $br = ($HTML) ? "<br />" : "";
+
+my ($sysname, $nodename, $release, $version, $machine) = POSIX::uname();
+my $hostname        = hostname();
+my $cpuinfo         = "";
+my $memtotal        = "";
+my $swaptotal       = "";
+my $bogomips        = 0;
 my $totalprocessors = 0;
 
-my @cpu = qx#cat /proc/cpuinfo#;
-my @mem = qx#cat /proc/meminfo#;
-my @pci = split (/\n/, qx/\(lspci; lspci -n\) | sort/);
+my @cpu = _slurp("/proc/cpuinfo");
+my @mem = _slurp("/proc/meminfo");
 
-foreach my $line(@cpu,@mem)
+my @pci =
+  ($PCIINFO and _which("lspci"))
+  ? split(/\n/, qx/\(lspci; lspci -n\) | sort/)
+  : ();
+
+foreach my $line (@cpu, @mem)
 {
-    if ( $line =~ /processor\s*:/i)
+    if ($line =~ /processor\s*:/i)
     {
         $totalprocessors += 1;
-    } elsif ( $line =~ /model\s+name\s*:\s*(.*)/i)
+    }
+    elsif ($line =~ /model\s+name\s*:\s*(.*)/i)
     {
         $cpuinfo = $1;
-    } elsif ( $line =~ /bogomips\s*:\s*([0-9]+)/i )
+    }
+    elsif ($line =~ /bogomips\s*:\s*([0-9]+)/i)
     {
         $bogomips += $1;
-    } elsif ( $line =~ /memtotal\s*:\s*([0-9]+\s+[kmobg]+)/i )
+    }
+    elsif ($line =~ /memtotal\s*:\s*([0-9]+\s+[kmobg]+)/i)
     {
         $memtotal = $1;
-    } elsif ( $line =~ /swaptotal\s*:\s*([0-9]+\s+[kmobg]+)/i )
+    }
+    elsif ($line =~ /swaptotal\s*:\s*([0-9]+\s+[kmobg]+)/i)
     {
         $swaptotal = $1;
     }
@@ -147,7 +164,7 @@ _print("# http://lems.kiskeyix.org/toolbox/?f=profile-computer\&d=1\n");
 _print_div();
 
 _print("Host Name: $hostname\n");
-_print("System Kernel: $unixname\n");
+_print("System Kernel: $sysname, $release, $version, $machine\n");
 _print_div();
 _print("CPU Info: $cpuinfo\n");
 _print("Total Processors: $totalprocessors\n");
@@ -155,44 +172,52 @@ _print("Bogomips total: $bogomips\n");
 _print_div();
 _print("Memory: $memtotal\n");
 _print("Virtual Memory (swap): $swaptotal\n");
-_print_div();
-foreach my $line (@pci)
+
+if ($PCIINFO)
 {
-    #0000:01:00.0 VGA compatible controller: ATI Technologies Inc: Unknown device 4153
-    $line =~ s#^[[:xdigit:]\:\.]+\s+##g; # remove PCI id
-    chomp($line);
-    _print("$line\n");
+    _print_div();
+    foreach my $line (@pci)
+    {
+
+        #0000:01:00.0 VGA compatible controller: ATI Technologies Inc: Unknown device 4153
+        $line =~ s#^[[:xdigit:]\:\.]+\s+##g;    # remove PCI id
+        chomp($line);
+        _print("$line\n");
+    }
 }
 _print_div();
 _print_lsb() if (-r "/etc/lsb-release");
 _print_div();
-_print("Library: libc6\n") if ( -e glob("/lib/libc-2.*.*.so") );
-_print("Compiler Version: ".qx#gcc --version|head -1#) if ( -x "/usr/bin/gcc" or -x "/usr/local/bin/gcc" or -x "/opt/bin/gcc" );
+_print("Library: libc6\n") if (-e glob("/lib/libc-2.*.so"));
+_print("Compiler Version: " . qx#gcc --version|head -1#) if (_which("gcc"));
 _print_div();
-if ( -r "/proc/cmdline" )
+if (-r "/proc/cmdline")
 {
-    if (open(CMDLINE,"</proc/cmdline"))
+
+    if (open(CMDLINE, "</proc/cmdline"))
     {
         _print("/proc/cmdline\n");
-        while(<CMDLINE>)
+        while (<CMDLINE>)
         {
             _print("$_\n");
         }
         close(CMDLINE);
     }
 }
-_print_div();
-if ( -x "/usr/bin/fglrxinfo" )
+if (my $_glrxinfo = _which("fglrxinfo"))
 {
-    my $fglrx_args = ( exists($ENV{DISPLAY}) ) ? " -display $ENV{DISPLAY}" : "" ;
-    open(FGLRX,"/usr/bin/fglrxinfo $fglrx_args |") or warn("Could not execute /usr/bin/fglrx\n");
-    while(<FGLRX>)
+    _print_div();
+    my $fglrx_args = (exists($ENV{DISPLAY})) ? " -display $ENV{DISPLAY}" : "";
+    open(FGLRX, "$_glrxinfo $fglrx_args |")
+      or warn("Could not execute $_glrxinfo\n");
+    while (<FGLRX>)
     {
         chomp();
         _print("$_\n");
     }
+    close(FGLRX);
 }
-_print_div(); # end
+_print_div();    # end
 
 # ----------------------------------#
 #           helper functions        #
@@ -202,46 +227,50 @@ sub _print
 {
     my $line = shift;
 
-    my $b_open = "";
+    my $b_open  = "";
     my $b_close = "";
 
     if ($HTML or $BBCODE)
     {
-        $b_open = ($BBCODE) ? "[b]":"<b>";
-        $b_close = ($BBCODE) ? "[/b]":"</b>";
+        $b_open  = ($BBCODE) ? "[b]"  : "<b>";
+        $b_close = ($BBCODE) ? "[/b]" : "</b>";
 
-        if ( $line =~ m/([^\:]+):(.*)/ )
+        if ($line =~ m/([^\:]+):(.*)/)
         {
             print "${b_open}${1}${b_close}: ${2}$br\n";
-        } else {
-            $line =~ s/(\r|\n)//g;
-            print $line,"<br />\n";
         }
-    } else {
+        else
+        {
+            $line =~ s/(\r|\n)//g;
+            print $line, "<br />\n";
+        }
+    }
+    else
+    {
         print $line;
     }
 }
 
 sub _print_div
 {
-    print STDOUT ("\n#","="x78,"#$br\n\n");
+    print STDOUT ("\n#", "=" x 78, "#$br\n\n");
 }
 
 sub _print_lsb
 {
 
-    my $b_open = "";
+    my $b_open  = "";
     my $b_close = "";
-   
+
     if ($HTML or $BBCODE)
     {
-        $b_open = ($BBCODE) ? "[b]":"<b>";
-        $b_close = ($BBCODE) ? "[/b]":"</b>";
+        $b_open  = ($BBCODE) ? "[b]"  : "<b>";
+        $b_close = ($BBCODE) ? "[/b]" : "</b>";
     }
 
-    # lsb_release -a is too slow. This function is 14% faster. 
-    open(FILE,"</etc/lsb-release") or return "";
-    while(<FILE>)
+    # lsb_release -a is too slow. This function is 14% faster.
+    open(FILE, "</etc/lsb-release") or return "";
+    while (<FILE>)
     {
         s/(\r|\n)//g;
         s/DISTRIB_/Distributor /;
@@ -251,14 +280,41 @@ sub _print_lsb
         s/"//g;
         s/=/: /;
 
-        if ( m/([^\:]+):(.*)/ )
+        if (m/([^\:]+):(.*)/)
         {
             print "${b_open}${1}${b_close}: ${2}$br\n";
-        } else {
+        }
+        else
+        {
             $_ =~ s/(\r|\n)//g;
-            print $_,"$br\n";
+            print $_, "$br\n";
         }
     }
+}
+
+# which("binary1"[,"binaryN"])
+# TODO return LIST if want array back
+sub _which
+{
+    my @_path = split(/:/, $ENV{'PATH'});
+    foreach my $_exec (@_)
+    {
+        foreach my $_path (@_path)
+        {
+            my $_full_path = File::Spec->catfile($_path, $_exec);
+            return $_full_path if (-x $_full_path);
+        }
+    }
+    return undef;
+}
+
+sub _slurp
+{
+    my $file = shift;
+    open(FILE, "<$file") or die($!, "\n");
+    my @_lines = <FILE>;
+    close(FILE);
+    return @_lines;
 }
 
 =pod

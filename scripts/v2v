@@ -649,13 +649,13 @@ sub which
     # @return binary path or undef
     my $binary = shift;
     return undef if (not defined $binary);
-    my $path = $binary;
+    my $path = undef;
     foreach my $binary_path ( split(/:/,$ENV{"PATH"}) )
     {
-        last if ( -x $path );
         $path = File::Spec->catfile($binary_path,$binary);
+        return $path if ( -x $path );
     }
-    return $path; # undef means not found
+    return undef; # undef means not found
 }
 
 sub do_file_ary {

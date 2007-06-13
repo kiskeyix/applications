@@ -20,12 +20,15 @@ skeleton.pl - skeleton script for Perl
 =cut
 
 use strict;
-$|++;
 
 my $revision = '$Revision: 1.10 $';    # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # standard Perl modules
+use IO::Handle;
+STDOUT->autoflush(1); # same as: $| = 1;
+STDERR->autoflush(1);
+
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
 use POSIX;                    # cwd() ... man POSIX

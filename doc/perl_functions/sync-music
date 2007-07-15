@@ -37,13 +37,13 @@ my $USAGE    = 0;
 my $DEBUG    = 0;
 my $VERBOSE  = 0;
 
-my $host     = undef;                          #$ARGV[0];
-my %hosts    = ();
+my $HOST     = undef;                          #$ARGV[0];
+my %HOSTS    = ();
 my $RED      = "\033[1;31m";
 my $NORM     = "\033[0;39m";
 my $GREEN    = "\033[0;32m";
 my $ssh_port = 22;
-my $path     = "/mnt/auto/imac-zeus/Music/";
+my $PATH     = "/mnt/auto/imac-zeus/Music/";
 my $REVERSE  = 0;
 my $RSYNC_ARGS =
   " --compress --delete --delete-excluded --force --exclude=.[a-zA-Z0-9]* ";
@@ -56,8 +56,10 @@ my $RSYNC_REVERSE_ARGS = " --compress --exclude=.[a-zA-Z0-9]* ";
 B<sync-music>   [-v,--version]
                 [-D,--debug] 
                 [-h,--help]
+                [-p,--path]
                 [-U,--usage]
                 [-V,--verbose]
+                [HOSTNAME_OR_IP]
 
 =head1 OPTIONS
 
@@ -75,6 +77,10 @@ Enables debug mode
 
 Prints this help and exits
 
+=item -p,--path PATH
+
+Synchronizing from local path PATH (ie no rsync over SSH from a remote host)
+
 =item -r,--reverse
 
 Syncs music back as well (uses rsync '--update' switch so only file that are newer will be copied
@@ -86,6 +92,10 @@ Prints usage information and exits
 =item -V,--verbose
 
 Prints messages to the screen
+
+=item HOSTNAME_OR_IP
+
+Hostname or IP to sync from
 
 =back
 
@@ -100,7 +110,8 @@ GetOptions(
     'U|usage'   => \$USAGE,
     'r|reverse' => \$REVERSE,
     'V|verbose' => \$VERBOSE,
-) and $host = shift;
+    'p|path=s'  => \$PATH,
+) and $HOST = shift;
 
 if ($HELP)
 {
@@ -119,7 +130,7 @@ sub _usage
 if ($USAGE)
 {
     _usage();
-    _exit_safe(0); # never reaches here
+    _exit_safe(0);    # never reaches here
 }
 
 if ($PVERSION) { print STDOUT ($revision, "\n"); _exit_safe(0); }
@@ -134,37 +145,43 @@ open(LOCK, "> $LOCK_FILE")
 print LOCK (my $date = localtime(), "\n");
 close(LOCK);
 
-debug("host $host") if (defined $host);
-debug("path $path") if (defined $path);
+debug("host $HOST") if (defined $HOST);
+debug("path $PATH") if (defined $PATH);
 
 $RSYNC_ARGS         .= " --verbose " if ($VERBOSE);
 $RSYNC_REVERSE_ARGS .= " --verbose " if ($VERBOSE);
 
-if (defined($host) and is_alive($host))
+if (defined($HOST) and is_alive($HOST))
 {
     system(
-        "rsync -e ssh -au $RSYNC_ARGS $host:/Users/Shared/Music/ /Users/Shared/Music/ > /dev/null 2>&1"
+        "rsync -e ssh -au $RSYNC_ARGS $HOST:/Users/Shared/Music/ /Users/Shared/Music/ > /dev/null 2>&1"
     );
     if ($REVERSE)
     {
         system(
-            "rsync -e ssh -au $RSYNC_REVERSE_ARGS /Users/Shared/Music/ $host:/Users/Shared/Music/ > /dev/null 2>&1"
+            "rsync -e ssh -au $RSYNC_REVERSE_ARGS /Users/Shared/Music/ $HOST:/Users/Shared/Music/ > /dev/null 2>&1"
         );
     }
 
 }
-elsif (-e $path)
+elsif (-e $PATH)
 {
-    system("rsync -au $RSYNC_ARGS $path /Users/Shared/Music/ > /dev/null 2>&1");
+
+    # for rsync ending / have special meaning...
+    $PATH =~ s,/+$,,g;
+    system(
+          "rsync -au $RSYNC_ARGS $PATH/ /Users/Shared/Music/ > /dev/null 2>&1");
     if ($REVERSE)
     {
         system(
-            "rsync -au $RSYNC_REVERSE_ARGS /Users/Shared/Music/ $path/ > /dev/null 2>&1"
+            "rsync -au $RSYNC_REVERSE_ARGS /Users/Shared/Music/ $PATH/ > /dev/null 2>&1"
         );
     }
-} else {
+}
+else
+{
     no warnings;
-    print STDERR ("Not local path ($path) or host ($host) given\n");
+    print STDERR ("Not local path ($PATH) or host ($HOST) given\n");
 }
 
 _exit_safe(0);
@@ -172,34 +189,34 @@ _exit_safe(0);
 # @desc checks whether a given host is alive by pinging it.
 #  pinging to a given host will be cached/saved for us so that we don't
 #  have to test for a given host more than once.
-# @arg 1 $host string or ip representing a given host
+# @arg 1 $HOST string or ip representing a given host
 # @return 1 if true 0 if false
 sub is_alive
 {
-    my $host = shift;
-    return undef if (not defined($host));
-    $hosts{$host}{'alive'} = 0 if (not exists($hosts{$host}{'alive'}));
+    my $HOST = shift;
+    return undef if (not defined($HOST));
+    $HOSTS{$HOST}{'alive'} = 0 if (not exists($HOSTS{$HOST}{'alive'}));
     my $ping_args = (qx/ping -V/ =~ /iputils/) ? " -w 4 " : "";
-    if ($hosts{$host}{'alive'} == 0)
+    if ($HOSTS{$HOST}{'alive'} == 0)
     {
         my $tmp_str = undef;
-        $tmp_str = qx/ping $ping_args -c 1 $host/
-          if ($hosts{$host}{'alive'} < 1);
+        $tmp_str = qx/ping $ping_args -c 1 $HOST/
+          if ($HOSTS{$HOST}{'alive'} < 1);
 
         # 0 when good
         # 256 when not good
-        debug("*** pinging $host returned $?");
+        debug("*** pinging $HOST returned $?");
 
         # return the opposite of ping's return output
-        $hosts{$host}{'alive'} = ($?) ? 0 : 1;
-        if ($hosts{$host}{'alive'} > 0)
+        $HOSTS{$HOST}{'alive'} = ($?) ? 0 : 1;
+        if ($HOSTS{$HOST}{'alive'} > 0)
         {
 
             # test to see if host is listening on SSH port
             use IO::Socket;
             my $socket =
               IO::Socket::INET->new(
-                                    PeerAddr => $host,
+                                    PeerAddr => $HOST,
                                     PeerPort => $ssh_port,
                                     Proto    => "tcp",
                                     Type     => SOCK_STREAM
@@ -209,11 +226,11 @@ sub is_alive
                 debug(
                     "*** couldn't connect to remove host ssh port $ssh_port. $@\n"
                 );
-                $hosts{$host}{'alive'} = 0;
+                $HOSTS{$HOST}{'alive'} = 0;
             }
             else
             {
-                debug("*** ssh to $host on port $ssh_port is possible");
+                debug("*** ssh to $HOST on port $ssh_port is possible");
                 close($socket);
             }
         }
@@ -224,8 +241,8 @@ sub is_alive
             "*** uh? We should never reach this... This means that we previously check for this host already. All checks were skipped."
         );
     }
-    debug("is_alive returning " . $hosts{$host}{'alive'} . " for $host");
-    return $hosts{$host}{'alive'};
+    debug("is_alive returning " . $HOSTS{$HOST}{'alive'} . " for $HOST");
+    return $HOSTS{$HOST}{'alive'};
 }
 
 # @desc prints colored messages
@@ -258,3 +275,4 @@ sub _exit_safe
 Luis Mondesi <lemsx1@gmail.com>
 
 =cut
+

@@ -46,8 +46,8 @@ my $ssh_port = 22;
 my $PATH     = "/mnt/auto/imac-zeus/Music/";
 my $REVERSE  = 0;
 my $RSYNC_ARGS =
-  " --compress --delete --delete-excluded --force --exclude=.[a-zA-Z0-9]* ";
-my $RSYNC_REVERSE_ARGS = " --compress --exclude=.[a-zA-Z0-9]* ";
+  " --compress --delete --delete-excluded --force --exclude=.[a-zA-Z0-9]* --partial-dir=.rsync-partial --partial ";
+my $RSYNC_REVERSE_ARGS = " --compress --exclude=.[a-zA-Z0-9]* --partial-dir=.rsync-partial --partial ";
 
 =pod
 
@@ -148,8 +148,8 @@ close(LOCK);
 debug("host $HOST") if (defined $HOST);
 debug("path $PATH") if (defined $PATH);
 
-$RSYNC_ARGS         .= " --verbose " if ($VERBOSE);
-$RSYNC_REVERSE_ARGS .= " --verbose " if ($VERBOSE);
+$RSYNC_ARGS         .= " --verbose --progress " if ($VERBOSE);
+$RSYNC_REVERSE_ARGS .= " --verbose --progress " if ($VERBOSE);
 
 if (defined($HOST) and is_alive($HOST))
 {

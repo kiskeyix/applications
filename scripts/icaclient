@@ -25,7 +25,7 @@ $|++;
 my $revision = '$Revision: 1.2 $';    # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
-my $ICAROOT=$ENV{'HOME'}."/Applications/ICAClient";
+my $ICAROOT=$ENV{'HOME'}."/Applications/opt/ICAClient/linuxx86";
 if ( -d $ENV{'ICAROOT'} )
 {
     $ICAROOT=$ENV{'ICAROOT'};

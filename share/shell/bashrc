@@ -161,7 +161,7 @@ function powerprompt()
     {
         ## trick: first put command in command history, then find it in
         ## the list. TODO find a better way of doing this:
-        LOAD=$(command uptime 2> /dev/null | sed -e "s/.*: \([^,]*\).*/\1/" -e "s/ //g")	
+        LOAD=$(command uptime 2> /dev/null | sed -e "s/.*: \([^,\ ]*\).*/\1/" -e "s/ //g")	
         if [[ -z "${LOAD:-}" ]]; then
             LOAD="NOLOAD_CMD"
         fi

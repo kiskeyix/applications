@@ -1,107 +1,226 @@
 #!/usr/bin/perl -w
-# $Revision: 1.10 $
+# $Revision: 1.9 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: syncs the music from my imac to this computer
 # LICENSE: GPL
 
+=pod
+
+=head1 NAME
+
+sync-music - script to synchronize my music
+
+=head1 DESCRIPTION 
+
+    This script is used to run Rsync to sync my music from my iMac to the localhost
+=cut
+
 use strict;
 $|++;
 use sigtrap qw(handler _exit_safe normal-signals error-signals);
+use IO::Handle;
+STDOUT->autoflush(1);    # same as: $| = 1;
+STDERR->autoflush(1);
+
+my $revision = '$Revision: 1.09 $';    # version
+$revision =~ s/(\\|Revision:|\s|\$)//g;
 
 my $LOCK_FILE = "/tmp/sync-music.lock";
 
-print STDERR ("$0: ERROR There is a lock file already $LOCK_FILE\n") 
-    and exit(1) if ( -e $LOCK_FILE );
+print STDERR ("$0: ERROR There is a lock file already $LOCK_FILE\n")
+  and exit(1)
+  if (-e $LOCK_FILE);
 
-open(LOCK,"> $LOCK_FILE") 
-    or die ("Could not create lock file $LOCK_FILE. $!\n");
-print LOCK (my $date = localtime(),"\n");
+open(LOCK, "> $LOCK_FILE")
+  or die("Could not create lock file $LOCK_FILE. $!\n");
+print LOCK (my $date = localtime(), "\n");
 close(LOCK);
 
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
 
-my $DEBUG = 0;
-my $host = undef; #$ARGV[0];
-my %hosts = ();
-my $RED = "\033[1;31m";
-my $NORM = "\033[0;39m";
-my $GREEN = "\033[0;32m";
-my $ssh_port=22;
-my $path = "/mnt/auto/imac-shared/Music/";
-my $REVERSE = 0;
-my $RSYNC_ARGS = " --compress --delete --delete-excluded --force --exclude=.[a-zA-Z0-9]* ";
+my $PVERSION = 0;
+my $HELP     = 0;
+my $USAGE    = 0;
+my $DEBUG    = 0;
+my $VERBOSE  = 0;
+
+my $host     = undef;                          #$ARGV[0];
+my %hosts    = ();
+my $RED      = "\033[1;31m";
+my $NORM     = "\033[0;39m";
+my $GREEN    = "\033[0;32m";
+my $ssh_port = 22;
+my $path     = "/mnt/auto/imac-zeus/Music/";
+my $REVERSE  = 0;
+my $RSYNC_ARGS =
+  " --compress --delete --delete-excluded --force --exclude=.[a-zA-Z0-9]* ";
 my $RSYNC_REVERSE_ARGS = " --compress --exclude=.[a-zA-Z0-9]* ";
 
+=pod
+
+=head1 SYNOPSIS
+
+B<sync-music>   [-v,--version]
+                [-D,--debug] 
+                [-h,--help]
+                [-U,--usage]
+                [-V,--verbose]
+
+=head1 OPTIONS
+
+=over 8
+
+=item -v,--version
+
+Prints version and exits
+
+=item -D,--debug
+
+Enables debug mode
+
+=item -h,--help
+
+Prints this help and exits
+
+=item -r,--reverse
+
+Syncs music back as well (uses rsync '--update' switch so only file that are newer will be copied
+
+=item -U,--usage
+
+Prints usage information and exits
+
+=item -V,--verbose
+
+Prints messages to the screen
+
+=back
+
+=cut
+
 GetOptions(
+
     # flags
-    'r|reverse'    => \$REVERSE,
-) and $host=shift;
- 
+    'v|version' => \$PVERSION,
+    'h|help'    => \$HELP,
+    'D|debug'   => \$DEBUG,
+    'U|usage'   => \$USAGE,
+    'r|reverse' => \$REVERSE,
+    'V|verbose' => \$VERBOSE,
+) and $host = shift;
+
+if ($HELP)
+{
+    use Pod::Text;
+    my $parser = Pod::Text->new(sentence => 0, width => 78);
+    $parser->parse_from_file($0, \*STDOUT);
+    exit 0;
+}
+
+sub _usage
+{
+    use Pod::Usage;
+    pod2usage(1);
+}
+
+if ($USAGE)
+{
+    _usage();
+    exit 0;    # never reaches here
+}
+
+if ($PVERSION) { print STDOUT ($revision, "\n"); exit 0; }
+
 #$host = "imac" if ( not defined $host );
 debug("host $host") if (defined $host);
 
-if ( defined($host) and is_alive($host) )
+$RSYNC_ARGS         .= " --verbose " if ($VERBOSE);
+$RSYNC_REVERSE_ARGS .= " --verbose " if ($VERBOSE);
+
+if (defined($host) and is_alive($host))
 {
-    system("rsync -e ssh -au $RSYNC_ARGS $host:/home/Shared/Music/ /home/Shared/Music/ > /dev/null 2>&1");
+    system(
+        "rsync -e ssh -au $RSYNC_ARGS $host:/home/Shared/Music/ /home/Shared/Music/ > /dev/null 2>&1"
+    );
     if ($REVERSE)
     {
-        system("rsync -e ssh -au $RSYNC_REVERSE_ARGS /home/Shared/Music/ $host:/home/Shared/Music/ > /dev/null 2>&1");
+        system(
+            "rsync -e ssh -au $RSYNC_REVERSE_ARGS /home/Shared/Music/ $host:/home/Shared/Music/ > /dev/null 2>&1"
+        );
     }
 
-} elsif ( -e $path ) {
+}
+elsif (-e $path)
+{
     system("rsync -au $path $RSYNC_ARGS /home/Shared/Music/ > /dev/null 2>&1");
     if ($REVERSE)
     {
-        system("rsync -au $RSYNC_REVERSE_ARGS /home/Shared/Music/ $path/ > /dev/null 2>&1");
+        system(
+            "rsync -au $RSYNC_REVERSE_ARGS /home/Shared/Music/ $path/ > /dev/null 2>&1"
+        );
     }
 }
 
 _exit_safe(0);
 
-# @desc checks whether a given host is alive by pinging it. 
-#  pinging to a given host will be cached/saved for us so that we don't 
+# @desc checks whether a given host is alive by pinging it.
+#  pinging to a given host will be cached/saved for us so that we don't
 #  have to test for a given host more than once.
 # @arg 1 $host string or ip representing a given host
 # @return 1 if true 0 if false
 sub is_alive
 {
     my $host = shift;
-    return undef if ( not defined ( $host ) );
-    $hosts{$host}{'alive'} = 0 if ( not exists ($hosts{$host}{'alive'}) );
-    my $ping_args = ( qx/ping -V/ =~ /iputils/ ) ? " -w 4 " : "" ;
-    if ( $hosts{$host}{'alive'} == 0  )
+    return undef if (not defined($host));
+    $hosts{$host}{'alive'} = 0 if (not exists($hosts{$host}{'alive'}));
+    my $ping_args = (qx/ping -V/ =~ /iputils/) ? " -w 4 " : "";
+    if ($hosts{$host}{'alive'} == 0)
     {
         my $tmp_str = undef;
-        $tmp_str = qx/ping $ping_args -c 1 $host/ if ( $hosts{$host}{'alive'} < 1  );
+        $tmp_str = qx/ping $ping_args -c 1 $host/
+          if ($hosts{$host}{'alive'} < 1);
+
         # 0 when good
         # 256 when not good
-        debug ("*** pinging $host returned $?");
+        debug("*** pinging $host returned $?");
+
         # return the opposite of ping's return output
-        $hosts{$host}{'alive'} = ( $? ) ? 0:1;
-        if ( $hosts{$host}{'alive'} > 0 )
+        $hosts{$host}{'alive'} = ($?) ? 0 : 1;
+        if ($hosts{$host}{'alive'} > 0)
         {
+
             # test to see if host is listening on SSH port
             use IO::Socket;
-            my $socket =  IO::Socket::INET->new(
-                    PeerAddr=>$host,
-                    PeerPort=>$ssh_port,
-                    Proto=>"tcp",
-                    Type=>SOCK_STREAM);
-            if ( ! $socket )
-            { 
-                debug("*** couldn't connect to remove host ssh port $ssh_port. $@\n");
-                $hosts{$host}{'alive'}=0;
-            } else {
-                debug ("*** ssh to $host on port $ssh_port is possible");
+            my $socket =
+              IO::Socket::INET->new(
+                                    PeerAddr => $host,
+                                    PeerPort => $ssh_port,
+                                    Proto    => "tcp",
+                                    Type     => SOCK_STREAM
+                                   );
+            if (!$socket)
+            {
+                debug(
+                    "*** couldn't connect to remove host ssh port $ssh_port. $@\n"
+                );
+                $hosts{$host}{'alive'} = 0;
+            }
+            else
+            {
+                debug("*** ssh to $host on port $ssh_port is possible");
                 close($socket);
             }
         }
-    } else {
-        debug ("*** uh? We should never reach this... This means that we previously check for this host already. All checks were skipped.");
     }
-    debug("is_alive returning ".$hosts{$host}{'alive'}." for $host");
+    else
+    {
+        debug(
+            "*** uh? We should never reach this... This means that we previously check for this host already. All checks were skipped."
+        );
+    }
+    debug("is_alive returning " . $hosts{$host}{'alive'} . " for $host");
     return $hosts{$host}{'alive'};
 }
 
@@ -109,7 +228,7 @@ sub is_alive
 sub debug
 {
     my $msg = "@_";
-    print STDERR ("$RED $msg $NORM\n")  if ( $DEBUG );
+    print STDERR ("$RED $msg $NORM\n") if ($DEBUG);
 }
 
 sub _exit_safe
@@ -117,13 +236,21 @@ sub _exit_safe
     my $status = shift;
     $status = 0 if (not defined($status));
 
-    unlink($LOCK_FILE) if ( -e $LOCK_FILE );
+    unlink($LOCK_FILE) if (-e $LOCK_FILE);
 
     # TODO handle more signals
-    my %exit = ( INT=>'9' );
-    if ( $status =~ /^[0-9]+$/ )
+    my %exit = (INT => '9');
+    if ($status =~ /^[0-9]+$/)
     {
         exit $status;
     }
     exit $exit{$status};
 }
+
+=pod
+
+=head1 AUTHORS
+
+Luis Mondesi <lemsx1@gmail.com>
+
+=cut

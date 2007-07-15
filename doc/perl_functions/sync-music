@@ -56,7 +56,7 @@ my $RSYNC_REVERSE_ARGS = " --compress --exclude=.[a-zA-Z0-9]* ";
 B<sync-music>   [-v,--version]
                 [-D,--debug] 
                 [-h,--help]
-                [-p,--path]
+                [-p,--path PATH]
                 [-U,--usage]
                 [-V,--verbose]
                 [HOSTNAME_OR_IP]
@@ -164,7 +164,7 @@ if (defined($HOST) and is_alive($HOST))
     }
 
 }
-elsif (-e $PATH)
+elsif (-d $PATH)
 {
 
     # for rsync ending / have special meaning...

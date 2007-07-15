@@ -134,8 +134,8 @@ open(LOCK, "> $LOCK_FILE")
 print LOCK (my $date = localtime(), "\n");
 close(LOCK);
 
-#$host = "imac" if ( not defined $host );
 debug("host $host") if (defined $host);
+debug("path $path") if (defined $path);
 
 $RSYNC_ARGS         .= " --verbose " if ($VERBOSE);
 $RSYNC_REVERSE_ARGS .= " --verbose " if ($VERBOSE);
@@ -143,25 +143,28 @@ $RSYNC_REVERSE_ARGS .= " --verbose " if ($VERBOSE);
 if (defined($host) and is_alive($host))
 {
     system(
-        "rsync -e ssh -au $RSYNC_ARGS $host:/home/Shared/Music/ /home/Shared/Music/ > /dev/null 2>&1"
+        "rsync -e ssh -au $RSYNC_ARGS $host:/Users/Shared/Music/ /Users/Shared/Music/ > /dev/null 2>&1"
     );
     if ($REVERSE)
     {
         system(
-            "rsync -e ssh -au $RSYNC_REVERSE_ARGS /home/Shared/Music/ $host:/home/Shared/Music/ > /dev/null 2>&1"
+            "rsync -e ssh -au $RSYNC_REVERSE_ARGS /Users/Shared/Music/ $host:/Users/Shared/Music/ > /dev/null 2>&1"
         );
     }
 
 }
 elsif (-e $path)
 {
-    system("rsync -au $path $RSYNC_ARGS /home/Shared/Music/ > /dev/null 2>&1");
+    system("rsync -au $RSYNC_ARGS $path /Users/Shared/Music/ > /dev/null 2>&1");
     if ($REVERSE)
     {
         system(
-            "rsync -au $RSYNC_REVERSE_ARGS /home/Shared/Music/ $path/ > /dev/null 2>&1"
+            "rsync -au $RSYNC_REVERSE_ARGS /Users/Shared/Music/ $path/ > /dev/null 2>&1"
         );
     }
+} else {
+    no warnings;
+    print STDERR ("Not local path ($path) or host ($host) given\n");
 }
 
 _exit_safe(0);

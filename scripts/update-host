@@ -15,10 +15,12 @@ use sigtrap qw(handler _exit_safe normal-signals error-signals);
 
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
-use File::Spec::Functions  qw/ splitdir catdir catfile /;  # abs2rel() and other dir/filename specific
+use File::Spec::Functions qw/ splitdir catdir catfile /
+  ;    # abs2rel() and other dir/filename specific
 use File::Basename qw/ basename /;
 
 ############## NO NEED TO MODIFY THESE #################
+
 =pod
 
 =head1 update-host
@@ -89,81 +91,88 @@ B<update-host> --delete-obsolete HOST HOST2 ...
 
 =cut
 
-my $PVERSION=0;
-my $HELP=0;
-my $MASTER_HOST = "http://lems.kiskeyix.org";
-my $LOCAL_PATH  = "$ENV{'HOME'}/Shared/Software/settings";
+my $PVERSION          = 0;
+my $HELP              = 0;
+my $MASTER_HOST       = "http://lems.kiskeyix.org";
+my $LOCAL_PATH        = "$ENV{'HOME'}/Shared/Software/settings";
 my $REMOTE_HOSTS_FILE = "$ENV{'HOME'}/.remote-hosts";
-my $PG_KEY=""; # when empty adds all for us... $ENV{'HOME'}."/.ssh/id_rsa";
+my $PG_KEY = "";    # when empty adds all for us... $ENV{'HOME'}."/.ssh/id_rsa";
 
 # path to temporary directory
-my $TMP="tmp";
+my $TMP = "tmp";
+
 # ary of systems to be excluded from updating
 # separate by |. i.e.: 127.0.0.1|192.168.1.2|10.1.1.1
-my $EXCLUDE= "172.16.1.250|as400";
+my $EXCLUDE = "172.16.1.250|as400";
+
 # files we will be updating
-my @FILES=("bashrc.tar.bz2", "vimrc.tar.bz2", "muttrc.tar.bz2", "Applications.tar.bz2");
+my @FILES =
+  ("bashrc.tar.bz2", "vimrc.tar.bz2", "muttrc.tar.bz2", "Applications.tar.bz2");
+
 # links to $ENV{HOME} if DOLINKS is true
 my @_CONFIG_FILES = (
-    "Applications/share/shell/bash_profile",
-    "Applications/share/shell/bashrc",
-    "Applications/share/shell/inputrc",
-    "Applications/share/shell/cvsrc",
-    "Applications/share/vim",
-    "Applications/share/mutt",
-);
+                     "Applications/share/shell/bash_profile",
+                     "Applications/share/shell/bashrc",
+                     "Applications/share/shell/inputrc",
+                     "Applications/share/shell/cvsrc",
+                     "Applications/share/vim",
+                     "Applications/share/mutt",
+                    );
+
 # files that should be tidied!
 my @_OBSOLETE = (
-    "Application/scripts/cvsdelete.sh",
-    "Application/scripts/cvsadd.sh",
-    "Application/scripts/backup.sh",
-    "Applications/scripts/isoMount.sh",
-    "Applications/scripts/mount_image.sh",
-    "Applications/scripts/mvall.sh",
-    "Applications/scripts/myestablished.sh",
-    "Applications/scripts/mylisten.sh",
-    "Applications/scripts/myproc.sh",
-    "Applications/scripts/mywait.sh",
-    "Applications/scripts/rcmd.sh",
-    "Applications/scripts/rundig.sh",
-    "Applications/scripts/service.sh",
-    "Applications/scripts/ssh-tunnel.sh",
-    "Applications/scripts/tar-all.sh", # now compress
-    "Applications/scripts/untar-all.sh", # now uncompress
-    "Applications/scripts/utar-all.sh",
-    "Applications/scripts/vnctunnel.sh",
-    "Applications/scripts/regex-test.pl",
-    "Applications/scripts/profile-computer.pl",
-    "Applications/scripts/leet.pl",
-    "Applications/scripts/ntpdate",
-    "Applications/scripts/motion.sh",
-);
-my %hosts; # global multi-dimensional hash to store hosts' information
-my $VERBOSE=0;
-my $DEBUG=0;
-my $USAGE=0;
-my $PRINT_FILES=0;
-my $REMOVE_FILES=0;
-my $DOLINKS=0;
-my $DOOBSOLETE=0;
-my $MASTER=0; # update current host from $MASTER_HOST
-my $LOCAL=0; # do not get any new copies, use the local files instead
-my $PKEY=0;  # should we push our id_rsa.pub key to the remote host?
-my $_ssh_agent = 0; # should we kill ssh-agent when done?
-my $_ssh_id = 0;    # should we remove id when done?
-my $ssh_port=22; # TODO add --ssh-port to allow users to change the ssh port at will
-my $RED = "\033[1;31m";
-my $NORM = "\033[0;39m";
-my $GREEN = "\033[0;32m";
-my $VERBOSE_ARGS="";
-my $WGET_ARGS="--continue --timestamping";
-my $HOST=undef;
-my $USERNAME=undef;
-my $PASSWORD=undef;
+                 "Application/scripts/cvsdelete.sh",
+                 "Application/scripts/cvsadd.sh",
+                 "Application/scripts/backup.sh",
+                 "Applications/scripts/isoMount.sh",
+                 "Applications/scripts/mount_image.sh",
+                 "Applications/scripts/mvall.sh",
+                 "Applications/scripts/myestablished.sh",
+                 "Applications/scripts/mylisten.sh",
+                 "Applications/scripts/myproc.sh",
+                 "Applications/scripts/mywait.sh",
+                 "Applications/scripts/rcmd.sh",
+                 "Applications/scripts/rundig.sh",
+                 "Applications/scripts/service.sh",
+                 "Applications/scripts/ssh-tunnel.sh",
+                 "Applications/scripts/tar-all.sh",            # now compress
+                 "Applications/scripts/untar-all.sh",          # now uncompress
+                 "Applications/scripts/utar-all.sh",
+                 "Applications/scripts/vnctunnel.sh",
+                 "Applications/scripts/regex-test.pl",
+                 "Applications/scripts/profile-computer.pl",
+                 "Applications/scripts/leet.pl",
+                 "Applications/scripts/ntpdate",
+                 "Applications/scripts/motion.sh",
+                );
+my %hosts;    # global multi-dimensional hash to store hosts' information
+my $VERBOSE      = 0;
+my $DEBUG        = 0;
+my $USAGE        = 0;
+my $PRINT_FILES  = 0;
+my $REMOVE_FILES = 0;
+my $DOLINKS      = 0;
+my $DOOBSOLETE   = 0;
+my $MASTER       = 0;   # update current host from $MASTER_HOST
+my $LOCAL        = 0;   # do not get any new copies, use the local files instead
+my $PKEY         = 0;   # should we push our id_rsa.pub key to the remote host?
+my $_ssh_agent   = 0;   # should we kill ssh-agent when done?
+my $_ssh_id      = 0;   # should we remove id when done?
+my $ssh_port =
+  22;    # TODO add --ssh-port to allow users to change the ssh port at will
+my $RED          = "\033[1;31m";
+my $NORM         = "\033[0;39m";
+my $GREEN        = "\033[0;32m";
+my $VERBOSE_ARGS = "";
+my $WGET_ARGS    = "--continue --timestamping";
+my $HOST         = undef;
+my $USERNAME     = undef;
+my $PASSWORD     = undef;
 
-my $CONF_FILES=undef; # comma separated list
+my $CONF_FILES = undef;    # comma separated list
 
 ## GET OPTIONS ##
+
 =pod
 
 =over 8
@@ -263,291 +272,374 @@ Prints version and exits
 =cut
 
 GetOptions(
+
     # flags
-    'v|version'         =>  \$PVERSION,
-    'h|help'            =>  \$HELP,
-    'U|usage'           =>  \$USAGE,
-    'D|debug'           =>  \$DEBUG,
-    'd|delete-obsolete' =>  \$DOOBSOLETE,
-    'r|remove'          =>  \$REMOVE_FILES,
-    'V|verbose'         =>  \$VERBOSE,
-    'm|master|localhost'=>  \$MASTER,
-    'l|local'           =>  \$LOCAL,
-    'print-files'       =>  \$PRINT_FILES,
-    'L|symlinks|links'  =>  \$DOLINKS,
-    's|send-key'        =>  \$PKEY,
+    'v|version'          => \$PVERSION,
+    'h|help'             => \$HELP,
+    'U|usage'            => \$USAGE,
+    'D|debug'            => \$DEBUG,
+    'd|delete-obsolete'  => \$DOOBSOLETE,
+    'r|remove'           => \$REMOVE_FILES,
+    'V|verbose'          => \$VERBOSE,
+    'm|master|localhost' => \$MASTER,
+    'l|local'            => \$LOCAL,
+    'print-files'        => \$PRINT_FILES,
+    'L|symlinks|links'   => \$DOLINKS,
+    's|send-key'         => \$PKEY,
+
     # strings
-    'k|key=s'           =>  \$PG_KEY,
-    'host=s'            =>  \$MASTER_HOST,
-    'files=s'           =>  \$CONF_FILES,
-    'local-path=s'      =>  \$LOCAL_PATH,
-    'hosts-file=s'      =>  \$REMOTE_HOSTS_FILE,
-    'u|username=s'      =>  \$USERNAME,
-    'password=s'        =>  \$PASSWORD
-) and $HOST=shift;
+    'k|key=s'      => \$PG_KEY,
+    'host=s'       => \$MASTER_HOST,
+    'files=s'      => \$CONF_FILES,
+    'local-path=s' => \$LOCAL_PATH,
+    'hosts-file=s' => \$REMOTE_HOSTS_FILE,
+    'u|username=s' => \$USERNAME,
+    'password=s'   => \$PASSWORD
+) and $HOST = shift;
 
 ## START SCRIPT ##
 
-if ( $HELP ) { 
+if ($HELP)
+{
     use Pod::Text;
-    my $parser = Pod::Text->new (sentence => 0, width => 78);
-    $parser->parse_from_file(File::Spec->catfile("$0"),
-			   \*STDOUT);
+    my $parser = Pod::Text->new(sentence => 0, width => 78);
+    $parser->parse_from_file(File::Spec->catfile("$0"), \*STDOUT);
     _exit_safe(0);
 }
 
-if ( $USAGE ) { 
+if ($USAGE)
+{
     use Pod::Usage;
     pod2usage(1);
     _exit_safe(0);
 }
 
 # setup SSH
-if ( exists($ENV{'SSH_AUTH_SOCK'}) and !-S $ENV{'SSH_AUTH_SOCK'} )
+if (exists($ENV{'SSH_AUTH_SOCK'}) and !-S $ENV{'SSH_AUTH_SOCK'})
 {
-    $ENV{'SSH_AUTH_SOCK'}="";
+    $ENV{'SSH_AUTH_SOCK'} = "";
     my $_ssh_agent_env = qx/ssh-agent -s/;
     debug($_ssh_agent_env);
     $_ssh_agent_env =~ m/SSH_AUTH_SOCK=(.*); /gmi;
-    debug("SSH_AUTH_SOCK before: ",$ENV{'SSH_AUTH_SOCK'});
+    debug("SSH_AUTH_SOCK before: ", $ENV{'SSH_AUTH_SOCK'});
     $ENV{'SSH_AUTH_SOCK'} = $1;
-    debug("SSH_AUTH_SOCK after: ",$ENV{'SSH_AUTH_SOCK'});
+    debug("SSH_AUTH_SOCK after: ", $ENV{'SSH_AUTH_SOCK'});
     $_ssh_agent_env =~ m/SSH_AGENT_PID=(.*); /gmi;
     $ENV{'SSH_AGENT_PID'} = $1;
-    
-    if ( -S $ENV{'SSH_AUTH_SOCK'} )
+
+    if (-S $ENV{'SSH_AUTH_SOCK'})
     {
-        $_ssh_agent = 1; # we should kill the agent when done
-    } else {
+        $_ssh_agent = 1;    # we should kill the agent when done
+    }
+    else
+    {
         warn("Could not launch our ssh-agent\n");
     }
 }
 $_ssh_id = system("ssh-add -l > /dev/null");
-if ( $_ssh_id != 0 )
+if ($_ssh_id != 0)
 {
-    system("ssh-add $PG_KEY"); # if $PG_KEY is blank ssh-add adds all private keys
-    if ( $? != 0 )
+    system("ssh-add $PG_KEY")
+      ;                     # if $PG_KEY is blank ssh-add adds all private keys
+    if ($? != 0)
     {
-        warn ("Failed to authenticate. ssh-gent is not running? There is no valid private key? Hint: create a key with \`ssh-keygen -t rsa -b 1024\`. And then pass the key to us with: $0 --key $ENV{HOME}/.ssh/id_rsa\n");
-        if ( prompt("Do you want to continue? You will be prompted for each password needed [y/N] ") !~ /^y/i )
+        warn(
+            "Failed to authenticate. ssh-gent is not running? There is no valid private key? Hint: create a key with \`ssh-keygen -t rsa -b 1024\`. And then pass the key to us with: $0 --key $ENV{HOME}/.ssh/id_rsa\n"
+        );
+        if (
+            prompt(
+                "Do you want to continue? You will be prompted for each password needed [y/N] "
+            ) !~ /^y/i
+           )
         {
             _exit_safe(0);
         }
     }
-    $_ssh_id = 1; # we need to know that this agent should be killed later
+    $_ssh_id = 1;    # we need to know that this agent should be killed later
 }
+
 # end setup SSH
 
 # username will be passed to e/a ssh call
 if (defined($USERNAME) and $USERNAME !~ /^\s*$/)
 {
     $USERNAME .= "\@";
-} else {
+}
+else
+{
     $USERNAME = "";
 }
 
-if ( $PKEY )
+if ($PKEY)
 {
-    print STDERR ("host argument missing.\nUsage: update-host --send-key HOST1 [HOST2 ...]") 
-        and _exit_safe(1) if ( !defined($HOST) or $HOST =~ /^\s*$/ );
-   
-    # generate RSA keys if none found. I don't care about people who use DSA :-P
-    system("ssh-keygen -t rsa -b 1024") if ( ! -f "$ENV{'HOME'}/.ssh/id_rsa.pub" );
+    print STDERR (
+        "host argument missing.\nUsage: update-host --send-key HOST1 [HOST2 ...]"
+      )
+      and _exit_safe(1)
+      if (!defined($HOST) or $HOST =~ /^\s*$/);
 
-    my $ssh_cmd = "cat $ENV{'HOME'}/.ssh/id_rsa.pub | ssh ".$USERNAME.$HOST." 'mkdir .ssh 2> /dev/null && chmod 0700 .ssh; cat - >> .ssh/authorized_keys; chmod 0644 .ssh/authorized_keys'";
+    # generate RSA keys if none found. I don't care about people who use DSA :-P
+    system("ssh-keygen -t rsa -b 1024") if (!-f "$ENV{'HOME'}/.ssh/id_rsa.pub");
+
+    # test if our key already exists on the remote host
+    open(KEY, "< $ENV{'HOME'}/.ssh/id_rsa.pub");
+    my $key = <KEY>;
+    close(KEY);
+    chomp($key);
+    $key =~ s/\S+\s+(\S+)\s+.*/$1/;
+    $key = "NO_KEY" if ($key =~ /^\s*$/);
+    $key =~ s/([\&\$\'\"\;\ ])/\\$1/g;    # escape shell chars
+    my $ssh_cmd =
+        "cat $ENV{'HOME'}/.ssh/id_rsa.pub | ssh "
+      . $USERNAME
+      . $HOST
+      . " 'mkdir ~/.ssh 2> /dev/null && chmod 0700 ~/.ssh; grep -q $key ~/.ssh/authorized_keys 2> /dev/null || cat - >> ~/.ssh/authorized_keys; chmod 0644 ~/.ssh/authorized_keys'";
 
     my $ret = 0;
 
-    if ( $PASSWORD )
+    if ($PASSWORD)
     {
+
         # password was supplied from the command line, handle it with expect
         eval "use Expect";
         if ($@)
         {
-            print STDERR "\n$0 ERROR: Could not load the Expect.pm module.\n" .
-            "       To install this module use:\n".
-            "       perl -e shell -MCPAN\n".
-            "       On Debian just: \n".
-            "       apt-get install libexpect-perl libio-stty-perl \n\n";
+            print STDERR "\n$0 ERROR: Could not load the Expect.pm module.\n"
+              . "       To install this module use:\n"
+              . "       perl -e shell -MCPAN\n"
+              . "       On Debian just: \n"
+              . "       apt-get install libexpect-perl libio-stty-perl \n\n";
             print STDERR "$@\n";
             exit 1;
         }
         my $exp = Expect->new();
         $exp->stty(qw(raw -echo));
-        my @args = (); # no need
+        my @args = ();    # no need
         $exp->spawn($ssh_cmd, @args)
-            or die "Cannot spawn $ssh_cmd: $!\n";
-        
+          or die "Cannot spawn $ssh_cmd: $!\n";
+
         # send some string there:
-        $exp->expect( 10,
+        $exp->expect(
+            10,
 
-            [ qr/.*\(yes.no\)/ => sub { my $self = shift;
-            $self->send("yes\n");
-            exp_continue(); } ],
+            [
+             qr/.*\(yes.no\)/ => sub {
+                 my $self = shift;
+                 $self->send("yes\n");
+                 exp_continue();
+               }
+            ],
 
-            [ qr/.*password: / => sub { my $self = shift;
-            $self->send("$PASSWORD\n");
-            exp_continue(); } ]
+            [
+             qr/.*password: / => sub {
+                 my $self = shift;
+                 $self->send("$PASSWORD\n");
+                 exp_continue();
+               }
+            ]
         );
         $exp->soft_close();
-    } else {
+    }
+    else
+    {
         $ret = system($ssh_cmd);
     }
-    print STDERR ("failed to send key to $HOST") and _exit_safe($?) if ( $? != 0 );
+    print STDERR ("failed to send key to $HOST") and _exit_safe($?)
+      if ($? != 0);
 
     # if we have more hosts, keep going
     foreach my $host (@ARGV)
     {
-        system("cat $ENV{'HOME'}/.ssh/id_rsa.pub | ssh ".$USERNAME.$host." 'mkdir .ssh 2> /dev/null && chmod 0700 .ssh; cat - >> .ssh/authorized_keys'");
-        print STDERR ("failed to send key to $HOST") and _exit_safe($?) if ( $? != 0 );
+        system("cat $ENV{'HOME'}/.ssh/id_rsa.pub | ssh "
+            . $USERNAME
+            . $host
+            . " 'mkdir ~/.ssh 2> /dev/null && chmod 0700 ~/.ssh; grep -q $key ~/.ssh/authorized_keys 2> /dev/null || cat - >> ~/.ssh/authorized_keys; chmod 0644 ~/.ssh/authorized_keys'"
+        );
+        print STDERR ("failed to send key to $HOST") and _exit_safe($?)
+          if ($? != 0);
     }
 
     _exit_safe(0);
 }
 
-if ( $VERBOSE )
+if ($VERBOSE)
 {
-    $VERBOSE_ARGS="v";
-} else {
-    $WGET_ARGS="-nv $WGET_ARGS";
+    $VERBOSE_ARGS = "v";
+}
+else
+{
+    $WGET_ARGS = "-nv $WGET_ARGS";
 }
 
 ## main ##
 
-if ( defined ($CONF_FILES) )
+if (defined($CONF_FILES))
 {
-    $CONF_FILES =~ s/[,|\s]+/ /g; # separate by single spaces
-    @FILES = split(/\s/,$CONF_FILES);
+    $CONF_FILES =~ s/[,|\s]+/ /g;    # separate by single spaces
+    @FILES = split(/\s/, $CONF_FILES);
 }
 
-if ( $PRINT_FILES )
+if ($PRINT_FILES)
 {
-    print STDOUT (join(",",@FILES),"\n");
+    print STDOUT (join(",", @FILES), "\n");
     _exit_safe(0);
 }
 
-my $j =0;
-my $n_files = $#FILES+1;
-my $silent = ( ! $VERBOSE ) ? " > /dev/null 2>&1" : "";
+my $j       = 0;
+my $n_files = $#FILES + 1;
+my $silent  = (!$VERBOSE) ? " > /dev/null 2>&1" : "";
 
 # update localhost from master and exit
-if ( $MASTER )
+if ($MASTER)
 {
-    my @failed = (); # array of files that failed
-    my $FAIL_FLAG=0;
-    my $SUCESS_FLAG=0;
+    my @failed      = ();    # array of files that failed
+    my $FAIL_FLAG   = 0;
+    my $SUCESS_FLAG = 0;
 
     _mkdir("$ENV{'HOME'}/.backup");
     _mkdir("$ENV{'HOME'}/tmp");
-    system("touch $ENV{'HOME'}/.signaturerc") 
-        if ( !-e "$ENV{'HOME'}/.signaturerc");
+    system("touch $ENV{'HOME'}/.signaturerc")
+      if (!-e "$ENV{'HOME'}/.signaturerc");
 
     _mkdir($LOCAL_PATH);
-    chdir($LOCAL_PATH) or die ("$LOCAL_PATH $!");
-    if ( !$LOCAL )
+    chdir($LOCAL_PATH) or die("$LOCAL_PATH $!");
+    if (!$LOCAL)
     {
+
         # download files from remote (master) host:
-        foreach my $i ( @FILES )
+        foreach my $i (@FILES)
         {
-            if ( $MASTER_HOST =~ m/^http:/i && -r $i )
+            if ($MASTER_HOST =~ m/^http:/i && -r $i)
             {
+
                 # wget is not too smart when using http
                 debug("Deleting $i");
-                unlink($i); # silently delete old copies
+                unlink($i);    # silently delete old copies
             }
-            printf STDOUT ("%20s","Downloading $MASTER_HOST/$i ");
-            system("wget $WGET_ARGS $MASTER_HOST/$i ".$silent);
-            print STDOUT ( $? ) ? " failed\n": " done\n";
+            printf STDOUT ("%20s", "Downloading $MASTER_HOST/$i ");
+            system("wget $WGET_ARGS $MASTER_HOST/$i " . $silent);
+            print STDOUT ($?) ? " failed\n" : " done\n";
         }
     }
     chdir($ENV{'HOME'});
-    foreach my $i ( @FILES )
+    foreach my $i (@FILES)
     {
-        if ( !-r "$LOCAL_PATH/$i" )
+        if (!-r "$LOCAL_PATH/$i")
         {
             debug("Skipping $LOCAL_PATH/$i because we can't read it");
             next;
         }
-        next if ( $DOLINKS and $i =~ /bashrc|vim|mutt/i ); # skip shell config
+        next if ($DOLINKS and $i =~ /bashrc|vim|mutt/i);    # skip shell config
         $j++;
-        print STDOUT "\r"; 
+        print STDOUT "\r";
         my $cmd = "";
-        my $_zcat = ( $i =~ /\.bz2$/i ) ? which("bzcat") : which("zcat"); # zcat or bzcat?
-        my $_tar_arg = ( $i =~ /\.bz2$/i ) ? "j" : "z"; # gzip or bzip2?
+        my $_zcat =
+          ($i =~ /\.bz2$/i) ? which("bzcat") : which("zcat");   # zcat or bzcat?
+        my $_tar_arg = ($i =~ /\.bz2$/i) ? "j" : "z";           # gzip or bzip2?
 
         my $tar = which("tar");
-        if ( -x $_zcat )
+        if (-x $_zcat)
         {
-            $cmd = "command $_zcat '$LOCAL_PATH/$i' | command $tar x".$VERBOSE_ARGS."f - ";
-        } else {
+            $cmd =
+              "command $_zcat '$LOCAL_PATH/$i' | command $tar x"
+              . $VERBOSE_ARGS . "f - ";
+        }
+        else
+        {
+
             # assume tar can decompress on the fly
             debug("Falling back to $tar...");
-            $cmd = "command $tar x".$VERBOSE_ARGS.$_tar_arg."f '$LOCAL_PATH/$i'";
+            $cmd =
+                "command $tar x"
+              . $VERBOSE_ARGS
+              . $_tar_arg
+              . "f '$LOCAL_PATH/$i'";
         }
 
-        my $err = system($cmd.$silent);
-        printf STDOUT ("%20s","localhost"); # host padded
-        if ( ! $err ) 
+        my $err = system($cmd. $silent);
+        printf STDOUT ("%20s", "localhost");    # host padded
+        if (!$err)
         {
-            printf STDOUT ("|%-".$n_files."s|", "#" x $j); # progress
+            printf STDOUT ("|%-" . $n_files . "s|", "#" x $j);    # progress
             $SUCESS_FLAG++;
-        } else {
+        }
+        else
+        {
             $FAIL_FLAG++;
-            push(@failed,$i);
+            push(@failed, $i);
             my $n_failed = $#failed + 1;
+
             # last tar command failed?
             if (!$SUCESS_FLAG)
             {
-                printf STDOUT ("|%-".$n_files."s|", "!" x $n_failed); # failed progress
-            } else {
+                printf STDOUT ("|%-" . $n_files . "s|", "!" x $n_failed)
+                  ;    # failed progress
+            }
+            else
+            {
+
                 # TODO keep the order of file failures
-                printf STDOUT ("|%-".($n_files - $n_failed )."s", "#" x ($n_files - $n_failed)); # successful progress
-                printf STDOUT ("%-".($n_failed )."s|", "!" x $n_failed); # failed progress
+                printf STDOUT (
+                               "|%-" . ($n_files - $n_failed) . "s",
+                               "#" x ($n_files - $n_failed)
+                              );    # successful progress
+                printf STDOUT ("%-" . ($n_failed) . "s|", "!" x $n_failed)
+                  ;                 # failed progress
             }
         }
     }
-    print STDERR ("\nlocalhost: These files failed: ". join ( " ",@failed )) 
-        if ( $FAIL_FLAG );
-    # do special operations: 
-    _do_links("localhost") if ( $DOLINKS );
-    unlink(@_OBSOLETE) if ($DOOBSOLETE);
-     
+    print STDERR ("\nlocalhost: These files failed: " . join(" ", @failed))
+      if ($FAIL_FLAG);
+
+    # do special operations:
+    _do_links("localhost") if ($DOLINKS);
+    unlink(@_OBSOLETE)     if ($DOOBSOLETE);
+
     print STDOUT ("\n");
     _exit_safe(0);
 }
 
 # update a single host or set of hosts passed from the command line
 # and exit
-if ( $HOST )
+if ($HOST)
 {
     my $host = $HOST;
     if (!$DEBUG)
     {
-        print update_host($host); # prints error if any
-    } else {
+        print update_host($host);    # prints error if any
+    }
+    else
+    {
         debug("Doing host $host");
-        if ( is_alive($host) )
+        if (is_alive($host))
         {
             debug("$host, it's alive!");
-        } else {
+        }
+        else
+        {
             debug("$host, is kaboom!");
         }
         debug("*** SKIPPED $host");
     }
+
     # do all other hosts if any
     foreach my $host (@ARGV)
     {
         debug("Doing host $host");
-        print STDERR ("WARNING! This host is in the excluded list\n") 
-            if ( grep(/$EXCLUDE/,$host) );
-        if ( !$DEBUG )
+        print STDERR ("WARNING! This host is in the excluded list\n")
+          if (grep(/$EXCLUDE/, $host));
+        if (!$DEBUG)
         {
-            print update_host($host); # prints error if any
-        } else {
-            if ( is_alive($host) )
+            print update_host($host);    # prints error if any
+        }
+        else
+        {
+            if (is_alive($host))
             {
                 debug("$host, it's alive!");
-            } else {
+            }
+            else
+            {
                 debug("$host, is kaboom!");
             }
             debug("*** SKIPPED $host");
@@ -559,21 +651,24 @@ if ( $HOST )
 # do all hosts
 slurp_hosts($REMOTE_HOSTS_FILE);
 
-foreach my $h ( keys %hosts )
+foreach my $h (keys %hosts)
 {
     debug("*** DOING: $h");
-    next if ( grep(/$EXCLUDE/,$h) );
-    if ( is_alive($h) != 1 )
+    next if (grep(/$EXCLUDE/, $h));
+    if (is_alive($h) != 1)
     {
-        printf STDOUT ("%20s",$h);
+        printf STDOUT ("%20s", $h);
         print STDOUT (" is dead or no ssh server on port $ssh_port\n");
         next;
     }
-    if ( !$DEBUG )
+    if (!$DEBUG)
     {
-        print update_host($h); # prints error if any
-    } else {
-        # debugging 
+        print update_host($h);    # prints error if any
+    }
+    else
+    {
+
+        # debugging
         debug("*** SKIPPED $h");
     }
 }
@@ -582,165 +677,209 @@ foreach my $h ( keys %hosts )
 sub slurp_hosts
 {
     my $file = shift;
-    open(FILE,$file) || die ("Could not open $file: $!\n");
+    open(FILE, $file) || die("Could not open $file: $!\n");
     while (<FILE>)
     {
         chomp($_);
-        if ( $_ gt "" && $_ !~ /^\s*#/ )
+        if ($_ gt "" && $_ !~ /^\s*#/)
         {
-            if ( $_ =~ /(\d+.\d+.\d+.\d+)\s+(\w+)/,$_)
+            if ($_ =~ /(\d+.\d+.\d+.\d+)\s+(\w+)/, $_)
             {
-                $hosts{$1}{ip}=$2;
+                $hosts{$1}{ip} = $2;
             }
         }
     }
 }
 
-# @desc checks whether a given host is alive by pinging it. 
-#  pinging to a given host will be cached/saved for us so that we don't 
+# @desc checks whether a given host is alive by pinging it.
+#  pinging to a given host will be cached/saved for us so that we don't
 #  have to test for a given host more than once.
 # @arg 1 $host string or ip representing a given host
 # @return 1 if true 0 if false
 sub is_alive
 {
     my $host = shift;
-    return undef if ( not defined ( $host ) );
-    $hosts{$host}{'alive'} = 0 if ( not exists ($hosts{$host}{'alive'}) );
-    my $ping_args = ( qx/ping -V/ =~ /iputils/ ) ? " -w 4 " : "" ;
-    if ( $hosts{$host}{'alive'} == 0  )
+    return undef if (not defined($host));
+    $hosts{$host}{'alive'} = 0 if (not exists($hosts{$host}{'alive'}));
+    my $ping_args = (qx/ping -V/ =~ /iputils/) ? " -w 4 " : "";
+    if ($hosts{$host}{'alive'} == 0)
     {
         my $tmp_str = undef;
-        $tmp_str = qx/ping $ping_args -c 1 $host/ if ( $hosts{$host}{'alive'} < 1  );
+        $tmp_str = qx/ping $ping_args -c 1 $host/
+          if ($hosts{$host}{'alive'} < 1);
+
         # 0 when good
         # 256 when not good
-        debug ("*** pinging $host returned $?");
+        debug("*** pinging $host returned $?");
+
         # return the opposite of ping's return output
-        $hosts{$host}{'alive'} = ( $? ) ? 0:1;
-        if ( $hosts{$host}{'alive'} > 0 )
+        $hosts{$host}{'alive'} = ($?) ? 0 : 1;
+        if ($hosts{$host}{'alive'} > 0)
         {
+
             # test to see if host is listening on SSH port
             use IO::Socket;
-            my $socket =  IO::Socket::INET->new(
-                    PeerAddr=>$host,
-                    PeerPort=>$ssh_port,
-                    Proto=>"tcp",
-                    Type=>SOCK_STREAM);
-            if ( ! $socket )
-            { 
-                debug("*** couldn't connect to remove host ssh port $ssh_port. $@\n");
-                $hosts{$host}{'alive'}=0;
-            } else {
-                debug ("*** ssh to $host on port $ssh_port is possible");
+            my $socket =
+              IO::Socket::INET->new(
+                                    PeerAddr => $host,
+                                    PeerPort => $ssh_port,
+                                    Proto    => "tcp",
+                                    Type     => SOCK_STREAM
+                                   );
+            if (!$socket)
+            {
+                debug(
+                    "*** couldn't connect to remove host ssh port $ssh_port. $@\n"
+                );
+                $hosts{$host}{'alive'} = 0;
+            }
+            else
+            {
+                debug("*** ssh to $host on port $ssh_port is possible");
                 close($socket);
             }
         }
-    } else {
-        debug ("*** uh? We should never reach this... This means that we previously check for this host already. All checks were skipped.");
     }
-    debug("is_alive returning ".$hosts{$host}{'alive'}." for $host");
+    else
+    {
+        debug(
+            "*** uh? We should never reach this... This means that we previously check for this host already. All checks were skipped."
+        );
+    }
+    debug("is_alive returning " . $hosts{$host}{'alive'} . " for $host");
     return $hosts{$host}{'alive'};
 }
 
-# @desc finds binaries in your $PATH 
+# @desc finds binaries in your $PATH
 sub which
 {
+
     # @param 0 string := binary to find in $ENV{PATH}
     # returns binary path or -1 if not found
     my $binary = shift;
-    my $path = undef; # holds string to return when found. 
-    foreach my $binary_path ( split(/:/,$ENV{"PATH"}) )
+    my $path   = undef;    # holds string to return when found.
+    foreach my $binary_path (split(/:/, $ENV{"PATH"}))
     {
+
         # first binary in $ENV{PATH}
-        if ( -x "$binary_path"."/$binary")
+        if (-x "$binary_path" . "/$binary")
         {
-            $path = "$binary_path"."/$binary";
+            $path = "$binary_path" . "/$binary";
             last;
         }
     }
-    return $path; # -1 means not found
+    return $path;          # -1 means not found
 }
 
 # @desc prints colored messages
 sub debug
 {
     my $msg = "@_";
-    print STDERR ("$RED $msg $NORM\n")  if ( $DEBUG );
+    print STDERR ("$RED $msg $NORM\n") if ($DEBUG);
 }
 
 # @desc do all needed steps to update a given host
 # @return error string if any errors were found
 sub update_host
 {
-    my $h = shift;
-    my @failed = ();    # array of failes that failed
-    my $tar = "tar";
-    my $j=0;            # number of files done
-    my $SUCESS_FLAG=0;
-    my $FAIL_FLAG=0;
+    my $h           = shift;
+    my @failed      = ();      # array of failes that failed
+    my $tar         = "tar";
+    my $j           = 0;       # number of files done
+    my $SUCESS_FLAG = 0;
+    my $FAIL_FLAG   = 0;
 
     # sanity check. make sure host is alive:
-    return "ERROR: host $h is dead or no ssh server on port $ssh_port\n" 
-        if ( ! is_alive($h) );
+    return "ERROR: host $h is dead or no ssh server on port $ssh_port\n"
+      if (!is_alive($h));
 
     # make sure the .backup and $TMP dir exists
-    system("ssh ".$USERNAME.$h." mkdir -p $TMP .backup ".$silent);
+    system("ssh " . $USERNAME . $h . " mkdir -p $TMP .backup " . $silent);
+
     # make sure this signature file exists:
-    system("ssh ".$USERNAME.$h." touch .signaturerc ".$silent);
+    system("ssh " . $USERNAME . $h . " touch .signaturerc " . $silent);
+
     # copy and unpack files:
-    foreach my $i ( @FILES )
+    foreach my $i (@FILES)
     {
-        next if ( $DOLINKS and $i =~ /bashrc|vim|mutt/i ); # skip shell config
-        next if ( ! -r "$LOCAL_PATH/$i" );
-        $j++; 
-        print STDOUT "\r";          # return cursor to beginning of line
-        printf STDOUT ("%20s",$h);  # host name padded to print progressbar correctly
-        
-        system("scp $LOCAL_PATH/$i ".$USERNAME."$h:$TMP/ ".$silent);
+        next if ($DOLINKS and $i =~ /bashrc|vim|mutt/i);    # skip shell config
+        next if (!-r "$LOCAL_PATH/$i");
+        $j++;
+        print STDOUT "\r";    # return cursor to beginning of line
+        printf STDOUT ("%20s", $h)
+          ;                   # host name padded to print progressbar correctly
 
-        my $_zcat = ( $i =~ /\.bz2$/i ) ? "bzcat" : "zcat"; # zcat or bzcat?
-        my $_tar_arg = ( $i =~ /\.bz2$/i ) ? "j" : "z"; # gzip or bzip2?
-        my $cmd = "ssh ".$USERNAME.$h." 'command $_zcat '$TMP/$i' | command $tar x".$VERBOSE_ARGS."f -' ";
-        
-        my $err = system($cmd.$silent);
+        system("scp $LOCAL_PATH/$i " . $USERNAME . "$h:$TMP/ " . $silent);
 
-        if ( ! $err ) 
+        my $_zcat    = ($i =~ /\.bz2$/i) ? "bzcat" : "zcat";    # zcat or bzcat?
+        my $_tar_arg = ($i =~ /\.bz2$/i) ? "j"     : "z";       # gzip or bzip2?
+        my $cmd = "ssh "
+          . $USERNAME
+          . $h
+          . " 'command $_zcat '$TMP/$i' | command $tar x"
+          . $VERBOSE_ARGS . "f -' ";
+
+        my $err = system($cmd. $silent);
+
+        if (!$err)
         {
             $SUCESS_FLAG++;
-            printf STDOUT ("|%-".$n_files."s|", "#" x $j); # progress
-        } else {
+            printf STDOUT ("|%-" . $n_files . "s|", "#" x $j);    # progress
+        }
+        else
+        {
             $FAIL_FLAG++;
-            push(@failed,$i);
+            push(@failed, $i);
             my $n_failed = $#failed + 1;
+
             # last tar command failed?
             if (!$SUCESS_FLAG)
             {
-                printf STDOUT ("|%-".$n_files."s|", "!" x $n_failed); # failed progress
-            } else {
+                printf STDOUT ("|%-" . $n_files . "s|", "!" x $n_failed)
+                  ;    # failed progress
+            }
+            else
+            {
+
                 # TODO keep the order of file failures
-                printf STDOUT ("|%-".($n_files - $n_failed )."s", "#" x ($n_files - $n_failed)); # successful progress
-                printf STDOUT ("%-".($n_failed )."s|", "!" x $n_failed); # failed progress
+                printf STDOUT (
+                               "|%-" . ($n_files - $n_failed) . "s",
+                               "#" x ($n_files - $n_failed)
+                              );    # successful progress
+                printf STDOUT ("%-" . ($n_failed) . "s|", "!" x $n_failed)
+                  ;                 # failed progress
             }
         }
 
-        if ( $REMOVE_FILES )
+        if ($REMOVE_FILES)
         {
-            system("ssh ".$USERNAME.$h." command rm -f '$TMP/$i' ".$silent);
+            system(  "ssh "
+                   . $USERNAME
+                   . $h
+                   . " command rm -f '$TMP/$i' "
+                   . $silent);
         }
-    } 
-    
+    }
+
     if ($DOOBSOLETE)
     {
-        my $joined_files = "'".join("' '",@_OBSOLETE)."'";
-        debug("deleting obsolete: ",$joined_files,"\n");
-        system("ssh ".$USERNAME.$h." command rm -f $joined_files ".$silent);
+        my $joined_files = "'" . join("' '", @_OBSOLETE) . "'";
+        debug("deleting obsolete: ", $joined_files, "\n");
+        system(  "ssh "
+               . $USERNAME
+               . $h
+               . " command rm -f $joined_files "
+               . $silent);
     }
 
-    print STDOUT ("\n$h These files failed: ".join ( " ",@failed )."\n") if ( $FAIL_FLAG );
+    print STDOUT ("\n$h These files failed: " . join(" ", @failed) . "\n")
+      if ($FAIL_FLAG);
 
-    if ( $DOLINKS )
+    if ($DOLINKS)
     {
-       _do_links($h); # remote links
+        _do_links($h);    # remote links
     }
+
     # no errors:
     return "\n";
 }
@@ -749,18 +888,18 @@ sub update_host
 sub _mkdir
 {
     my $path = shift;
-    my $root = ( $path =~ m,^([/|\\|:]), ) ? $1 : ""; # relative or full path?
+    my $root = ($path =~ m,^([/|\\|:]),) ? $1 : "";    # relative or full path?
     my @dirs = splitdir($path);
     my $last = "";
-    my $flag=1;
+    my $flag = 1;
     foreach (@dirs)
     {
-        next if ( $_ =~ m/^\s*$/ );
-        $last = ( $flag > 1 ) ? catdir($last,$_) : "$root"."$_" ;
-        mkdir ($last) if ( ! -d $last);
+        next if ($_ =~ m/^\s*$/);
+        $last = ($flag > 1) ? catdir($last, $_) : "$root" . "$_";
+        mkdir($last) if (!-d $last);
         $flag++;
     }
-    return $flag; # number of directories created
+    return $flag;    # number of directories created
 }
 
 sub _do_links
@@ -770,22 +909,28 @@ sub _do_links
     chdir($ENV{'HOME'}) if ($host eq "localhost");
     foreach my $_config_file (@_CONFIG_FILES)
     {
-        my $_conf = ".".basename($_config_file); # dot file
-        if ( $host eq "localhost" )
+        my $_conf = "." . basename($_config_file);    # dot file
+        if ($host eq "localhost")
         {
-            if ( ! -l $_conf )
+            if (!-l $_conf)
             {
-                if ( -e $_conf )
+                if (-e $_conf)
                 {
+
                     # backup
-                    if (!rename($_conf,"$_conf.bak"))
+                    if (!rename($_conf, "$_conf.bak"))
                     {
+
                         # oops
-                        print STDERR ("Failed to backup ".$ENV{'HOME'}."/$_conf\n");
+                        print STDERR (
+                              "Failed to backup " . $ENV{'HOME'} . "/$_conf\n");
                         next;
                     }
                 }
-            } else {
+            }
+            else
+            {
+
                 # we already have a symlink here,
                 # we need to make sure that the link points to the
                 # correct path:
@@ -793,20 +938,28 @@ sub _do_links
                 # for now, we simply remove the link
                 next if (!unlink($_conf));
             }
-            symlink($_config_file,$_conf);
-        } else {
+            symlink($_config_file, $_conf);
+        }
+        else
+        {
+
             # dealing with a remote hosts
-            system("ssh ".$USERNAME.$host." 'command rm -fr $_conf;".
-                "command ln -sf $_config_file $_conf $silent'");
+            system(  "ssh "
+                   . $USERNAME
+                   . $host
+                   . " 'command rm -fr $_conf;"
+                   . "command ln -sf $_config_file $_conf $silent'");
         }
     }
 }
 
-sub prompt {
+sub prompt
+{
+
     #@param 0 string := question to prompt
     #returns answer
     print STDOUT (@_);
-    my $rep=<STDIN>;
+    my $rep = <STDIN>;
     chomp($rep);
     return $rep;
 }
@@ -815,18 +968,19 @@ sub _exit_safe
 {
     my $status = shift;
     $status = 0 if (not defined($status));
+
     # TODO handle more signals
-    my %exit = ( INT=>'9' );
-    if ( $_ssh_id == 1 )
+    my %exit = (INT => '9');
+    if ($_ssh_id == 1)
     {
-        system("ssh-add -D"); # delete identities
+        system("ssh-add -D");    # delete identities
     }
 
-    if ( $_ssh_agent == 1 )
+    if ($_ssh_agent == 1)
     {
-        kill(15,$ENV{'SSH_AGENT_PID'});
+        kill(15, $ENV{'SSH_AGENT_PID'});
     }
-    if ( $status =~ /^[0-9]+$/ )
+    if ($status =~ /^[0-9]+$/)
     {
         exit $status;
     }

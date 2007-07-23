@@ -355,19 +355,22 @@ endif
 " luis, 2002-07-09 22:01 
 " switched back to 16
 set t_Co=16
-if has("terminfo")
-  set t_AB=[%?%p1%{8}%<%t%p1%{40}%+%e%p1%{92}%+%;%dm
-  set t_AF=[%?%p1%{8}%<%t%p1%{30}%+%e%p1%{82}%+%;%dm
-else
-  set t_Sf=[3%dm
-  set t_Sb=[4%dm
-endif
+" on RedHat EL 4/5 and others, t_AF causes vim to display escape chars
+" I'm commenting all this out
+" luis, 2007-07-23 17:31 EDT
+"if has("terminfo")
+"  set t_AB=[%?%p1%{8}%<%t%p1%{40}%+%e%p1%{92}%+%;%dm
+"  set t_AF=[%?%p1%{8}%<%t%p1%{30}%+%e%p1%{82}%+%;%dm
+"else
+"  set t_Sf=[3%dm
+"  set t_Sb=[4%dm
+"endif
 
-if &term =~ "xterm-debian" || &term =~ "xterm-xfree86"
-  set t_Co=16
-  set t_Sf=[3%dm
-  set t_Sb=[4%dm
-endif
+"if &term =~ "xterm-debian" || &term =~ "xterm-xfree86"
+"  set t_Co=16
+"  set t_Sf=[3%dm
+"  set t_Sb=[4%dm
+"endif
 
 " Default is white background
 " uncomment this if you want to cover your terminal's color

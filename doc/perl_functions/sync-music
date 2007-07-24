@@ -47,7 +47,8 @@ my $PATH     = "/mnt/auto/imac-zeus/Music/";
 my $REVERSE  = 0;
 my $RSYNC_ARGS =
   " --compress --delete --delete-excluded --force --exclude=.[a-zA-Z0-9]* --partial-dir=.rsync-partial --partial ";
-my $RSYNC_REVERSE_ARGS = " --compress --exclude=.[a-zA-Z0-9]* --partial-dir=.rsync-partial --partial ";
+my $RSYNC_REVERSE_ARGS =
+  " --compress --exclude=.[a-zA-Z0-9]* --partial-dir=.rsync-partial --partial ";
 
 =pod
 
@@ -153,14 +154,18 @@ $RSYNC_REVERSE_ARGS .= " --verbose --progress " if ($VERBOSE);
 
 if (defined($HOST) and is_alive($HOST))
 {
-    system(
-        "rsync -e ssh -au $RSYNC_ARGS $HOST:/Users/Shared/Music/ /Users/Shared/Music/ > /dev/null 2>&1"
-    );
+    my $cmd =
+      "rsync -e ssh -au $RSYNC_ARGS $HOST:/Users/Shared/Music/ /Users/Shared/Music/";
+    $cmd .= "> /dev/null 2>&1" if (not $VERBOSE and not $DEBUG);
+    debug($cmd);
+    system($cmd);
     if ($REVERSE)
     {
-        system(
-            "rsync -e ssh -au $RSYNC_REVERSE_ARGS /Users/Shared/Music/ $HOST:/Users/Shared/Music/ > /dev/null 2>&1"
-        );
+        my $cmd =
+          "rsync -e ssh -au $RSYNC_REVERSE_ARGS /Users/Shared/Music/ $HOST:/Users/Shared/Music/";
+        $cmd .= "> /dev/null 2>&1" if (not $VERBOSE and not $DEBUG);
+        debug($cmd);
+        system($cmd);
     }
 
 }
@@ -169,13 +174,16 @@ elsif (-d $PATH)
 
     # for rsync ending / have special meaning...
     $PATH =~ s,/+$,,g;
-    system(
-          "rsync -au $RSYNC_ARGS $PATH/ /Users/Shared/Music/ > /dev/null 2>&1");
+    my $cmd = "rsync -au $RSYNC_ARGS $PATH/ /Users/Shared/Music/ ";
+    $cmd .= "> /dev/null 2>&1" if (not $VERBOSE and not $DEBUG);
+    debug($cmd);
+    system($cmd);
     if ($REVERSE)
     {
-        system(
-            "rsync -au $RSYNC_REVERSE_ARGS /Users/Shared/Music/ $PATH/ > /dev/null 2>&1"
-        );
+        my $cmd = "rsync -au $RSYNC_REVERSE_ARGS /Users/Shared/Music/ $PATH/ ";
+        $cmd .= "> /dev/null 2>&1" if (not $VERBOSE and not $DEBUG);
+        debug($cmd);
+        system($cmd);
     }
 }
 else

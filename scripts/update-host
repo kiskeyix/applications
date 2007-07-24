@@ -207,7 +207,13 @@ Uses private key KEY instead of ~/.ssh/id_rsa for ssh-agent
 
 =item -l,--local
 
-Use copies in $LOCAL_PATH instead of remote $MASTER_HOST. @see --local-path
+Use copies in $LOCAL_PATH instead of remote $MASTER_HOST when --master is given. @see --local-path.
+Otherwise, it will create local versions of the files using ~/Applications and these new files will be used instead on the remote hosts. 
+
+Example: 
+update-host --local --links REMOTE_HOST
+
+This will create the Applications.tar.bz2,vimrc.tar.bz2 and muttrc.tar.bz2 files from ~/Applications and send those files over to the remote host.
 
 =item --local-path PATH
 
@@ -606,7 +612,15 @@ if ($HOST)
     my $host = $HOST;
     if (!$DEBUG)
     {
-        print update_host($host);    # prints error if any
+
+        if (grep(/$EXCLUDE/, $host))
+        {
+            print STDERR ("WARNING! This host is in the excluded list\n");
+        }
+        else
+        {
+            print update_host($host);    # prints error if any
+        }
     }
     else
     {
@@ -648,7 +662,7 @@ if ($HOST)
     _exit_safe(0);
 }
 
-# do all hosts
+# do all hosts from a remote file (if any)
 slurp_hosts($REMOTE_HOSTS_FILE);
 
 foreach my $h (keys %hosts)
@@ -794,16 +808,44 @@ sub update_host
       if (!is_alive($h));
 
     # make sure the .backup and $TMP dir exists
-    system("ssh " . $USERNAME . $h . " mkdir -p $TMP .backup " . $silent);
-
-    # make sure this signature file exists:
-    system("ssh " . $USERNAME . $h . " touch .signaturerc " . $silent);
+    # and make sure this signature file exists:
+    system(  "ssh "
+           . $USERNAME
+           . $h
+           . " 'mkdir -p $TMP ~/.backup; touch ~/.signaturerc' "
+           . $silent);
 
     # copy and unpack files:
     foreach my $i (@FILES)
     {
         next if ($DOLINKS and $i =~ /bashrc|vim|mutt/i);    # skip shell config
-        next if (!-r "$LOCAL_PATH/$i");
+
+        # if the file does not exist, then we create our own on the fly
+        if (!-r "$LOCAL_PATH/$i" or $LOCAL)
+        {
+            chdir($ENV{'HOME'}) or die("Cannot change to \$HOME. $!.\n");
+            if ($i =~ /Applications/)
+            {
+                $i = "Applications.tar.bz2";                # sanity check
+                system(
+                    "tar --exclude=\"bin\" --exclude=\"include\" --exclude=\"man\" --exclude=\"CVS\" --exclude=\"etc\" --exclude=\".cvsignore\" --exclude=\".git\" -cjf $LOCAL_PATH/$i Applications"
+                );
+            }
+            elsif ($i =~ /vim/)
+            {
+                $i = "vimrc.tar.bz2";
+                system("tar --exclude=\"CVS\" -h -cjf $LOCAL_PATH/$i .vim");
+            }
+            elsif ($i =~ /mutt/)
+            {
+                $i = "muttrc.tar.bz2";
+                system("tar --exclude=\"CVS\" -h -cjf $LOCAL_PATH/$i .mutt");
+            }
+            else
+            {
+                die("What is this?? $i?\n");
+            }
+        }
         $j++;
         print STDOUT "\r";    # return cursor to beginning of line
         printf STDOUT ("%20s", $h)

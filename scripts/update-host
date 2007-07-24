@@ -69,7 +69,7 @@ updates localhost using files from the default local settings folder ($ENV{"HOME
 
 B<update-host>  --master --host URL
 
-updates localhost using files from URL
+updates localhost using files from URL. If not --host is given, it assumes: lems.kiskeyix.org
 
 B<update-host> --hosts-file ~/.hosts
 
@@ -81,9 +81,15 @@ updates only bashrc and vimrc files to all hosts found in ~/.hosts
 
 B<update-host> --delete-obsolete HOST HOST2 ...
 
+Removes obsolete files from hosts passed as arguments
+
+B<update-host> --local --links HOST 
+
+Creates tarball files for ~/Applications and sends these to the remote host HOST
+
 =head1 BUGS
 
-* --files cannot contain spaces and must be .tar.bz2.
+* --files cannot contain spaces and must be .tar.bz2 or .tar.gz.
 
 * there is no way to pass $EXCEPTIONS from the command line.
 
@@ -107,7 +113,7 @@ my $EXCLUDE = "172.16.1.250|as400";
 
 # files we will be updating
 my @FILES =
-  ("bashrc.tar.bz2", "vimrc.tar.bz2", "muttrc.tar.bz2", "Applications.tar.bz2");
+  ("Applications.tar.bz2", "bashrc.tar.bz2", "vimrc.tar.bz2", "muttrc.tar.bz2");
 
 # links to $ENV{HOME} if DOLINKS is true
 my @_CONFIG_FILES = (
@@ -479,6 +485,10 @@ else
 
 ## main ##
 
+# when doing symlinks, we only need one file
+@FILES = ("Applications.tar.bz2") if ($DOLINKS);
+
+# yet, user can override @FILES from the command line...
 if (defined($CONF_FILES))
 {
     $CONF_FILES =~ s/[,|\s]+/ /g;    # separate by single spaces
@@ -492,7 +502,7 @@ if ($PRINT_FILES)
 }
 
 my $j       = 0;
-my $n_files = $#FILES + 1;
+my $n_files = @FILES + 0;
 my $silent  = (!$VERBOSE) ? " > /dev/null 2>&1" : "";
 
 # update localhost from master and exit
@@ -827,13 +837,14 @@ sub update_host
                 "We do not have a copy of Applications yet! Get one using: cd ~/ && git clone http://git.kiskeyix.org/git/Applications\n"
                ) if (!-d "$ENV{'HOME'}/Applications");
             chdir($ENV{'HOME'}) or die("Cannot change to \$HOME. $!.\n");
+            system("mkdir -p $LOCAL_PATH");
+            die("Could not create directory $LOCAL_PATH. $!\n") if ($? != 0);
             if ($i =~ /Applications/)
             {
-                $i = "Applications.tar.bz2";                # sanity check
+                $i = "Applications.tar.bz2";    # sanity check
                 system(
-                    "tar --exclude=\"bin\" --exclude=\"include\" --exclude=\"man\" --exclude=\"CVS\" --exclude=\"etc\" --exclude=\".cvsignore\" --exclude=\".git\" -cjf $LOCAL_PATH/
-                $i Applications "
-                      );
+                    "tar --exclude=\"bin\" --exclude=\"include\" --exclude=\"man\" --exclude=\"CVS\" --exclude=\"etc\" --exclude=\".cvsignore\" --exclude=\".git\" -cjf $LOCAL_PATH/$i Applications"
+                );
             }
             elsif ($i =~ /vim/)
             {

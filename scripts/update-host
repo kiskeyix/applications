@@ -2,7 +2,7 @@
 # $Revision: 1.80 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
-# DESCRIPTION: A simple script to update my settings in $HOME @see --help
+# DESCRIPTION: A simple script to update my settings in $HOME @see --help. You can get the latest copy from: git clone http://git.kiskeyix.org/git/Applications.git
 # USAGE: update-host [OPTIONS] [host1 host2 host3 ...]
 #
 # TODO:

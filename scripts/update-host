@@ -213,7 +213,7 @@ Otherwise, it will create local versions of the files using ~/Applications and t
 Example: 
 update-host --local --links REMOTE_HOST
 
-This will create the Applications.tar.bz2,vimrc.tar.bz2 and muttrc.tar.bz2 files from ~/Applications and send those files over to the remote host.
+This will create the Applications.tar.bz2, bashrc.tar.bz2, vimrc.tar.bz2 and muttrc.tar.bz2 files from ~/Applications and send those files over to the remote host.
 
 =item --local-path PATH
 
@@ -823,23 +823,34 @@ sub update_host
         # if the file does not exist, then we create our own on the fly
         if (!-r "$LOCAL_PATH/$i" or $LOCAL)
         {
+            die(
+                "We do not have a copy of Applications yet! Get one using: cd ~/ && git clone http://git.kiskeyix.org/git/Applications\n"
+               ) if (!-d "$ENV{'HOME'}/Applications");
             chdir($ENV{'HOME'}) or die("Cannot change to \$HOME. $!.\n");
             if ($i =~ /Applications/)
             {
                 $i = "Applications.tar.bz2";                # sanity check
                 system(
-                    "tar --exclude=\"bin\" --exclude=\"include\" --exclude=\"man\" --exclude=\"CVS\" --exclude=\"etc\" --exclude=\".cvsignore\" --exclude=\".git\" -cjf $LOCAL_PATH/$i Applications"
-                );
+                    "tar --exclude=\"bin\" --exclude=\"include\" --exclude=\"man\" --exclude=\"CVS\" --exclude=\"etc\" --exclude=\".cvsignore\" --exclude=\".git\" -cjf $LOCAL_PATH/
+                $i Applications "
+                      );
             }
             elsif ($i =~ /vim/)
             {
-                $i = "vimrc.tar.bz2";
-                system("tar --exclude=\"CVS\" -h -cjf $LOCAL_PATH/$i .vim");
+                $i = " vimrc . tar . bz2 ";
+                system(" tar-- exclude = \"CVS\" -h -cjf $LOCAL_PATH/$i .vim");
             }
             elsif ($i =~ /mutt/)
             {
                 $i = "muttrc.tar.bz2";
                 system("tar --exclude=\"CVS\" -h -cjf $LOCAL_PATH/$i .mutt");
+            }
+            elsif ($i =~ /bash/)
+            {
+                $i = "bashrc.tar.bz2";
+                system(
+                    "tar -h -cjf $LOCAL_PATH/$i .bashrc .bash_profile .dir_colors .inputrc .cvsrc"
+                );
             }
             else
             {

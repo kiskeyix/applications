@@ -13,7 +13,10 @@ sync-music - script to synchronize my music
 
 =head1 DESCRIPTION 
 
-    This script is used to run Rsync to sync my music from my iMac to the localhost
+    This script is used to run Rsync to sync my music from my iMac to the localhost.
+
+    If HOST is given, music will be sync'd from the remote path /Users/Shared/Music/ to local path /Users/Shared/Music
+
 =cut
 
 use strict;

@@ -1,0 +1,10 @@
+#!/bin/sh
+# Luis Mondesi <lemsx1@gmail.com> 
+# LICENSE: GPL
+# DESCRIPTION: A simple way to create an HTML index from files relative to this directory
+[ -n "$1" ] && echo "<html>"
+for i in $*; do
+    echo "<a href='$i'>$i</a>"
+    echo "<br />"
+done
+[ -n "$1" ] && echo "</html>"

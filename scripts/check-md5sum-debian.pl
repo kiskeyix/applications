@@ -20,7 +20,9 @@
 #       does the same in a simpler and nicer way... use that instead.
 #       Unless you want a different type of report when seeing what got
 #       changed.
-# 
+# USAGE: $0 [--binary] [--md5sum="/usr/local/bin/md5sum"] [--log="/tmp/log"]
+# LICENSE: GPL
+ 
 
 use File::Find 'find';     # find();
 use File::Basename 'basename'; # basename();

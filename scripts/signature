@@ -1,6 +1,6 @@
 #!/bin/sh
 # $Revision: 1.4 $
-# Luis Mondesi < lemsx1@hotmail.com >
+# Luis Mondesi < lemsx1@gmail.com >
 # Last modified: 2003-Nov-11
 #
 # DESCRIPTION:  A simple script to output a signature
@@ -13,10 +13,10 @@
 # -- copy to .signaturerc from here -- #
 NAME="Luis M"
 POSITION="System Administrator/Web Developer"
-COMPANY="LatinoMixed.com"
+COMPANY="kiskeyix.org"
 PHONE=""
-EMAIL="lemsx1@latinomixed.com"
-URL="http://www.latinomixed.com/"
+EMAIL="lemsx1@kiskeyix.org"
+URL="http://www.kiskeyix.org/"
 DEFAULT_SIGNATURE="'We think basically you watch television to turn your brain off, and you work on your computer when you want to turn your brain on' -- Steve Jobs in an interview for MacWorld Magazine 2004-Feb"
 
 SIGNATURE=1 # whether to generate a signature using fortunes
@@ -43,9 +43,9 @@ fi
 
 # signature header
 if [ $STDOUT -eq 1 ]; then
-    echo -e "--$ENDLINE----)(----- $ENDLINE $NAME $ENDLINE $POSITION $ENDLINE $COMPANY $ENDLINE $PHONE $ENDLINE $EMAIL $ENDLINE"
+    printf -- "--$ENDLINE----)(----- $ENDLINE $NAME $ENDLINE $POSITION $ENDLINE $COMPANY $ENDLINE $PHONE $ENDLINE $EMAIL $ENDLINE"
 else
-    echo -e "--$ENDLINE----)(----- $ENDLINE $NAME $ENDLINE $POSITION $ENDLINE $COMPANY $ENDLINE $PHONE $ENDLINE $EMAIL $ENDLINE" > "$HOME/.signature"
+    printf -- "--$ENDLINE----)(----- $ENDLINE $NAME $ENDLINE $POSITION $ENDLINE $COMPANY $ENDLINE $PHONE $ENDLINE $EMAIL $ENDLINE" > "$HOME/.signature"
 fi
 
 # body
@@ -67,12 +67,12 @@ if [ -x "/usr/games/fortune" -a $QUOTE -eq 1 ]; then
     fi
 else
     # fall back to this default signature
-    echo $DEFAULT_SIGNATURE >> "$HOME/.signature"
+    printf -- $DEFAULT_SIGNATURE >> "$HOME/.signature"
 fi
 
 # footer
 if [ $STDOUT -eq 1 ]; then
-    echo -e "$ENDLINE $ENDLINE $URL"
+    printf -- "$ENDLINE $ENDLINE $URL"
 else
-    echo -e "$ENDLINE $ENDLINE $URL" >> "$HOME/.signature"
+    printf -- "$ENDLINE $ENDLINE $URL" >> "$HOME/.signature"
 fi

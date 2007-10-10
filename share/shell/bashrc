@@ -126,7 +126,7 @@ function printusers()
 
 function _exit()	# function to run upon exit of shell
 {
-    echo -e "${RED}Hasta la vista, $HOSTNAME ${NC}"
+    printf -- "${RED}Hasta la vista, $HOSTNAME ${NC}"
 }
 #trap _exit 0
 
@@ -256,7 +256,7 @@ alias r='rlogin'
 alias which='type -a'
 
 alias ..='cd ..'
-#alias path='echo -e ${PATH//:/\\n}'
+#alias path='printf ${PATH//:/\\n}'
 
 #alias print='/usr/bin/lp -o nobanner -d $LPDEST'
 #alias pjet='enscript -h -G -fCourier9 -d $LPDEST '
@@ -323,7 +323,7 @@ fi
 #----------------------#
 
 if [[ -n "$SIGNATURE" && $SIGNATURE -eq 1 ]]; then
-    echo -e "----)(----- \
+    printf -- "--\n----)(----- \
         \n$NAME\n$POSITION\n$COMPANY\n$PHONE \
         \n$EMAIL\n" > "$HOME/.signature"
 
@@ -339,7 +339,7 @@ if [[ -n "$SIGNATURE" && $SIGNATURE -eq 1 ]]; then
     else
         echo $DEFAULT_QUOTE >> "$HOME/.signature";
     fi
-    echo -e "\n \n $URL" >> "$HOME/.signature"
+    printf -- "\n \n $URL" >> "$HOME/.signature"
 fi
 
 #----------------------#

@@ -201,6 +201,14 @@ sub _process_file
             }
             $modified = 0;    # just in case...
         }
+        
+        # cleanup
+        if (-f $_file_tmp)
+        {
+            warn "Removing left-over file $_file_tmp\n";
+            unlink($_file_tmp)
+                or die("Could not remove file $_file_tmp. $!\n");
+        }
     }
 }
 

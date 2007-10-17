@@ -29,7 +29,7 @@ my $ENC_IMAGE = "/home/Shared/pri/ehd/$USER.img";
 my $ENC_KEY_FILE = "/etc/ehd/$USER.key";
 my $EXTRA_MOUNT_OPTIONS=undef;
 # find unused loop device
-my $LOOP_DEV = qx/sudo losetup -f/; # "/dev/loop".int(rand(7));
+my $LOOP_DEV = qx/gksu 'losetup -f'/; # "/dev/loop".int(rand(7));
 chomp($LOOP_DEV);
 
 # get options
@@ -72,14 +72,22 @@ if ( ! -d $MOUNT_POINT )
         if ( $mounted =~ /$MOUNT_POINT/mig);
 }
 
-system("sudo losetup -d $LOOP_DEV 2> /dev/null"); 
+system("gksu 'losetup -d $LOOP_DEV'"); 
 
 # 2. setup loop
 
 my ($LO_foo,$LO_ENC,$LO_KEY,$LO_OTHER) = split(/-/,$ENCRYPTION);
-my $cmd = "openssl enc -d $ENCRYPTION -in $ENC_KEY_FILE | sudo losetup -e $LO_ENC -k $LO_KEY -p0 $LOOP_DEV $ENC_IMAGE";
-print STDOUT ($cmd,"\n") if ( $DEBUG );
+print STDOUT ("openssl enc -d $ENCRYPTION -in $ENC_KEY_FILE\n") 
+    if ( $DEBUG );
+open(FD,"openssl enc -d $ENCRYPTION -in $ENC_KEY_FILE |") 
+    or die("Cannot get encrypted password from $ENC_KEY_FILE. $!\n");
+# losetup allows to read from a file descriptor. Get one and pass it using gksu/sudo
+my $fd = fileno(FD);
+my $cmd = "gksu 'losetup -e $LO_ENC -k $LO_KEY -p$fd $LOOP_DEV $ENC_IMAGE'";
+print STDOUT ("\n",$cmd,"\n") if ( $DEBUG );
 my $err = qx/$cmd/;
+
+close(FD);
 
 die ("Failed to setup unencrypted loopback on $LOOP_DEV\n") 
     if ($? != 0 or $err =~ /error/i);
@@ -87,7 +95,7 @@ die ("Failed to setup unencrypted loopback on $LOOP_DEV\n")
 # 3. mount vault
 
 my $MOUNT_OPTIONS = (defined($EXTRA_MOUNT_OPTIONS) and $EXTRA_MOUNT_OPTIONS !~ /^\s*$/) ? "exec,nosuid,rw,defaults,$EXTRA_MOUNT_OPTIONS":"exec,nosuid,rw,defaults";
-my $mount_cmd = "sudo mount -t $MOUNT_TYPE -o $MOUNT_OPTIONS $LOOP_DEV $MOUNT_POINT";
+my $mount_cmd = "gksu 'mount -t $MOUNT_TYPE -o $MOUNT_OPTIONS $LOOP_DEV $MOUNT_POINT'";
 print STDOUT ($mount_cmd,"\n") if ($DEBUG);
 system($mount_cmd);
 warn ("Failed to mount encrypted image \n") if ($? != 0);

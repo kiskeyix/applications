@@ -206,15 +206,24 @@ alias abul='exit'
 alias ssh='ssh -c blowfish'
 alias cvs='cvs -q -w -z3'
 
+# git-pull does not cut it for you?
+alias gitpull='git fetch origin; git rebase origin;'
+
 alias diff='diff -burN'
-if [[ -z "${CONCURRENCY_LEVEL:-}" ]]; then
-    CONCURRENCY_LEVEL=8
-fi
-alias make="make -j$CONCURRENCY_LEVEL"
+
+# This needs to be done on a per-system basis 
+# as this breaks builds for some binaries.
+# Libraries are built out-of-order by concurrent make processes
+# 2007-10-21 10:15 EDT - LM
+#if [[ -z "${CONCURRENCY_LEVEL:-}" ]]; then
+#    CONCURRENCY_LEVEL=8
+#fi
+#alias make="make -j$CONCURRENCY_LEVEL"
 
 # we setup MAKEFLAGS for debian to be able to use
 # multiple jobs in make (-j8) and distcc+ccache
-# 2005-12-05 01:15 EST - it happens to create problems.
+# it happens to create problems
+# 2005-12-05 01:15 EST - LM
 # if [[ ! -z "${MAKEFLAGS:-}" ]]; then
 #     alias debuild="debuild -e MAKEFLAGS"
 # fi
@@ -229,6 +238,7 @@ elif [[ -f /etc/redhat-release ]]; then
     # assume Fedora
     alias swinstall="yum install "
     alias swremove="yum remove "
+# TODO parse lsb_release output
 else
     alias swinstall="echo command not found"
     alias swremove="echo command not found"
@@ -253,7 +263,7 @@ alias mv='mv -i'
 alias h='history'
 alias j='jobs -l'
 
-alias r='rlogin'
+#alias r='rlogin' # who uses rlogin anymore?
 
 alias which='type -a'
 
@@ -284,14 +294,18 @@ alias tm='tail -f /var/log/messages'
 alias cd='cd_pushd' # keep a stack of all directories visited
                     # use 'popd' to go back in the stack
 
-if [ -x "/usr/sbin/adduser" ]; then
-    alias useradd="adduser" # better implementaion
+# adduser is a better implementaion of useradd
+if [[ -x "`command -v adduser 2> /dev/null`" ]]; then
+    alias useradd="adduser" 
 fi
 
-#alias close="eject -t" # close CDROM tray ;-)
+alias cdclose="eject -t" # close CDROM tray ;-)
 
+# TODO we need to see if vim exists in our PATH first
 ## Vim baby!
-alias vi='vim -u "$HOME/.vim/vimrc"'
+if [[ -x "`command -v vim 2> /dev/null`" ]]; then
+    alias vi='vim -u "$HOME/.vim/vimrc"'
+fi
 ## use gvim if exists instead of vim
 ## and if we are not connected remotely to a system 
 ## (via ssh)

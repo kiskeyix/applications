@@ -208,6 +208,8 @@ alias cvs='cvs -q -w -z3'
 
 # git-pull does not cut it for you?
 alias gitpull='git fetch origin; git rebase origin;'
+# how about git-push?
+alias gitpush='git push; git fetch origin; git rebase origin;'
 
 alias diff='diff -burN'
 

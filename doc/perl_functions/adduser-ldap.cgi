@@ -108,7 +108,7 @@ my $intro = <<EOF;
 <pre class='code'>
 <center><b>Manage $CHATSERVER Users</b></center>
 
-This form is used to create new accounts for $domain
+This form is used to create new accounts for $DOMAIN
 Chat server or for reseting passwords to existing users.
 
 Details on how to configure the chat client will be sent to the user when

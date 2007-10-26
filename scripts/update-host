@@ -831,7 +831,7 @@ sub update_host
     system(  "ssh "
            . $USERNAME
            . $h
-           . " 'mkdir -p $TMP ~/.backup; touch ~/.signaturerc' "
+           . " 'mkdir -p $TMP ~/.backup; chmod 0700 ~/.backup; touch ~/.signaturerc' "
            . $silent);
 
     # copy and unpack files:
@@ -961,6 +961,8 @@ sub update_host
 sub _mkdir
 {
     my $path = shift;
+    my $mode = shift;
+    $mode = (defined $mode) ? $mode : 0700;
     my $root = ($path =~ m,^([/|\\|:]),) ? $1 : "";    # relative or full path?
     my @dirs = splitdir($path);
     my $last = "";
@@ -972,6 +974,7 @@ sub _mkdir
         mkdir($last) if (!-d $last);
         $flag++;
     }
+    chmod($mode,$last) if ($flag > 1); # we created at least one dir, and we need to change its mode
     return $flag;    # number of directories created
 }
 

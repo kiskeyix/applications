@@ -150,6 +150,15 @@ my @_OBSOLETE = (
                  "Applications/scripts/leet.pl",
                  "Applications/scripts/ntpdate",
                  "Applications/scripts/motion.sh",
+                 "Applications/3ddesk.desktop",
+                 "Applications/Gnome*ScreenSaver*Lock.desktop", # spaces might break this
+                 "Applications/TkSETI.desktop",
+                 "Applications/firefox.desktop",
+                 "Applications/nvu.desktop",
+                 "Applications/qtopiadesktop.desktop",
+                 "Applications/ut2003.desktop",
+                 "Applications/ut2004demo.desktop",
+                 "Applications/virus_removal.desktop",
                 );
 my %hosts;    # global multi-dimensional hash to store hosts' information
 my $VERBOSE      = 0;

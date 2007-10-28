@@ -2,8 +2,14 @@
 
 # Copyright (C) 2007 Simon Josefsson.
 # Changes by Luis Mondesi <lemsx1@gmail.com>
-# - implements strptime()
-# - fixes bug in $comment parsing
+# * calls git directly. To use it just: 
+#   cd ~/Project/my_git_repo; git2cl > ChangeLog
+# * implements strptime()
+# * fixes bugs in $comment parsing
+#   - copy input before we remove leading spaces
+#   - skip "merge branch" statements as they don't
+#     have information about files (i.e. we never
+#     go into $state 2)
 #
 # The functions mywrap, last_line_len, wrap_log_entry are derived from
 # the cvs2cl tool, see <http://www.red-bean.com/cvs2cl/>:
@@ -280,13 +286,20 @@ while (my $_l = <GITLOG>) {
 	if ($_l =~ m,^Date: (.*),) {
 	    @date = strptime($1);
 	}
-	$state = 1 if ($_l =~ m,^$,);
+	$state = 1 if ($_l =~ m,^$, and $author and (@date+0>0));
     } elsif ($state == 1) {
-        # modifying our input text is a bad choice
-        # let's make a copy of it first, then we remove spaces 
-        # - lemsx1@gmail.com
+        # * modifying our input text is a bad choice
+        #   let's make a copy of it first, then we remove spaces 
+        # * if we meet a "merge branch" statement, we need to start
+        #   over and find a real entry
+        # Luis Mondesi <lemsx1@gmail.com>
         my $_s = $_l;
 	$_s =~ s/^    //g;
+        if ($_s =~ m/^Merge branch/)
+        {
+            $state=0;
+            next;
+        }
 	$comment = $comment . $_s;
 	$state = 2 if ($_l =~ m,^$,);
     } elsif ($state == 2) {
@@ -296,7 +309,7 @@ while (my $_l = <GITLOG>) {
 	$done = 1 if ($_l =~ m,^$,);
     }
 
-    if ($done and (@date + 0)>0) {
+    if ($done) {
 	print (strftime "%Y-%m-%d  $author\n\n", @date);
 
 	my $files = join (", ", @files);
@@ -323,7 +336,11 @@ while (my $_l = <GITLOG>) {
 	$done = 0;
     }
 }
-print (strftime "%Y-%m-%d  $author\n\n", @date) if (@date + 0);
-my $msg = wrap_log_entry($comment, "\t", 69, 69);
-$msg =~ s/[ \t]+\n/\n/g;
-print "\t* $msg\n";
+
+if (@date + 0)
+{
+    print (strftime "%Y-%m-%d  $author\n\n", @date);
+    my $msg = wrap_log_entry($comment, "\t", 69, 69);
+    $msg =~ s/[ \t]+\n/\n/g;
+    print "\t* $msg\n";
+}

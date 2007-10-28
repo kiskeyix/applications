@@ -3,7 +3,8 @@
 # $Date: 2006-04-20 03:24:27 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
-# DESCRIPTION: simple way to mount a File Vault on Linux $HOME/Vault directory for the current user
+# DESCRIPTION: simple way to mount a File Vault on Linux $HOME/Vault directory for the current user.
+# Make sure that you are a member of the group "disk" or that you are able to write to /dev/loop* devices
 # USAGE: mount_vault --help
 # LICENSE: GPL
 
@@ -25,11 +26,11 @@ my $ENCRYPTION = "-aes-256-ecb"; # ie -aes-256-ecb, etc... openssl --help for mo
 my $USER = $ENV{'USER'};
 my $MOUNT_POINT = $ENV{'HOME'}."/Vault";
 my $MOUNT_TYPE = "xfs";
-my $ENC_IMAGE = "/home/Shared/pri/ehd/$USER.img";
+my $ENC_IMAGE = "/Users/Shared/pri/ehd/$USER.img";
 my $ENC_KEY_FILE = "/etc/ehd/$USER.key";
 my $EXTRA_MOUNT_OPTIONS=undef;
 # find unused loop device
-my $LOOP_DEV = qx/gksu 'losetup -f'/; # "/dev/loop".int(rand(7));
+my $LOOP_DEV = qx/losetup -f/; # Not "/dev/loop".int(rand(7));
 chomp($LOOP_DEV);
 
 # get options
@@ -72,18 +73,21 @@ if ( ! -d $MOUNT_POINT )
         if ( $mounted =~ /$MOUNT_POINT/mig);
 }
 
-system("gksu 'losetup -d $LOOP_DEV'"); 
+# sanity check:
+# TODO losetup -a | grep $LOOP_DEV ? and die('this device is in use') 
+# - note that you should be able to rw to this device! (group "disk")?
+system("losetup -d $LOOP_DEV"); 
 
 # 2. setup loop
 
 my ($LO_foo,$LO_ENC,$LO_KEY,$LO_OTHER) = split(/-/,$ENCRYPTION);
 print STDOUT ("openssl enc -d $ENCRYPTION -in $ENC_KEY_FILE\n") 
     if ( $DEBUG );
-open(FD,"openssl enc -d $ENCRYPTION -in $ENC_KEY_FILE |") 
+open(FD,"openssl enc -d $ENCRYPTION -in $ENC_KEY_FILE|") 
     or die("Cannot get encrypted password from $ENC_KEY_FILE. $!\n");
 # losetup allows to read from a file descriptor. Get one and pass it using gksu/sudo
 my $fd = fileno(FD);
-my $cmd = "gksu 'losetup -e $LO_ENC -k $LO_KEY -p$fd $LOOP_DEV $ENC_IMAGE'";
+my $cmd = "gksu -- losetup -e $LO_ENC -k $LO_KEY -p$fd $LOOP_DEV $ENC_IMAGE";
 print STDOUT ("\n",$cmd,"\n") if ( $DEBUG );
 my $err = qx/$cmd/;
 
@@ -95,7 +99,7 @@ die ("Failed to setup unencrypted loopback on $LOOP_DEV\n")
 # 3. mount vault
 
 my $MOUNT_OPTIONS = (defined($EXTRA_MOUNT_OPTIONS) and $EXTRA_MOUNT_OPTIONS !~ /^\s*$/) ? "exec,nosuid,rw,defaults,$EXTRA_MOUNT_OPTIONS":"exec,nosuid,rw,defaults";
-my $mount_cmd = "gksu 'mount -t $MOUNT_TYPE -o $MOUNT_OPTIONS $LOOP_DEV $MOUNT_POINT'";
+my $mount_cmd = "gksu -- mount -t $MOUNT_TYPE -o $MOUNT_OPTIONS $LOOP_DEV $MOUNT_POINT";
 print STDOUT ($mount_cmd,"\n") if ($DEBUG);
 system($mount_cmd);
 warn ("Failed to mount encrypted image \n") if ($? != 0);
@@ -138,9 +142,9 @@ C<chmod 0750 /etc/ehd>
 
 C<chown root:staff /etc/ehd>
 
-C<dd if=/dev/urandom bs=1c count=32 | openssl enc -aes-256-ecb | tee /etc/ehd/$USER.key>
+C<dd if=/dev/urandom bs=1c count=32 | openssl enc -aes-256-ecb > /etc/ehd/$USER.key>
 
-C<chmod 0640 /etc/ehd/$USER.key>
+C<chmod 0440 /etc/ehd/$USER.key>
 
 # where $USER is the user you want to have that given key file
 
@@ -152,15 +156,15 @@ C<chown :$GROUP /etc/ehd/$USER.key>
 
 # 1024 * 5 of block-size 1M = 5 GB image
 
-dd if=/dev/urandom of=/home/Shared/pri/ehd/$USER.img bs=1M count=5120
+dd if=/dev/urandom of=/Users/Shared/pri/ehd/$USER.img bs=1M count=5120
 
 openssl enc -d -aes-256-ecb -in /etc/ehd/$USER.key | \
 
-losetup -e aes -k 256 -p0 /dev/loop0 /home/Shared/pri/ehd/$USER.img
+losetup -e aes -k 256 -p0 /dev/loop0 /Users/Shared/pri/ehd/$USER.img
 
-chown $USER /home/Shared/pri/ehd/$USER.img
+chown $USER /Users/Shared/pri/ehd/$USER.img
 
-chmod 0600 /home/Shared/pri/ehd/$USER.img
+chmod 0600 /Users/Shared/pri/ehd/$USER.img
 
 mkfs -t xfs /dev/loop0
 
@@ -174,13 +178,13 @@ losetup -d /dev/loop0
 
 # encrypted hard drive
 
-/home/Shared/pri/ehd/&.img /home/& xfs defaults,exec,user,rw,loop,encryption=aes,keybits=256,noauto 0 0
+/Users/Shared/pri/ehd/&.img /Users/& xfs defaults,exec,user,rw,loop,encryption=aes,keybits=256,noauto 0 0
 
 # this applies to pam-mount:
 
 5. edit /etc/security/pam_mount.conf and add:
 
-volume * local - /home/&.img - loop,user,exec,encryption=aes,keybits=256 aes-256-ecb /etc/ehd/&.key
+volume * local - /Users/&.img - loop,user,exec,encryption=aes,keybits=256 aes-256-ecb /etc/ehd/&.key
 
 6. edit /etc/login.defs and make sure that CLOSE_SESSION is set to "yes"
 

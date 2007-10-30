@@ -10,6 +10,8 @@
 #   - skip "merge branch" statements as they don't
 #     have information about files (i.e. we never
 #     go into $state 2)
+#   - behaves like a pipe/filter if input is given from the CLI
+#     else it calls git log by itself
 #
 # The functions mywrap, last_line_len, wrap_log_entry are derived from
 # the cvs2cl tool, see <http://www.red-bean.com/cvs2cl/>:
@@ -36,6 +38,7 @@ use strict;
 #use Date::Parse qw(strptime); # this is non-standard module
 use POSIX qw(strftime);
 use Text::Wrap qw(wrap);
+use FileHandle;
 
 use constant EMPTY_LOG_MESSAGE => '*** empty log message ***';
 
@@ -55,6 +58,14 @@ my %month = (
              'Nov' => 10,
              'Dec' => 12,
             );
+my $fh = new FileHandle;
+
+sub key_ready
+{
+    my ($rin, $nfd);
+    vec($rin, fileno(STDIN), 1) = 1;
+    return $nfd = select($rin, undef, undef, 0);
+}
 
 sub strptime
 {
@@ -304,9 +315,22 @@ my $done = 0;
 
 $state = 0;
 
-open(GITLOG, "LC_ALL=C git log --pretty --numstat --summary|")
-  or die("Cannot execute git log...$!\n");
-while (my $_l = <GITLOG>)
+# if reading from STDIN, we assume that we are
+# getting git log as input
+if (key_ready())
+{
+
+    #my $dummyfh; # don't care about writing
+    #($fh,$dummyfh) = FileHandle::pipe;
+    $fh->fdopen(*STDIN, 'r');
+}
+else
+{
+    $fh->open("LC_ALL=C git log --pretty --numstat --summary|")
+      or die("Cannot execute git log...$!\n");
+}
+
+while (my $_l = <$fh>)
 {
     if ($state == 0)
     {

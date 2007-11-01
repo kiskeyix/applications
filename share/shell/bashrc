@@ -258,9 +258,29 @@ alias nospace="rename 's/ /_/g' *"
 # I like using 'perl -pe' instead of stupid 'sed' and psed command is a clone of sed. So, we re-define it
 alias psed='perl -pe'
 
-alias rm='rm -i'
-alias cp='cp -i'
-alias mv='mv -i'
+if [[ -x "`command -v grm 2> /dev/null`" ]]; then
+    alias rm='grm -i'
+else
+    alias rm='rm -i'
+fi
+
+if [[ -x "`command -v gls 2> /dev/null`" ]]; then
+    alias ls='gls -hF --color'
+elif [[ "Linux" = "`uname -s`" ]]; then
+    alias ls='ls -hF --color' 
+fi
+
+if [[ -x "`command -v gcp 2> /dev/null`" ]]; then
+    alias cp='gcp -i'
+else
+    alias cp='cp -i'
+fi
+
+if [[ -x "`command -v gmv 2> /dev/null`" ]]; then
+    alias mv='gmv -i'
+else
+    alias mv='mv -i'
+fi
 
 alias h='history'
 alias j='jobs -l'
@@ -278,7 +298,6 @@ alias ..='cd ..'
 alias du='du -h'
 alias df='df -h'
 
-alias ls='ls -hF --color' 
 alias lx='ls -lXB'          # B doesn't show files ending with ~
 alias lk='ls -lSr'
 alias la='ls -lA'           # A doesn't show implied . and .. files

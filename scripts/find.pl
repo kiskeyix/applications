@@ -129,7 +129,7 @@ sub _is_binary
     my $file = shift;
     print STDERR ("is_binary() called: $file\n") if ($DEBUG);
     my $file_t = qx/file "$file"/; # FIXME very expensive call. re-write in Perl
-    if ($file_t =~ m/(text\s+executable|\btext\b)/i)
+    if ($file_t =~ m/(text\s+executable|\btext\b|\s+script\b)/i)
     {
         return 0;
     }

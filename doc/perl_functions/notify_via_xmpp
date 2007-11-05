@@ -1,0 +1,78 @@
+#!/usr/bin/perl
+#
+# Author David Cox
+# modified by Luis Mondesi for Fotolog.com
+# Created from various code examples found on the web
+# Last Modified 08/06/2002
+# Feel free to use or modify as needed to suit your needs
+#######################################################
+# MAXWAIT is used because the send message function didn't seem to
+# like being called to fast. The message would be sent unless I waited a second
+# or so. You can experiment with it but I just went with 2 seconds.
+#######################################################
+#
+# Luis Mondesi's Notes:
+# if you receive an error like:
+# Can't use an undefined value as a HASH reference at /usr/lib/perl5/site_perl/5.8.8/XML/Stream.pm line 1165, <STDIN> line 1.
+#
+# Just comment out the line "delete($self->{SIDS}->{$currsid});" in /usr/lib/perl5/site_perl/5.8.8/XML/Stream.pm
+
+use strict;
+use Net::XMPP qw(Client) ;
+use Net::XMPP qw(Message) ;
+use Net::XMPP qw(Protocol) ;
+use Net::XMPP qw(Presence) ;
+
+my $len = scalar @ARGV;
+
+my $_msg = "";
+
+if ($len eq 1)
+{
+    while(<STDIN>)
+    {
+        $_msg .= $_;
+    }
+} elsif ($len eq 2) {
+    $_msg = $ARGV[1];
+} else {
+   die "Usage...\n notify <jabberid> <message> or cat message | notify <jabberid>\n";
+}
+
+my @field=split(/,/,$ARGV[0]);
+
+use constant DEBUGLEVEL       => 0; # 0-2
+
+use constant RECIPIENT => $ARGV[0];
+use constant SERVER    => 'chat.example.com';
+use constant PORT      => 5222;
+use constant USER      => 'nagiosalert';
+use constant PASSWORD  => 'nagiossecret';
+use constant RESOURCE  => 'nagios';
+#use constant MESSAGE   => $_msg;
+use constant MAXWAIT   => 2 ;
+use constant TLS       => 1;
+
+my $connection = Net::XMPP::Client->new(debuglevel=>DEBUGLEVEL);
+$connection->Connect( "hostname" => SERVER,"port" => PORT, "tls" => TLS )  
+    or die "Cannot connect ($!)\n";
+
+my @result = $connection->AuthSend( "username" => USER,"password" =>
+PASSWORD,"resource" => RESOURCE );
+if ($result[0] ne "ok") {
+ die "Ident/Auth with server failed: $result[0] - $result[1]\n";
+}
+
+foreach ( @field ) {
+   my $message = Net::XMPP::Message->new();
+   $message->SetMessage( "to"           => $_,
+                         "subject"      => "Notification",
+                         "type"         => "chat",
+                         "body"         => $_msg);
+
+   $connection->Send($message);
+   sleep(MAXWAIT);
+}
+$connection->Disconnect();
+exit;
+

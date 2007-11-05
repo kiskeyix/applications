@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 #
+# DESCRIPTION:
 # Author David Cox
 # modified by Luis Mondesi for Fotolog.com
 # Created from various code examples found on the web
@@ -16,6 +17,8 @@
 # Can't use an undefined value as a HASH reference at /usr/lib/perl5/site_perl/5.8.8/XML/Stream.pm line 1165, <STDIN> line 1.
 #
 # Just comment out the line "delete($self->{SIDS}->{$currsid});" in /usr/lib/perl5/site_perl/5.8.8/XML/Stream.pm
+# USAGE: echo "message" | notify_via_xmpp user@server 
+# LICENSE: Public Domain
 
 use strict;
 use Net::XMPP qw(Client) ;

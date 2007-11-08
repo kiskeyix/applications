@@ -3,15 +3,15 @@
 # $Date: 2006-04-20 03:24:27 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
-# DESCRIPTION: simple way to mount a File Vault on Linux $HOME/Vault directory for the current user.
-# Make sure that you are a member of the group "disk" or that you are able to write to /dev/loop* devices
+# DESCRIPTION: simple way to mount a File Vault on
+# Linux $HOME/Vault directory for the current user.
 # USAGE: mount_vault --help
 # LICENSE: GPL
 
 use strict;
 $|++;
 
-my $revision='$Revision: 1.8 $'; # version
+my $revision = '$Revision: 1.8 $';    # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # standard Perl modules
@@ -19,90 +19,106 @@ use Getopt::Long;
 Getopt::Long::Configure('bundling');
 
 # Args:
-my $PVERSION=0;
-my $HELP=0;
-my $DEBUG=0;
-my $ENCRYPTION = "-aes-256-ecb"; # ie -aes-256-ecb, etc... openssl --help for more
-my $USER = $ENV{'USER'};
-my $MOUNT_POINT = $ENV{'HOME'}."/Vault";
-my $MOUNT_TYPE = "xfs";
-my $ENC_IMAGE = "/Users/Shared/pri/ehd/$USER.img";
-my $ENC_KEY_FILE = "/etc/ehd/$USER.key";
-my $EXTRA_MOUNT_OPTIONS=undef;
+my $PVERSION = 0;
+my $HELP     = 0;
+my $DEBUG    = 0;
+my $ENCRYPTION =
+  "-aes-256-ecb";    # ie -aes-256-ecb, etc... openssl --help for more
+
+# assume that user is running: sudo $0
+my $USER = (exists($ENV{'SUDO_USER'})) ? $ENV{'SUDO_USER'} : $ENV{'USER'};
+my $MOUNT_POINT         = $ENV{'HOME'} . "/Vault";
+my $MOUNT_TYPE          = "xfs";
+my $ENC_IMAGE           = "/Users/Shared/pri/ehd/$USER.img";
+my $ENC_KEY_FILE        = "/etc/ehd/$USER.key";
+my $EXTRA_MOUNT_OPTIONS = undef;
+
 # find unused loop device
-my $LOOP_DEV = qx/losetup -f/; # Not "/dev/loop".int(rand(7));
+my $LOOP_DEV = qx/losetup -f/;    # Not "/dev/loop".int(rand(7));
 chomp($LOOP_DEV);
 
 # get options
 GetOptions(
+
     # flags
-    'v|version'         =>  \$PVERSION,
-    'h|help'            =>  \$HELP,
-    'D|debug'           =>  \$DEBUG,
+    'v|version' => \$PVERSION,
+    'h|help'    => \$HELP,
+    'D|debug'   => \$DEBUG,
+
     # strings
-    'E|mount-options=s' =>  \$EXTRA_MOUNT_OPTIONS,
-    'e|encryption=s'    =>  \$ENCRYPTION,
-    'i|image=s'         =>  \$ENC_IMAGE,
-    'f|key-file=s'      =>  \$ENC_KEY_FILE,
-    'l|loop=s'          =>  \$LOOP_DEV,
-    'm|mount-point=s'   =>  \$MOUNT_POINT,
-    'u|user=s'          =>  \$USER,
-    't|type=s'          =>  \$MOUNT_TYPE
+    'E|mount-options=s'   => \$EXTRA_MOUNT_OPTIONS,
+    'e|encryption=s'      => \$ENCRYPTION,
+    'i|image=s'           => \$ENC_IMAGE,
+    'f|key-file=s'        => \$ENC_KEY_FILE,
+    'l|loop=s'            => \$LOOP_DEV,
+    'm|mount-point=s'     => \$MOUNT_POINT,
+    'u|user=s'            => \$USER,
+    't|filesystem-type=s' => \$MOUNT_TYPE
 );
 
-if ( $HELP ) { 
+if ($HELP)
+{
     use Pod::Text;
-    my $parser = Pod::Text->new (sentence => 0, width => 78);
-    $parser->parse_from_file($0,\*STDOUT);
+    my $parser = Pod::Text->new(sentence => 0, width => 78);
+    $parser->parse_from_file($0, \*STDOUT);
     exit 0;
 }
 
-if ( $PVERSION ) { print STDOUT ($revision,"\n"); exit 0; }
+if ($PVERSION) { print STDOUT ($revision, "\n"); exit 0; }
 
 # 1. sanity checks
+die("You must run this command as root. See --help") if ($> != 0);
+die("File not found $ENC_IMAGE\n")                   if (!-e $ENC_IMAGE);
 
-die ("File not found $ENC_IMAGE\n") if ( ! -e $ENC_IMAGE );
-
-if ( ! -d $MOUNT_POINT )
+if (!-d $MOUNT_POINT)
 {
-    die ("Could not create directory $MOUNT_POINT\n") if ( ! mkdir($MOUNT_POINT,0700) );
-} else {
+    die("Could not create directory $MOUNT_POINT\n")
+      if (!mkdir($MOUNT_POINT, 0700));
+}
+else
+{
+
     # check if something is already mounted there!
     my $mounted = qx/mount/;
-    die ("File system already mounted at $MOUNT_POINT\n") 
-        if ( $mounted =~ /$MOUNT_POINT/mig);
+    die("File system already mounted at $MOUNT_POINT\n")
+      if ($mounted =~ /$MOUNT_POINT/mig);
 }
 
 # sanity check:
-# TODO losetup -a | grep $LOOP_DEV ? and die('this device is in use') 
+# TODO losetup -a | grep $LOOP_DEV ? and die('this device is in use')
 # - note that you should be able to rw to this device! (group "disk")?
-system("losetup -d $LOOP_DEV"); 
+system("losetup -d $LOOP_DEV 2> /dev/null");
 
 # 2. setup loop
 
-my ($LO_foo,$LO_ENC,$LO_KEY,$LO_OTHER) = split(/-/,$ENCRYPTION);
-print STDOUT ("openssl enc -d $ENCRYPTION -in $ENC_KEY_FILE\n") 
-    if ( $DEBUG );
-#open(FD,"openssl enc -d $ENCRYPTION -in $ENC_KEY_FILE|") 
+my ($LO_foo, $LO_ENC, $LO_KEY, $LO_OTHER) = split(/-/, $ENCRYPTION);
+print STDOUT ("openssl enc -d $ENCRYPTION -in $ENC_KEY_FILE\n")
+  if ($DEBUG);
+
+#open(FD,"openssl enc -d $ENCRYPTION -in $ENC_KEY_FILE|")
 #    or die("Cannot get encrypted password from $ENC_KEY_FILE. $!\n");
-# losetup allows to read from a file descriptor. Get one and pass it using gksu/sudo
+# losetup allows to read from a file descriptor
 #my $fd = fileno(FD);
-my $cmd = "openssl enc -d $ENCRYPTION -in $ENC_KEY_FILE | gksu -- losetup -e $LO_ENC -k $LO_KEY -p0 $LOOP_DEV $ENC_IMAGE";
-print STDOUT ("\n",$cmd,"\n") if ( $DEBUG );
+my $cmd =
+  "openssl enc -d $ENCRYPTION -in $ENC_KEY_FILE | losetup -e $LO_ENC -k $LO_KEY -p0 $LOOP_DEV $ENC_IMAGE";
+print STDOUT ("\n", $cmd, "\n") if ($DEBUG);
 my $err = qx/$cmd/;
 
 #close(FD);
 
-die ("Failed to setup unencrypted loopback on $LOOP_DEV\n") 
-    if ($? != 0 or $err =~ /error/i);
+die("Failed to setup unencrypted loopback on $LOOP_DEV\n")
+  if ($? != 0 or $err =~ /error/i);
 
 # 3. mount vault
 
-my $MOUNT_OPTIONS = (defined($EXTRA_MOUNT_OPTIONS) and $EXTRA_MOUNT_OPTIONS !~ /^\s*$/) ? "exec,nosuid,rw,defaults,$EXTRA_MOUNT_OPTIONS":"exec,nosuid,rw,defaults";
-my $mount_cmd = "gksu -- mount -t $MOUNT_TYPE -o $MOUNT_OPTIONS $LOOP_DEV $MOUNT_POINT";
-print STDOUT ($mount_cmd,"\n") if ($DEBUG);
+my $MOUNT_OPTIONS =
+  (defined($EXTRA_MOUNT_OPTIONS) and $EXTRA_MOUNT_OPTIONS !~ /^\s*$/)
+  ? "exec,nosuid,rw,defaults,$EXTRA_MOUNT_OPTIONS"
+  : "exec,nosuid,rw,defaults";
+my $mount_cmd = "mount -t $MOUNT_TYPE -o $MOUNT_OPTIONS $LOOP_DEV $MOUNT_POINT";
+print STDOUT ($mount_cmd, "\n") if ($DEBUG);
 system($mount_cmd);
-warn ("Failed to mount encrypted image \n") if ($? != 0);
+warn("Failed to mount encrypted image \n") if ($? != 0);
 
 __END__
 
@@ -115,10 +131,18 @@ mount_vault - a simple script to mount an encrypted file system. See http://www.
 B<mount_vault>  [-v,--version]
                 [-D,--debug] 
                 [-h,--help]
+                [-E,--mount-options <STRING>]
+                [-e,--encryption <STRING>]
+                [-i,--image <STRING>]
+                [-f,--key-file <STRING>]
+                [-l,--loop <STRING>]
+                [-m,--mount-point <STRING>]
+                [-u,--user <STRING>]
+                [-t,--filesystem-type <STRING>]
 
 =head1 DESCRIPTION 
 
-    This script mounts an encrypted image from /home/Shared/pri/ehd/$USER.img to $HOME/Vault.
+    This script mounts an encrypted image from /home/Shared/pri/ehd/\$USER.img to \$HOME/Vault.
     To setup the .img file, please follow this instructions carefully:
     http://www.kiskeyix.org/article.php?story_id=1151
 
@@ -209,6 +233,38 @@ enables debug mode
 =item -h,--help
 
 prints this help and exits
+
+=item -E,--mount-options <STRING>
+
+extra options to the mount command. If none, it defaults to: rw,nosuid
+
+=item -e,--encryption <STRING>
+
+encryption to use instead of default: "-aes-256-ecb". See openssl --help.
+
+=item -i,--image <STRING>
+
+path to image file instead of default: "/Users/Shared/pri/ehd/$USER.img"
+
+=item -f,--key-file <STRING>
+
+path to key file instead of default: "/etc/ehd/$USER.key"
+
+=item -l,--loop <STRING>
+
+loop device to use instead of trying to find one using `losetup -f`
+
+=item -m,--mount-point <STRING>
+
+where to mount the Vault instead of $HOME/Vault
+
+=item -u,--user <STRING>
+
+user to use when completing path to key and other strings. Defaults to $SUDO_USER and falls back to $USER. Since this command must run as root, you might need to use this option, unless you run it as: sudo $0
+
+=item -t,--filesystem-type <STRING>
+
+filesystem type instead of default "xfs"
 
 =back
 

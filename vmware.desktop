@@ -1,9 +1,0 @@
-[Desktop Entry]
-Name=VMware
-Comment=v4
-Exec=vmware
-Terminal=false
-MultipleArgs=false
-Type=Application
-Icon=/usr/share/pixmaps/other/vmware.png
-Categories=Application;Accessories;Utility;

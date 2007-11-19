@@ -1,10 +1,10 @@
 #!/bin/sh
 # $Revision: 1.2 $
 # Luis Mondesi <lemsx1@gmail.com>
-# Use Vim as a PAGER, behaves like less
+# Use Vim as a MANPAGER, behaves like less
 cat $1 \
 | col -b \
-| vim -c 'se ro nomod wrap ls=1 notitle ic' \
+| vim -c 'se ft=man ro nomod wrap ls=1 notitle ic' \
 -c 'nmap q :q!<CR>' -c 'nmap <Space> <C-F>' -c 'nmap b <C-B>' \
 -c 'nmap f <C-F>' -c 'norm L' -
 

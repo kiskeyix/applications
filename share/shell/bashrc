@@ -203,7 +203,7 @@ powerprompt	# this is the default prompt - might be slow
 alias bye='exit'
 alias abul='exit'
 
-alias ssh='ssh -c blowfish'
+#alias ssh='ssh -c blowfish'
 alias cvs='cvs -q -w -z3'
 
 # git-pull does not cut it for you?

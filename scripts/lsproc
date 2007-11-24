@@ -6,7 +6,8 @@
 # LICENSE: GPL
 #
 
-PS='ps -eo pid,user,rss,stat,args'
+PS='ps -eaf'
+#o pid,user,rss,stat,args'
 SORT='sort --key=3 --reverse --numeric-sort'
 
 if [ ! -z $1 ]; then

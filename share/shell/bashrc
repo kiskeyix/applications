@@ -234,12 +234,12 @@ alias diff='diff -burN'
 # to know what distro we are running and set alias
 # accordingly using yast2, yum or even rpm and dpkg
 if [[ -f /etc/debian_release ]]; then
-    alias swinstall="apt-get install "
-    alias swremove="apt-get remove "
+    alias swinstall="sudo apt-get install "
+    alias swremove="sudo apt-get remove "
 elif [[ -f /etc/redhat-release ]]; then
     # assume Fedora
-    alias swinstall="yum install "
-    alias swremove="yum remove "
+    alias swinstall="sudo yum install "
+    alias swremove="sudo yum remove "
 # TODO parse lsb_release output
 else
     alias swinstall="echo command not found"
@@ -257,6 +257,12 @@ alias nospace="rename 's/ /_/g' *"
 
 # I like using 'perl -pe' instead of stupid 'sed' and psed command is a clone of sed. So, we re-define it
 alias psed='perl -pe'
+
+if [[ -x "`command -v less 2> /dev/null`" ]]; then
+    # less is just better than more
+    # no pun intended
+    alias more='less'
+fi
 
 if [[ -x "`command -v grm 2> /dev/null`" ]]; then
     alias rm='grm -i'

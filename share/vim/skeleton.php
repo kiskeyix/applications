@@ -1,6 +1,7 @@
 <?php
 /*
  * $Revision: 1.1 $
+ * my_name < email@example.com >
  *
  */
 

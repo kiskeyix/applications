@@ -205,7 +205,7 @@ sub _process_file
         # cleanup
         if (-f $_file_tmp)
         {
-            warn "Removing left-over file $_file_tmp\n";
+            #DEBUG warn "Removing left-over file $_file_tmp\n";
             unlink($_file_tmp)
                 or die("Could not remove file $_file_tmp. $!\n");
         }

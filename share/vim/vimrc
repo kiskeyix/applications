@@ -223,7 +223,7 @@ augroup mail
     if !exists("autocommands_mail_loaded")
         let autocommands_mail_loaded = 1
     " If you wonder, the big regexes are for matching temp files from cvs
-        au BufRead .followup,.article,.letter,/tmp/snd*,/tmp/mutt*,/tmp/moder*,/var/tmp/[a-z][a-z][a-z][a-z][0-9][0-9][0-9]*,/tmp/[0-9][0-9][0-9][0-9][0-9][a-z][a-z][a-z] set formatoptions=tcqro2 comments=n:>,n::,n:»,n:] tw=72 autoindent
+        au BufRead .followup,.article,.letter,/tmp/snd*,/tmp/mutt*,/tmp/moder*,/var/tmp/[a-z][a-z][a-z][a-z][0-9][0-9][0-9]*,/tmp/[0-9][0-9][0-9][0-9][0-9][a-z][a-z][a-z] set formatoptions=tcqro2 comments=n:>,n::,n:Â»,n:] tw=72 autoindent
     endif
 augroup END
 

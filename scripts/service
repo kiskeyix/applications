@@ -3,7 +3,7 @@
 # $Date: 2007-03-10 22:30:11 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
-# DESCRIPTION: Advanced drop-in replacement for "service" command line utility found on RedHat systems. Use to start/stop or removes services in Linux. Works on all Linux distributions.
+# DESCRIPTION: Advanced drop-in replacement for "service" command line utility found on Redhat systems. Use to start/stop or removes services in Linux. Works on all Linux distributions.
 # USAGE: service <start|stop|restart|remove|reload|status|on|off> <service1 [service2 ... serviceN]>
 # LICENSE: GPL
 # BUGS:
@@ -34,7 +34,7 @@ B<service>  [-v,--version]
 
     service stop apache2 squid gnump3d shorewall
 
-    # or classic RedHat style:
+    # or classic Redhat style:
 
     service apache2 stop
 
@@ -48,8 +48,8 @@ B<service>  [-v,--version]
 
 =head1 DESCRIPTION 
 
-    This script is used for sending commands to a given service or to remove/add a service to the SysV style startup script directories. This script should work well for all Linux distributions. Tested on: RedHat/FedoraCore, SuSe, Ubuntu and Debian.
-    This is a drop-in replacement for the "service" command line utility on RedHat-based systems.
+    This script is used for sending commands to a given service or to remove/add a service to the SysV style startup script directories. This script should work well for all Linux distributions. Tested on: Redhat/Fedora, SuSE, Ubuntu and Debian.
+    This is a drop-in replacement for the "service" command line utility on Redhat-based systems.
     
     Adding more distributions is as simple as:
     
@@ -86,7 +86,8 @@ my %debian_commands = (
 my %distros = (
                'redhat'     => \%redhat_commands,
                'suselinux'  => \%redhat_commands,
-               'fedoracore' => \%redhat_commands,
+               'fedora'     => \%redhat_commands,
+               'fedoracore'     => \%redhat_commands,
                'debian'     => \%debian_commands,
                'ubuntu'     => \%debian_commands,
               );

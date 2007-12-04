@@ -18,6 +18,11 @@ set nocompatible	" we want vim's features, not stupid vi compatiblity
 set ruler		" shows ruler at the bottom of the screen
 set bs=2		" allow backspacing over everything in insert mode
 
+" force utf-8
+set encoding=utf-8
+set fileencodings=""
+" end utf-8
+
 set ic			" comment this out if you want to search non case sensitive
 
 set showcmd		" Show (partial) command in status line

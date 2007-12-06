@@ -247,7 +247,7 @@ if ($LIST_ALL or $LIST_RUN or $LIST_LEV or $LIST_ON or $LIST_OFF)
 
         # TODO attempt to find some names by reading the initrc files... 
         # will take a lot of time to finish.
-        open(PROC,"ps ax --format \%c | sort | uniq|") or die($!,"\n");
+        open(PROC,"ps -eo comm | sort | uniq|") or die($!,"\n");
         while (my $file = <PROC>)
         {
             chomp($file);
@@ -275,7 +275,7 @@ if ($LIST_ALL or $LIST_RUN or $LIST_LEV or $LIST_ON or $LIST_OFF)
             }
         }
         # sanity check
-        $RUNLEVEL=qx/runlevel/ if (not defined $RUNLEVEL and $RUNLEVEL eq "");
+        $RUNLEVEL=qx/runlevel/ if (not defined $RUNLEVEL or $RUNLEVEL eq "");
         chomp($RUNLEVEL);
         $RUNLEVEL =~ s/[^0-9]//g;
 
@@ -288,7 +288,10 @@ if ($LIST_ALL or $LIST_RUN or $LIST_LEV or $LIST_ON or $LIST_OFF)
         print sprintf("\%s\t%32s\t%s\n","Pri","Service Name","Status");
         print '-'x64,"\n";
 
-        while (my $file = readdir(DIR))
+        my @files = readdir(DIR);
+        close(DIR);
+        @files = sort(@files);
+        foreach my $file (@files)
         {
             next if (-d "$DIR/$file");
             next if (!-x "$DIR/$file");

@@ -1,0 +1,232 @@
+#!/usr/bin/perl -w
+# $Revision: 1.80 $
+# Luis Mondesi < lemsx1@gmail.com >
+#
+# DESCRIPTION: A simple script to set ssh-agent and add your private keys
+# using ssh-add
+# USAGE: ssh-agent
+# LICENSE: GPL
+
+use strict;
+$|++;
+use sigtrap qw(handler _exit_safe error-signals);
+
+use Getopt::Long;
+Getopt::Long::Configure('bundling');
+
+############## NO NEED TO MODIFY THESE #################
+
+=pod
+
+=head1 ssh-agent
+
+ssh-agent - by Luis Mondesi L<<lemsx1@gmail.com>>
+
+=head1 SYNOPSIS
+
+B<ssh-agent>  
+[-D,--debug]
+[-h,--help]
+[-k,--key]
+[--shell /bin/bash]
+[-U,--usage]
+[-V,--verbose]
+[-v,--version]
+
+=head1 DESCRIPTION 
+
+This script sets up ssh-agent properly (or re-uses the previous ssh-agent)
+and ensures that your private keys are added to the session
+
+=head1 BUGS
+
+* none (yet)
+
+=head1 OPTIONS
+
+=cut
+
+my $PVERSION = 0;
+my $HELP     = 0;
+
+# when empty adds all for us... $ENV{'HOME'}."/.ssh/id_rsa":
+my $PG_KEY  = "";
+my $SHELL   = undef;
+my $VERBOSE = 0;
+my $DEBUG   = 0;
+my $USAGE   = 0;
+my $RED     = "\033[1;31m";
+my $NORM    = "\033[0;39m";
+my $GREEN   = "\033[0;32m";
+
+## GET OPTIONS ##
+
+=pod
+
+=over 8
+
+=item -D,--debug
+
+Enables debug mode
+
+=item -h,--help
+
+Prints this help and exits
+
+=item -k,--key KEY
+
+Uses private key KEY instead of ~/.ssh/id_rsa for ssh-agent
+
+=item --shell SHELL
+
+Executes shell SHELL after ssh-agent is setup
+
+=item -U,--usage
+
+Prints usage information
+
+=item -V,--verbose
+
+be verbose
+
+=item -v,--version
+
+Prints version and exits
+
+=back
+
+=cut
+
+GetOptions(
+
+    # flags
+    'v|version' => \$PVERSION,
+    'h|help'    => \$HELP,
+    'U|usage'   => \$USAGE,
+    'D|debug'   => \$DEBUG,
+    'V|verbose' => \$VERBOSE,
+
+    # strings
+    'k|key=s' => \$PG_KEY,
+    'shell=s' => \$SHELL,
+);
+
+## START SCRIPT ##
+
+if ($HELP)
+{
+    use Pod::Text;
+    my $parser = Pod::Text->new(sentence => 0, width => 78);
+    $parser->parse_from_file(File::Spec->catfile("$0"), \*STDOUT);
+    exit(0);
+}
+
+if ($USAGE)
+{
+    use Pod::Usage;
+    pod2usage(1);
+    exit(0);    # never reaches here
+}
+
+# setup SSH
+my $_ssh_id    = 0;    # in case of errors, remove our keys
+my $_ssh_agent = 0;    # kill our agent in case of errors
+
+if (exists($ENV{'SSH_AUTH_SOCK'}) and -S $ENV{'SSH_AUTH_SOCK'})
+{
+    print STDOUT ("Reusing SSH agent from " . $ENV{'SSH_AUTH_SOCK'} . "\n");
+}
+else
+{
+    $ENV{'SSH_AUTH_SOCK'} = "" if (!exists $ENV{'SSH_AUTH_SOCK'});
+    my $_ssh_agent_env = qx/ssh-agent -s/;
+    $_ssh_agent = 1 if ($? == 0);    # kill ssh-agent if errors
+    debug($_ssh_agent_env);
+    $_ssh_agent_env =~ m/SSH_AUTH_SOCK=(.*); /gmi;
+    debug("SSH_AUTH_SOCK before: ", $ENV{'SSH_AUTH_SOCK'});
+    $ENV{'SSH_AUTH_SOCK'} = $1;
+    debug("SSH_AUTH_SOCK after: ", $ENV{'SSH_AUTH_SOCK'});
+    $_ssh_agent_env =~ m/SSH_AGENT_PID=(.*); /gmi;
+    $ENV{'SSH_AGENT_PID'} = $1;
+
+    if (-S $ENV{'SSH_AUTH_SOCK'})
+    {
+        print STDOUT (  "SSH agent ("
+                      . $ENV{'SSH_AGENT_PID'}
+                      . ") listening on "
+                      . $ENV{'SSH_AUTH_SOCK'}
+                      . "\n");
+    }
+    else
+    {
+
+        # did we miss the SSH_AUTH_SOCK value?
+        warn("Could not launch our ssh-agent\n");
+    }
+}
+
+system("ssh-add -l > /dev/null 2>&1");
+if ($? != 0)
+{
+
+    # if $PG_KEY is blank ssh-add adds all private keys
+    system("ssh-add $PG_KEY");
+    if ($? != 0)
+    {
+        warn(
+            "Failed to authenticate. Possible causes are:\n * ssh-agent is not running? \n * There is no valid private key? \nHint: create a key with \n\`ssh-keygen -t rsa -b 1024\` \nAnd then pass the key to us with: $0 --key $ENV{HOME}/.ssh/id_rsa\n"
+        );
+        _exit_safe(0);
+    }
+}
+$_ssh_id = 1;
+
+# end setup SSH
+
+if (defined $SHELL and -x $SHELL)
+{
+
+    # since there is no way to send our environment to our parent shell,
+    # we spawn a new shell that inherits our ssh-agent env
+    system($SHELL);
+}
+else
+{
+    print STDOUT (  "SSH_AGENT_PID="
+                  . $ENV{'SSH_AGENT_PID'}
+                  . "; export SSH_AGENT_PID;"
+                  . "SSH_AUTH_SOCK="
+                  . $ENV{'SSH_AUTH_SOCK'}
+                  . "; export SSH_AUTH_SOCK");
+}
+
+# @desc prints colored messages
+sub debug
+{
+    my $msg = "@_";
+    print STDERR ("$RED $msg $NORM\n") if ($DEBUG);
+}
+
+sub _exit_safe
+{
+    my $status = shift;
+    $status = 0 if (not defined($status));
+
+    # TODO handle more signals
+    my %exit = (INT => '9');
+    if ($_ssh_id == 1)
+    {
+        system("ssh-add -D");    # delete identities
+    }
+
+    if ($_ssh_agent == 1)
+    {
+        kill(15, $ENV{'SSH_AGENT_PID'});
+    }
+    if ($status =~ /^[0-9]+$/)
+    {
+        exit $status;
+    }
+    exit $exit{$status};
+}
+

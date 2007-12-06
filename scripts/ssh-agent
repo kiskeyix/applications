@@ -151,7 +151,7 @@ else
 
     if (-S $ENV{'SSH_AUTH_SOCK'})
     {
-        print STDOUT (  "SSH agent ("
+        print STDERR (  "SSH agent ("
                       . $ENV{'SSH_AGENT_PID'}
                       . ") listening on "
                       . $ENV{'SSH_AUTH_SOCK'}
@@ -170,7 +170,7 @@ if ($? != 0)
 {
 
     # if $PG_KEY is blank ssh-add adds all private keys
-    system("ssh-add $PG_KEY");
+    system("ssh-add $PG_KEY > /dev/null 2>&1");
     if ($? != 0)
     {
         warn(
@@ -194,7 +194,7 @@ else
 {
     print STDOUT (  "SSH_AGENT_PID="
                   . $ENV{'SSH_AGENT_PID'}
-                  . "; export SSH_AGENT_PID;"
+                  . "; export SSH_AGENT_PID; "
                   . "SSH_AUTH_SOCK="
                   . $ENV{'SSH_AUTH_SOCK'}
                   . "; export SSH_AUTH_SOCK");

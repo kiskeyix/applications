@@ -260,19 +260,24 @@ if ($LIST_ALL or $LIST_RUN or $LIST_LEV or $LIST_ON or $LIST_OFF)
     if ($LIST_LEV)
     {
         my $RUNLEVEL = undef;
-
-        # parse inittab
-        open(INITTAB, "</etc/inittab") or die($! . "\n");
-        while (<INITTAB>)
+        
+        if ( -r "/etc/inittab" )
         {
-            if (/^\s*id\s*:\s*(\d+)\s*:\s*initdefault\s*:\s*$/)
+            # parse inittab
+            open(INITTAB, "</etc/inittab") or die($! . "\n");
+            while (<INITTAB>)
             {
-                $RUNLEVEL = $1;
-                last;
+                if (/^\s*id\s*:\s*(\d+)\s*:\s*initdefault\s*:\s*$/)
+                {
+                    $RUNLEVEL = $1;
+                    last;
+                }
             }
         }
+        # sanity check
         $RUNLEVEL=qx/runlevel/ if (not defined $RUNLEVEL and $RUNLEVEL eq "");
         chomp($RUNLEVEL);
+
         print "All services for this runlevel [$RUNLEVEL]\n";
         my $DIR = "/etc/rc$RUNLEVEL.d";    # LSB
                                            # TODO use distro specific

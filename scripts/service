@@ -271,7 +271,8 @@ if ($LIST_ALL or $LIST_RUN or $LIST_LEV or $LIST_ON or $LIST_OFF)
                 last;
             }
         }
-
+        $RUNLEVEL=qx/runlevel/ if (not defined $RUNLEVEL and $RUNLEVEL eq "");
+        chomp($RUNLEVEL);
         print "All services for this runlevel [$RUNLEVEL]\n";
         my $DIR = "/etc/rc$RUNLEVEL.d";    # LSB
                                            # TODO use distro specific

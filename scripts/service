@@ -277,6 +277,7 @@ if ($LIST_ALL or $LIST_RUN or $LIST_LEV or $LIST_ON or $LIST_OFF)
         # sanity check
         $RUNLEVEL=qx/runlevel/ if (not defined $RUNLEVEL and $RUNLEVEL eq "");
         chomp($RUNLEVEL);
+        $RUNLEVEL =~ s/[^0-9]//g;
 
         print "All services for this runlevel [$RUNLEVEL]\n";
         my $DIR = "/etc/rc$RUNLEVEL.d";    # LSB

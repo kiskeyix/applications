@@ -1,10 +1,10 @@
 #!/usr/bin/perl -w
-# $Revision: 1.80 $
+# $Revision: 0.1 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to set ssh-agent and add your private keys
 # using ssh-add
-# USAGE: ssh-agent
+# USAGE: eval `ssh-agent-setup`
 # LICENSE: GPL
 
 use strict;
@@ -18,13 +18,13 @@ Getopt::Long::Configure('bundling');
 
 =pod
 
-=head1 ssh-agent
+=head1 ssh-agent-setup
 
-ssh-agent - by Luis Mondesi L<<lemsx1@gmail.com>>
+ssh-agent-setup - by Luis Mondesi L<<lemsx1@gmail.com>>
 
 =head1 SYNOPSIS
 
-B<ssh-agent>  
+B<ssh-agent-setup>  
 [-D,--debug]
 [-h,--help]
 [-k,--key]
@@ -32,6 +32,16 @@ B<ssh-agent>
 [-U,--usage]
 [-V,--verbose]
 [-v,--version]
+
+=head1 EXAMPLES
+
+to continue using same shell:
+
+eval `B<ssh-agent-setup>`
+
+to launch a new shell after ssh-agent is setup:
+
+B<ssh-agent-setup> --shell /bin/bash
 
 =head1 DESCRIPTION 
 

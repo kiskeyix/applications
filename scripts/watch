@@ -1,0 +1,27 @@
+#!/usr/bin/perl
+# Luis Mondesi <lemsx1@gmail.com> 
+# 2007-12-12 11:49 EST 
+# LICENSE: GPL
+
+my $USAGE='Usage: watch <command>';
+# TODO check for command existence? -o ! -x $1
+# how do we know if user did: watch 'foo | bar' ?
+if ( !$ARGV[0] )
+{
+    print STDERR $USAGE."\n";
+    exit 1;
+}
+
+my $sleep = "2.0";
+
+my $_cmd = join(' ',@ARGV);
+my $_status = "Every ${sleep}s: ".substr($_cmd,0,32)."...\t\t";
+
+while(1)
+{
+    system("clear");
+    print STDOUT $_status;
+    print STDOUT scalar localtime."\n\n";
+    system($_cmd);
+    sleep $sleep;
+}

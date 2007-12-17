@@ -65,8 +65,9 @@ $|++;
 
 $ENV{'PATH'} .= ":/sbin:/usr/sbin";
 
-my $revision = '$Revision: 1.17 $';    # version
-$revision =~ s/(\\|Revision:|\s|\$)//g;
+my $revision = '1.2';
+#'$Revision: 1.17 $';    # version
+#$revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # service is the template for the command to execute
 # /etc/init.d/service_name action
@@ -85,6 +86,7 @@ my %debian_commands = (
 # NOTE: key 1 is output of lsb_release -i
 my %distros = (
                'redhat'     => \%redhat_commands,
+               'centos'     => \%redhat_commands,
                'suselinux'  => \%redhat_commands,
                'fedora'     => \%redhat_commands,
                'fedoracore'     => \%redhat_commands,
@@ -205,6 +207,12 @@ while(<LSB>)
         last;
     }
 }
+if (not $release_info or $release_info =~ /^\s*$/)
+{
+    $release_info = (-e "/etc/redhat-release") ? "redhat" : "debian";
+    warn ("Could not determine release information from LSB using '$release_info'\n");
+}
+
 print "Distributor ID: ",$release_info, "\n" if ($DEBUG);
 
 if ($DEBUG)

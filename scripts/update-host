@@ -410,11 +410,12 @@ if ($PKEY)
     $key =~ s/\S+\s+(\S+)\s+.*/$1/;
     $key = "NO_KEY" if ($key =~ /^\s*$/);
     $key =~ s/([\&\$\'\"\;\ ])/\\$1/g;    # escape shell chars
+    print ("Using ssh key $key\n") if ($VERBOSE);
     my $ssh_cmd =
         "cat $ENV{'HOME'}/.ssh/id_rsa.pub | ssh "
       . $USERNAME
       . $HOST
-      . " 'mkdir ~/.ssh 2> /dev/null && chmod 0700 ~/.ssh; grep -q $key ~/.ssh/authorized_keys 2> /dev/null || cat - >> ~/.ssh/authorized_keys; chmod 0644 ~/.ssh/authorized_keys'";
+      . " 'mkdir ~/.ssh 2> /dev/null && chmod 0700 ~/.ssh; grep $key ~/.ssh/authorized_keys > /dev/null 2>&1 || cat - >> ~/.ssh/authorized_keys; chmod 0644 ~/.ssh/authorized_keys'";
 
     my $ret = 0;
 

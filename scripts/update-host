@@ -335,52 +335,6 @@ if ($USAGE)
     _exit_safe(0);
 }
 
-# setup SSH
-if (exists($ENV{'SSH_AUTH_SOCK'}) and !-S $ENV{'SSH_AUTH_SOCK'})
-{
-    $ENV{'SSH_AUTH_SOCK'} = "";
-    my $_ssh_agent_env = qx/ssh-agent -s/;
-    debug($_ssh_agent_env);
-    $_ssh_agent_env =~ m/SSH_AUTH_SOCK=(.*); /gmi;
-    debug("SSH_AUTH_SOCK before: ", $ENV{'SSH_AUTH_SOCK'});
-    $ENV{'SSH_AUTH_SOCK'} = $1;
-    debug("SSH_AUTH_SOCK after: ", $ENV{'SSH_AUTH_SOCK'});
-    $_ssh_agent_env =~ m/SSH_AGENT_PID=(.*); /gmi;
-    $ENV{'SSH_AGENT_PID'} = $1;
-
-    if (-S $ENV{'SSH_AUTH_SOCK'})
-    {
-        $_ssh_agent = 1;    # we should kill the agent when done
-    }
-    else
-    {
-        warn("Could not launch our ssh-agent\n");
-    }
-}
-$_ssh_id = system("ssh-add -l > /dev/null");
-if ($_ssh_id != 0)
-{
-    system("ssh-add $PG_KEY")
-      ;                     # if $PG_KEY is blank ssh-add adds all private keys
-    if ($? != 0)
-    {
-        warn(
-            "Failed to authenticate. ssh-gent is not running? There is no valid private key? Hint: create a key with \`ssh-keygen -t rsa -b 1024\`. And then pass the key to us with: $0 --key $ENV{HOME}/.ssh/id_rsa\n"
-        );
-        if (
-            prompt(
-                "Do you want to continue? You will be prompted for each password needed [y/N] "
-            ) !~ /^y/i
-           )
-        {
-            _exit_safe(0);
-        }
-    }
-    $_ssh_id = 1;    # we need to know that this agent should be killed later
-}
-
-# end setup SSH
-
 # username will be passed to e/a ssh call
 if (defined($USERNAME) and $USERNAME !~ /^\s*$/)
 {
@@ -389,99 +343,6 @@ if (defined($USERNAME) and $USERNAME !~ /^\s*$/)
 else
 {
     $USERNAME = "";
-}
-
-if ($PKEY)
-{
-    print STDERR (
-        "host argument missing.\nUsage: update-host --send-key HOST1 [HOST2 ...]"
-      )
-      and _exit_safe(1)
-      if (!defined($HOST) or $HOST =~ /^\s*$/);
-
-    # generate RSA keys if none found. I don't care about people who use DSA :-P
-    system("ssh-keygen -t rsa -b 1024") if (!-f "$ENV{'HOME'}/.ssh/id_rsa.pub");
-
-    # test if our key already exists on the remote host
-    open(KEY, "< $ENV{'HOME'}/.ssh/id_rsa.pub");
-    my $key = <KEY>;
-    close(KEY);
-    chomp($key);
-    $key =~ s/\S+\s+(\S+)\s+.*/$1/;
-    $key = "NO_KEY" if ($key =~ /^\s*$/);
-    $key =~ s/([\&\$\'\"\;\ ])/\\$1/g;    # escape shell chars
-    print ("Using ssh key $key\n") if ($VERBOSE);
-    my $ssh_cmd =
-        "cat $ENV{'HOME'}/.ssh/id_rsa.pub | ssh "
-      . $USERNAME
-      . $HOST
-      . " 'mkdir ~/.ssh 2> /dev/null && chmod 0700 ~/.ssh; grep $key ~/.ssh/authorized_keys > /dev/null 2>&1 || cat - >> ~/.ssh/authorized_keys; chmod 0644 ~/.ssh/authorized_keys'";
-
-    my $ret = 0;
-
-    if ($PASSWORD)
-    {
-
-        # password was supplied from the command line, handle it with expect
-        eval "use Expect";
-        if ($@)
-        {
-            print STDERR "\n$0 ERROR: Could not load the Expect.pm module.\n"
-              . "       To install this module use:\n"
-              . "       perl -e shell -MCPAN\n"
-              . "       On Debian just: \n"
-              . "       apt-get install libexpect-perl libio-stty-perl \n\n";
-            print STDERR "$@\n";
-            exit 1;
-        }
-        my $exp = Expect->new();
-        $exp->stty(qw(raw -echo));
-        my @args = ();    # no need
-        $exp->spawn($ssh_cmd, @args)
-          or die "Cannot spawn $ssh_cmd: $!\n";
-
-        # send some string there:
-        $exp->expect(
-            10,
-
-            [
-             qr/.*\(yes.no\)/ => sub {
-                 my $self = shift;
-                 $self->send("yes\n");
-                 exp_continue();
-               }
-            ],
-
-            [
-             qr/.*password: / => sub {
-                 my $self = shift;
-                 $self->send("$PASSWORD\n");
-                 exp_continue();
-               }
-            ]
-        );
-        $exp->soft_close();
-    }
-    else
-    {
-        $ret = system($ssh_cmd);
-    }
-    print STDERR ("failed to send key to $HOST") and _exit_safe($?)
-      if ($? != 0);
-
-    # if we have more hosts, keep going
-    foreach my $host (@ARGV)
-    {
-        system("cat $ENV{'HOME'}/.ssh/id_rsa.pub | ssh "
-            . $USERNAME
-            . $host
-            . " 'mkdir ~/.ssh 2> /dev/null && chmod 0700 ~/.ssh; grep -q $key ~/.ssh/authorized_keys 2> /dev/null || cat - >> ~/.ssh/authorized_keys; chmod 0644 ~/.ssh/authorized_keys'"
-        );
-        print STDERR ("failed to send key to $HOST") and _exit_safe($?)
-          if ($? != 0);
-    }
-
-    _exit_safe(0);
 }
 
 if ($VERBOSE)
@@ -622,6 +483,144 @@ if ($MASTER)
     unlink(@_OBSOLETE)     if ($DOOBSOLETE);
 
     print STDOUT ("\n");
+    _exit_safe(0);
+}
+
+# setup SSH
+if (exists($ENV{'SSH_AUTH_SOCK'}) and !-S $ENV{'SSH_AUTH_SOCK'})
+{
+    $ENV{'SSH_AUTH_SOCK'} = "";
+    my $_ssh_agent_env = qx/ssh-agent -s/;
+    debug($_ssh_agent_env);
+    $_ssh_agent_env =~ m/SSH_AUTH_SOCK=(.*); /gmi;
+    debug("SSH_AUTH_SOCK before: ", $ENV{'SSH_AUTH_SOCK'});
+    $ENV{'SSH_AUTH_SOCK'} = $1;
+    debug("SSH_AUTH_SOCK after: ", $ENV{'SSH_AUTH_SOCK'});
+    $_ssh_agent_env =~ m/SSH_AGENT_PID=(.*); /gmi;
+    $ENV{'SSH_AGENT_PID'} = $1;
+
+    if (-S $ENV{'SSH_AUTH_SOCK'})
+    {
+        $_ssh_agent = 1;    # we should kill the agent when done
+    }
+    else
+    {
+        warn("Could not launch our ssh-agent\n");
+    }
+}
+$_ssh_id = system("ssh-add -l > /dev/null");
+if ($_ssh_id != 0)
+{
+    system("ssh-add $PG_KEY")
+      ;                     # if $PG_KEY is blank ssh-add adds all private keys
+    if ($? != 0)
+    {
+        warn(
+            "Failed to authenticate. ssh-agent is not running? There is no valid private key? Hint: create a key with \`ssh-keygen -t rsa -b 1024\`. And then pass the key to us with: $0 --key $ENV{HOME}/.ssh/id_rsa\n"
+        );
+        if (
+            prompt(
+                "Do you want to continue? You will be prompted for each password needed [y/N] "
+            ) !~ /^y/i
+           )
+        {
+            _exit_safe(0);
+        }
+    }
+    $_ssh_id = 1;    # we need to know that this agent should be killed later
+}
+# end setup SSH
+
+if ($PKEY)
+{
+    print STDERR (
+        "host argument missing.\nUsage: update-host --send-key HOST1 [HOST2 ...]\n"
+      )
+      and _exit_safe(1)
+      if (!defined($HOST) or $HOST =~ /^\s*$/);
+
+    # generate RSA keys if none found. I don't care about people who use DSA :-P
+    system("ssh-keygen -t rsa -b 1024") if (!-f "$ENV{'HOME'}/.ssh/id_rsa.pub");
+
+    # test if our key already exists on the remote host
+    open(KEY, "< $ENV{'HOME'}/.ssh/id_rsa.pub");
+    my $key = <KEY>;
+    close(KEY);
+    chomp($key);
+    $key =~ s/\S+\s+(\S+)\s+.*/$1/;
+    $key = "NO_KEY" if ($key =~ /^\s*$/);
+    $key =~ s/([\&\$\'\"\;\ ])/\\$1/g;    # escape shell chars
+    print ("Using ssh key $key\n") if ($VERBOSE);
+    my $ssh_cmd =
+        "cat $ENV{'HOME'}/.ssh/id_rsa.pub | ssh "
+      . $USERNAME
+      . $HOST
+      . " 'mkdir ~/.ssh 2> /dev/null && chmod 0700 ~/.ssh; grep $key ~/.ssh/authorized_keys > /dev/null 2>&1 || cat - >> ~/.ssh/authorized_keys; chmod 0644 ~/.ssh/authorized_keys'";
+
+    my $ret = 0;
+
+    if ($PASSWORD)
+    {
+
+        # password was supplied from the command line, handle it with expect
+        eval "use Expect";
+        if ($@)
+        {
+            print STDERR "\n$0 ERROR: Could not load the Expect.pm module.\n"
+              . "       To install this module use:\n"
+              . "       perl -e shell -MCPAN\n"
+              . "       On Debian just: \n"
+              . "       apt-get install libexpect-perl libio-stty-perl \n\n";
+            print STDERR "$@\n";
+            exit 1;
+        }
+        my $exp = Expect->new();
+        $exp->stty(qw(raw -echo));
+        my @args = ();    # no need
+        $exp->spawn($ssh_cmd, @args)
+          or die "Cannot spawn $ssh_cmd: $!\n";
+
+        # send some string there:
+        $exp->expect(
+            10,
+
+            [
+             qr/.*\(yes.no\)/ => sub {
+                 my $self = shift;
+                 $self->send("yes\n");
+                 exp_continue();
+               }
+            ],
+
+            [
+             qr/.*password: / => sub {
+                 my $self = shift;
+                 $self->send("$PASSWORD\n");
+                 exp_continue();
+               }
+            ]
+        );
+        $exp->soft_close();
+    }
+    else
+    {
+        $ret = system($ssh_cmd);
+    }
+    print STDERR ("failed to send key to $HOST") and _exit_safe($?)
+      if ($? != 0);
+
+    # if we have more hosts, keep going
+    foreach my $host (@ARGV)
+    {
+        system("cat $ENV{'HOME'}/.ssh/id_rsa.pub | ssh "
+            . $USERNAME
+            . $host
+            . " 'mkdir ~/.ssh 2> /dev/null && chmod 0700 ~/.ssh; grep -q $key ~/.ssh/authorized_keys 2> /dev/null || cat - >> ~/.ssh/authorized_keys; chmod 0644 ~/.ssh/authorized_keys'"
+        );
+        print STDERR ("failed to send key to $HOST") and _exit_safe($?)
+          if ($? != 0);
+    }
+
     _exit_safe(0);
 }
 

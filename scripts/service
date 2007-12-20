@@ -81,6 +81,11 @@ my %debian_commands = (
                        'off'     => 'update-rc.d -f %s remove',
                        'service' => '/etc/init.d/%s %s'
                       );
+my %solaris_commands = (
+                          'on'      => '/usr/sbin/svcadm enable %s',
+                          'off'     => '/usr/sbin/svcadm disable %s',
+                          'service' => '/usr/sbin/svcadm %s %s'
+                      );
 
 # now assign commands accordingly
 # NOTE: key 1 is output of lsb_release -i
@@ -92,6 +97,7 @@ my %distros = (
                'fedoracore'     => \%redhat_commands,
                'debian'     => \%debian_commands,
                'ubuntu'     => \%debian_commands,
+               'sunos'      => \%solaris_commands,
               );
 
 #---------------------------------------------------------------------------#
@@ -192,25 +198,29 @@ if ($HELP)
 if ($PVERSION) { print STDOUT ($revision, "\n"); exit 0; }
 
 # what distro are we?
-open(LSB,"</etc/lsb-release") or open(LSB,"lsb_release -i|") 
-    or die("Cannot get distributor id ",$!,"\n");
+my $release_info = lc(qx/uname -s/);
+chomp($release_info);
 
-my $release_info = undef;
-
-while(<LSB>)
+if ($release_info ne "sunos")
 {
-    chomp;
-    if (/\s*distrib(utor)*[[:blank:]\_]*ID\s*[\:\=]{1}\s*([^[:blank:]]+)/i)
+    open(LSB,"</etc/lsb-release") or open(LSB,"lsb_release -i|") 
+        or die("Cannot get distributor id ",$!,"\n");
+
+    while(<LSB>)
     {
-        $release_info = lc($2);
-        $release_info =~ s/\s+//;
-        last;
+        chomp;
+        if (/\s*distrib(utor)*[[:blank:]\_]*ID\s*[\:\=]{1}\s*([^[:blank:]]+)/i)
+        {
+            $release_info = lc($2);
+            $release_info =~ s/\s+//;
+            last;
+        }
     }
-}
-if (not $release_info or $release_info =~ /^\s*$/)
-{
-    $release_info = (-e "/etc/redhat-release") ? "redhat" : "debian";
-    warn ("Could not determine release information from LSB using '$release_info'\n");
+    if (not $release_info or $release_info =~ /^\s*$/)
+    {
+        $release_info = (-e "/etc/redhat-release") ? "redhat" : "debian";
+        warn ("Could not determine release information from LSB using '$release_info'\n");
+    }
 }
 
 print "Distributor ID: ",$release_info, "\n" if ($DEBUG);
@@ -273,19 +283,24 @@ if ($LIST_ALL or $LIST_RUN or $LIST_LEV or $LIST_ON or $LIST_OFF)
         {
             # parse inittab
             open(INITTAB, "</etc/inittab") or die($! . "\n");
-            while (<INITTAB>)
+            while (my $_l = <INITTAB>)
             {
-                if (/^\s*id\s*:\s*(\d+)\s*:\s*initdefault\s*:\s*$/)
+                if ($_l =~ /^\s*[[:alnum:]]{2}\s*:\s*(\d+)\s*:\s*initdefault\s*:\s*$/)
                 {
                     $RUNLEVEL = $1;
                     last;
                 }
             }
+            close(INITTAB);
         }
         # sanity check
+        my $_runlevel_cmd = which("runlevel");
+        die ("Cannot find runlevel command\n") if (not defined $_runlevel_cmd or not -x $_runlevel_cmd);
         $RUNLEVEL=qx/runlevel/ if (not defined $RUNLEVEL or $RUNLEVEL eq "");
         chomp($RUNLEVEL);
         $RUNLEVEL =~ s/[^0-9]//g;
+        
+        die ("Cannot determine runlevel\n") if (not defined $RUNLEVEL or $RUNLEVEL eq "");
 
         print "All services for this runlevel [$RUNLEVEL]\n";
         my $DIR = "/etc/rc$RUNLEVEL.d";    # LSB
@@ -403,6 +418,28 @@ foreach (split(",",$_args))
     {
         print "ERROR: $_ service was not $ACTION" . "ed\n";
     }
+}
+
+# helper functions
+# @desc finds binaries in your $PATH
+sub which
+{
+
+    # @param 0 string := binary to find in $ENV{PATH}
+    # returns binary path or -1 if not found
+    my $binary = shift;
+    my $path   = undef;    # holds string to return when found.
+    foreach my $binary_path (split(/:/, $ENV{"PATH"}))
+    {
+
+        # first binary in $ENV{PATH}
+        if (-x "$binary_path" . "/$binary")
+        {
+            $path = "$binary_path" . "/$binary";
+            last;
+        }
+    }
+    return $path;          # -1 means not found
 }
 
 =pod

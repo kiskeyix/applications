@@ -66,6 +66,7 @@ $|++;
 $ENV{'PATH'} .= ":/sbin:/usr/sbin";
 
 my $revision = '1.2';
+
 #'$Revision: 1.17 $';    # version
 #$revision =~ s/(\\|Revision:|\s|\$)//g;
 
@@ -82,10 +83,10 @@ my %debian_commands = (
                        'service' => '/etc/init.d/%s %s'
                       );
 my %solaris_commands = (
-                          'on'      => '/usr/sbin/svcadm enable %s',
-                          'off'     => '/usr/sbin/svcadm disable %s',
-                          'service' => '/usr/sbin/svcadm %s %s'
-                      );
+                        'on'      => '/usr/sbin/svcadm enable %s',
+                        'off'     => '/usr/sbin/svcadm disable %s',
+                        'service' => '/usr/sbin/svcadm %s %s'
+                       );
 
 # now assign commands accordingly
 # NOTE: key 1 is output of lsb_release -i
@@ -94,7 +95,7 @@ my %distros = (
                'centos'     => \%redhat_commands,
                'suselinux'  => \%redhat_commands,
                'fedora'     => \%redhat_commands,
-               'fedoracore'     => \%redhat_commands,
+               'fedoracore' => \%redhat_commands,
                'debian'     => \%debian_commands,
                'ubuntu'     => \%debian_commands,
                'sunos'      => \%solaris_commands,
@@ -183,9 +184,9 @@ GetOptions(
     'list-all'      => \$LIST_ALL,
     'list-running'  => \$LIST_RUN,
     'list-runlevel' => sub { $LIST_LEV++; $LIST_ON++; $LIST_OFF++; },
-    'list-on'       => sub { $LIST_LEV++; $LIST_ON++; },
-    'list-off'      => sub { $LIST_LEV++; $LIST_OFF++; },
-);# and $ACTION = shift;
+    'list-on'  => sub { $LIST_LEV++; $LIST_ON++; },
+    'list-off' => sub { $LIST_LEV++; $LIST_OFF++; },
+);    # and $ACTION = shift;
 
 if ($HELP)
 {
@@ -203,10 +204,11 @@ chomp($release_info);
 
 if ($release_info ne "sunos")
 {
-    open(LSB,"</etc/lsb-release") or open(LSB,"lsb_release -i|") 
-        or die("Cannot get distributor id ",$!,"\n");
+    open(LSB,      "</etc/lsb-release")
+      or open(LSB, "lsb_release -i|")
+      or die("Cannot get distributor id ", $!, "\n");
 
-    while(<LSB>)
+    while (<LSB>)
     {
         chomp;
         if (/\s*distrib(utor)*[[:blank:]\_]*ID\s*[\:\=]{1}\s*([^[:blank:]]+)/i)
@@ -219,11 +221,13 @@ if ($release_info ne "sunos")
     if (not $release_info or $release_info =~ /^\s*$/)
     {
         $release_info = (-e "/etc/redhat-release") ? "redhat" : "debian";
-        warn ("Could not determine release information from LSB using '$release_info'\n");
+        warn(
+            "Could not determine release information from LSB using '$release_info'\n"
+        );
     }
 }
 
-print "Distributor ID: ",$release_info, "\n" if ($DEBUG);
+print "Distributor ID: ", $release_info, "\n" if ($DEBUG);
 
 if ($DEBUG)
 {
@@ -263,9 +267,9 @@ if ($LIST_ALL or $LIST_RUN or $LIST_LEV or $LIST_ON or $LIST_OFF)
         my $DIR = "/etc/init.d";    # LSB
                                     # TODO use distro specific
 
-        # TODO attempt to find some names by reading the initrc files... 
+        # TODO attempt to find some names by reading the initrc files...
         # will take a lot of time to finish.
-        open(PROC,"ps -eo comm | sort | uniq|") or die($!,"\n");
+        open(PROC, "ps -eo comm | sort | uniq|") or die($!, "\n");
         while (my $file = <PROC>)
         {
             chomp($file);
@@ -278,14 +282,16 @@ if ($LIST_ALL or $LIST_RUN or $LIST_LEV or $LIST_ON or $LIST_OFF)
     if ($LIST_LEV)
     {
         my $RUNLEVEL = undef;
-        
-        if ( -r "/etc/inittab" )
+
+        if (-r "/etc/inittab")
         {
+
             # parse inittab
             open(INITTAB, "</etc/inittab") or die($! . "\n");
             while (my $_l = <INITTAB>)
             {
-                if ($_l =~ /^\s*[[:alnum:]]{2}\s*:\s*(\d+)\s*:\s*initdefault\s*:\s*$/)
+                if ($_l =~
+                    /^\s*[[:alnum:]]{2}\s*:\s*(\d+)\s*:\s*initdefault\s*:\s*$/)
                 {
                     $RUNLEVEL = $1;
                     last;
@@ -293,23 +299,26 @@ if ($LIST_ALL or $LIST_RUN or $LIST_LEV or $LIST_ON or $LIST_OFF)
             }
             close(INITTAB);
         }
+
         # sanity check
         my $_runlevel_cmd = which("runlevel");
-        die ("Cannot find runlevel command\n") if (not defined $_runlevel_cmd or not -x $_runlevel_cmd);
-        $RUNLEVEL=qx/runlevel/ if (not defined $RUNLEVEL or $RUNLEVEL eq "");
+        die("Cannot find runlevel command\n")
+          if (not defined $_runlevel_cmd or not -x $_runlevel_cmd);
+        $RUNLEVEL = qx/runlevel/ if (not defined $RUNLEVEL or $RUNLEVEL eq "");
         chomp($RUNLEVEL);
         $RUNLEVEL =~ s/[^0-9]//g;
-        
-        die ("Cannot determine runlevel\n") if (not defined $RUNLEVEL or $RUNLEVEL eq "");
+
+        die("Cannot determine runlevel\n")
+          if (not defined $RUNLEVEL or $RUNLEVEL eq "");
 
         print "All services for this runlevel [$RUNLEVEL]\n";
         my $DIR = "/etc/rc$RUNLEVEL.d";    # LSB
                                            # TODO use distro specific
         opendir(DIR, $DIR) or die("Cannot open $DIR. $!\n");
 
-        print '-'x64,"\n";
-        print sprintf("\%s\t%32s\t%s\n","Pri","Service Name","Status");
-        print '-'x64,"\n";
+        print '-' x 64, "\n";
+        print sprintf("\%s\t%32s\t%s\n", "Pri", "Service Name", "Status");
+        print '-' x 64, "\n";
 
         my @files = readdir(DIR);
         close(DIR);
@@ -323,27 +332,29 @@ if ($LIST_ALL or $LIST_RUN or $LIST_LEV or $LIST_ON or $LIST_OFF)
 
             if ($LIST_ON and $file =~ /^S(\d+)([^[:blank:]]+)/)
             {
-                print sprintf("\%s\t%32s\t%s\n",$1,$2,"On");
+                print sprintf("\%s\t%32s\t%s\n", $1, $2, "On");
             }
             elsif ($LIST_OFF and $file =~ /^K(\d+)([^[:blank:]]+)/)
             {
-                print sprintf("\%s\t%32s\t%s\n",$1,$2,"Off");
+                print sprintf("\%s\t%32s\t%s\n", $1, $2, "Off");
             }
         }
     }
     exit(0);
 }
 
-my $_args = join(",",@ARGV);
+my $_args = join(",", @ARGV);
 
-if ( $_args =~ /(\bstart\b|\bstop\b|\breload\b|\bstatus\b|\boff\b|\bon\b|\breset\b|\bremove\b|\badd\b)/)
+if ($_args =~
+    /(\bstart\b|\bstop\b|\breload\b|\bstatus\b|\boff\b|\bon\b|\breset\b|\bremove\b|\badd\b)/
+   )
 {
     $ACTION = $1;
 }
 
 # sanity checks before action is taken
 if (not defined($ACTION)
-        or $ACTION !~ /^(start|stop|reload|status|off|on|reset|remove|add)$/)
+    or $ACTION !~ /^(start|stop|reload|status|off|on|reset|remove|add)$/)
 {
     use Pod::Usage;
     pod2usage(1);
@@ -351,9 +362,10 @@ if (not defined($ACTION)
 }
 
 # remove all other actions from $_args
-$_args =~ s/,?(\bstart\b|\bstop\b|\breload\b|\bstatus\b|\boff\b|\bon\b|\breset\b|\bremove\b|\badd\b)//g;
+$_args =~
+  s/,?(\bstart\b|\bstop\b|\breload\b|\bstatus\b|\boff\b|\bon\b|\breset\b|\bremove\b|\badd\b)//g;
 
-print "Remaining arguments: ",$_args,"\n" if ($DEBUG);
+print "Remaining arguments: ", $_args, "\n" if ($DEBUG);
 
 my $KEY = $ACTION;
 
@@ -372,15 +384,16 @@ elsif ($ACTION =~ /add/)
     $KEY = "on";
 }
 
-foreach (split(",",$_args))
+foreach (split(",", $_args))
 {
     print "_argument: '$_'\n" if ($DEBUG);
-    next if (/^[[:blank:]]*$/);
+    next                      if (/^[[:blank:]]*$/);
     if ($ACTION =~ /\breset\b/
       )    # reset means to make sure the service has the proper initrc links
     {
         my $error = 0;
-        system(sprintf($distros{$release_info}->{'off'}, basename($_), $ACTION));
+        system(
+              sprintf($distros{$release_info}->{'off'}, basename($_), $ACTION));
         $error++ if ($? != 0);
         system(sprintf($distros{$release_info}->{'on'}, basename($_), $ACTION));
         $error++ if ($? != 0);
@@ -401,17 +414,18 @@ foreach (split(",",$_args))
         print "Turning off service $_\n" if ($DEBUG);
         system(sprintf($distros{$release_info}->{$KEY}, basename($_), 'stop'));
     }
-     
-# TODO sanity check: see if command exists
-#     my $service_cmd = sprintf($distros{$release_info}->{$KEY}, basename($_), $ACTION);
-#     $service_cmd =~ s/^(\S+).*$/$1/;
-#     if ( ! -x $service_cmd )
-#     {
-#         print STDERR "No such command $service_cmd\n";
-#         next;
-#     } 
 
-    my $system_cmd = sprintf($distros{$release_info}->{$KEY}, basename($_), $ACTION);
+    # TODO sanity check: see if command exists
+    #     my $service_cmd = sprintf($distros{$release_info}->{$KEY}, basename($_), $ACTION);
+    #     $service_cmd =~ s/^(\S+).*$/$1/;
+    #     if ( ! -x $service_cmd )
+    #     {
+    #         print STDERR "No such command $service_cmd\n";
+    #         next;
+    #     }
+
+    my $system_cmd =
+      sprintf($distros{$release_info}->{$KEY}, basename($_), $ACTION);
     print "Executing cmd: $system_cmd\n" if ($DEBUG);
     system($system_cmd);
     if ($? != 0)

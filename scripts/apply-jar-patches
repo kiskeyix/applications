@@ -16,12 +16,12 @@ for i in *.jar; do
     if [ -d $PATCH ]; then
         chmod u+rx $PATCH/*
         patchadd -d $PATCH
+        cd ..
         if [ $? = 0 ]; then
-            cd ..
             rm -fr $i.dir
         else
             echo "patchadd -d $PATCH could not install $i. Exit code $?"
-            exit 3
+            echo "Perhaps patch was already installed? Continuing..."
         fi  
     else
         echo "Sorry, $PATCH directory does not exist for $i"

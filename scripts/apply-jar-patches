@@ -1,25 +1,26 @@
 #!/bin/sh
-# $Revision: 0.1 $
-# $Date: 2008-01-11 16:53 EST $
-# Luis Mondesi <lmondesi@fotolog.com>
+# $Revision: 1.3 $
+# $Date: 2007-03-01 21:41:46 $
+# my_name < email@example.com >
 #
-# DESCRIPTION: a very dumb script to apply a lot of .jar packaged patches to a Sun Solaris system
-# USAGE: cd /var/sadm/spool; apply-jar-patches
-# LICENSE: GPLv3
+# DESCRIPTION:
+# USAGE:
+# LICENSE: ___
 
 for i in *.jar; do
     rm -fr $i.dir
     mkdir $i.dir || exit 1
     cd $i.dir || exit 2
-    jar -xvf ../$i
+    jar -xf ../$i
     PATCH=`echo $i|sed s/\.jar$//`
     if [ -d $PATCH ]; then
+        chmod u+rx $PATCH/*
         patchadd -d $PATCH
         if [ $? = 0 ]; then
             cd ..
             rm -fr $i.dir
         else
-            echo "patchadd -d $PATCH could not install $i"
+            echo "patchadd -d $PATCH could not install $i. Exit code $?"
             exit 3
         fi  
     else

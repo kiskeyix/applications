@@ -1,0 +1,29 @@
+#!/bin/sh
+# $Revision: 0.1 $
+# $Date: 2008-01-11 16:53 EST $
+# Luis Mondesi <lmondesi@fotolog.com>
+#
+# DESCRIPTION: a very dumb script to apply a lot of .jar packaged patches to a Sun Solaris system
+# USAGE: cd /var/sadm/spool; apply-jar-patches
+# LICENSE: GPLv3
+
+for i in *.jar; do
+    rm -fr $i.dir
+    mkdir $i.dir || exit 1
+    cd $i.dir || exit 2
+    jar -xvf ../$i
+    PATCH=`echo $i|sed s/\.jar$//`
+    if [ -d $PATCH ]; then
+        patchadd -d $PATCH
+        if [ $? = 0 ]; then
+            cd ..
+            rm -fr $i.dir
+        else
+            echo "patchadd -d $PATCH could not install $i"
+            exit 3
+        fi  
+    else
+        echo "Sorry, $PATCH directory does not exist for $i"
+        exit 4
+    fi
+done

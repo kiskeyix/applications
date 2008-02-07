@@ -22,7 +22,9 @@
 #       your aliases. The file should contain lines like        #
 #       alias vi='vim -c "set ft=dosini" '                      #
 #   * Create a file named "$HOME/.bashrc-`hostname` to add host #
-#       specific functions and other bashrc related things      #
+#       specific functions and other bashrc related things.     #
+#       Add the variable USE_BASH_COMPLETION=1 to make bash     #
+#       more fun                                                #
 #   * Create a file named "$HOME/.profile-`hostname` to add     #
 #       host specific environmental variables and other         #
 #       profile-related things                                  #
@@ -101,12 +103,14 @@ fi
 shopt -s checkwinsize
 
 # enable bash completion in interactive shells
-if [[ -r "/etc/bash_completion" ]]; then
-    . /etc/bash_completion
-elif [[ -r "/usr/local/etc/bash_completion" ]]; then
-    . /usr/local/etc/bash_completion
-elif [[ -r "/opt/csw/etc/bash_completion" ]]; then
-    . /opt/csw/etc/bash_completion
+if [[ 1 == $USE_BASH_COMPLETION ]]; then
+    if [[ -r "/etc/bash_completion" ]]; then
+        . /etc/bash_completion
+    elif [[ -r "/usr/local/etc/bash_completion" ]]; then
+        . /usr/local/etc/bash_completion
+    elif [[ -r "/opt/csw/etc/bash_completion" ]]; then
+        . /opt/csw/etc/bash_completion
+    fi
 fi
 
 #---------------------------#

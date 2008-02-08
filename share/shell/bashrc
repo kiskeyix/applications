@@ -23,17 +23,21 @@
 #       alias vi='vim -c "set ft=dosini" '                      #
 #   * Create a file named "$HOME/.bashrc-`hostname` to add host #
 #       specific functions and other bashrc related things.     #
-#       Add the variable USE_BASH_COMPLETION=1 to make bash     #
-#       more fun                                                #
 #   * Create a file named "$HOME/.profile-`hostname` to add     #
 #       host specific environmental variables and other         #
-#       profile-related things                                  #
+#       profile-related things like:                            #
+#       - USE_BASH_COMPLETION=1 to allow bash_completion to load#
+#       - DEFAULT_LANGUAGE="en"   Perl likes this               #
+#       - DEFAULT_LC_ALL="en_US.utf8"   shells like this        #
+#       - DEFAULT_LANG="en_US.utf8"   vim loves this            #
 #   * Create a file named "$HOME/.signaturerc" and add your     #
 #       host specific signature related variables. See below    #
 #       for defaults (and examples)                             #
+#                                                               #
 # Luis Mondesi   lemsx1 $AT$ gmail ! com                        #
 # http://lems.kiskeyix.org/bashrc.tar.bz2                       #
 # 2003-04-25 13:46                                              #
+# updaed: 2008-02-08 11:24 EST                                  #
 #===============================================================#
 
 # if we are not in an interactive shell, that we do nothing
@@ -112,6 +116,10 @@ if [[ 1 == $USE_BASH_COMPLETION ]]; then
         . /opt/csw/etc/bash_completion
     fi
 fi
+
+# at this point is a good time to cleanup our PATH from dups
+PATH=`awk -F: '{for(i=1;i<=NF;i++){if(!($i in a)){a[$i];printf s$i;s=":"}}}'<<<$PATH`
+export PATH
 
 #---------------------------#
 #          FUNCTIONS        #

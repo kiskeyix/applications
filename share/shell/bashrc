@@ -118,8 +118,9 @@ if [[ 1 == $USE_BASH_COMPLETION ]]; then
 fi
 
 # at this point is a good time to cleanup our PATH from dups
-PATH=`awk -F: '{for(i=1;i<=NF;i++){if(!($i in a)){a[$i];printf s$i;s=":"}}}'<<<$PATH`
-export PATH
+# does not work well on Solaris
+#PATH=`awk -F: '{for(i=1;i<=NF;i++){if(!($i in a)){a[$i];printf s$i;s=":"}}}'<<<$PATH`
+#export PATH
 
 #---------------------------#
 #          FUNCTIONS        #

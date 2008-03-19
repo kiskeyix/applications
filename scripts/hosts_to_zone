@@ -168,7 +168,7 @@ sub slurp_hosts
         chomp($_);
         if ( $_ gt "" )
         {
-            if ( $_ =~ /(\d+.\d+.\d+.\d+)\s+([[:alnum:]\-]+)/ )
+            if ( $_ =~ /^\s*(\d+.\d+.\d+.\d+)\s+([[:alnum:]\.\-]+)\s*/ )
             {
                 $hosts{$1}=$2;
             }

@@ -29,7 +29,7 @@ my $ENCRYPTION =
 my $USER = (exists($ENV{'SUDO_USER'})) ? $ENV{'SUDO_USER'} : $ENV{'USER'};
 my $MOUNT_POINT         = $ENV{'HOME'} . "/Vault";
 my $MOUNT_TYPE          = "xfs";
-my $ENC_IMAGE           = "/Users/Shared/pri/ehd/$USER.img";
+my $ENC_IMAGE           = "/Users/Shared/Private/pri/ehd/$USER.img";
 my $ENC_KEY_FILE        = "/etc/ehd/$USER.key";
 my $EXTRA_MOUNT_OPTIONS = undef;
 

@@ -151,7 +151,7 @@ $MY_CONFIG{"EXC_ULIST"} = "man|nobody";    # separated by | . Change in
 
 # backup "root" home dir, cvsroot and other important stuff
 
-$MY_CONFIG{"SYSTEM"} = "/etc /var/mail /var/spool /var/lib/iptables /root";
+$MY_CONFIG{"SYSTEM"} = "/etc /var/mail /var/spool /var/lib/iptables /root /var/cache/debconf";
 
 #-------------------------------------------------------------#
 #           No need to modify anything below here             #
@@ -665,7 +665,7 @@ if (!-e $TMP_LOCK)
             print STDOUT ("Debian selections file created as:"
               . " $sel.\n "
               . " Use:\n dpkg --set-selections < $sel"
-              . " && dselect install \n to restore from this list.\n") if ($VERBOSE);
+              . " && apt-get dselect-upgrade \n to restore from this list.\n") if ($VERBOSE);
         }
     }
 }

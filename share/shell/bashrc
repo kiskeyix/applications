@@ -183,6 +183,9 @@ function powerprompt()
         #TIME=$(command date '+%H:%M') # replaced with \t now
         case $TERM in 
             *term | rxvt* )
+                # changes xterm title and icon to this string.
+                # the sequence is ESC]0+string+BELL
+                # where ESC is \033 and BELL is \007
                 echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD/$HOME/~}\007" ;;
         esac
     } 

@@ -163,9 +163,9 @@ function fastprompt()
     unset PROMPT_COMMAND
     case $TERM in
 	*term | rxvt | vt100 )	
-	    PS1="[\h/\u] \W > \[\033]0;[\h/\u] \w\007\]" ;;
+	    PS1="\u@\h:\W > \[\033]0;\u@\h:\w\007\]" ;;
 	*) 
-	    PS1="[\h/\u] \W > " ;;
+	    PS1="\u@\h:\W > " ;;
     esac
 }
 
@@ -180,7 +180,6 @@ function powerprompt()
         if [[ -z "${LOAD:-}" ]]; then
             LOAD="NOLOAD_CMD"
         fi
-        #TIME=$(command date '+%H:%M') # replaced with \t now
         case $TERM in 
             *term | rxvt* )
                 # changes xterm title and icon to this string.

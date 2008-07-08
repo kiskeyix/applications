@@ -364,6 +364,9 @@ fi
 
 alias dpkg-buildpackage='dpkg-buildpackage -rfakeroot'
 
+# connect (callup) to a system using a serial cable:
+alias connect='cu -l /dev/ttyS0 -s 9600'
+
 ## spelling typos
 
 alias xs='cd'

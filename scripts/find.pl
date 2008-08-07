@@ -179,7 +179,7 @@ sub _process_file
             }
             else
             {
-                if ($_ =~ m|$this_string|gi)
+                if ($_ =~ m|$this_string|g)
                 {
                     my $_local = $_; # beautify display
                     $_local =~ s/^\s+//;

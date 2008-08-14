@@ -26,7 +26,7 @@ $|++;
 
 my $DEBUG = 0;
 
-my $EXCEPTION_LIST = "\.soc\$|\.sock\$|\.so\$|\.o\$|\.swp\$";
+my $EXCEPTION_LIST = "(\\.soc|\\.sock|\\.so|\\.o|\\.swp)\$";
 
 # some colors:
 
@@ -140,7 +140,8 @@ sub _is_binary
 sub _process_file
 {
     print STDERR ("Processing : ", $_, "\n") if ($DEBUG);
-    if (    $_ =~ m($f_pattern)
+    if (
+        $_ =~ m($f_pattern)
         and -r $_
         and basename($_) !~ m($EXCEPTION_LIST)
         and !_is_binary($_))

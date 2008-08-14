@@ -996,6 +996,7 @@ sub _do_links
         {
             if (!-l $_conf)
             {
+                # TODO we need to ensure that the user did not purposely create a regular file here... say, somebody who changes .inputrc -> Applications/share/shell/inputrc
                 if (-e $_conf)
                 {
 

@@ -89,7 +89,7 @@ SetEnvIfNoCase Referer "^http.?://$SITE/" local_img_ref=1
     #ThrottlePolicy Volume $VOLUME $PERIOD
     ServerAdmin $WEBMASTER_EMAIL
     #DocumentRoot /usr/share/phpslash/public_html
-    DocumentRoot /home/Shared/Sites/$SITE
+    DocumentRoot /srv/web/$SITE
     ServerName  $SITE
     ServerAlias www.$SITE test.$SITE
     ErrorLog /var/log/apache2/$SITE-error.log
@@ -98,7 +98,7 @@ SetEnvIfNoCase Referer "^http.?://$SITE/" local_img_ref=1
 
     # 3 MB for POST and GET
     #LimitRequestBody 3145728
-    <Directory /home/Shared/Sites/$SITE>
+    <Directory /srv/web/$SITE>
         AllowOverride FileInfo AuthConfig Limit Options
         Options MultiViews Indexes
         Order allow,deny
@@ -113,12 +113,12 @@ SetEnvIfNoCase Referer "^http.?://$SITE/" local_img_ref=1
     </FilesMatch>
 
     # note alias goes to documentroot
-    Alias /incoming /home/Shared/Sites/$SITE
+    Alias /incoming /srv/web/$SITE
     <Location /incoming>
         DAV On
 	AuthType Basic
 	AuthName "$SITE private section"
-	AuthUserFile /home/Shared/Sites/$SITE/.webdav.users
+	AuthUserFile /srv/web/$SITE/.webdav.users
 	Require valid-user
 #         <LimitExcept GET PUT POST PROPFIND PROPPATCH HEAD OPTIONS>
 #             Order allow,deny

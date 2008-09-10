@@ -1,12 +1,17 @@
 #!/usr/bin/perl -w
+# $Revision: 1.0.1 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help. You can get the latest copy from: git clone http://git.kiskeyix.org/git/Applications.git
 # USAGE: update-host [OPTIONS] [host1 host2 host3 ...]
 #
 # TODO:
+#  - because --links is now default, we don't need --links and --files among others, remove all references to the old code
 #  - tests host file and print their new IP to STDOUT. hint slurp_hosts() and do host lookups on the names. Allow a --reconcile-hosts option so the new IP for the hostnames can be save to the file passed from the command line.
 # LICENSE: GPL
+# CHANGES:
+# * 2008-09-10 14:14 EDT --links (DOLINKS) is now the default. Everything is kept under Applications tarball
+#
 my $VERSION="1.9";
 
 use strict;
@@ -166,7 +171,7 @@ my $DEBUG        = 0;
 my $USAGE        = 0;
 my $PRINT_FILES  = 0;
 my $REMOVE_FILES = 0;
-my $DOLINKS      = 0;
+my $DOLINKS      = 1;   # now default. 2008-09-10 14:09 EDT 
 my $DOOBSOLETE   = 0;
 my $MASTER       = 0;   # update current host from $MASTER_HOST
 my $LOCAL        = 0;   # do not get any new copies, use the local files instead

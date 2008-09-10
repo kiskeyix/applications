@@ -118,7 +118,7 @@ my $EXCLUDE = "172.16.1.250|as400";
 
 # files we will be updating
 my @FILES =
-  ("Applications.tar.bz2", "bashrc.tar.bz2", "vimrc.tar.bz2", "muttrc.tar.bz2");
+  ("Applications.tar.bz2"); # --links is default: , "bashrc.tar.bz2", "vimrc.tar.bz2", "muttrc.tar.bz2");
 
 # links to $ENV{HOME} if DOLINKS is true
 my @_CONFIG_FILES = (
@@ -204,10 +204,6 @@ Enables debug mode
 =item -d,--delete-obsolete
 
 Deletes the obsolete scripts from the @_OBSOLETE array (hard coded)
-
-=item --files FILES
-
-Comma separated list of files to get/upgrade instead of the defaults at @FILES
 
 =item -h,--help
 
@@ -367,15 +363,12 @@ else
 
 ## main ##
 
-# when doing symlinks, we only need one file
-@FILES = ("Applications.tar.bz2") if ($DOLINKS);
-
-# yet, user can override @FILES from the command line...
-if (defined($CONF_FILES))
+# when doing symlinks, we only need one file. And this is now the default behavior.
+if ((@FILES + 0) > 1)
 {
-    $CONF_FILES =~ s/[,|\s]+/ /g;    # separate by single spaces
-    @FILES = split(/\s/, $CONF_FILES);
+    print STDERR ("--links is now default. Do not use --files anymore\n"); # will remove this in a few months. LM
 }
+@FILES = ("Applications.tar.bz2");
 
 if ($PRINT_FILES)
 {

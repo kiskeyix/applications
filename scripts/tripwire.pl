@@ -33,7 +33,7 @@ my $DEBUG=0;
 my $USAGE=0;
 my $SKIP_TRIPWIRE=0; # should we skip running tripwire and just email the db
 my $_EMAIL=undef;
-my $TRIPWIRE = "tripwire --check -I"; # interactive check
+my $TRIPWIRE = "sudo tripwire --check -I"; # interactive check
 my $TRIPWIREDB = "/var/lib/tripwire/$HOSTNAME.twd";
 my $HASH = "sha1sum";
 my $SUBJECT = "$HASH: tripwire $HOSTNAME";
@@ -71,8 +71,8 @@ if ( $USAGE ) {
 
 if ( $PVERSION ) { print STDOUT ($revision,"\n"); exit 0; }
 # sanity checks
-my $UID = $<;
-die ( "You must run this as root\n" ) if ( $UID != 0 );
+#my $UID = $<;
+#die ( "You must run this as root\n" ) if ( $UID != 0 );
 
 # globals
 my $config = undef;
@@ -81,8 +81,6 @@ if ( -r $ENV{'HOME'}."/.signaturerc" )
     my @files = ($ENV{'HOME'}."/.signaturerc"); 
     $config = parse_ini(\@files);
 }
-
-chomp($UID);
 
 my $EMAIL = undef;
 if ( defined($_EMAIL) )

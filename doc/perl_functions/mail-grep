@@ -1,0 +1,1047 @@
+#!/usr/bin/perl -w
+# $Revision: 1.110 $
+# $Date: 2007/04/06 19:49:03 $
+# Luis Mondesi <lemsx1@gmail.com>
+#
+# DESCRIPTION: A simple script to investigate issues in mail servers
+# USAGE: mail-grep --help
+# LICENSE: GPL
+# TODO:
+# - take care of all the temporary files used (even when killed)
+# - make it faster by scanning the logs once (if even possible: remember that
+#   when looking for strings, they can appear before or after another important
+#   line, though we really only care about the outcome of the message, which
+#   can be the only line available after all). If we cat the log and do our own
+#   grepping of IDs and if not, for each line we match against a growing list of
+#   new good ids, the time it takes for getting to the end of the log grows exponentially.
+#   On top of that, this is a bad idea because we have to send the whole log file
+#   over the wire in other for the thread to search for the string. The beauty of
+#   this script is to use the CPU on the remote hosts and only collect the information
+#   once it has been identified and parsed.
+#
+
+=pod
+
+=head1 NAME
+
+mail-grep - A simple script to investigate issues forensically on multiple mail servers
+
+=head1 DESCRIPTION 
+
+    This script is use to gather targetted, forensics information from mail servers and act accordingly. It's main purpose is to be used with sendmail and Mailscanner, though Postfix logs are also supported.
+
+How does this work?
+
+This script will connect to a remote host (or the localhost if --local-only is passed)
+and it will attempt to find what happened to a given email by grepping for an ID.
+The script works in 2 passes. On the first pass it will look for message IDs and put
+them in a btree database. On the second pass it will launch as many as the limit
+of threads allow to connect to each of the remote servers and look for the rest of the
+information regarding the found message IDs.
+
+Note that this script works on sendmail log format only. Additional changes will be needed to work with Postfix or any other mail server.
+
+=cut
+
+use strict;
+$|++;
+use sigtrap qw(handler _exit_safe normal-signals error-signals);
+
+my $revision = "1.0";    # version
+
+# standard Perl modules
+use threads;
+use threads::shared;
+
+#use Thread::Semaphore;
+use Getopt::Long;
+Getopt::Long::Configure('bundling');
+use POSIX;                    # cwd() ... man POSIX
+use File::Spec::Functions;    # abs2rel() and other dir/filename specific
+use File::Copy;
+use File::Find;               # find();
+use File::Basename;           # basename() && dirname()
+use File::Temp qw/ tempfile /;
+use FileHandle;               # for progressbar
+use DB_File;
+use Time::HiRes qw ( sleep )
+  ;    # to sleep for a fraction of a second (ie .5 seconds)
+
+# Args:
+my $PVERSION      = 0;
+my $HELP          = 0;
+my $USAGE         = 0;
+my $DEBUG         = 0;
+my $VERBOSE       = 0;
+my $CONFIGURE     = 0;
+my $INVESTIGATE_Q = 0;
+my $MAX_THREADS   = 50;      # default threads/children limit
+my $MAIL_SERVERS  = undef;
+my $LOGFILE       = undef;
+my $CSVFILE       = undef;
+my $GREP          = undef;
+my $PG_KEY = "";    # when empty adds all for us... $ENV{'HOME'}."/.ssh/id_rsa";
+my $LOCAL_ONLY = 0; # when set we never attempt any SSH
+
+=pod
+
+=head1 SYNOPSIS
+
+B<mail-grep>  [-v,--version]
+                [-D,--debug] 
+                [-h,--help]
+                [-k,--key KEY]
+                [-l,--log LOGFILE]
+                [local-only|local]
+                [-M,--mail-servers,--servers SERVER1[,SERVER2...]]
+                [-Q,--quarantine]
+                [-S,--setup,--wizard,--configure]
+                [-T,--threads,--chidren NUM]
+                [-U,--usage]
+                [-V,--verbose]
+                [TEXT_OR_REGEX_PATTERN]
+
+=head1 OPTIONS
+
+=over 8
+
+=item -c,--csv FILE
+
+Write output in CSV format to FILE. Output has: "DATE","TO","FROM","MSGID","BLOCKED"
+
+This implies -Q,--quarantine investigations.
+
+=item -D,--debug
+
+Enables debug mode
+
+=item -h,--help
+
+Prints this help and exits
+
+=item -k,--key KEY
+
+Use identity key KEY instead of default ~/.ssh/id_rsa
+
+=item -l,--log LOGFILE
+
+Use log file named LOGFILE instead of default (/var/log/maillog). It will be prompted interactively if not explicitly set from the command line
+
+=item -M,--mail-servers SERVER1[,SERVER2 ...]
+
+Use comma separated list of mail servers instead of default
+
+=item -Q,--quarantine
+
+Investigate string to determine what happen to a given email ID. Tries to answer: 
+Was it quarantine? Why?
+
+=item -S,--setup,--wizard,--configure
+
+Interactively setup the user environment before proceeding
+
+=item -T,--threads,--children NUM
+
+Maximun number of threads/children to open
+
+=item -U,--usage
+
+Prints usage information and exits
+
+=item -v,--version
+
+Prints version and exits
+
+=item -V,--verbose
+
+Do not be quiet
+
+=item TEXT_OR_REGEX_PATTERN
+
+Regular expression pattern to look for in the remote log file. This uses egrep syntax by default
+
+=back
+
+=cut
+
+# get options
+GetOptions(
+
+    # flags
+    'v|version'        => \$PVERSION,
+    'h|help'           => \$HELP,
+    'k|key=s'          => \$PG_KEY,
+    'l|log=s'          => \$LOGFILE,
+    'local|local-only' => sub { $LOCAL_ONLY++; $MAIL_SERVERS = "localhost"; },
+    'D|debug'          => \$DEBUG,
+    'U|usage'          => \$USAGE,
+    'V|verbose'        => \$VERBOSE,
+    'Q|quarantine'     => \$INVESTIGATE_Q,
+    'S|setup|configure|wizard' => \$CONFIGURE,
+
+    # numbers
+    'T|threads|children=i' => \$MAX_THREADS,
+
+    # strings
+    'c|csv=s' => sub { $CSVFILE = $_[1]; $INVESTIGATE_Q++; },
+    'M|mail-servers|servers=s' => \$MAIL_SERVERS,
+) and $GREP = shift;
+
+if ($HELP)
+{
+    use Pod::Text;
+    my $parser = Pod::Text->new(sentence => 0, width => 78);
+    $parser->parse_from_file($0, \*STDOUT);
+    exit 0;
+}
+
+if ($USAGE)
+{
+    use Pod::Usage;
+    pod2usage(1);
+    exit 0;    # never reaches here
+}
+
+if ($PVERSION) { print STDOUT ($revision); exit 0; }
+
+my $_ssh_agent = 0;    # should we kill ssh-agent when done?
+my $_ssh_id    = 0;    # should we remove id when done?
+my $stdout     = 1;
+
+my $global_total_threads = 0
+  ; # TODO find a better way to keep a global count of running threads. We use this number purely for informational purposes, do not attempt to lock this to control the flow of threads. It causes race conditions. Used merely for debugging purposes now
+
+debug("We will allow $MAX_THREADS threads at time");
+
+#my $mutex = Thread::Semaphore->new($MAX_THREADS); # allow only MAX_THREADS at a time
+
+# we use this database tie'd to a hash (Berkeley DBM)
+my %DBHASHDATE    = ();
+my %DBHASHFROM    = ();
+my %DBHASHTO      = ();
+my %DBHASH        = ();
+my %DBHASHBLOCKED = ();
+
+my @_temp_files = (); # we need to get rid of temp files
+
+my $DBFILE  = undef;
+my $DBFILE2 = undef;
+my $DBFILE3 = undef;
+my $FH      = undef;
+my $TMPFILE = undef;
+
+($FH, $TMPFILE) = tempfile(DIR => "/tmp");
+push(@_temp_files,$TMPFILE);
+close($FH);
+debug("Using TMP_File $TMPFILE");
+tie %DBHASH, "DB_File", $TMPFILE;
+
+#open($TMPFH, ">>$TMPFILE") or die($!, "\n");
+# NOTE that we don't truncate the file, we only appende to it
+if ($CSVFILE)
+{
+    warn("--csv option is only used for investigations...\n")
+      and $INVESTIGATE_Q++
+      if (not $INVESTIGATE_Q);
+    $stdout = 0;
+
+    my $CSVFH = new FileHandle(">>$CSVFILE");
+    print $CSVFH ("\"DATE\",\"TO\",\"FROM\",\"MSGID\",\"BLOCKED\"\n");
+    $CSVFH->close();
+
+    my ($DBFH, $DBFILE) = tempfile(DIR => "/tmp");
+    push(@_temp_files,$DBFILE);
+    close($DBFH);
+    my ($DBFH2, $DBFILE2) = tempfile(DIR => "/tmp");
+    push(@_temp_files,$DBFILE2);
+    close($DBFH2);
+    my ($DBFH3, $DBFILE3) = tempfile(DIR => "/tmp");
+    push(@_temp_files,$DBFILE3);
+    close($DBFH3);
+    my ($DBFH4, $DBFILE4) = tempfile(DIR => "/tmp");
+    push(@_temp_files,$DBFILE4);
+    close($DBFH4);
+
+    debug("Using DB_File $DBFILE $DBFILE2 $DBFILE3");
+    tie %DBHASHDATE,    "DB_File", $DBFILE;
+    tie %DBHASHTO,      "DB_File", $DBFILE2;
+    tie %DBHASHFROM,    "DB_File", $DBFILE3;
+    tie %DBHASHBLOCKED, "DB_File", $DBFILE4;
+}
+
+# shared between all threads
+share(%DBHASH);
+
+# there is no real need to share this file name. but we need to lock it:
+share($CSVFILE);
+share(%DBHASHDATE);
+share(%DBHASHTO);
+share(%DBHASHFROM);
+share(%DBHASHBLOCKED);
+if ($DEBUG)
+{
+    share($global_total_threads);
+}
+
+#share($mutex);
+
+# default mail servers:
+my @mail_servers =
+  ("smtp1", "smtp2", "smtp3", "smtp4", "smtp5", "smtp6", "smtp7", "smtp8", "smtp9", "smtp10");
+
+if (defined($MAIL_SERVERS))
+{
+    @mail_servers = split(/\s*,\s*/, $MAIL_SERVERS);
+
+    # sanity check
+    my $_mail_servers = join("", @mail_servers);
+    if ($_mail_servers =~ /^[[:blank:]]*$/)
+    {
+        @mail_servers = ("localhost");
+        $LOCAL_ONLY   = 1;
+    }
+    elsif ($_mail_servers =~ /^\s*(localhost|127\..*)\s*$/)
+    {
+
+        # we only have one host or ip and it's our own loopback?
+        $LOCAL_ONLY = 1;
+    }
+}
+
+# sanity check
+if ($LOCAL_ONLY)
+{
+    @mail_servers = ("localhost");
+    $MAIL_SERVERS = "localhost";
+}
+
+# helpers #
+
+# @desc prints colored messages
+sub debug
+{
+    my $msg   = "@_";
+    my $RED   = "\033[1;31m";
+    my $NORM  = "\033[0;39m";
+    my $GREEN = "\033[0;32m";
+    print STDERR ("$RED $msg $NORM\n") if ($DEBUG);
+}
+
+# execute a given command remotely (via ssh)
+# return exec status
+sub remote_exec
+{
+    my $host      = shift;
+    my $cmd       = shift;
+    my $stdout    = shift;
+    my $array_ref = shift;
+    return undef if (not defined($host) or not defined($cmd));
+
+    my $ret = undef;
+
+    debug("Thread ID: " . threads->tid());
+
+    my $_cmd_str = (
+                         $LOCAL_ONLY
+                      or $host eq "localhost"
+                      or $host =~ /^127\.[0-9\.]+$/
+                      or $host =~ /^[[:blank:]]*$/
+                   ) ? $cmd : "ssh $host $cmd";
+    debug("remote_exec(): " . $_cmd_str . " to " . $stdout);
+
+    if (defined($stdout) and $stdout == 1)
+    {
+        debug(  "Thread ID: "
+              . threads->tid()
+              . " printing to STDOUT ($stdout) \n");
+        $ret = system($_cmd_str);
+    }
+    elsif (defined($stdout) and $stdout == -1)
+    {
+        debug("INVESTIGATION: inside " . $stdout);
+        open(CMD, "$_cmd_str|") or warn("Could not exec $_cmd_str. $!\n");
+        my $_log = undef;
+        while ($_log = <CMD>)
+        {
+            debug("INVESTIGATION: output " . $stdout . ": $_log");
+
+            debug(  "INVESTIGATION: Thread ID: "
+                  . threads->tid()
+                  . " working on IDs (DBHASH{HOST:ID}=ID)");
+
+            # SAMPLE:
+            # 622893:Jan 17 07:35:26 SMTP1 sendmail[2937]: k0HCZQKB002937: from=<foo@example.com>, size=8613, class=0, nrcpts=1, msgid=<E1EyqNF-0007B6-foo@example.com>, proto=SMTP, daemon=MTA, relay=pop-canoe.atl.sa.example.com [127.0.0.1]
+            if ($_log =~
+                /^\s*([[:digit:]]+):.*\d{2}:\d{2}:\d{2}\s+([^[:blank:]]+)\s+.*\[[[:digit:]]+\]:\s+([[:alnum:]]+):\s+(from|to)=/
+               )
+            {
+                my $_line = $1;
+                my $_host = $2;
+                my $id    = $3;
+                debug("HOST: $_host ID: $2 @ line $_line");
+
+                debug("Getting lock to write \%DBHASH");
+                {
+                    lock(%DBHASH);
+                    if (!exists($DBHASH{"$_host:$id"}))
+                    {
+                        $DBHASH{"$_host:$id"} = $id;
+                        debug("Wrote \%DBHASH");
+                    }
+                    else
+                    {
+                        debug("Skipped duplicate key $_host:$id");
+                    }
+                }
+
+                # SAMPLE:
+                # 234243:Nov  1 15:07:14 SMTP4 MailScanner[2063]: Message kA1K7DP4012849 from 127.0.0.1 (foo@example.com) to gmail.com is spam (blacklisted)
+            }
+            elsif ($_log =~
+                /^[[:blank:]]*([[:digit:]]+):.*\d{2}:\d{2}:\d{2}[[:blank:]]+([^[:blank:]]+)[[:blank:]]+.*\[[[:digit:]]+\]:[[:blank:]]*Message[[:blank:]]+([^[:blank:]]+).*\((blacklisted|whitelisted)\)/
+              )
+            {
+                my $_line = $1;
+                my $_host = $2;
+                my $id    = $3;
+                debug("HOST: $_host ID: $2 @ line $_line");
+
+                debug("Getting lock to write \%DBHASH");
+                {
+                    lock(%DBHASH);
+                    if (!exists($DBHASH{"$_host:$id"}))
+                    {
+                        $DBHASH{"$_host:$id"} = $id;
+                        debug("Wrote \%DBHASH");
+                    }
+                    else
+                    {
+                        debug(
+                            "(black/white list) Skipped duplicate key $_host:$id"
+                        );
+                    }
+                }
+            }
+            else
+            {
+                if ($DEBUG and $_log =~ /^\s*([[:digit:]]):/)
+                {
+                    debug("Skipped line $1");
+                }
+            }
+        }
+        close(CMD);
+    }
+    elsif ($CSVFILE and $stdout == 0)
+    {
+        open(CMD, "$_cmd_str|") or warn("Could not exec $_cmd_str. $!\n");
+        my $_log = undef;
+        while ($_log = <CMD>)
+        {
+
+            debug("CSV: $_log");
+
+            debug(  "Thread ID: "
+                  . threads->tid()
+                  . " working on CSVFILE investigation with stdout $stdout");
+
+            # SAMPLE:
+            # 622893:Jan 17 07:35:26 SMTP1 sendmail[2937]: k0HCZQKB002937: from=<foo@example.com>, size=8613, class=0, nrcpts=1, msgid=<E1EyqNF-0007B6-foo@example.com>, proto=SMTP, daemon=MTA, relay=pop-canoe.atl.sa.example.com [127.0.0.1]
+            if ($_log =~
+                /^\s*([[:digit:]]+):(.*\d{2}:\d{2}:\d{2})\s*([^[:blank:]]+)\s*[[:alnum:]]+\[[[:digit:]]+\]:\s+([[:alnum:]]+):\s+(to|from)=([[:alnum:]\<\>\.\@\_\-]+)/
+               )
+            {
+
+                # dispatch a thread to get all the data about this ID
+                my $line = $1;
+                my $date = $2;
+                $date =~ s/\s+[[:alnum:]]+\s*$//;
+                my $_host      = $3;
+                my $id         = $4;
+                my $from_or_to = $5;
+                my $email      = $6;
+
+                debug("HOST: $_host LINE: $1 ID: $4");
+
+                {
+                    lock(%DBHASHDATE);
+                    $DBHASHDATE{"$_host:$id"} = $date;
+                }
+
+                {
+                    lock(%DBHASHFROM);
+                    lock(%DBHASHTO);
+
+                    # avoid warning:
+                    if (not exists $DBHASHTO{"$_host:$id"})
+                    {
+                        $DBHASHTO{"$_host:$id"} = "";
+                    }
+                    if (not exists $DBHASHFROM{"$_host:$id"})
+                    {
+                        $DBHASHFROM{"$_host:$id"} = "";
+                    }
+                    if ($from_or_to and $from_or_to eq "to")
+                    {
+                        my $to = $DBHASHTO{"$_host:$id"};
+                        if ($to !~ /$email/)
+                        {
+                            $DBHASHTO{"$_host:$id"} = $to . "," . $email;
+                        }
+                    }
+                    elsif ($from_or_to and $from_or_to eq "from")
+                    {
+                        my $from = $DBHASHFROM{"$_host:$id"};
+                        if ($from !~ /$email/)
+                        {
+                            $DBHASHFROM{"$_host:$id"} = $from . "," . $email;
+                        }
+                    }
+                    else
+                    {
+                        warn(
+                            "Missing TO or FROM email for host $_host (on $host) line $line email ID $id\n"
+                        );
+                    }
+                }
+            }
+
+            # now look for other miscellaneous things that might be in the same lines we
+            # searched before or not:
+
+            # look for delivered emails:
+            #
+            # SAMPLE:
+            # 239009:Oct 19 16:31:14 SMTP1 sendmail[14211]: k9JKVBcp014145: to=<foo@example.com>, delay=00:00:03, xdelay=00:00:01, mailer=smtp, pri=174296, relay=[127.0.0.1] [127.0.0.1], dsn=2.0.0, stat=Sent (2.6.0  <4537E08D.00000A.foo@example.com> Queued mail for delivery)
+            if ($_log =~
+                /([^[:blank:]]+)\s+[[:alnum:]]+\s*\[[[:digit:]]+\]:\s+([[:alnum:]]+):\s+(?:to|from)=.*Queued mail for delivery\)\s*$/
+               )
+            {
+                my $_host = $1;
+                my $id    = $2;
+
+                debug("Getting lock to write \%DBHASHBLOCKED");
+                {
+                    lock(%DBHASHBLOCKED);
+                    $DBHASHBLOCKED{"$_host:$id"} = "no";
+                }
+
+            }
+
+            # SAMPLE:
+            # 2565257:Oct 12 10:48:06 SMTP1 MailScanner[11540]: Filename Checks: Windows bitmap file security vulnerability (k9CElg82012951 ole0.bmp)
+            # Oct  3 16:59:28 SMTP1 MailScanner[16045]: Filetype Checks: No MPEG movies (k93KwqvG008481 RefereeTraining1.mpeg)
+
+            elsif ($_log =~
+                /^[[:blank:]]*[[:digit:]]+:.*\d{2}:\d{2}:\d{2}[[:blank:]]+([^[:blank:]]+)[[:blank:]]+.*\[[[:digit:]]+\]:[[:blank:]]*(File[[:alpha:]]+[[:blank:]]+Checks:.*)[[:blank:]]*\(([[:alnum:]]+)[[:blank:]]+(.*)\)/
+              )
+            {
+                my $_host = $1;
+                my $msg   = $2;
+                my $id    = $3;
+                my $file  = $4;
+                debug("Getting lock to write \%DBHASHBLOCKED");
+                {
+                    lock(%DBHASHBLOCKED);
+                    $DBHASHBLOCKED{"$_host:$id"} .= " ($msg '$file') ";
+                }
+
+            }
+
+            # TODO
+            # SAMPLE:
+            # 234234:Oct 19 05:44:39 SMTP1 MailScanner[31148]: Message k9J9iW11003174 from 127.0.0.1 (foo@example.com) to gmail.com is spam (blacklisted)
+            elsif ($_log =~
+                /^[[:blank:]]*[[:digit:]]+:.*\d{2}:\d{2}:\d{2}[[:blank:]]+([^[:blank:]]+)[[:blank:]]+.*\[[[:digit:]]+\]:[[:blank:]]*Message[[:blank:]]+([^[:blank:]]+).*\((blacklisted|whitelisted)\)/
+              )
+            {
+
+                # black|white listed
+                my $_host = $1;
+                my $id    = $2;
+                my $msg   = $3;
+                debug("Getting lock to write \%DBHASHBLOCKED");
+                {
+                    lock(%DBHASHBLOCKED);
+                    $DBHASHBLOCKED{"$_host:$id"} .= " ($msg) ";
+                }
+
+            }
+
+            # SAMPLE:
+            # 2342342:Oct 19 16:31:14 SMTP1 MailScanner[12441]: Spam Actions: message k9JKUuSZ013961 actions are store
+
+            elsif ($_log =~
+                /([^[:blank:]]+)\s+[[:alnum:]]+\s*\[[[:digit:]]+\]:\s+Spam\s+Actions:\s*message\s+([[:alnum:]]+)\s+actions\s+are\s+store$/
+              )
+            {
+                my $_host = $1;
+                my $id    = $2;
+                debug("Getting lock to write \%DBHASHBLOCKED");
+                {
+                    lock(%DBHASHBLOCKED);
+
+                    # note that we say "quarantined" here because our scoreing regex
+                    # will also match (and usually first)
+                    $DBHASHBLOCKED{"$_host:$id"} .= " Quarantined ";
+                }
+            }
+
+            # SAMPLE:
+            # 998:Oct 19 16:31:14 SMTP1 MailScanner[12441]: Message k9JKV37Q014014 from 127.0.0.1 (foo@example.com) to gmail.com is spam, SpamAssassin (score=39.16, required 4.4, POBOX 0.50, BAYES_99 6.00, RCVD_IN_SBL 3.16, URIBL_BLACK 5.50, URIBL_CUSTOM 8.00, URIBL_JP_SURBL 5.00, URIBL_OB_SURBL 5.00, URIBL_WS_SURBL 6.00)
+            elsif ($_log =~
+                /\s+([^[:blank:]]+)\s+[[:alnum:]]+\[[[:digit:]]+\]:\s+Message\s+([^[:blank:]]+)\s+.*\s+\(score=([[:digit:]\-\.]+),\s+required\s+([[:digit:]\-\.]+).*$/
+              )
+            {
+                my $_host    = $1;
+                my $id       = $2;
+                my $score    = $3;
+                my $required = $4;
+
+                debug("Getting lock to write \%DBHASHBLOCKED");
+                {
+                    lock(%DBHASHBLOCKED);
+
+                    # TODO FIXME hardcoded 5.5 value for spamassassin
+                    $DBHASHBLOCKED{"$_host:$id"} .=
+                      ($score > $required and $score > 5.5)
+                      ? "yes [$score/$required]"
+                      : "no [$score/$required]";
+                }
+            }
+        }    # end while
+        close(CMD);
+    }
+    else
+    {
+
+        # the output of this command should be safe to a stack (array)
+        # to allow the main thread to analyze the data
+        my @_log = qx($_cmd_str);
+        if (@_log)    # is defined
+        {
+            $ret = 0;
+
+            # we have to be thread safe...
+            foreach (@_log)
+            {
+                lock($array_ref)
+                  ; # locks from threads::shared are remove when they go out of scope
+                push(@$array_ref, "$host:$_");
+            }
+            @_log = ();
+            undef @_log;
+        }
+        else
+        {
+            $ret = -1;    # failed
+            warn("** command: ssh $host $cmd failed! $!. $?\n")
+              if ($? != 0);
+        }
+    }
+    if ($DEBUG)
+    {
+        lock($global_total_threads);
+        $global_total_threads--;
+        debug("\$global_total_threads decreased to $global_total_threads\n");
+    }
+    debug("Thread ID: " . threads->tid() . " exiting");
+    return $ret;
+}
+
+# for each mail server we will execute a given command remotely (via ssh)
+sub multi_remote_exec
+{
+    my $cmd       = shift;
+    my $stdout    = shift;
+    my $array_ref = shift;
+    return undef if (not defined($cmd));
+
+    my @threads = ();
+    foreach my $host (@mail_servers)
+    {
+
+        debug("multi_remote_exec calling remote_exec with host $host");
+
+        # the output of this command should be safe to a PIPE or some other file
+        # to allow the main thread to analyze the data
+        my $_t =
+          threads->create('remote_exec', $host, $cmd, $stdout, $array_ref);
+        if (defined($_t))
+        {
+            push(@threads, $_t);
+            if ($DEBUG)
+            {
+                lock($global_total_threads);
+                $global_total_threads++;
+            }
+        }
+        else
+        {
+            warn(
+                "multi_remote_exec() Error: could not execute $cmd on $host\n");
+        }
+    }
+    return \@threads;
+}
+
+sub prompt
+{
+
+    #@param 0 string := question to prompt
+    #returns answer
+    print STDOUT "@_";
+    my $rep = <STDIN>;
+    chomp($rep);
+    return $rep;
+}
+
+sub _wait
+{
+    _join_all();
+}
+
+sub _join_all
+{
+
+    # wait for all threads to finish
+    foreach my $thr (threads->list())
+    {
+
+        # join all threads before exiting main
+        if ($thr->tid())
+        {
+
+            #print "Waiting for thread id ".$thr->tid()." Located at ".scalar($thr)."\n";
+            $thr->join();
+        }
+    }
+}
+
+# cleanup
+sub _exit_safe
+{
+    my $status = shift || 0;
+    $status = 1 if ($status !~ /[[:digit:]]/g);
+
+    # wait for all threads to finish
+    _join_all();
+
+    untie %DBHASHDATE;    # close database
+    untie %DBHASHFROM;
+    untie %DBHASHTO;
+    untie %DBHASH;
+    untie %DBHASHBLOCKED;
+
+    unlink($TMPFILE) if (-e $TMPFILE);
+    unlink(@_temp_files);
+
+    if ($_ssh_id == 1)
+    {
+        system("ssh-add -D");    # delete identities
+    }
+
+    if ($_ssh_agent == 1)
+    {
+        kill(15, $ENV{'SSH_AGENT_PID'});
+    }
+    exit $status;
+}
+
+sub _setup_ssh_agent
+{
+    $ENV{'SSH_AUTH_SOCK'} = "";
+    my $_ssh_agent_env = qx/ssh-agent -s/;
+    debug($_ssh_agent_env);
+    $_ssh_agent_env =~ m/SSH_AUTH_SOCK=(.*); /gmi;
+    debug("SSH_AUTH_SOCK before: ", $ENV{'SSH_AUTH_SOCK'});
+    $ENV{'SSH_AUTH_SOCK'} = $1;
+    debug("SSH_AUTH_SOCK after: ", $ENV{'SSH_AUTH_SOCK'});
+    $_ssh_agent_env =~ m/SSH_AGENT_PID=(.*); /gmi;
+    $ENV{'SSH_AGENT_PID'} = $1;
+
+    if (-S $ENV{'SSH_AUTH_SOCK'})
+    {
+        $_ssh_agent = 1;    # we should kill the agent when done
+    }
+    else
+    {
+        warn("Could not launch our ssh-agent\n");
+    }
+}
+
+# main #
+
+if ($CONFIGURE)
+{
+
+    # interactively setup the user environment before we begin
+    print STDOUT ("#" x 80, "\n");
+    print STDOUT ("Welcome to the Mail Commander configuration Wizard\n");
+    print STDOUT ("#" x 80, "\n");
+    if (    !-r $PG_KEY
+        and !-f "$ENV{'HOME'}/.ssh/id_rsa"
+        and !-f "$ENV{'HOME'}/.ssh/id_rsa.pub")
+    {
+        my $_key =
+          prompt(
+            "No GNU Privacy Guard keys found (gpg). Do you want to create one now (y/N)? "
+          );
+        if ($_key =~ /^[yY]/)
+        {
+            $PG_KEY = $ENV{'HOME'} . "/.ssh/id_rsa";
+
+            # sanity checks
+            if (-f $ENV{'HOME'} . "/.ssh/id_rsa")
+            {
+                use File::Copy;
+                copy($PG_KEY, "$PG_KEY.bak")
+                  and warn("File $PG_KEY backed up in $PG_KEY.bak\n");
+            }
+
+            # generate key with fixed name
+            my $_cmd = "ssh-keygen -t rsa -b 1024 -f $PG_KEY";
+            print STDOUT ("Running (Be sure to set a passphrase!!): $_cmd\n");
+            sleep(2);
+            system($_cmd);
+            if ($? != 0)
+            {
+                die("Could not generate key $PG_KEY. Please run $_cmd by hand and use --key to set your key properly\n. $!"
+                   );
+            }
+        }
+    }
+
+    # TODO what if user uses a different keyname? perhaps they should not be using --configure|--wizard then...
+    $PG_KEY = $ENV{'HOME'} . "/.ssh/id_rsa" if (!-r $PG_KEY);
+    print STDOUT ("Do you want me to send your $PG_KEY.pub to the following ");
+    print STDOUT ("mail servers [--mail-servers]: ", join(", ", @mail_servers));
+    my $continue = prompt(" (y/N)? ");
+    if ($continue =~ /^[yY]/)
+    {
+        foreach my $host (@mail_servers)
+        {
+            system("ssh $host 'mkdir .ssh && chmod 0700 .ssh'");
+            system(
+                 "cat $PG_KEY.pub | ssh $host 'cat - >> .ssh/authorized_keys'");
+            warn("failed to send key to $host\n") and _exit_safe($?)
+              if ($? != 0);
+        }
+    }
+}
+
+# setup SSH
+# check that we are not checking the localhost only, if that's the
+# case, we don't need to set ssh-agent
+my $_hosts_to_check = join("", @mail_servers);
+if (   $LOCAL_ONLY
+    or $_hosts_to_check eq "localhost"
+    or $_hosts_to_check =~ /^127\.[0-9\.]+$/
+    or $_hosts_to_check =~ /^[[:blank:]]*$/)
+{
+    debug("We are doing localhost/loopback no ssh-agent needed");
+}
+else
+{
+    if (!exists($ENV{'SSH_AUTH_SOCK'}))
+    {
+        _setup_ssh_agent();
+    }
+
+    if (!-S $ENV{'SSH_AUTH_SOCK'})
+    {
+        _setup_ssh_agent();
+    }
+
+    die(
+        "Could not setup ssh-agent. Please run it form the command line before executing this sccript: Bash/sh: eval \`ssh-agent -s\`\n"
+       ) if (!-S $ENV{'SSH_AUTH_SOCK'});
+
+    $_ssh_id = system("ssh-add -l > /dev/null");
+    if ($_ssh_id != 0)
+    {
+        system("ssh-add $PG_KEY")
+          ;    # if $PG_KEY is blank ssh-add adds all private keys
+        if ($? != 0)
+        {
+            warn(
+                "Failed to authenticate. ssh-gent is not running? There is no valid private key? Hint: create a key with \`ssh-keygen -t rsa -b 1024\`. And then pass the key to us with: $0 --key $ENV{HOME}/.ssh/id_rsa\n"
+            );
+            if (
+                prompt(
+                    "Do you want to continue? You will be prompted for each password needed [y/N] "
+                ) !~ /^y/i
+               )
+            {
+                _exit_safe(0);
+            }
+        }
+        $_ssh_id = 1;   # we need to know that this agent should be killed later
+    }
+}
+
+# end setup SSH
+
+$VERBOSE = 1;           # running interactively
+my $log_file =
+  (!defined($LOGFILE))
+  ? prompt("Enter log file name for servers "
+           . join(', ', @mail_servers)
+           . " [/var/log/maillog]: ")
+  : $LOGFILE;
+
+$log_file = "/var/log/maillog"
+  if (not defined($log_file) or $log_file =~ /^\s*$/);
+
+$GREP =
+  prompt(
+        "Enter text to grep for in servers " . join(', ', @mail_servers) . ": ")
+  if (not defined($GREP));
+
+if ($INVESTIGATE_Q)
+{
+    debug("Quarantine Investigation");
+
+    # build up our text messages in temporary file and then use threads to
+    # go through the stack and research to find emails quarantined
+    # we don't use CSV, STDOUT or anything here, we want write the IDs to a temp file
+    my $_cat = (basename($log_file) =~ /\.gz$/) ? "zcat" : "cat";
+
+    my $threads_ref =
+      multi_remote_exec("$_cat $log_file | egrep -n -i '$GREP'", -1);
+    sleep(1);    # pause to allow threads to start collecting data
+                 # wait for all threads to finish
+    threads->yield();
+    foreach my $thr (@$threads_ref)
+    {
+        $thr->join();
+    }
+
+    # tmpfile format:
+    # $host,$id
+    my @keys = ();
+
+    debug("Getting ready to read \%DBHASH");
+    {
+        lock(%DBHASH);
+        @keys = keys %DBHASH;
+    }
+    my $db_hash_total = 1;
+    my @threads       = ();
+    my $threads_i     = 0;    # counter for when to join
+    $db_hash_total = @keys + 0;
+    debug("Total n. of items in \%DBHASH = ", $db_hash_total);
+    if ($db_hash_total > 0)
+    {
+
+        foreach my $key (@keys)
+        {
+            my ($host, $id) = split(/:/, $key);
+            chomp($id);
+            chomp($host);
+            $host = "localhost" if ($LOCAL_ONLY);
+            debug("** ID: ", $id, "\n");
+            debug("** HOST: ", $host);
+
+            # note that this is the second time we will look for this and 1 of 2 things
+            # will happen:
+            # 1. we print to STDOUT if there is the user didn't request for CSV output
+            # 2. we print to CSV if the user requested to do so, but no STDOUT then
+            # So, we don't need an array_ref passed to remote_exec()
+
+            my $_cat = (basename($log_file) =~ /\.gz$/) ? "zcat" : "cat";
+            my $_t =
+              threads->create('remote_exec', $host,
+                              "$_cat $log_file | egrep -n '$id'", $stdout);
+            if (defined($_t))
+            {
+                sleep(0.5);
+                {
+                    lock(%DBHASH);
+                    delete($DBHASH{$key});
+
+                    if ($DEBUG)
+                    {
+                        lock($global_total_threads);
+                        $global_total_threads++;
+                    }
+                }
+                push(@threads, $_t);
+                my $_total_threads = @threads + 0;
+                if (($_total_threads % $MAX_THREADS) == 0)
+                {
+
+                    # join() all threads (not already joined) that we created
+                    foreach my $thr (@threads)
+                    {
+                        $thr->join();
+                    }
+                    @threads = ();    # reset
+                }
+            }
+            else
+            {
+                warn(
+                    "Error: could not look for ID $id on host $host log file $log_file\n"
+                );
+                threads->yield();
+            }
+        }    # end foreach
+    }    # end if
+
+    debug("######### out ###########");
+    debug("Waiting for threads to finish before writing to CSV file");
+    threads->yield();
+
+    # make sure that there are no more threads waiting to be join()'ed
+    _join_all();
+
+    if ($CSVFILE)
+    {
+        lock($CSVFILE);
+        my $CSVFH = new FileHandle(">>$CSVFILE");
+        lock(%DBHASHFROM);
+        lock(%DBHASHTO);
+        lock(%DBHASHDATE);
+        lock(%DBHASHBLOCKED);
+        foreach my $_id (sort keys %DBHASHDATE)
+        {
+            my $to      = $DBHASHTO{$_id};
+            my $from    = $DBHASHFROM{$_id};
+            my $date    = $DBHASHDATE{$_id};
+            my $blocked = $DBHASHBLOCKED{$_id} || "unknown";
+
+            $from =~ s/^,//g;
+            $from =~ s/<|>//g;
+            $to   =~ s/^,//g;
+            $to   =~ s/<|>//g;
+
+            debug("To: $to");
+            debug("From: $from");
+            debug("Date: $date");
+            debug("Blocked: $blocked");
+
+            print $CSVFH (
+                         "\"$date\",\"$to\",\"$from\",\"$_id\",\"$blocked\"\n");
+        }
+        $CSVFH->close();
+    }
+}
+else
+{
+
+    # send output to stdout or CSV report
+    my $_cat = (basename($log_file) =~ /\.gz$/) ? "zcat" : "cat";
+    multi_remote_exec("$_cat $log_file | egrep -n -i '$GREP'", $stdout);
+}
+
+_exit_safe(0);
+
+=pod
+
+=head1 AUTHORS
+
+Luis Mondesi <lemsx1@gmail.com>
+
+=cut
+

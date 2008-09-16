@@ -32,6 +32,7 @@ my $HELP          = 0;
 my $DEBUG         = 0;
 my $USAGE         = 0;
 my $SKIP_TRIPWIRE = 0;   # should we skip running tripwire and just email the db
+my $SEND_TWD      = 0;
 my $_EMAIL     = undef;
 my $TRIPWIRE   = "sudo tripwire --check -I";          # interactive check
 my $TRIPWIREDB = "/var/lib/tripwire/$HOSTNAME.twd";
@@ -43,11 +44,12 @@ my $MUA        = "mutt";
 GetOptions(
 
     # flags
-    'v|version' => \$PVERSION,
-    'h|help'    => \$HELP,
-    'D|debug'   => \$DEBUG,
-    'U|usage'   => \$USAGE,
-    's|skip'    => \$SKIP_TRIPWIRE,
+    'v|version'             => \$PVERSION,
+    'h|help'                => \$HELP,
+    'D|debug'               => \$DEBUG,
+    'U|usage'               => \$USAGE,
+    's|skip'                => \$SKIP_TRIPWIRE,
+    'a|send-twd|attach-twd' => \$SEND_TWD,
 
     # strings
     'e|email=s'    => \$_EMAIL,
@@ -104,10 +106,16 @@ else
 
 system($TRIPWIRE)
   unless ($SKIP_TRIPWIRE);  # TODO is command in our path and we can execute it?
-print STDERR
-  "$HASH '$TRIPWIREDB' | $MUA -a '$TRIPWIREDB' -s '$SUBJECT' $EMAIL\n"
-  if ($DEBUG);
-system("$HASH '$TRIPWIREDB' | $MUA -a '$TRIPWIREDB' -s '$SUBJECT' $EMAIL");
+
+my $_cmd = "$HASH '$TRIPWIREDB' | $MUA -s '$SUBJECT' $EMAIL";
+
+if ($SEND_TWD)
+{
+    $_cmd = "$HASH '$TRIPWIREDB' | $MUA -a '$TRIPWIREDB' -s '$SUBJECT' $EMAIL";
+}
+
+print STDERR ($_cmd) if ($DEBUG);
+system($_cmd);
 if ($? == 0)
 {
     print STDOUT ("$HASH and '$TRIPWIREDB' emailed successfully to $EMAIL\n");
@@ -227,7 +235,8 @@ tripwire.pl - tripwire script to email reports and twd to a remote address
 
 =head1 SYNOPSIS
 
-B<tripwire.pl>  [-v,--version]
+B<tripwire.pl>  [-a,--send-twd]
+                [-v,--version]
                 [-D,--debug] 
                 [-U,--usage]
                 [-h,--help]
@@ -246,6 +255,10 @@ B<tripwire.pl>  [-v,--version]
 =head1 OPTIONS
 
 =over 8
+
+=item -a,--send-twd,--attach-twd
+
+attaches tripwire database file with outgoing E-Mail
 
 =item -v,--version
 

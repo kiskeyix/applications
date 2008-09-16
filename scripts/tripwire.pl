@@ -118,7 +118,7 @@ print STDERR ($_cmd) if ($DEBUG);
 system($_cmd);
 if ($? == 0)
 {
-    print STDOUT ("$HASH and '$TRIPWIREDB' emailed successfully to $EMAIL\n");
+    print STDOUT ("$HASH ". ($SEND_TWD) ? "and '$TRIPWIREDB'" : ""." emailed successfully to $EMAIL\n");
 }
 
 #write_ini()

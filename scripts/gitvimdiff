@@ -16,8 +16,7 @@
 
 vimdiff="vimdiff"
 suffix="vimgitdiff"
-# TODO loop through PATH to find gvimdiff
-if [[ $1 == "-g" ]] || [[ -x "/usr/bin/gvimdiff" ]] || [[ -x "/usr/local/bin/gvimdiff" ]] ; then
+if [[ $1 == "-g" ]] || [[ -x "`command -v gvimdiff 2> /dev/null`" ]]; then
   vimdiff="gvimdiff -f"
   shift 1
 fi

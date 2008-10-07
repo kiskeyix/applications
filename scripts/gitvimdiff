@@ -16,7 +16,7 @@
 
 vimdiff="vimdiff"
 suffix="vimgitdiff"
-if [[ $1 == "-g" ]] || [[ -x "`command -v gvimdiff 2> /dev/null`" ]]; then
+if [[ $1 == "-g" ]] || [[ -z "$SSH_TTY" && -x "`command -v gvimdiff 2> /dev/null`" ]]; then
   vimdiff="gvimdiff -f"
   shift 1
 fi

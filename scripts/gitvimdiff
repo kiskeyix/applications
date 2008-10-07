@@ -5,6 +5,9 @@
 # Based on the script cvsvimdiff, written by
 #   Stefano Zacchiroli	<zack@cs.unibo.it>
 #   Enrico Tassi	<tassi@cs.unibo.it>
+# Modified by:
+#   Luis Mondesi        <lemsx1@gmail.com>
+#     - added a check for gvim to avoid passing -g if detected
 #
 # This is free software, you can redistribute it and/or modify it under the
 # terms of the GNU General Public License version 2 as published by the Free
@@ -13,7 +16,8 @@
 
 vimdiff="vimdiff"
 suffix="vimgitdiff"
-if [[ $1 == "-g" ]] ; then
+# TODO loop through PATH to find gvimdiff
+if [[ $1 == "-g" ]] || [[ -x "/usr/bin/gvimdiff" ]] || [[ -x "/usr/local/bin/gvimdiff" ]] ; then
   vimdiff="gvimdiff -f"
   shift 1
 fi

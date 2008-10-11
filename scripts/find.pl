@@ -40,18 +40,20 @@ my $BLUE  = "\033[0;34m";
 # -------------------------------------------------------------------
 
 my $usage =
-  "Usage:\nfind.pl [-f,--file-pattern=\"REGEX\"] [-r,--replace=\"replacement\"] <-s,--string=\"string\">\nfind.pl <\"string to find\"> [\"REGEX file pattern\"] [\"replacement string\"]\n\nNOTE use quotes to avoid the shell expanding your REGEX\n\n";
+  "Usage:\nfind.pl [-i,--ignore-case] [-f,--file-pattern=\"REGEX\"] [-r,--replace=\"replacement\"] <-s,--string=\"string\">\nfind.pl <\"string to find\"> [\"REGEX file pattern\"] [\"replacement string\"]\n\nNOTE use quotes to avoid the shell expanding your REGEX\n\n";
 
 my $this_string = undef;
 my $that_string = undef;
 my $f_pattern   = undef;
+my $IGNORECASE  = 0;
 
 GetOptions(
 
     'D|debug'          => \$DEBUG,
     'f|file-pattern=s' => \$f_pattern,
     's|string=s'       => \$this_string,
-    'r|replace=s'      => \$that_string
+    'r|replace=s'      => \$that_string,
+    'i|ignore-case'    => \$IGNORECASE,
   )
   and (not defined $this_string and $this_string = shift)
   and (not defined $f_pattern   and $f_pattern   = shift)
@@ -140,8 +142,7 @@ sub _is_binary
 sub _process_file
 {
     print STDERR ("Processing : ", $_, "\n") if ($DEBUG);
-    if (
-        $_ =~ m($f_pattern)
+    if (    $_ =~ m($f_pattern)
         and -r $_
         and basename($_) !~ m($EXCEPTION_LIST)
         and !_is_binary($_))
@@ -160,15 +161,22 @@ sub _process_file
         }
 
         open(FILE, "<$_file") or die "could not open $_file. $!\n";
-
         while (<FILE>)
         {
             $i++;
             if (defined($that_string))
             {
-                if ($_ =~ s|$this_string|$that_string|g)
+                # TODO cleanup
+                if ($IGNORECASE and ($_ =~ s|$this_string|$that_string|gi))
                 {
-                    my $_local = $_; # beautify display
+                    my $_local = $_;    # beautify display
+                    $_local =~ s/^\s+//;
+                    print STDOUT "$GREEN $_file [$i]:$NORM $_local";
+                    $modified = 1;
+                }
+                elsif ($_ =~ s|$this_string|$that_string|g)
+                {
+                    my $_local = $_;    # beautify display
                     $_local =~ s/^\s+//;
                     print STDOUT "$GREEN $_file [$i]:$NORM $_local";
                     $modified = 1;
@@ -180,10 +188,18 @@ sub _process_file
             }
             else
             {
-                if ($_ =~ m|$this_string|g)
+                # TODO cleanup
+                if ($IGNORECASE
+                    and ($_ =~ m|$this_string|gi))
                 {
-                    my $_local = $_; # beautify display
-                    $_local =~ s/^\s+//;
+                    my $_local = $_;
+                    $_local =~ s/^\s+//;    # beautify display
+                    print STDOUT "$BLUE $_file [$i]:$NORM $_local";
+                }
+                elsif ($_ =~ m|$this_string|g)
+                {
+                    my $_local = $_;
+                    $_local =~ s/^\s+//;    # beautify display
                     print STDOUT "$BLUE $_file [$i]:$NORM $_local";
                 }
             }
@@ -202,13 +218,14 @@ sub _process_file
             }
             $modified = 0;    # just in case...
         }
-        
+
         # cleanup
         if (-f $_file_tmp)
         {
+
             #DEBUG warn "Removing left-over file $_file_tmp\n";
             unlink($_file_tmp)
-                or die("Could not remove file $_file_tmp. $!\n");
+              or die("Could not remove file $_file_tmp. $!\n");
         }
     }
 }

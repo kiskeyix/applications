@@ -8,7 +8,7 @@
 # of things that should be defined here:
 
 #set realname="My name"
-#set alternates=(email1|emailx1|webmaster)@((www|mail).server.com|hotmail.com)
+#alternates (email1|emailx1|webmaster)@((www|mail).server.com|hotmail.com)
 
 #send-hook "@server.net" "my_hdr From: me <me@server.net>"
 #send-hook "@hotmail.com" "set pgp_autosign; my_hdr From: other <other@hotmail.com>"

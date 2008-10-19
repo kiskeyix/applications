@@ -14,7 +14,7 @@ use Getopt::Long;
 Getopt::Long::Configure('bundling');
 
 my $USAGE =
-  'adduser-ldap.pl [--uid="username"] <--first="First"> <--last="Lastname"> [--password="passwd"] [--email="mail_id"] <--domain="domain.com"> [--organizational-unit|--ou="People"] [--posix] [--nt] [--uid-number] [--gid=number] [--home-path|--home] [-D|--bind] [| ldapadd -x -D "cn=admin..." -W]';
+  'adduser-ldap.pl [--uid="username"] <--first="First"> <--last="Lastname"> [--password="passwd"] [--email="mail_id"] <--domain="domain.com"> [--organizational-unit|--ou="People"] [--posix] [--nt] [--uid-number] [--gid=number] [--home-path|--home] [-D|--bind] [| ldapadd -x -D "cn=admin..." -W]'."\n\nExample: adduser-ldap.pl --uid=ivan --first=ivan --last=grullon --email='igrullon\@kiskeyix.org' --domain=i.kiskeyix.org --posix --uid-number=1023 --ldif --home-path=/home/ivan --password=secret123 --ou=People |ldapadd -x -D 'cn=admin,dc=i,dc=kiskeyix,dc=org' -W\n";
 
 #my $pass_cmd = "slappasswd";
 my $pass_scheme = "\{CRYPT\}";    # SSHA, SHA1, MD5, CRYPT
@@ -98,7 +98,7 @@ sub hash_password
 {
     my $str     = shift;
     my $_scheme = shift;
-    my $hash    = "x";
+    my $hash    = $str;
     if ($_scheme =~ /crypt/i)
     {
 

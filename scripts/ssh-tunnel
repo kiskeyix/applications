@@ -13,6 +13,7 @@ LOCALHOST="127.0.0.1"
 ARG=" -c blowfish -X "
 
 if [ x$2 != "x" ]; then
+    # ssh -L LOCALPORT:127.0.0.1:REMOTEPORT user@remotehost
     ssh $ARG -L $2:$LOCALHOST:$2 "$1"
 else
     echo $USAGE

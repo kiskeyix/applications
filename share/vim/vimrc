@@ -9,6 +9,12 @@
 " -- Luis M < lemsx1@gmail.com > 2002-10-30 19:47 
 
 "
+" Tips:
+" - use ga (normal mode) to know the numeric value of the char under cursor
+" - CTRL-v u 1234 in insert mode to type a char (:help utf-8-typing)
+" 
+
+"
 " Options
 "
 

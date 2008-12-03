@@ -230,13 +230,14 @@ alias gitpush='git push; git fetch origin; git rebase origin;'
 # aliases so whenever you switch SCM you don't need to relearn the commands:
 alias vca='git add .'           # think 'commit all'
 alias vcb='git branch'
-alias vcc='git commit -a'
+alias vcc='git commit'
 alias vcd='git diff'
 alias vcm='git merge'
 alias vco='git checkout'        # think 'rcs/cvs/svn co'
 alias vcp='git pull --rebase'   # think 'checkout from remote host'
 alias vcu='git push'            # think 'update'
 alias vcs='git status'          # think 'info'
+alias vcl='git log'
 
 alias diff='diff -burN'
 

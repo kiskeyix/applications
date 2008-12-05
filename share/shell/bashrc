@@ -302,6 +302,8 @@ if [[ -x "`command -v gls 2> /dev/null`" ]]; then
     alias ls='gls -hF --color'
 elif [[ "Linux" = "`uname -s`" ]]; then
     alias ls='ls -hF --color' 
+elif [[ "Darwin" = "`uname -s`" ]]; then
+    alias ls='ls -GF' 
 fi
 
 if [[ -x "`command -v gcp 2> /dev/null`" ]]; then

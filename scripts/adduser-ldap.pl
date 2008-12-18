@@ -14,7 +14,7 @@ use Getopt::Long;
 Getopt::Long::Configure('bundling');
 
 my $USAGE =
-  'adduser-ldap.pl [--uid="username"] <--first="First"> <--last="Lastname"> [--password="passwd"] [--email="mail_id"] <--domain="domain.com"> [--organizational-unit|--ou="People"] [--posix] [--nt] [--uid-number] [--gid=number] [--home-path|--home] [-D|--bind] [| ldapadd -x -D "cn=admin..." -W]'."\n\nExample: adduser-ldap.pl --uid=ivan --first=ivan --last=grullon --email='igrullon\@kiskeyix.org' --domain=i.kiskeyix.org --posix --uid-number=1023 --ldif --home-path=/home/ivan --password=secret123 --ou=People |ldapadd -x -D 'cn=admin,dc=i,dc=kiskeyix,dc=org' -W\n";
+  'adduser-ldap.pl [--uid="username"] <--first="First"> <--last="Lastname"> [--password="passwd"] [--email="mail_id"] <--domain="domain.com"> [--organizational-unit|--ou="People"] [--posix] [--nt] [--uid-number] [--gid=number] [--home-path|--home] [-D|--bind] [| ldapadd -x -D "cn=admin..." -W]'."\n\nExample: adduser-ldap.pl --uid=ivan --first=ivan --last=smith --email='ismith\@kiskeyix.org' --domain=i.kiskeyix.org --posix --uid-number=1023 --ldif --home-path=/home/ivan --password=secret123 --ou=People |ldapadd -x -D 'cn=admin,dc=i,dc=kiskeyix,dc=org' -W\n";
 
 #my $pass_cmd = "slappasswd";
 my $pass_scheme = "\{CRYPT\}";    # SSHA, SHA1, MD5, CRYPT
@@ -166,7 +166,7 @@ foreach (@domain_parts)
 $domain_joined =~ s/, $//;
 
 my $ldif = "
-dn: cn=$full_name, $ou $domain_joined
+dn: uid=$uid, $ou $domain_joined
 objectClass: top
 objectClass: person
 objectClass: organizationalPerson
@@ -203,7 +203,7 @@ shadowMin: -1
 shadowMax: 99999
 shadowWarning: 7
 shadowInactive: -1
-shadowExpire: 1
+shadowExpire: -1
 uidNumber: $uid_number
 gidNumber: $gid_number
 userpassword: ${pass_scheme}${passwd}

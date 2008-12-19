@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.10 $
+# $Revision: 1.0 $
 # $Date: 2007-05-03 20:37:08 $
 # my_name < email@example.com >
 #
@@ -21,12 +21,12 @@ skeleton.pl - skeleton script for Perl
 
 use strict;
 
-my $revision = '$Revision: 1.10 $';    # version
+my $revision = '$Revision: 1.0 $';    # version
 $revision =~ s/(\\|Revision:|\s|\$)//g;
 
 # standard Perl modules
 use IO::Handle;
-STDOUT->autoflush(1); # same as: $| = 1;
+STDOUT->autoflush(1);                 # same as: $| = 1;
 STDERR->autoflush(1);
 
 use Getopt::Long;
@@ -126,7 +126,7 @@ if ($USAGE)
 
 if ($PVERSION) { print STDOUT ($revision, "\n"); exit 0; }
 
-print "sample";
+print "Hello\n";
 
 =pod
 

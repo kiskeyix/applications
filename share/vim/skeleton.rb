@@ -68,19 +68,21 @@ opts.each do |opt, arg|
    end
 end
 
-if ARGV.length != 1
-   puts "Missing dir argument (try --help)"
-   RDoc::usage 1
-   exit 1 # never reaches here
-end
+# if ARGV.length != 1
+#    puts "Missing dir argument (try --help)"
+#    RDoc::usage 1
+#    exit 1 # never reaches here
+# end
+# 
+# dir = ARGV.shift
+# 
+# Dir.chdir(dir)
+# for i in (1..repetitions)
+#    print "Hello"
+#    if name
+#       print ", #{name}"
+#    end
+#    puts
+# end
 
-dir = ARGV.shift
-
-Dir.chdir(dir)
-for i in (1..repetitions)
-   print "Hello"
-   if name
-      print ", #{name}"
-   end
-   puts
-end
+puts "Hello"

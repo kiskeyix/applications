@@ -161,22 +161,23 @@ sub _process_file
         }
 
         open(FILE, "<$_file") or die "could not open $_file. $!\n";
-        while (<FILE>)
+        my $line='';
+        while ($line = <FILE>)
         {
             $i++;
             if (defined($that_string))
             {
                 # TODO cleanup
-                if ($IGNORECASE and ($_ =~ s|$this_string|$that_string|gi))
+                if ($IGNORECASE and ($line =~ s|$this_string|$that_string|gi))
                 {
-                    my $_local = $_;    # beautify display
+                    my $_local = $line;    # beautify display
                     $_local =~ s/^\s+//;
                     print STDOUT "$GREEN $_file [$i]:$NORM $_local";
                     $modified = 1;
                 }
-                elsif ($_ =~ s|$this_string|$that_string|g)
+                elsif ($line =~ s|$this_string|$that_string|g)
                 {
-                    my $_local = $_;    # beautify display
+                    my $_local = $line;    # beautify display
                     $_local =~ s/^\s+//;
                     print STDOUT "$GREEN $_file [$i]:$NORM $_local";
                     $modified = 1;
@@ -190,15 +191,15 @@ sub _process_file
             {
                 # TODO cleanup
                 if ($IGNORECASE
-                    and ($_ =~ m|$this_string|gi))
+                    and ($line =~ m|$this_string|gi))
                 {
-                    my $_local = $_;
+                    my $_local = $line;
                     $_local =~ s/^\s+//;    # beautify display
                     print STDOUT "$BLUE $_file [$i]:$NORM $_local";
                 }
-                elsif ($_ =~ m|$this_string|g)
+                elsif ($line =~ m|$this_string|g)
                 {
-                    my $_local = $_;
+                    my $_local = $line;
                     $_local =~ s/^\s+//;    # beautify display
                     print STDOUT "$BLUE $_file [$i]:$NORM $_local";
                 }

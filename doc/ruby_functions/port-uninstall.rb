@@ -3,6 +3,8 @@
 #
 # port-uninstall: recursively removes ports and its dependencies
 #
+# Yes, I'm aware of `port uninstall --recursive pkgname`
+#
 # == Usage
 #
 # port-uninstall [OPTION] ... <port>
@@ -48,6 +50,11 @@ if ARGV.length != 1
    puts "Missing port argument (try --help)"
    RDoc::usage 1
    exit 1 # never reaches here
+end
+
+unless File.executable?('/opt/local/bin/port')
+   puts "Missing /opt/local/bin/port. Is this a Mac runnin MacPorts?"
+   exit 2
 end
 
 # helpers

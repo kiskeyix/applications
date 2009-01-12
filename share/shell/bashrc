@@ -382,6 +382,10 @@ alias dpkg-buildpackage='dpkg-buildpackage -rfakeroot'
 # connect (callup) to a system using a serial cable:
 alias connect='cu -l /dev/ttyS0 -s 9600'
 
+# sysadmin tasks:
+alias Iostat='iostat -xnczpm 3'
+alias Prstat='prstat -mL'
+
 ## spelling typos
 
 alias xs='cd'

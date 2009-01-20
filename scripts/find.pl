@@ -2,12 +2,12 @@
 # $Revision: 1.32 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
-# URL: http://www.kiskeyix.org/downloads/find.pl.gz
+# URL: http://www.kiskeyix.org/downloads/fgrep.pl.gz
 #
 # DESCRIPTION: finds a string in a set of files
 #
-# USAGE: find.pl --replace="bar" "foo"
-#        find.pl "string" ".*\.html"
+# USAGE: fgrep.pl --replace="bar" "foo"
+#        fgrep.pl "string" ".*\.html"
 #
 # BUGS: if replacement string contains invalid characters
 #       nothing gets done. Have to find a way to escape
@@ -40,7 +40,7 @@ my $BLUE  = "\033[0;34m";
 # -------------------------------------------------------------------
 
 my $usage =
-  "Usage:\nfind.pl [-i,--ignore-case] [-f,--file-pattern=\"REGEX\"] [-r,--replace=\"replacement\"] <-s,--string=\"string\">\nfind.pl <\"string to find\"> [\"REGEX file pattern\"] [\"replacement string\"]\n\nNOTE use quotes to avoid the shell expanding your REGEX\n\n";
+  "Usage:\nfgrep.pl [-i,--ignore-case] [-f,--file-pattern=\"REGEX\"] [-r,--replace=\"replacement\"] <-s,--string=\"string\">\nfgrep.pl <\"string to find\"> [\"REGEX file pattern\"] [\"replacement string\"]\n\nNOTE use quotes to avoid the shell expanding your REGEX\n\n";
 
 my $this_string = undef;
 my $that_string = undef;

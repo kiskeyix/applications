@@ -1,0 +1,113 @@
+#!/usr/bin/perl -w
+#
+# testrelay - Check an MTA (mail-transfer-agent, aka: mail server) for
+#             open-relayness.
+#
+# By: Theo Van Dinter (felicity@kluge.net) (c) 1998-2002
+# Revision Info: $Id: testrelay,v 1.12 2002/07/24 16:48:52 felicity Stab $
+#
+#
+# I have configured my mail server to use the DNS blacklists from the
+# MAPS project (http://www.mail-abuse.org/).  The basics are that if an
+# IP address appears in one of the MAPS lookup tables, my mail server
+# will reject the SMTP connection since the mail is likely to be spam.
+# I became tired of manually doing SMTP to test for open relays, so in
+# the true UNIX SA style, I wrote a script to automate this task. :)
+# 
+# If you are going to use this script, please be sure to change the $from
+# and $to settings at the top of the script.  They're setup for my server
+# and I'd rather not have all these open-relay mails coming to my box.
+# My "openrelaytest" address is aliased to postmaster (which is aliased
+# to my account), and the "nobody" address is aliased to /dev/null (aka:
+# the bit bucket.)  That way I never have to deal with these messages
+# again.
+#
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.
+#
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+# General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+#
+$|++;
+
+use Net::SMTP;
+use Socket;
+
+my $debug = 1;
+chomp( my $domain = `/bin/hostname -d` )
+  ;    # this will hopefully make people edit before
+       # running if necessary!
+my $from = 'openrelaytest@' . $domain;
+my @to   = ( 'nobody@' . $domain, 'listme@listme.dsbl.org' );
+
+# Deal with a debug option if it's there
+if ( $ARGV[0] eq "-d" ) {
+    $debug = $ARGV[1];
+    splice @ARGV, 0, 2;
+}
+
+my $server;
+MAINL: foreach $server (@ARGV) {
+    if ( $server =~ /[^0-9.]/ ) {    # not an IP!
+        my @addrs = ( gethostbyname($server) )[4];
+        $server = inet_ntoa( $addrs[0] );
+    }
+
+    my $smtp = new Net::SMTP( $server, Debug => $debug, Timeout => 10 );
+    unless ($smtp) {
+        print "Can't create connection with $server!\n";
+        next;
+    }
+
+    if ( !$smtp->mail($from) ) {
+        $smtp->quit;
+        print "$server gave error for MAIL FROM.\n";
+        next;
+    }
+
+    my $to;
+    foreach $to (@to) {
+        if ( !$smtp->to($to) ) {
+            $smtp->quit;
+            print "$server isn't an open relay!\n";
+            next MAINL;
+        }
+    }
+
+    if ( !$smtp->data() ) {
+        $smtp->quit;
+        print "$server gave error for DATA.\n";
+        next;
+    }
+    $smtp->datasend( "To: " . join ( ", ", @to ) . "\n" );
+    $smtp->datasend("\n");
+    $smtp->datasend(
+        "This is an open relay test for $server.  Shame on you if it works.
+
+Please see http://www.mail-abuse.org/ and specifically
+http://mail-abuse.org/tsi/ for information about what
+an open relay is and how you can fix your server.
+DSBL LISTME: smtp $server
+How does one get a cookie?
+DSBL END"
+    );
+    if ( !$smtp->dataend() ) {
+    	$smtp->quit;
+	print "$server gave error for DATA end.\n";
+	next;
+    }
+
+    $smtp->quit;
+    print "$server appears to be an open relay!\n";
+}
+
+exit 0;

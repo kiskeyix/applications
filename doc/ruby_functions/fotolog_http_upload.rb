@@ -26,6 +26,14 @@
 #
 # --file FILENAME or FILENAME
 #    file to upload
+#
+# == TODO
+# - allow uploading up to six files from the command line: ./fotolog_http_upload.rb ... file1 [file2[...]]
+#
+# == exit code
+# 0 - Ok
+#
+# 1 - Error
 
 =begin
 $Revision: 1.0 $
@@ -37,6 +45,7 @@ USAGE: fotolog_http_upload --help
 LICENSE: GPL
 =end
 
+require 'net/http'
 require 'getoptlong'
 require 'rdoc/usage'
 
@@ -92,10 +101,20 @@ if user.nil? or password.nil? or file.nil?
    exit 1 # never reaches here
 end
 
-require 'net/http'
-def file_to_multipart(key,filename,mime_type,content,user=nil)
-   #u=\"#{CGI::escape(user)}\"; 
-   return "Content-Disposition: form-data; name=\"#{CGI::escape(key)}\"; filename=\"#{filename}\"\r\n" +
+# helpers:
+
+# given a form input name returns the right POST data
+# you still need your boundaries before this
+def upload_form(key,content)
+   return "Content-Disposition: form-data; name=\"#{CGI::escape(key)}\"\r\n" +
+   "\r\n" +
+   "#{content}\r\n"
+end
+
+# given a form file input name returns the right POST data
+# you still need your boundaries before this
+def file_to_multipart(key,filename,mime_type,content)
+   return "Content-Disposition: form-data; name=\"#{CGI::escape(key)}\"; filename=\"#{File.basename(filename)}\"\r\n" +
    "Content-Transfer-Encoding: binary\r\n" +
    "Content-Type: #{mime_type}\r\n" +
    "\r\n" +
@@ -105,56 +124,62 @@ end
 # internal vars:
 url = 'photo.fotolog.com'
 path = '/upload'
+loginurl = 'account.fotolog.com'
+loginpath = '/login'
 useragent = 'Ruby/1.8 (Fotolog; LM)'
-boundary = '4aa7438b5c6fd25599785dd25a41be96' # md5sum of what?
+boundary = '-------------------------3599464642501006571963510995'
 
-# 1. get cookie
-http = Net::HTTP.new(url, 80)
-# GET request -> so the host can set his cookies
-resp = http.get(path, nil)
-cookie = resp.response['set-cookie']
-
-# 2. POST request -> logging in
-data = 'u_name=' + user + '&p_word=' + password
+# 1. get cookie from login form
+http = Net::HTTP.new(loginurl, 80)
+data = 'u_name=' + CGI::escape(user) + '&p_word=' + CGI::escape(password)
 headers = {
-   'Cookie' => cookie,
-   'Referer' => 'http://'+ url + path,
    'Content-Type' => 'application/x-www-form-urlencoded',
    'User-Agent' => useragent
 }
-resp = http.post(path, data, headers)
+resp = http.post(loginpath, data, headers)
+# cookie is now has P and LEC
+cookie = resp.response['set-cookie']
 
 # debug
 #puts 'Code = ' + resp.code
 #puts 'Message = ' + resp.message
 #resp.each {|key, val| puts key + ' = ' + val}
+#puts cookie
+#exit 0
 # end debug
 
-# 3. read our file in memory
+# 2. read our file in memory
+# TODO will need to loop through file list
 content = open( file, "rb" ) do |f|
    f.read()
 end
 
-# 4. set headers for our multipart/form-data post request
+# 3. set headers for our multipart/form-data post request
 headers2 = {
    'Cookie'              => cookie,
    'Referer'             => 'http://photo.fotolog.com/upload',
-   'Content-Type'        => 'multipart/form-data',
-   'boundary'            => boundary,
+   'Content-Type'        => 'multipart/form-data; boundary='+boundary,
+   'Accept-Language'     => 'en-us,en;q=0.5',
+   'Accept-Encoding'     => 'gzip,deflate',
+   'Keep-Alive'          => '300',
+   'Connection'          => 'keep-alive',
    'User-Agent'          => useragent
 }
 
-# 5. upload file
-#params = [ file_to_multipart('file',file,'image/jpeg',content,user) ]
-#query = params.collect {|p| p + '--' + boundary + "\r\n" }.join('') + "--" + boundary + "--\r\n"
-query = '--' + boundary + "\r\n" + file_to_multipart('image',file,'image/jpeg',content,user) + '--' + boundary + "--\r\n"
-http.set_debug_output $stderr
+# 4. upload file
+# - the form needs u= (user) and password= (password) the rest is optional
+# - you may add multiple images by adding calls to file_to_multipart() (think array)
+params = [ upload_form('u',user), file_to_multipart('image',file,'image/jpeg',content), upload_form('password',password) ]
+query = params.collect {|p| '--' + boundary + "\r\n" + p }.join('') + "--" + boundary + "--\r\n"
+http = Net::HTTP.new(url, 80)
+#http.set_debug_output $stderr
 resp = http.post2(path,query,headers2)
 
 case resp
-when Net::HTTPSuccess, Net::HTTPRedirection
-   # OK
-   puts "File uploaded " + resp.status
+when Net::HTTPSuccess, Net::HTTPRedirection, Net::HTTPFound
+   puts "File uploaded"
+   exit 0
 else
    resp.error!
+   exit 1
 end

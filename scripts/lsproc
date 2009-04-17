@@ -7,11 +7,14 @@
 #
 
 PS='ps -eo pid,user,rss,s,args'
+if [ `uname -s` = 'Darwin' ]; then
+    PS='ps -eco pid,user,rss,comm'
+fi
 SORT='sort --key=3 --reverse --numeric-sort'
 
 if [ -n "$1" ]; then
     $PS | head -1 # put the header
-    $PS | grep -v lsproc | grep -v PID | grep -v grep | grep  $1 | $SORT
+    $PS | grep -v lsproc | grep -v PID | grep -v grep | grep $1 | $SORT
 else
     $PS | head -1 # put the header
     $PS | grep -v lsproc | grep -v PID | grep -v grep | $SORT

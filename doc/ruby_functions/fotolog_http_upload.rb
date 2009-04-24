@@ -173,11 +173,20 @@ params = [ upload_form('u',user), file_to_multipart('image',file,'image/jpeg',co
 query = params.collect {|p| '--' + boundary + "\r\n" + p }.join('') + "--" + boundary + "--\r\n"
 http = Net::HTTP.new(url, 80)
 #http.set_debug_output $stderr
+
+start_time = Time.now
 resp = http.post2(path,query,headers2)
+end_time = Time.now
+elapsed_time = end_time - start_time
+
+#system  "wget --load-cookies tcook.txt --post-data="delete=43839074&pwd=testtest101" http://photo.fotolog.com/archive"
 
 case resp
-when Net::HTTPSuccess, Net::HTTPRedirection, Net::HTTPFound
-   puts "File uploaded"
+when Net::HTTPRedirection
+   puts resp['location'] + " (#{elapsed_time})"
+   exit 0
+when Net::HTTPSuccess, Net::HTTPFound
+   puts "Ok" + " (#{elapsed_time})"
    exit 0
 else
    resp.error!

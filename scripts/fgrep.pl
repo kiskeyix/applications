@@ -184,7 +184,7 @@ sub _process_file
                 }
                 open(NEWFILE, ">>$_file_tmp")
                   or die("could not write to $_file_tmp. $!\n");
-                print NEWFILE $_;
+                print NEWFILE $line;
                 close(NEWFILE);
             }
             else

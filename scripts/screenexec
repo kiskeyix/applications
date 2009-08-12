@@ -1,0 +1,15 @@
+#!/bin/sh
+# executes a command in a new screen session and detach
+#
+NAME=$1
+if [ -n "$NAME" ]; then
+    shift
+    for exec in $*; do
+        #-S `basename $exec` - name
+        screen -S ${NAME}.`basename $exec` -md $exec
+    done
+    screen -ls
+else
+    echo "Usage: screenexec <name> <command> [command2 [commandN]]"
+    exit 1
+fi

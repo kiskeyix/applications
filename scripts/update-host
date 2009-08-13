@@ -128,6 +128,7 @@ my @_CONFIG_FILES = (
                      "Applications/share/shell/cvsrc",
                      "Applications/share/vim",
                      "Applications/share/mutt",
+                     "Applications/share/shell/screenrc",
                     );
 
 # files that should be tidied!

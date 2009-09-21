@@ -1,0 +1,17 @@
+#!/usr/bin/env ruby
+# 2009-09-21
+# avoid using Resolv.getaddresses as this has a recursion limit on Ruby 1.8
+# Luis Mondesi
+# TODO
+# - sort result nicely
+require "resolv"
+ARGV.each { |arg|
+	hosts = `host #{arg}`
+	hosts.split(/\n/).each { |line|
+		ip = line.split(/\s+/).last.chomp
+		if ip =~ /^[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+$/
+			name = Resolv::getname(ip)
+			puts name.split(/\./).first
+		end
+	}
+}

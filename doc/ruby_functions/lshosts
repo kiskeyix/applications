@@ -4,6 +4,10 @@
 # Luis Mondesi
 # TODO
 # - sort result nicely
+USAGE = "Usage: lshosts <cluster [cluster2 [...]]>"
+
+puts USAGE if not ARGV.first
+
 require "resolv"
 ARGV.each { |arg|
 	hosts = `host #{arg}`

@@ -130,7 +130,7 @@ my $NEW_MENU_NAME = "";
 
 # others
 my $menu_str = "";
-my $revision = "Pixdir2html v1.8\n Luis Mondesi <lemsx1\@hotmail.com>\n";
+my $revision = "Pixdir2html v1.9\n Luis Mondesi <lemsx1\@gmail.com>\n";
 
 # get options
 GetOptions(
@@ -823,7 +823,7 @@ sub mkthumb
                 # there is no way around defining $image here...
                 my $image = Image::Magick->new;
                 $image->Read($_pix_name_tmp);
-                $image->Resize($PERCENT);
+                $image->Resize(geometry=>$PERCENT,blur=>0.75);
                 $image->Write($_thumb_pix_name_tmp);
                 undef $image;
             }

@@ -23,6 +23,7 @@
 set nocompatible	" we want vim's features, not stupid vi compatiblity
 set ruler		" shows ruler at the bottom of the screen
 set bs=2		" allow backspacing over everything in insert mode
+set modeline            " reads modelines like '# vi: ft=foo :' lines
 
 " force utf-8
 set encoding=utf-8

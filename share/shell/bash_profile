@@ -45,26 +45,12 @@ elif [[ -d "/dev/shm/" ]]; then
     fi
 fi
 
-# Mini-Hack to use Vim as a pager
-PAGER="less"
-MANPAGER=$PAGER
-
-if [[ -x "`command -v vim 2> /dev/null`" ]]; then
-    # FIXME using Vim as pager can be slow and annoying...
-    if [[ -x "$HOME/Applications/scripts/pager" ]]; then
-        PAGER="$HOME/Applications/scripts/pager"
-    fi
-
-    # Using Vim as a MANPAGER is not bad
-    if [[ -x "$HOME/Applications/scripts/manpager" ]]; then
-        MANPAGER="$HOME/Applications/scripts/manpager"
-    fi
-    # These lines could create problems if you
-    # use 'more' or 'less' to see files not from STDIN
-    # alias less=$PAGER
-    # alias more=$PAGER
+if [[ -x "`command -v less 2> /dev/null`" ]]; then
+    PAGER="less"
+else
+    PAGER="more"
 fi
-
+MANPAGER=$PAGER
 LESSCHARSET='utf-8'
 LESS='-F -i -w -R -z-4 -g -e -M -X -P%t?f%f \
         :stdin .?pb%pb\%:?lbLine %lb:?bbByte %bb:-...'

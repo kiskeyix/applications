@@ -51,6 +51,8 @@ password    = nil
 message     = nil
 quiet       = false
 
+#TODO read start file ~/.twitterrc
+
 #### --------------- do not modify below this line --------------- ####
 
 # libs we need:

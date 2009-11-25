@@ -9,6 +9,7 @@ use strict;
 $|++;    # disable buffer (autoflush)
 
 use Net::LDAP;
+use Net::LDAP::Entry;
 use URI;
 use Getopt::Long;
 Getopt::Long::Configure('bundling');
@@ -32,50 +33,70 @@ my $NT;
 my $OU;
 my $LDIF;
 
-my $LDAPADMINCN      = "";      # -D or --bind
+my $LDAPADMINCN      = "";                           # -D or --bind
 my $LDAPSERVER       = "localhost";
 my $LDAPPASSWORDFILE = "/etc/adduser-ldap.secret";
 my $LDAPPASSWORD     = "";
 
+# all possible items we will use. note that some need
+# other objectClasses added. order does not matter
+my @records = qw(
+  carLicense
+  cn
+  departmentNumber
+  employeeNumber
+  employeeType
+  facsimileTelephoneNumber
+  gecos
+  gidNumber
+  givenName
+  homeDirectory
+  homePhone
+  initials
+  labeledURI
+  loginShell
+  mail
+  mobile
+  preferredLanguage
+  roomNumber
+  shadowExpire
+  shadowInactive
+  shadowMax
+  shadowMin
+  shadowWarning
+  sn
+  telephoneNumber
+  title
+  uid
+  uidNumber
+  userPassword
+  );
+
 my %rec = ();
 
-my $first = "";    # first name
-my $last  = "";    # last name (surname)
-my $uid   = "";    # User ID for login
-my $mid   = ""
-  ; # User ID for our emails: $first_letter$lastname scheme. or full email: $first_letter$lastname@$domain
-my $domain    = "";    # yields dc=domain,dc=com
-my $edomain   = "";    # TODO --email-domain. defaults to $domain
-my $passwd    = "";    # can pass given encrypted string from command line
-my $posix_uid = "";    # --uid-number
-my $posix_gid = "";    # --gid-number
-my $home      = "";    # --home-path --home
-my @groups    = ();    # --groups
-my $shell = "/bin/false";    # TODO --shell
+my $domain = "";    # yields dc=domain,dc=com
+my @groups = ();    # --groups
+$rec{loginShell} = "/bin/false";    # TODO --shell
+my $edomain = "";                   # TODO --email-domain. defaults to $domain
 
 # visible domain from the outside word
 # TODO set this interactively:
-$rec{'webhost'}       = "www";          # name of web server, without the domain
-$rec{'office_number'} = "212.123.4567";
-$rec{'fax_number'}    = "212.123.4567";
-$rec{'mobile_number'} = "212.123.4567";
-$rec{'title'}         = "my title";
-$rec{'home_number'}   = "212.123.4567";
+$rec{'webhost'} = "www";            # name of web server, without the domain
 
 GetOptions(
     'debug'                      => \$DEBUG,
     'posix'                      => \$POSIX,
     'nt'                         => \$NT,
-    'f|first=s'                  => \$first,
-    'l|last=s'                   => \$last,
-    'u|uid=s'                    => \$uid,
-    'e|m|email=s'                => \$mid,
+    'f|first=s'                  => sub { $rec{givenName} = $_[1] },
+    'l|last=s'                   => sub { $rec{sn} = $_[1] },
+    'u|uid=s'                    => sub { $rec{uid} = $_[1] },
+    'e|m|email=s'                => sub { $rec{mail} = $_[1] },
     'd|domain=s'                 => \$domain,
     'o|ou|organizational-unit=s' => \$OU,
-    'p|password=s'               => \$passwd,
-    'H|home|home-path=s'         => \$home,
-    'U|uid-number=i'             => \$posix_uid,
-    'G|gid-number=i'             => \$posix_gid,
+    'p|password=s'               => sub { $rec{userPassword} = $_[1] },
+    'H|home|home-path=s'         => sub { $rec{homeDirectory} = $_[1] },
+    'U|uid-number=i'             => sub { $rec{uidNumber} = $_[1] },
+    'G|gid-number=i'             => sub { $rec{gidNumber} = $_[1] },
     'D|bind=s'                   => \$LDAPADMINCN,
     'w|bind-password=s'          => \$LDAPPASSWORD,
     'W|bind-password-file=s'     => \$LDAPPASSWORDFILE,
@@ -95,7 +116,7 @@ GetOptions(
 if ($HELP) { print $USAGE; exit 0; }
 
 print STDERR ($USAGE) and exit(1)
-  if (not $first || not $last || not $domain);
+  if (not exists $rec{givenName} || not exists $rec{sn} || not $domain);
 
 # helpers
 sub _debug
@@ -137,18 +158,8 @@ sub hash_password
 
 sub _create_entry
 {
-    my ($ldap, $dn, $whatToCreate) = @_;
-    if ($DEBUG)
-    {
-        print "DEBUG: _create_entry\n";
-        print("\tdn: ", $dn, "\n");
-        foreach (@$whatToCreate)
-        {
-            print("\t\t", $_, "\n");
-        }
-        print "\n";
-    }
-    my $result = $ldap->add($dn, 'attr' => [@$whatToCreate]);
+    my ($ldap, $whatToCreate) = @_; # $whatToCreate is Net::LDAP::Entry
+    my $result = $ldap->add($whatToCreate);
     return $result;
 }
 
@@ -186,46 +197,71 @@ sub _get_password
 
 # end helpers
 
+# main()
 # set some internal vars:
 my @domain_parts = split(/\./, $domain);
 $edomain = (not $edomain) ? $domain : $edomain;
 
 # create UID and MID using scheme:
 #   (first letter of first name) + (last name)
-$uid = ($uid ne "") ? $uid : lc(substr($first, 0, 1) . $last);
+$rec{uid} =
+  (exists $rec{uid} and $rec{uid} ne "")
+  ? $rec{uid}
+  : lc(substr($rec{givenName}, 0, 1) . $rec{sn});
 
-if ($mid)
+if (exists $rec{mail} and $rec{mail})
 {
-    if ($mid !~ /@/)
+    if ($rec{mail} !~ /@/)
     {
-        $mid .= "\@" . $edomain;
+        $rec{mail} .= "\@" . $edomain;
     }
 }
 else
 {
-    $mid = lc(substr($first, 0, 1) . $last) . "\@" . $edomain;
+    $rec{mail} = lc(substr($rec{givenName}, 0, 1) . $rec{sn}) . "\@" . $edomain;
 }
 
-$home = ($home ne "") ? $home : "/home/$uid";    # --posix only
+$rec{homeDirectory} =
+  (exists $rec{homeDirectory})
+  ? $rec{homeDirectory}
+  : "/home/${rec{uid}}";    # --posix only
 
-my $full_name = ucfirst($first) . " " . ucfirst($last);
-my $initials = substr($first, 0, 1) . substr($last, 0, 1);
+$rec{cn} = ucfirst($rec{givenName}) . " " . ucfirst($rec{sn});
+$rec{initials} = substr($rec{givenName}, 0, 1) . substr($rec{sn}, 0, 1);
 
 # --posix only
 # TODO calculate uid number from previous LDAP user_list
-my $uid_number =
-  ($posix_uid ne "")
-  ? $posix_uid
+$rec{uidNumber} =
+  (exists $rec{uidNumber} and $rec{uidNumber} >= 0)
+  ? $rec{uidNumber}
   : sprintf("%02d", rand(my @ary = ($min_uid .. $max_uid)));
-my $gid_number =
-  ($posix_gid ne "")
-  ? $posix_gid
+$rec{gidNumber} =
+  (exists $rec{gidNumber} and $rec{gidNumber} >= 0)
+  ? $rec{gidNumber}
   : "100";    # TODO get a good GID number from LDAP
 
-$passwd =
-  ($passwd ne "")
-  ? hash_password($passwd,            $pass_scheme)
+$rec{userPassword} =
+  (exists $rec{userPassword} and $rec{userPassword})
+  ? hash_password($rec{userPassword}, $pass_scheme)
   : hash_password(random_password(8), $pass_scheme);
+
+$rec{labeledURI} =
+  "http://people.$edomain/${rec{givenName}}_${rec{sn}} User Home Page";
+
+# TODO
+$rec{title} = "Employee Title";
+$rec{carLicense} = "000";
+$rec{departmentNumber} = "0";
+$rec{employeeNumber} = "0";
+$rec{roomNumber} = "0";
+$rec{employeeType} = "Full Time";
+$rec{facsimileTelephoneNumber} = "000-000-0000";
+$rec{homePhone} = "000-000-0000";
+$rec{telephoneNumber} = "000-000-0000";
+$rec{mobile} = "000-000-0000";
+$rec{preferredLanguage}="en";
+
+$rec{gecos} = "${rec{givenName}} ${rec{sn}},Home Address Here,${rec{telephoneNumber}},${rec{homePhone}},${rec{mobile}}";
 
 # TODO sanity checks: mid, uid, uidNumber, gidNumber, ...
 
@@ -237,8 +273,8 @@ foreach (@domain_parts)
 }
 $domain_joined =~ s/, $//;
 
-my $ldif = "
-dn: uid=$uid, $ou $domain_joined
+# this $ldif is used only if --ldif
+my $ldif = "dn: uid=${rec{uid}}, $ou $domain_joined
 objectClass: top
 objectClass: person
 objectClass: organizationalPerson
@@ -246,43 +282,15 @@ objectClass: inetOrgPerson";
 
 $ldif .= "
 objectClass: posixAccount
-objectClass: shadowAccount" if ($POSIX);
+objectClass: shadowAccount\n" if ($POSIX);
 
-# TODO fix the stuff with 1234
-$ldif .= "
-cn: $full_name
-sn: $last
-givenName: $first
-initials: $initials
-title: $rec{'title'}
-uid: $uid
-mail: $mid
-telephoneNumber: $rec{'office_number'}
-facsimileTelephoneNumber: $rec{'fax_number'}
-homePhone: $rec{'home_number'}
-mobile: $rec{'mobile_number'}
-roomNumber: 0
-carLicense: 1234
-departmentNumber: 1234
-employeeNumber: 1234
-employeeType: full time
-preferredLanguage: en
-labeledURI: http://people.$edomain/${first}_${last} User Home Page";
-
-$ldif .= "
-homeDirectory: $home
-gecos: $full_name,101 5th Ave,212.620.6001,646.123.4567,Super User
-shadowMin: -1
-shadowMax: 99999
-shadowWarning: 7
-shadowInactive: -1
-shadowExpire: -1
-uidNumber: $uid_number
-gidNumber: $gid_number
-userpassword: ${pass_scheme}${passwd}
-loginShell: $shell
-
-" if ($POSIX);
+foreach my $_item (@records)
+{
+    if (exists $rec{$_item})
+    {
+        $ldif .= "${_item}: " . $rec{$_item} . "\n";
+    }
+}
 
 if ((@groups + 0))
 {
@@ -293,7 +301,7 @@ if ((@groups + 0))
 dn: cn=$_group,ou=Groups,$domain_joined
 changetype: modify
 add: uniqueMember
-uniqueMember: uid=$uid, $ou $domain_joined
+uniqueMember: uid=${rec{uid}}, $ou $domain_joined
         "
     }
 }
@@ -319,63 +327,42 @@ my $mesg = $ldap->bind(
     : _get_password($LDAPPASSWORDFILE),
     'version' => '3'
                       );    # if bind() it binds anonymously
-my $_dn = "uid=${uid},${ou}${domain_joined}";
-
+my $_dn   = "uid=${rec{uid}},${ou}${domain_joined}";
+my $entry = Net::LDAP::Entry->new($_dn);
 my $CODE = 0;               # assume we won't have errors
-
-my $create_ary = [
-    objectClass => ["top", "person", "organizationalPerson", "inetorgperson"],
-    cn                       => $full_name,
-    uid                      => $uid,
-    givenName                => $first,
-    sn                       => $last,
-    mail                     => $mid,
-    telephoneNumber          => $rec{'office_number'},
-    userPassword             => "${pass_scheme}${passwd}",
-    initials                 => $initials,
-    title                    => $rec{'title'},
-    telephoneNumber          => $rec{'office_number'},
-    facsimileTelephoneNumber => $rec{'fax_number'},
-    homePhone                => $rec{'home_number'},
-    mobile                   => $rec{'mobile_number'},
-    roomNumber               => 0,
-    carLicense               => 1234,
-    departmentNumber         => 1234,
-    employeeNumber           => 1234,
-    employeeType             => "full time",
-    preferredLanguage        => "en",
-    labeledURI => "http=>//people.$edomain/${first}_${last} User Home Page"
-                 ];
 
 if ($POSIX)
 {
-    my @_extra_classes = ("shadowAccount", "posixAccount");
-    foreach my $obj (@_extra_classes)
-    {
-        push @{$create_ary->{'objectClass'}}, $obj;
-    }
-
-    $create_ary->{'homeDirectory'} = "$home";
-    $create_ary->{'gecos'} =
-        "$full_name,101 5th Ave,"
-      . $rec{'office_number'}
-      . ",646.123.4567,Super User";
-    $create_ary->{'shadowMin'}      = "-1";
-    $create_ary->{'shadowMax'}      = "99999";
-    $create_ary->{'shadowWarning'}  = "7";
-    $create_ary->{'shadowInactive'} = "-1";
-    $create_ary->{'shadowExpire'}   = "-1";
-    $create_ary->{'uidNumber'}      = "$uid_number";
-    $create_ary->{'gidNumber'}      = "$gid_number";
-    $create_ary->{'userpassword'}   = "${pass_scheme}${passwd}";
-    $create_ary->{'loginShell'}     = $shell;
+    $entry->add(
+                objectClass => [
+                                "top",                  "person",
+                                "organizationalPerson", "inetorgperson",
+                                "shadowAccount",        "posixAccount"
+                               ]
+               );
+    $rec{'shadowMin'}      = "-1";
+    $rec{'shadowMax'}      = "99999";
+    $rec{'shadowWarning'}  = "7";
+    $rec{'shadowInactive'} = "-1";
+    $rec{'shadowExpire'}   = "-1";
+}
+else
+{
+    $entry->add(objectClass =>
+                ["top", "person", "organizationalPerson", "inetorgperson"]);
 }
 
-my $entry_result = _create_entry($ldap, $_dn, $create_ary);
+foreach my $_item (@records)
+{
+    $entry->add($_item => $rec{$_item});
+}
+
+my $entry_result = _create_entry($ldap, $entry);
 
 if ($entry_result->code())
 {
-    print STDERR " Error while creating entry for uid $uid on \$LDAPSERVER\n";
+    print STDERR
+      " Error while creating entry for uid ${rec{uid}} on \$LDAPSERVER\n";
 
     print STDERR (  ". Server message => code: "
                   . $entry_result->code()
@@ -393,13 +380,15 @@ if (@groups + 0)
     foreach my $_group (@groups)
     {
         my $_dn = "cn=$_group,ou=Groups,$domain_joined";
-        my $add_hash = ['uniqueMember' => "uid=$uid, $ou $domain_joined"];
+        my $add_hash =
+          ['uniqueMember' => "uid=" . $rec{uid} . ", $ou $domain_joined"];
     }
 
     my $entry_result = _add_entry($ldap, $_dn, $add_hash);
     if ($entry_result->code())
     {
-        print(" Error while adding uid $uid to group $_dn on $LDAPSERVER: "
+        print(
+            " Error while adding uid ${rec{uid}} to group $_dn on $LDAPSERVER: "
               . $entry_result->error_text());
         goto EXIT;
     }

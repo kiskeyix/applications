@@ -1,5 +1,5 @@
 #!/usr/bin/perl -w
-# $Revision: 1.3 $
+# $Revision: 1.4 $
 #
 # Adds user to ldap server running on ldap://localhost:389
 #
@@ -14,7 +14,8 @@ use Getopt::Long;
 Getopt::Long::Configure('bundling');
 
 my $USAGE =
-  'adduser-ldap.pl [--uid="username"] <--first="First"> <--last="Lastname"> [--password="passwd"] [--email="mail_id"] <--domain="domain.com"> [--organizational-unit|--ou="People"] [--posix] [--nt] [--uid-number] [--gid=number] [--home-path|--home] [-D|--bind] [| ldapadd -x -D "cn=admin..." -W]'."\n\nExample: adduser-ldap.pl --uid=ivan --first=ivan --last=smith --email='ismith\@kiskeyix.org' --domain=i.kiskeyix.org --posix --uid-number=1023 --ldif --home-path=/home/ivan --password=secret123 --ou=People |ldapadd -x -D 'cn=admin,dc=i,dc=kiskeyix,dc=org' -W\n";
+  'adduser-ldap [--uid="username"] <--first="First"> <--last="Lastname"> [--password="passwd"] [--email="mail_id"] <--domain="domain.com"> [--organizational-unit|--ou="People"] [--posix] [--nt] [--uid-number] [--gid=number] [--home-path|--home] [-D|--bind] [-w|--bind-password="ldapsecret"] [-W|--bind-password-file="/etc/adduser-ldap.secret"] [--groups="group1,group2,..."] [--host="ldapserver"] [| ldapadd -x -D "cn=Directory Manager" -W]'
+  . "\n\nExample: adduser-ldap --uid=ismith --first=ivan --last=smith --email='ismith\@example.org' --domain=example.org --posix --uid-number=1023 --ldif --home-path=/home/ismith --password=secret123 --ou=People --groups=mygroup |ldapadd -x -D 'cn=Directory Manager' -W\n";
 
 #my $pass_cmd = "slappasswd";
 my $pass_scheme = "\{CRYPT\}";    # SSHA, SHA1, MD5, CRYPT
@@ -31,52 +32,78 @@ my $NT;
 my $OU;
 my $LDIF;
 
+my $LDAPADMINCN      = "";      # -D or --bind
+my $LDAPSERVER       = "localhost";
+my $LDAPPASSWORDFILE = "/etc/adduser-ldap.secret";
+my $LDAPPASSWORD     = "";
+
 my %rec = ();
 
-my $first     = "";    # first name
-my $last      = "";    # last name (surname)
-my $uid       = "";    # User ID for login
-my $mid       = "";    # User ID for our emails: $first_letter$lastname scheme
+my $first = "";    # first name
+my $last  = "";    # last name (surname)
+my $uid   = "";    # User ID for login
+my $mid   = ""
+  ; # User ID for our emails: $first_letter$lastname scheme. or full email: $first_letter$lastname@$domain
 my $domain    = "";    # yields dc=domain,dc=com
+my $edomain   = "";    # TODO --email-domain. defaults to $domain
 my $passwd    = "";    # can pass given encrypted string from command line
 my $posix_uid = "";    # --uid-number
 my $posix_gid = "";    # --gid-number
 my $home      = "";    # --home-path --home
-my $bind      = "";    # -D or --bind
+my @groups    = ();    # --groups
+my $shell = "/bin/false";    # TODO --shell
 
 # visible domain from the outside word
 # TODO set this interactively:
-$rec{'webhost'}       = "www";        # name of web server, without the domain
+$rec{'webhost'}       = "www";          # name of web server, without the domain
 $rec{'office_number'} = "212.123.4567";
 $rec{'fax_number'}    = "212.123.4567";
 $rec{'mobile_number'} = "212.123.4567";
 $rec{'title'}         = "my title";
+$rec{'home_number'}   = "212.123.4567";
 
 GetOptions(
-           'debug'                      => \$DEBUG,
-           'posix'                      => \$POSIX,
-           'nt'                         => \$NT,
-           'f|first=s'                  => \$first,
-           'l|last=s'                   => \$last,
-           'u|uid=s'                    => \$uid,
-           'e|m|email=s'                => \$mid,
-           'd|domain=s'                 => \$domain,
-           'o|ou|organizational-unit=s' => \$OU,
-           'p|password=s'               => \$passwd,
-           'H|home|home-path=s'         => \$home,
-           'U|uid-number=i'             => \$posix_uid,
-           'G|gid-number=i'             => \$posix_gid,
-           'D|bind=s'                   => \$bind,
-           'ldif'                       => \$LDIF,
-           'h|help'                     => \$HELP
+    'debug'                      => \$DEBUG,
+    'posix'                      => \$POSIX,
+    'nt'                         => \$NT,
+    'f|first=s'                  => \$first,
+    'l|last=s'                   => \$last,
+    'u|uid=s'                    => \$uid,
+    'e|m|email=s'                => \$mid,
+    'd|domain=s'                 => \$domain,
+    'o|ou|organizational-unit=s' => \$OU,
+    'p|password=s'               => \$passwd,
+    'H|home|home-path=s'         => \$home,
+    'U|uid-number=i'             => \$posix_uid,
+    'G|gid-number=i'             => \$posix_gid,
+    'D|bind=s'                   => \$LDAPADMINCN,
+    'w|bind-password=s'          => \$LDAPPASSWORD,
+    'W|bind-password-file=s'     => \$LDAPPASSWORDFILE,
+    'host=s'                     => \$LDAPSERVER,
+    'groups=s'                   => sub {
+        my $str = $_[1];
+        foreach my $_g (split(/[[:blank:],]/, $str))
+        {
+            next if $_g =~ /^\s*$/;
+            push @groups, $_g;
+        }
+    },
+    'ldif'   => \$LDIF,
+    'h|help' => \$HELP
           );
 
 if ($HELP) { print $USAGE; exit 0; }
 
 print STDERR ($USAGE) and exit(1)
-  if ($first eq "" || $last eq "" || $domain eq "");
+  if (not $first || not $last || not $domain);
 
 # helpers
+sub _debug
+{
+    my $str = shift;
+    print STDERR "DEBUG: $str\n" if ($DEBUG);
+}
+
 sub random_password
 {
     my $num = shift;
@@ -113,26 +140,71 @@ sub _create_entry
     my ($ldap, $dn, $whatToCreate) = @_;
     if ($DEBUG)
     {
-        print "DEBUG: _create_entry <pre>";
-        print("dn: ", $dn, "\n");
+        print "DEBUG: _create_entry\n";
+        print("\tdn: ", $dn, "\n");
         foreach (@$whatToCreate)
         {
-            print($_, "\n");
+            print("\t\t", $_, "\n");
         }
-        print "</pre>";
+        print "\n";
     }
     my $result = $ldap->add($dn, 'attr' => [@$whatToCreate]);
     return $result;
 }
+
+# @param whatToModify a hashref like " userPassword => 'foo' "
+sub _modify_entry
+{
+    my ($ldap, $dn, $whatToModify) = @_;
+    my $result = $ldap->modify($dn, 'replace' => {%$whatToModify});
+    return $result;
+}
+
+sub _add_entry
+{
+    my ($ldap, $dn, $whatToModify) = @_;
+    my $result = $ldap->modify($dn, 'add' => {%$whatToModify});
+    return $result;
+}
+
+sub _get_password
+{
+    my $file = shift;
+    if (-r $file)
+    {
+        open(PW, "<$file") or die("Could not read file $file. " . $!);
+        undef $/;    # slurp mode
+        my $content = <PW>;
+        $content =~ s/(\r|\n)//g;
+        return $content;
+    }
+    else
+    {
+        die("Could not read password file $file\n");
+    }
+}
+
 # end helpers
 
 # set some internal vars:
 my @domain_parts = split(/\./, $domain);
+$edomain = (not $edomain) ? $domain : $edomain;
 
 # create UID and MID using scheme:
 #   (first letter of first name) + (last name)
 $uid = ($uid ne "") ? $uid : lc(substr($first, 0, 1) . $last);
-$mid = ($mid ne "") ? $mid : lc(substr($first, 0, 1) . $last) . "\@" . $domain;
+
+if ($mid)
+{
+    if ($mid !~ /@/)
+    {
+        $mid .= "\@" . $edomain;
+    }
+}
+else
+{
+    $mid = lc(substr($first, 0, 1) . $last) . "\@" . $edomain;
+}
 
 $home = ($home ne "") ? $home : "/home/$uid";    # --posix only
 
@@ -187,6 +259,7 @@ uid: $uid
 mail: $mid
 telephoneNumber: $rec{'office_number'}
 facsimileTelephoneNumber: $rec{'fax_number'}
+homePhone: $rec{'home_number'}
 mobile: $rec{'mobile_number'}
 roomNumber: 0
 carLicense: 1234
@@ -194,11 +267,11 @@ departmentNumber: 1234
 employeeNumber: 1234
 employeeType: full time
 preferredLanguage: en
-labeledURI: http://$rec{'webhost'}.$domain/~$uid User Home Page";
+labeledURI: http://people.$edomain/${first}_${last} User Home Page";
 
 $ldif .= "
 homeDirectory: $home
-gecos: $full_name
+gecos: $full_name,101 5th Ave,212.620.6001,646.123.4567,Super User
 shadowMin: -1
 shadowMax: 99999
 shadowWarning: 7
@@ -207,30 +280,99 @@ shadowExpire: -1
 uidNumber: $uid_number
 gidNumber: $gid_number
 userpassword: ${pass_scheme}${passwd}
+loginShell: $shell
 
 " if ($POSIX);
 
-# TODO remove "1 or" when $ldap is done
-if (1 or $LDIF or $DEBUG)
+if ((@groups + 0))
 {
-    print STDOUT ($ldif, "\n");
+    foreach my $_group (@groups)
+    {
+        $ldif .= "
 
-    exit 0; # FIXME
+dn: cn=$_group,ou=Groups,$domain_joined
+changetype: modify
+add: uniqueMember
+uniqueMember: uid=$uid, $ou $domain_joined
+        "
+    }
 }
 
-# FIXME:
-# connect to LDAP server and do your thing
-$bind = ($bind ne "") ? $bind : "cn=admin, $domain_joined";
+# FIXME remove 1 when $ldap auth is done
+if ($LDIF)
+{
+    print STDOUT ($ldif, "\n");
+    exit 0;
+}
 
-print "Binding as: " . $bind . "\n" if ($DEBUG);
+$LDAPADMINCN = ($LDAPADMINCN) ? $LDAPADMINCN : "cn=admin, $domain_joined";
 
-my $ldap = Net::LDAP->new("localhost");          # TODO LDAPSERVER
-my $_dn  = "uid=${uid},${ou}${domain_joined}";
+_debug("connecting to $LDAPSERVER as $LDAPADMINCN");
 
-my $CODE = 0; # assume we won't have errors
+my $ldap = Net::LDAP->new($LDAPSERVER);
+my $mesg = $ldap->bind(
+    $LDAPADMINCN,
 
-my $create_ary = [ 'foo'=>'bar' ];
+    # --bind-password takes precedence
+    'password' => ($LDAPPASSWORD)
+    ? $LDAPPASSWORD
+    : _get_password($LDAPPASSWORDFILE),
+    'version' => '3'
+                      );    # if bind() it binds anonymously
+my $_dn = "uid=${uid},${ou}${domain_joined}";
+
+my $CODE = 0;               # assume we won't have errors
+
+my $create_ary = [
+    objectClass => ["top", "person", "organizationalPerson", "inetorgperson"],
+    cn                       => $full_name,
+    uid                      => $uid,
+    givenName                => $first,
+    sn                       => $last,
+    mail                     => $mid,
+    telephoneNumber          => $rec{'office_number'},
+    userPassword             => "${pass_scheme}${passwd}",
+    initials                 => $initials,
+    title                    => $rec{'title'},
+    telephoneNumber          => $rec{'office_number'},
+    facsimileTelephoneNumber => $rec{'fax_number'},
+    homePhone                => $rec{'home_number'},
+    mobile                   => $rec{'mobile_number'},
+    roomNumber               => 0,
+    carLicense               => 1234,
+    departmentNumber         => 1234,
+    employeeNumber           => 1234,
+    employeeType             => "full time",
+    preferredLanguage        => "en",
+    labeledURI => "http=>//people.$edomain/${first}_${last} User Home Page"
+                 ];
+
+if ($POSIX)
+{
+    my @_extra_classes = ("shadowAccount", "posixAccount");
+    foreach my $obj (@_extra_classes)
+    {
+        push @{$create_ary->{'objectClass'}}, $obj;
+    }
+
+    $create_ary->{'homeDirectory'} = "$home";
+    $create_ary->{'gecos'} =
+        "$full_name,101 5th Ave,"
+      . $rec{'office_number'}
+      . ",646.123.4567,Super User";
+    $create_ary->{'shadowMin'}      = "-1";
+    $create_ary->{'shadowMax'}      = "99999";
+    $create_ary->{'shadowWarning'}  = "7";
+    $create_ary->{'shadowInactive'} = "-1";
+    $create_ary->{'shadowExpire'}   = "-1";
+    $create_ary->{'uidNumber'}      = "$uid_number";
+    $create_ary->{'gidNumber'}      = "$gid_number";
+    $create_ary->{'userpassword'}   = "${pass_scheme}${passwd}";
+    $create_ary->{'loginShell'}     = $shell;
+}
+
 my $entry_result = _create_entry($ldap, $_dn, $create_ary);
+
 if ($entry_result->code())
 {
     print STDERR " Error while creating entry for uid $uid on \$LDAPSERVER\n";
@@ -243,6 +385,24 @@ if ($entry_result->code())
                   . $entry_result->error_text());
     $CODE = 1;
     goto EXIT;
+}
+
+if (@groups + 0)
+{
+    my $add_hash = undef;
+    foreach my $_group (@groups)
+    {
+        my $_dn = "cn=$_group,ou=Groups,$domain_joined";
+        my $add_hash = ['uniqueMember' => "uid=$uid, $ou $domain_joined"];
+    }
+
+    my $entry_result = _add_entry($ldap, $_dn, $add_hash);
+    if ($entry_result->code())
+    {
+        print(" Error while adding uid $uid to group $_dn on $LDAPSERVER: "
+              . $entry_result->error_text());
+        goto EXIT;
+    }
 }
 
 EXIT:

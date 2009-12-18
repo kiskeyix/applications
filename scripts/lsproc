@@ -6,15 +6,17 @@
 # LICENSE: GPL
 #
 
-PS='ps -eo pid,user,rss,s,args'
+PS='ps -eo pid,user,nice,rss,s,args'
+SORT='sort -k4 -r -n'
+
 if [ `uname -s` = 'Darwin' ]; then
     PS='ps -eco pid,user,rss,comm'
+    SORT='sort --key=3 --reverse --numeric-sort'
 fi
-SORT='sort --key=3 --reverse --numeric-sort'
 
 if [ -n "$1" ]; then
     $PS | head -1 # put the header
-    $PS | grep -v lsproc | grep -v PID | grep -v grep | grep $1 | $SORT
+    $PS | grep -v lsproc | grep -v PID | grep -v grep | grep  $1 | $SORT
 else
     $PS | head -1 # put the header
     $PS | grep -v lsproc | grep -v PID | grep -v grep | $SORT

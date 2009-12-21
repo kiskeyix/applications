@@ -73,6 +73,18 @@ my @records = qw(
   );
 
 my %rec = ();
+my %posix_rec = (
+                 gecos          => 1,
+                 gidNumber      => 1,
+                 homeDirectory  => 1,
+                 loginShell     => 1,
+                 shadowExpire   => 1,
+                 shadowInactive => 1,
+                 shadowMax      => 1,
+                 shadowMin      => 1,
+                 shadowWarning  => 1,
+                 uidNumber      => 1
+                );
 
 my $domain = "";    # yields dc=domain,dc=com
 my @groups = ();    # --groups
@@ -158,7 +170,7 @@ sub hash_password
 
 sub _create_entry
 {
-    my ($ldap, $whatToCreate) = @_; # $whatToCreate is Net::LDAP::Entry
+    my ($ldap, $whatToCreate) = @_;    # $whatToCreate is Net::LDAP::Entry
     my $result = $ldap->add($whatToCreate);
     return $result;
 }
@@ -249,19 +261,20 @@ $rec{labeledURI} =
   "http://people.$edomain/${rec{givenName}}_${rec{sn}} User Home Page";
 
 # TODO
-$rec{title} = "Employee Title";
-$rec{carLicense} = "000";
-$rec{departmentNumber} = "0";
-$rec{employeeNumber} = "0";
-$rec{roomNumber} = "0";
-$rec{employeeType} = "Full Time";
+$rec{title}                    = "Employee Title";
+$rec{carLicense}               = "000";
+$rec{departmentNumber}         = "0";
+$rec{employeeNumber}           = "0";
+$rec{roomNumber}               = "0";
+$rec{employeeType}             = "Full Time";
 $rec{facsimileTelephoneNumber} = "000-000-0000";
-$rec{homePhone} = "000-000-0000";
-$rec{telephoneNumber} = "000-000-0000";
-$rec{mobile} = "000-000-0000";
-$rec{preferredLanguage}="en";
+$rec{homePhone}                = "000-000-0000";
+$rec{telephoneNumber}          = "000-000-0000";
+$rec{mobile}                   = "000-000-0000";
+$rec{preferredLanguage}        = "en";
 
-$rec{gecos} = "${rec{givenName}} ${rec{sn}},Home Address Here,${rec{telephoneNumber}},${rec{homePhone}},${rec{mobile}}";
+$rec{gecos} =
+  "${rec{givenName}} ${rec{sn}},Home Address Here,${rec{telephoneNumber}},${rec{homePhone}},${rec{mobile}}";
 
 # TODO sanity checks: mid, uid, uidNumber, gidNumber, ...
 
@@ -278,14 +291,14 @@ my $ldif = "dn: uid=${rec{uid}}, $ou $domain_joined
 objectClass: top
 objectClass: person
 objectClass: organizationalPerson
-objectClass: inetOrgPerson";
+objectClass: inetOrgPerson\n";
 
-$ldif .= "
-objectClass: posixAccount
+$ldif .= "objectClass: posixAccount
 objectClass: shadowAccount\n" if ($POSIX);
 
 foreach my $_item (@records)
 {
+    next if ($posix_rec{$_item} and not $POSIX);
     if (exists $rec{$_item})
     {
         $ldif .= "${_item}: " . $rec{$_item} . "\n";
@@ -354,6 +367,7 @@ else
 
 foreach my $_item (@records)
 {
+    next if ($posix_rec{$_item} and not $POSIX);
     $entry->add($_item => $rec{$_item});
 }
 

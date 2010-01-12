@@ -1,0 +1,51 @@
+#!/usr/bin/env ruby
+# Luis Mondesi <lemsx1@gmail.com> 
+# 2010-01-12 14:20 EST 
+#
+# Restore my screenlets settings
+
+pkg_name = "screenlets"
+pkg_log = "/tmp/#{pkg_name.gsub(/\s+/,"_")}.log"
+
+settings_url = "http://lems.kiskeyix.org/screenlets-configuration.tar.bz2"
+
+# helper to log strings to a file
+# args: message, log_file_path
+def log_msg(msg,logfile=pkg_log)
+    open(logfile,File::WRONLY|File::APPEND|File::CREAT) do |fh|
+        fh.puts msg
+        fh.puts
+    end
+end
+
+def wget(url)
+    require 'net/http'
+
+    uri = URI.parse(url)
+
+    http = Net::HTTP.new(uri.host, uri.port) 
+    resp = http.get(uri.path)
+
+    # if we got the file successfully, write it to filename
+    case resp
+    when Net::HTTPSuccess, Net::HTTPFound
+        filename = uri.path.split(/\//).last or uri.host + "-temp"
+        open(filename,"wb") do |fh|
+            fh.write content
+        end
+    end
+end
+
+# do we need to install Screenlets?
+if not `COLUMNS=5 dpkg --list|grep #{pkg_name}|head -1` =~ /^\s*ii\s+#{pkg_name}/
+    log_msg "#{pkg_name} not installed", pkg_log
+    log_msg `gksu apt-get install #{pkg_name}`, pkg_log
+else
+    log_msg "#{pkg_name} already installed", pkg_log
+end
+
+# get settings untarred under ~/
+
+Dir.chdir # change to $HOME
+log_msg "Getting #{pkg_name} configuration from #{url}", pkg_log
+content = wget(settings_url)

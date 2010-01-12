@@ -21,6 +21,7 @@ end
 def wget(url)
     require 'net/http'
 
+    filename = nil
     uri = URI.parse(url)
 
     http = Net::HTTP.new(uri.host, uri.port) 
@@ -31,9 +32,10 @@ def wget(url)
     when Net::HTTPSuccess, Net::HTTPFound
         filename = uri.path.split(/\//).last or uri.host + "-temp"
         open(filename,"wb") do |fh|
-            fh.write content
+            fh.write resp.body
         end
     end
+    return filename
 end
 
 # do we need to install Screenlets?
@@ -45,7 +47,9 @@ else
 end
 
 # get settings untarred under ~/
-
-Dir.chdir # change to $HOME
-log_msg "Getting #{pkg_name} configuration from #{url}", pkg_log
-content = wget(settings_url)
+Dir.chdir
+log_msg "Getting #{pkg_name} configuration from #{settings_url}", pkg_log
+filename = wget(settings_url)
+if not filename.nil?
+    `tar xjf #{filename}`
+end

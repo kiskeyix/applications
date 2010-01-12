@@ -41,7 +41,7 @@ end
 # do we need to install Screenlets?
 if not `COLUMNS=5 dpkg --list|grep #{pkg_name}|head -1` =~ /^\s*ii\s+#{pkg_name}/
     log_msg "#{pkg_name} not installed", pkg_log
-    log_msg `gksu apt-get install #{pkg_name}`, pkg_log
+    log_msg `gksu "apt-get -y install #{pkg_name}"`, pkg_log
 else
     log_msg "#{pkg_name} already installed", pkg_log
 end

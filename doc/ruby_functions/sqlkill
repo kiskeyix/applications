@@ -57,7 +57,9 @@ else
     # TODO is there a way to check if there is input from stdin stream?
     
     # this will pause here until input is given
-    id_list << STDIN.read.split(/\s+/)
+    STDIN.read.split(/\s+|\n/).each do |i|
+        id_list << i
+    end
 end
 
 if id_list.nil?

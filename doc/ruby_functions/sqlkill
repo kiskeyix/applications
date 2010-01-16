@@ -1,0 +1,75 @@
+#!/usr/bin/env ruby
+# == Synopsis
+#
+# sqlkill: use this to kill process IDs for a given set of threads in a SQL server
+#
+# == Usage
+#
+# sqlkill <--host|-h HOST> [PID PID2 ... PIDN]
+#
+# You can also pipe results from an existing list:
+#
+# sqlgrep -h mysqlserver 'select' | sqlkill -h mysqlserver
+#
+# -h, --host HOST:
+#    MySQL host to connect
+#
+# PID: process ID list to kill. Separate them by blanks
+
+=begin
+$Revision: 0.1 $
+$Date: 2010-01-16 10:43 EST $
+Luis Mondesi <lmondesi@fotolog.com>
+
+DESCRIPTION: use this to kill process IDs for threads on mysql servers
+USAGE: sqlkill <-h HOST> <regex>
+LICENSE: GPL
+=end
+
+
+
+require 'getoptlong'
+require 'rdoc/usage'
+
+opts = GetoptLong.new(
+[ '--host', '-h', GetoptLong::REQUIRED_ARGUMENT ]
+)
+
+host = nil
+opts.each do |opt, arg|
+   case opt
+   when '--host'
+       host = arg.to_s
+   end
+end
+
+if not host
+    RDoc::usage 1
+    exit 1
+end
+
+id_list = []
+
+# TODO allow split by commands?
+if not ARGV.first.nil?
+    id_list << ARGV
+else
+    # TODO is there a way to check if there is input from stdin stream?
+    
+    # this will pause here until input is given
+    id_list << STDIN.read.split(/\s+/)
+end
+
+if id_list.nil?
+    RDoc::usage(1)
+    exit 1 # never reaches here
+end
+
+id_list.each do |id|
+    _sql = `mysql -h #{host} -e 'kill #{id};' mysql`
+    if $? == 0
+        puts "#{id} was killed"
+    else
+        puts "ERROR: #{$?} while killing #{id}"
+    end
+end

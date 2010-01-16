@@ -48,7 +48,7 @@ if not host or not regex
     exit 1
 end
 
-_sql = `mysql -h #{host} -e 'show full processlist'`.chomp
+_sql = `mysql -h #{host} -e 'show full processlist' mysql`.chomp
 
 # show matching IDs
 _sql.each do |l|

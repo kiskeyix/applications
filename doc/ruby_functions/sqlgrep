@@ -5,12 +5,43 @@
 #
 # == Usage
 #
-# sqlgrep <--host|-h HOST> <REGEX>
+# sqlgrep [OPTIONS] <--host|-h HOST> <REGEX>
+# sqlgrep [OPTIONS] <--host|-h HOST> <--print-columns|-C>
+#
+# -c, --column OPEATION:
+#    Perform operation on each item matched by REGEX
+#
+#    e.g.:
+#    - matching lines whose time is greater than N:
+#      sqlgrep ... --column 'Time > N'
+#    - matching lines which time is less than or equal to N:
+#      sqlgrep ... --column 'Time <= N'
+#
+#    Operations can be one of:
+#    ==
+#    <=
+#    >=
+#    <
+#    >
+#    !=
+#    See --print-columns to know what you can match against
+#
+# -C, --print-columns:
+#    Prints column headers from remote host's 'show full processlist'
+#
+# -D, --debug
+#    Shows debugging information
+#
+# -H, --help
+#    Shows this help and exits
 #
 # -h, --host HOST:
 #    MySQL host to connect
 #
 # REGEX: regular expression to match
+# BUGS:
+# * when matching columns with --column, you cannot use spaces on value to match:
+#   sqlgrep ... --column 'User != system user' # this fails
 
 # TODO:
 # - allow sorting by columns (Time) and grepping for Time > N
@@ -18,7 +49,7 @@
 =begin
 $Revision: 0.1 $
 $Date: 2010-01-16 10:33 EST $
-Luis Mondesi <lemsx1@gmail.com>
+Luis Mondesi <lmondesi@fotolog.com>
 
 DESCRIPTION: use this to grep process IDs for a given set of queries
 USAGE: sqlgrep <-h HOST> <regex>
@@ -31,26 +62,122 @@ require 'getoptlong'
 require 'rdoc/usage'
 
 opts = GetoptLong.new(
-[ '--host', '-h', GetoptLong::REQUIRED_ARGUMENT ]
+    [ '--help', '--usage', '-H', GetoptLong::NO_ARGUMENT ],
+    [ '--host', '-h', GetoptLong::REQUIRED_ARGUMENT ],
+    [ '--column', '-c', GetoptLong::REQUIRED_ARGUMENT ],
+    [ '--print-columns', '-C', GetoptLong::NO_ARGUMENT ],
+    [ '--debug', '-D', GetoptLong::NO_ARGUMENT ]
 )
 
 host = nil
+column = nil
+printcolumns=false
+debug=false
 opts.each do |opt, arg|
    case opt
+   when '--help','--usage'
+      RDoc::usage
    when '--host'
        host = arg.to_s
+   when '--column'
+       column = arg.to_s
+   when '--print-columns'
+       printcolumns=true
+   when '--debug'
+       debug=true
    end
 end
 regex = ARGV.shift
 
-if not host or not regex
-    RDoc::usage 1
-    exit 1
+# we don't need REGEX to print columns
+if printcolumns and host
+else
+    if not host or not regex
+        RDoc::usage 1
+        exit 1 # never reaches here
+    end
 end
 
-_sql = `mysql -h #{host} -e 'show full processlist' mysql`.chomp
+# show matching PIDs
+_sql = `mysql -h #{host} -e 'show full processlist' mysql`.split(/\n/)
 
-# show matching IDs
-_sql.each do |l|
-    puts l.split(/\s+/).first if l =~ /#{regex}/
+# if we are looking for a specific column in addition to regex:
+if column or printcolumns
+    # get column list
+    columns = _sql.first.chomp.split(/\s+/)
+    column_keys = {}
+    i=0
+    puts "Supported columns are:" if printcolumns
+    columns.each do |k|
+        puts k if printcolumns
+        column_keys[k.downcase] = i
+        i += 1
+    end
+    exit 0 if printcolumns
+
+    if debug
+        puts "SQL column key/val mapping:"
+        column_keys.each do |key,val|
+            puts "#{key} => #{val}"
+        end
+    end
+
+    # split requested --column so we can do the correct operation
+    # TODO can this do with eval() or so?
+    _keys = column.split(/\s+/)
+    column_name = _keys[0].strip.downcase
+    column_operation = _keys[1].strip.downcase
+    column_value = _keys[2].strip.downcase
+
+    puts "column name #{column_name}; operation #{column_operation}; value #{column_value}" if debug
+
+    raise "--column '#{column}' could not be parsed" if not column_name or not column_operation or not column_value
+
+    # print PIDs
+    _sql.each do |l|
+        l_ary = l.split(/\s+/)
+
+        if debug
+            puts "MATCHING: #{regex} and #{l_ary[column_keys[column_name]]} #{column_operation} #{column_value} on: #{l}"
+        end
+
+        if l =~ /#{regex}/
+            case column_operation
+            when /^>=$/
+                if l_ary[column_keys[column_name]] >= column_value
+                    print "*** MATCHED: " if debug
+                    puts l_ary.first
+                end
+            when /^<=$/
+                if l_ary[column_keys[column_name]] <= column_value
+                    print "*** MATCHED: " if debug
+                    puts l_ary.first
+                end
+            when /^===?$/
+                if l_ary[column_keys[column_name]] == column_value
+                    print "*** MATCHED: " if debug
+                    puts l_ary.first
+                end
+            when /^<$/
+                if l_ary[column_keys[column_name]] < column_value
+                    print "*** MATCHED: " if debug
+                    puts l_ary.first
+                end
+            when /^>$/
+                if l_ary[column_keys[column_name]] > column_value
+                    print "*** MATCHED: " if debug
+                    puts l_ary.first
+                end
+            when /^!=$/
+                if l_ary[column_keys[column_name]] != column_value
+                    print "*** MATCHED: " if debug
+                    puts l_ary.first
+                end
+            end
+        end
+    end
+else
+    _sql.each do |l|
+        puts l.split(/\s+/).first if l =~ /#{regex}/
+    end
 end

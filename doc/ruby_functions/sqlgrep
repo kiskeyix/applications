@@ -1,0 +1,56 @@
+#!/usr/bin/env ruby
+# == Synopsis
+#
+# sqlgrep: use this to grep process IDs for a given set of queries
+#
+# == Usage
+#
+# sqlgrep <--host|-h HOST> <REGEX>
+#
+# -h, --host HOST:
+#    MySQL host to connect
+#
+# REGEX: regular expression to match
+
+# TODO:
+# - allow sorting by columns (Time) and grepping for Time > N
+#
+=begin
+$Revision: 0.1 $
+$Date: 2010-01-16 10:33 EST $
+Luis Mondesi <lemsx1@gmail.com>
+
+DESCRIPTION: use this to grep process IDs for a given set of queries
+USAGE: sqlgrep <-h HOST> <regex>
+LICENSE: GPL
+=end
+
+
+
+require 'getoptlong'
+require 'rdoc/usage'
+
+opts = GetoptLong.new(
+[ '--host', '-h', GetoptLong::REQUIRED_ARGUMENT ]
+)
+
+host = nil
+opts.each do |opt, arg|
+   case opt
+   when '--host'
+       host = arg.to_s
+   end
+end
+regex = ARGV.shift
+
+if not host or not regex
+    RDoc::usage 1
+    exit 1
+end
+
+_sql = `mysql -h #{host} -e 'show full processlist'`.chomp
+
+# show matching IDs
+_sql.each do |l|
+    puts l.split(/\s+/).first if l =~ /#{regex}/
+end

@@ -110,6 +110,8 @@ end
 # show matching PIDs
 _sql = `mysql -h #{host} -e 'show full processlist' mysql`.split(/\n/)
 
+# TODO rescue EPIPE (broken pipe)
+
 # if we are looking for a specific column in addition to regex:
 if column or printcolumns
     # get column list
@@ -149,39 +151,41 @@ if column or printcolumns
     _sql.each do |l|
         l_ary = l.split(/\s+/)
 
+	this_value = l_ary[c_keys[c_name]].downcase
+
         if debug
-            puts "MATCHING: #{regex} and #{l_ary[c_keys[c_name]]} #{c_operation} #{c_value} on: #{l}"
+            puts "MATCHING: #{regex} and #{this_value} #{c_operation} #{c_value} on: #{l}"
         end
 
         if l =~ /#{regex}/
             case c_operation
             when /^>=$/
-                if convert(l_ary[c_keys[c_name]],c_value_spec) >= convert(c_value,c_value_spec)
+                if convert(this_value,c_value_spec) >= convert(c_value,c_value_spec)
                     print "*** MATCHED: " if debug
                     puts l_ary.first
                 end
             when /^<=$/
-                if convert(l_ary[c_keys[c_name]],c_value_spec) <= convert(c_value,c_value_spec)
+                if convert(this_value,c_value_spec) <= convert(c_value,c_value_spec)
                     print "*** MATCHED: " if debug
                     puts l_ary.first
                 end
             when /^===?$/
-                if convert(l_ary[c_keys[c_name]],c_value_spec) == convert(c_value,c_value_spec)
+                if convert(this_value,c_value_spec) == convert(c_value,c_value_spec)
                     print "*** MATCHED: " if debug
                     puts l_ary.first
                 end
             when /^<$/
-                if convert(l_ary[c_keys[c_name]],c_value_spec) < convert(c_value,c_value_spec)
+                if convert(this_value,c_value_spec) < convert(c_value,c_value_spec)
                     print "*** MATCHED: " if debug
                     puts l_ary.first
                 end
             when /^>$/
-                if convert(l_ary[c_keys[c_name]],c_value_spec) > convert(c_value.to_i,c_value_spec)
+                if convert(this_value,c_value_spec) > convert(c_value.to_i,c_value_spec)
                     print "*** MATCHED: " if debug
                     puts l_ary.first
                 end
             when /^!=$/
-                if convert(l_ary[c_keys[c_name]],c_value_spec) != convert(c_value,c_value_spec)
+                if convert(this_value,c_value_spec) != convert(c_value,c_value_spec)
                     print "*** MATCHED: " if debug
                     puts l_ary.first
                 end

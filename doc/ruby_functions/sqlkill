@@ -19,7 +19,7 @@
 =begin
 $Revision: 0.1 $
 $Date: 2010-01-16 10:43 EST $
-Luis Mondesi <lmondesi@fotolog.com>
+Luis Mondesi <lemsx1@gmail.com>
 
 DESCRIPTION: use this to kill process IDs for threads on mysql servers
 USAGE: sqlkill <-h HOST> <regex>

@@ -49,7 +49,7 @@
 =begin
 $Revision: 0.1 $
 $Date: 2010-01-16 10:33 EST $
-Luis Mondesi <lmondesi@fotolog.com>
+Luis Mondesi <lemsx1@gmail.com>
 
 DESCRIPTION: use this to grep process IDs for a given set of queries
 USAGE: sqlgrep <-h HOST> <regex>
@@ -98,6 +98,15 @@ else
     end
 end
 
+# helpers
+def convert(field,spec)
+    if spec == "d"
+        field.to_i
+    else
+        field.to_s
+    end
+end
+
 # show matching PIDs
 _sql = `mysql -h #{host} -e 'show full processlist' mysql`.split(/\n/)
 
@@ -105,19 +114,19 @@ _sql = `mysql -h #{host} -e 'show full processlist' mysql`.split(/\n/)
 if column or printcolumns
     # get column list
     columns = _sql.first.chomp.split(/\s+/)
-    column_keys = {}
+    c_keys = {}
     i=0
     puts "Supported columns are:" if printcolumns
     columns.each do |k|
         puts k if printcolumns
-        column_keys[k.downcase] = i
+        c_keys[k.downcase] = i
         i += 1
     end
     exit 0 if printcolumns
 
     if debug
         puts "SQL column key/val mapping:"
-        column_keys.each do |key,val|
+        c_keys.each do |key,val|
             puts "#{key} => #{val}"
         end
     end
@@ -125,51 +134,54 @@ if column or printcolumns
     # split requested --column so we can do the correct operation
     # TODO can this do with eval() or so?
     _keys = column.split(/\s+/)
-    column_name = _keys[0].strip.downcase
-    column_operation = _keys[1].strip.downcase
-    column_value = _keys[2].strip.downcase
+    c_name = _keys[0].strip.downcase
+    c_operation = _keys[1].strip.downcase
+    c_value = _keys[2].strip.downcase 
+    
+    c_value_spec = "s" # assume we are matching strings
+    c_value_spec = "d" if c_value =~ /^[[:digit:]]+$/
 
-    puts "column name #{column_name}; operation #{column_operation}; value #{column_value}" if debug
+    puts "column name #{c_name}; operation #{c_operation}; value #{c_value}" if debug
 
-    raise "--column '#{column}' could not be parsed" if not column_name or not column_operation or not column_value
+    raise "--column '#{column}' could not be parsed" if not c_name or not c_operation or not c_value
 
     # print PIDs
     _sql.each do |l|
         l_ary = l.split(/\s+/)
 
         if debug
-            puts "MATCHING: #{regex} and #{l_ary[column_keys[column_name]]} #{column_operation} #{column_value} on: #{l}"
+            puts "MATCHING: #{regex} and #{l_ary[c_keys[c_name]]} #{c_operation} #{c_value} on: #{l}"
         end
 
         if l =~ /#{regex}/
-            case column_operation
+            case c_operation
             when /^>=$/
-                if l_ary[column_keys[column_name]] >= column_value
+                if convert(l_ary[c_keys[c_name]],c_value_spec) >= convert(c_value,c_value_spec)
                     print "*** MATCHED: " if debug
                     puts l_ary.first
                 end
             when /^<=$/
-                if l_ary[column_keys[column_name]] <= column_value
+                if convert(l_ary[c_keys[c_name]],c_value_spec) <= convert(c_value,c_value_spec)
                     print "*** MATCHED: " if debug
                     puts l_ary.first
                 end
             when /^===?$/
-                if l_ary[column_keys[column_name]] == column_value
+                if convert(l_ary[c_keys[c_name]],c_value_spec) == convert(c_value,c_value_spec)
                     print "*** MATCHED: " if debug
                     puts l_ary.first
                 end
             when /^<$/
-                if l_ary[column_keys[column_name]] < column_value
+                if convert(l_ary[c_keys[c_name]],c_value_spec) < convert(c_value,c_value_spec)
                     print "*** MATCHED: " if debug
                     puts l_ary.first
                 end
             when /^>$/
-                if l_ary[column_keys[column_name]] > column_value
+                if convert(l_ary[c_keys[c_name]],c_value_spec) > convert(c_value.to_i,c_value_spec)
                     print "*** MATCHED: " if debug
                     puts l_ary.first
                 end
             when /^!=$/
-                if l_ary[column_keys[column_name]] != column_value
+                if convert(l_ary[c_keys[c_name]],c_value_spec) != convert(c_value,c_value_spec)
                     print "*** MATCHED: " if debug
                     puts l_ary.first
                 end

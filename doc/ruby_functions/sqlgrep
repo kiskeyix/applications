@@ -1,4 +1,4 @@
-#!/usr/bin/env ruby
+#!/opt/csw/bin/ruby
 # == Synopsis
 #
 # sqlgrep: use this to grep process IDs for a given set of queries
@@ -9,13 +9,16 @@
 # sqlgrep [OPTIONS] <--host|-h HOST> <--print-columns|-C>
 #
 # -c, --column OPEATION:
-#    Perform operation on each item matched by REGEX
+#    Perform operation on each item matched by REGEX.
+#    Can be used multiple times.
 #
 #    e.g.:
 #    - matching lines whose time is greater than N:
 #      sqlgrep ... --column 'Time > N'
 #    - matching lines which time is less than or equal to N:
 #      sqlgrep ... --column 'Time <= N'
+#    - matching lnes with time greater than value and user string:
+#      sqlgrep ... --column 'Time > value' --column 'user == string'
 #
 #    Operations can be one of:
 #    ==
@@ -45,21 +48,21 @@
 # BUGS:
 # * when matching columns with --column, you cannot use spaces on value to match:
 #   sqlgrep ... --column 'User != system user' # this fails
+# * you must setup ~/.my.cnf before using:
+#   [client]
+#	user=my_user
+#	database=my_db
+#	password=my_secret
 
-# TODO:
-# - allow sorting by columns (Time) and grepping for Time > N
-#
 =begin
-$Revision: 0.1 $
+$Revision: 0.3 $
 $Date: 2010-01-16 10:33 EST $
-Luis Mondesi <lemsx1@gmail.com>
+Luis Mondesi <lmondesi@fotolog.com>
 
 DESCRIPTION: use this to grep process IDs for a given set of queries
-USAGE: sqlgrep <-h HOST> <regex>
+USAGE: sqlgrep [OPTIONS] <-h HOST> <regex>
 LICENSE: GPL
 =end
-
-
 
 require 'getoptlong'
 require 'rdoc/usage'
@@ -74,9 +77,9 @@ opts = GetoptLong.new(
 )
 
 host = nil
-column = nil
+column = []
 printcolumns=false
-debug=false
+$debug=false
 full=false
 
 opts.each do |opt, arg|
@@ -86,11 +89,11 @@ opts.each do |opt, arg|
    when '--host'
        host = arg.to_s
    when '--column'
-       column = arg.to_s
+       column << arg.to_s
    when '--print-columns'
        printcolumns=true
    when '--debug'
-       debug=true
+       $debug=true
    when '--full'
        full=true
    end
@@ -121,80 +124,108 @@ _sql = `mysql -h #{host} -e 'show full processlist' mysql`.split(/\n/)
 # TODO rescue EPIPE (broken pipe)
 
 # if we are looking for a specific column in addition to regex:
-if column or printcolumns
+if column.size > 0 or printcolumns
     # get column list
-    columns = _sql.first.chomp.split(/\s+/)
+    column_list = _sql.first.chomp.split(/\s+/)
     c_keys = {}
     i=0
     puts "Supported columns are:" if printcolumns
-    columns.each do |k|
+    column_list.each do |k|
         puts k if printcolumns
         c_keys[k.downcase] = i
         i += 1
     end
+    column_list = []
     exit 0 if printcolumns
 
-    if debug
+    if $debug
         puts "SQL column key/val mapping:"
         c_keys.each do |key,val|
             puts "#{key} => #{val}"
         end
     end
 
-    # split requested --column so we can do the correct operation
-    # TODO can this do with eval() or so?
-    _keys = column.split(/\s+/)
-    c_name = _keys[0].strip.downcase
-    c_operation = _keys[1].strip.downcase
-    c_value = _keys[2].strip.downcase 
-    
-    c_value_spec = "s" # assume we are matching strings
-    c_value_spec = "d" if c_value =~ /^[[:digit:]]+$/
+    # we need to break down our --column array so we can match each line
+    # against each item
+    c_name = []
+    c_operation = []
+    c_value = []
+    c_value_spec = []
 
-    puts "column name #{c_name}; operation #{c_operation}; value #{c_value}" if debug
+    # TODO instead of using 4 arrays, use some other data struct
+    column.each do |col|
+        # split requested --column so we can do the correct operation
+        # TODO can this do with eval() or so?
+        _keys = col.split(/\s+/)
+        _c_name = _keys[0].strip.downcase
+        _c_operation = _keys[1].strip.downcase
+        _c_value = _keys[2].strip.downcase 
+        _c_value_spec = nil
 
-    raise "--column '#{column}' could not be parsed" if not c_name or not c_operation or not c_value
-
-    # print PIDs
-    _sql.each do |l|
-        l_ary = l.split(/\s+/)
-
-	this_value = l_ary[c_keys[c_name]].downcase
-
-        if debug
-            puts "MATCHING: #{regex} and #{this_value} #{c_operation} #{c_value} on: #{l}"
+        c_name << _c_name
+        c_operation << _c_operation
+        c_value << _c_value
+        # by default, assume we are matching strings
+        if _c_value =~ /^[[:digit:]]+$/
+            _c_value_spec = "d"
+        else
+            _c_value_spec = "s"
         end
+        c_value_spec << _c_value_spec
 
-        if l =~ /#{regex}/
-            case c_operation
+        puts "column name #{_c_name}; operation #{_c_operation}; value #{_c_value}; spec #{_c_value_spec}" if $debug
+
+        raise "--column '#{col}' could not be parsed" if not _c_name or not _c_operation or not _c_value
+    end
+    
+    # print matching PIDs
+    _sql.grep(/#{regex}/) do |l|
+        l_ary = l.split(/\s+/)
+        n_matches = 0 # keep count of how many matches with --column we find
+
+        # match against each --column given:
+        c_name.each_with_index do |_c,_i|	
+            this_value = l_ary[c_keys[_c]].downcase
+
+            puts "MATCHING: #{regex} and #{this_value} #{c_operation[_i]} #{c_value[_i]} on line '#{l}'" if $debug
+
+            case c_operation[_i]
             when /^>=$/
-                if convert(this_value,c_value_spec) >= convert(c_value,c_value_spec)
-                    print "*** MATCHED: " if debug
-                    puts l_ary.first
+                if convert(this_value,c_value_spec[_i]) >= convert(c_value[_i],c_value_spec[_i])
+                    puts "*** MATCHED #{this_value} #{c_operation[_i]} #{c_value[_i]}" if $debug
+                    n_matches += 1
                 end
             when /^<=$/
-                if convert(this_value,c_value_spec) <= convert(c_value,c_value_spec)
-                    print "*** MATCHED: " if debug
-                    puts l_ary.first
+                if convert(this_value,c_value_spec[_i]) <= convert(c_value[_i],c_value_spec[_i])
+                    puts "*** MATCHED #{this_value} #{c_operation[_i]} #{c_value[_i]}" if $debug
+                    n_matches += 1
                 end
             when /^===?$/
-                if convert(this_value,c_value_spec) == convert(c_value,c_value_spec)
-                    print "*** MATCHED: " if debug
-                    puts l_ary.first
+                if convert(this_value,c_value_spec[_i]) == convert(c_value[_i],c_value_spec[_i])
+                    puts "*** MATCHED #{this_value} #{c_operation[_i]} #{c_value[_i]}" if $debug
+                    n_matches += 1
                 end
             when /^<$/
-                if convert(this_value,c_value_spec) < convert(c_value,c_value_spec)
-                    print "*** MATCHED: " if debug
-                    puts l_ary.first
+                if convert(this_value,c_value_spec[_i]) < convert(c_value[_i],c_value_spec[_i])
+                    puts "*** MATCHED #{this_value} #{c_operation[_i]} #{c_value[_i]}" if $debug
+                    n_matches += 1
                 end
             when /^>$/
-                if convert(this_value,c_value_spec) > convert(c_value.to_i,c_value_spec)
-                    print "*** MATCHED: " if debug
-                    puts l_ary.first
+                if convert(this_value,c_value_spec[_i]) > convert(c_value[_i],c_value_spec[_i])
+                    puts "*** MATCHED #{this_value} #{c_operation[_i]} #{c_value[_i]}" if $debug
+                    n_matches += 1
                 end
             when /^!=$/
-                if convert(this_value,c_value_spec) != convert(c_value,c_value_spec)
-                    print "*** MATCHED: " if debug
+                if convert(this_value,c_value_spec[_i]) != convert(c_value[_i],c_value_spec[_i])
+                    puts "*** MATCHED #{this_value} #{c_operation[_i]} #{c_value[_i]}" if $debug
+                    n_matches += 1
+                end
+            end
+            puts "COLUMN MATCHES #{n_matches} out of #{column.size}" if $debug
+            if n_matches == column.size
+                if full
+                    puts l
+                else
                     puts l_ary.first
                 end
             end

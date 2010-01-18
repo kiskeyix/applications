@@ -32,6 +32,9 @@
 # -D, --debug
 #    Shows debugging information
 #
+# -f, --full
+#    Prints full lines, not just the PIDs
+#
 # -H, --help
 #    Shows this help and exits
 #
@@ -66,13 +69,16 @@ opts = GetoptLong.new(
     [ '--host', '-h', GetoptLong::REQUIRED_ARGUMENT ],
     [ '--column', '-c', GetoptLong::REQUIRED_ARGUMENT ],
     [ '--print-columns', '-C', GetoptLong::NO_ARGUMENT ],
-    [ '--debug', '-D', GetoptLong::NO_ARGUMENT ]
+    [ '--debug', '-D', GetoptLong::NO_ARGUMENT ],
+    [ '--full', '-f', GetoptLong::NO_ARGUMENT ]
 )
 
 host = nil
 column = nil
 printcolumns=false
 debug=false
+full=false
+
 opts.each do |opt, arg|
    case opt
    when '--help','--usage'
@@ -85,6 +91,8 @@ opts.each do |opt, arg|
        printcolumns=true
    when '--debug'
        debug=true
+   when '--full'
+       full=true
    end
 end
 regex = ARGV.shift
@@ -193,7 +201,11 @@ if column or printcolumns
         end
     end
 else
-    _sql.each do |l|
-        puts l.split(/\s+/).first if l =~ /#{regex}/
-    end
+    _sql.grep(/#{regex}/) { |l|
+        if full
+            puts l
+        else
+            puts l.gsub(/^([[:digit:]]+).*/,'\1')
+        end
+    }
 end

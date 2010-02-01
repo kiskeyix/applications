@@ -7,17 +7,23 @@
 #
 # skeleton [OPTION] ... <DIR>
 #
-# -h, --help:
+# --debug, -D:
+#    show colorful debugging information
+#
+# --help, -h:
 #    show help
 #
-# --repeat x, -n x:
+# --name, -n [name]:
+#    greet user by name, if name not supplied default is John
+#
+# --repeat, -r x:
 #    repeat x times
 #
 # --usage, -U, -?:
 #    show usage
 #
-# --name [name]:
-#    greet user by name, if name not supplied default is John
+# --verbose, -v
+#    shows verbose messages
 #
 # DIR: The directory in which to issue the greeting.
 
@@ -36,12 +42,12 @@ require 'getoptlong'
 require 'rdoc/usage'
 
 opts = GetoptLong.new(
-[ '--help', '-h', GetoptLong::NO_ARGUMENT ],
-[ '--usage', '-U', '-?', GetoptLong::NO_ARGUMENT ],
-[ '--repeat', '-n', GetoptLong::REQUIRED_ARGUMENT ],
-[ '--name', GetoptLong::OPTIONAL_ARGUMENT ],
-[ '--verbose', '-v', GetoptLong::NO_ARGUMENT ],
-[ '--debug', '-D', GetoptLong::NO_ARGUMENT ]
+[ '--debug',   '-D', GetoptLong::NO_ARGUMENT ],
+[ '--help',    '-h', GetoptLong::NO_ARGUMENT ],
+[ '--name',    '-n', GetoptLong::OPTIONAL_ARGUMENT ],
+[ '--repeat',  '-r', GetoptLong::REQUIRED_ARGUMENT ],
+[ '--usage',   '-U', '-?', GetoptLong::NO_ARGUMENT ],
+[ '--verbose', '-v', GetoptLong::NO_ARGUMENT ]
 )
 
 dir         = nil
@@ -69,7 +75,7 @@ opts.each do |opt, arg|
          repetitions = arg.to_i
       end
    when '--name'
-      if arg == ''
+      if not arg
          name = 'John'
       else
          name = arg
@@ -78,6 +84,8 @@ opts.each do |opt, arg|
 end
 
 # helpers
+class MyError < StandardError
+end
 def scolor(msg,color)
    colors = {
       'red'    => "\033[1;31m",
@@ -102,6 +110,9 @@ def verbose(msg)
    return if not $_verbose
    puts "#{msg}"
 end
+def error(msg)
+   $stderr.puts scolor("ERROR: #{msg}","red")
+end
 # end helpers
 
 # main()
@@ -123,9 +134,25 @@ end
 #    puts
 # end
 
-str = "Hello"
-val = "World"
+begin
+   str = "Hello"
+   val = "World"
 
-debug(str,val)
-verbose("printing all variables: ")
-puts str + " " + val
+   # demonstrates debug:
+   debug(str,val)
+   debug("name",name)
+   debug("repetitions",repetitions)
+
+   # demonstrates verbose:
+   verbose("printing all variables: ")
+
+   print "#{name}, " if name
+
+   raise MyError, "Too many repetitions" if repetitions > 10
+
+   1.upto(repetitions) do
+      puts str + " " + val
+   end
+rescue MyError => e
+   error e.message
+end

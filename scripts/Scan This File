@@ -1,0 +1,37 @@
+#!/usr/bin/perl -w
+# $Revision: 0.1 $
+# $Date: 2010-02-03 16:56 EST $
+# Luis Mondesi <lemsx1@gmail.com>
+#
+# Scan This File
+#
+# DESCRIPTION: Nautilus script that scans files for viruses. It needs clamscan installed.
+# USAGE: Save to ~/.gnome2/nautilus-scripts/Scan\ This\ File
+# LICENSE: GPL
+#
+# TEST: 
+# 1. save a file named elcar.com with content: X5O!P%@AP[4\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*
+# 2. run this script from natilus by right-clicking on elcar.com
+# 3. an error dialog will be displayed by Zenity showing the result from the antivirus scan
+
+use strict;
+
+my $_uri   = $ENV{'NAUTILUS_SCRIPT_CURRENT_URI'};
+my $_files = $ENV{'NAUTILUS_SCRIPT_SELECTED_FILE_PATHS'};
+chomp($_files);
+
+if ($_uri and $_files and $_uri =~ m#^file:///# and $_files =~ m/^.+$/)
+{
+    $_uri =~ s/%([0-9A-Fa-f]{2})/chr(hex($1))/eg;
+    $_uri =~ s#^file://##;
+    my $_out = `clamscan --bell $_files`;
+    if ($? == 0)
+    {
+        `zenity --info --text="$_out"`;
+    }
+    else
+    {
+        `zenity --error --text="$_out"`;
+    }
+}
+

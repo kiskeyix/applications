@@ -1,6 +1,12 @@
 #!/bin/sh
+# $Revision: 0.1 $
+# $Date: 2010-02-05 11:15 EST $
+# Luis Mondesi <lemsx1@gmail.com>
+#
+# DESCRIPTION: removes all kernels but the current version
+# USAGE: $0 [--I-know-what-I-am-doing]
+# LICENSE: GPL
 
-# removes all kernels but the current version
 DOACTION="--I-know-what-I-am-doing"
 CURRENT=`uname -r`
 KERNELPKG="linux-image" # Ubuntu standard

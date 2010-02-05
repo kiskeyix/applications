@@ -1,0 +1,23 @@
+#!/bin/sh
+
+# removes all kernels but the current version
+DOACTION="--I-know-what-I-am-doing"
+CURRENT=`uname -r`
+KERNELPKG="linux-image" # Ubuntu standard
+
+echo To remove kernels run with $DOACTION
+for i in /boot/vmlinuz*; do
+    #echo "d: $i"
+    if ! echo $i | grep -q $CURRENT; then
+        if [ "x$1" = "x$DOACTION" ]; then
+            name=`basename $i|sed s/vmlinuz/$KERNELPKG/`
+            #echo $name
+            sudo apt-get -y remove $name
+        else
+            echo $i
+        fi
+    else
+        : Skip from current kernel on
+        break
+    fi
+done

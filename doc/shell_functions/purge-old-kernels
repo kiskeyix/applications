@@ -12,7 +12,7 @@ for i in /boot/vmlinuz*; do
         if [ "x$1" = "x$DOACTION" ]; then
             name=`basename $i|sed s/vmlinuz/$KERNELPKG/`
             #echo $name
-            sudo apt-get -y remove $name
+            sudo apt-get --purge -y remove $name
         else
             echo $i
         fi

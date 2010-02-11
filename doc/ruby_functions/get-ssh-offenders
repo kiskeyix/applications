@@ -1,0 +1,190 @@
+#!/usr/bin/ruby
+# == Synopsis
+#
+# get-ssh-offenders: reads log file and
+#
+# == Usage
+#
+# get-ssh-offenders [OPTION] [LOG]
+#
+# --debug, -D:
+#    show colorful debugging information
+#
+# --help, -h:
+#    show help
+#
+# --usage, -U, -?:
+#    show usage
+#
+# --verbose, -v:
+#    shows verbose messages
+#
+# --data-file, -d <SQLITE_FILE>:
+#    sqlite3 data file to use for storing SSH offenses and whitelist. Defaults to ssh-data.db
+#
+#   Data file is created with:
+#   sqlite3 ssh-data.db
+#   > CREATE TABLE log (date timestamp, user varchar(128), ip varchar(128));
+#   > CREATE TABLE whitelist (date timestamp, user varchar(128), ip varchar(128));
+#   > .q
+#
+# LOG:
+#    log file to read from. Defaults to /var/log/auth.log
+
+=begin
+$Revision: 1.0 $
+$Date: 2010-02-10 19:49 EST $
+Luis Mondesi <lemsx1@gmail.com>
+
+DESCRIPTION:
+USAGE: get-ssh-offenders --help
+LICENSE: GPL
+=end
+
+require 'getoptlong'
+require 'rdoc/usage'
+
+opts = GetoptLong.new(
+[ '--debug',   '-D', GetoptLong::NO_ARGUMENT ],
+[ '--help',    '-h', GetoptLong::NO_ARGUMENT ],
+[ '--usage',   '-U', '-?', GetoptLong::NO_ARGUMENT ],
+[ '--verbose', '-v', GetoptLong::NO_ARGUMENT ],
+[ '--data-file', '-d', GetoptLong::REQUIRED_ARGUMENT ]
+)
+
+data        = nil
+$_verbose   = false
+$_debug     = false
+
+opts.each do |opt, arg|
+   case opt
+   when '--help'
+      RDoc::usage
+   when '--usage'
+      RDoc::usage
+   when '--verbose'
+      $_verbose=true
+   when '--debug'
+      $_debug=true
+   when '--data-file'
+      if arg.chomp.empty?
+         puts 'data-file is wrong (try --help)'
+         RDoc::usage 1
+      else
+         data = arg.to_s
+      end
+   end
+end
+
+# helpers
+class MyError < StandardError
+end
+def scolor(msg,color)
+   colors = {
+      'red'    => "\033[1;31m",
+      'norm'   => "\033[0;39m",
+      'green'  => "\033[0;32m",
+      'blue'   => "\033[0;34m"
+   }
+   ansicolor = "#{colors[color.downcase]}#{msg}#{colors['norm']}"
+end
+def debug(msg,val="")
+   return if not $_debug
+  
+   $stderr.print scolor("DEBUG: ",'green')
+   if val.size > 0 
+      # val.to_s is called for us:
+      $stderr.puts "#{scolor(msg,'blue')} = #{scolor(val,'red')}"
+   else
+      $stderr.puts "#{scolor(msg,'blue')}"
+   end
+end
+def verbose(msg)
+   return if not $_verbose
+   puts "#{msg}"
+end
+def error(msg)
+   $stderr.puts scolor("ERROR: #{msg}","red")
+end
+# end helpers
+
+# main()
+data = data ? data : "ssh-data.db"
+
+log = ARGV.shift
+# TODO test if log is readable/exist
+log = "/var/log/auth.log" if not log
+
+require 'sqlite3'
+
+# create ssh-data.db with:
+# CREATE TABLE log (date timestamp, user varchar(128), ip varchar(128));
+# CREATE TABLE whitelist (date timestamp, user varchar(128), ip varchar(128));
+debug("opening sqlite #{data}") 
+db = SQLite3::Database.new( data )
+
+begin
+    #1. get failed attemps from /var/log/auth.log
+    #1.1 Feb 10 17:43:10 clutch sshd[25287]: Invalid user oracle from 192.168.0.160
+    #2. write to db
+    #3. return list of users that have failed 3 or more times in 1 hour
+    
+    # create sql db if not found
+    debug("opening #{log}") 
+    f = open(log,"r")
+    raise MyError, "Cannot open file #{log}" if f.nil?
+
+    f.each_line do |line|
+        if line =~ /^([[:alnum:]]{3}[[:space:]]+[[:digit:]]{1,2}[[:space:]]+[[:digit:]]{1,2}:[[:digit:]]{1,2}:[[:digit:]]{1,2})[[:space:]]+clutch[[:alnum:]]*[[:space:]]+sshd\[[0-9]+\]:[[:space:]]+Invalid[[:space:]]+user[[:space:]]+([[:alnum:]]+)[[:space:]]+from[[:space:]]+([[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3}\.[[:digit:]]{1,3})/
+            # convert date to timestamp
+            # time.strftime("%Y-%m-%d %H:%M:%S")
+            date = $1
+            user = $2
+            ip = $3
+           
+            # skip private IPs
+            if ip =~ /^192\.168/ or ip =~ /^10\./
+                verbose "skipped IP #{ip}"
+                next
+            end
+            # skip whitelisted users
+            wl = db.execute("select user,ip from whitelist where ip='#{ip}'") 
+            if wl.size > 0
+                verbose "whitelisted IP #{ip} (#{wl[0][1]}) user #{wl[0][0]}"
+                next
+            end
+
+            # ensure that our database doesn't have an offense for this already
+            offense_list = db.execute("select ip from log where ip='#{ip}' and date='#{date}' and user='#{user}'")
+            if offense_list.size < 1
+                # insert offenders
+                db.execute( "insert into log values ('#{date}','#{user}','#{ip}')" )
+            else
+                verbose "Duplicate offense for record: #{date} #{ip} #{user}"
+            end
+        end
+    end
+
+    ip_list = db.execute("select ip from log")
+    ip_list.uniq!
+
+    # print offenders according to user criteria
+    ip_list.each do |ip|
+        count = db.execute("select ip from log where ip='#{ip}'")
+        if count.size > 3
+            print "#{count.size} offenses from IP " #if $_verbose
+            puts ip
+        end
+    end
+
+    db.close
+    #raise MyError, "Too many repetitions" if repetitions > 10
+rescue MyError => e
+   db.close
+   error e.message
+rescue SQLite3::SQLException => e
+    db.close
+    error "#{e.message} on data file #{data}"
+    #TODO RDoc::usage "--data-file, -d <SQLITE_FILE>"
+    RDoc::usage 2
+end

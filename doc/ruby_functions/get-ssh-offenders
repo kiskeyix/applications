@@ -1,7 +1,9 @@
 #!/usr/bin/ruby
 # == Synopsis
 #
-# get-ssh-offenders: reads log file and
+# get-ssh-offenders: reads log file and gathers information about 
+# failed SSH attempts. It then prints a list of IPs with offenses
+# higher than a given threshold (3 offenses)
 #
 # == Usage
 #
@@ -172,7 +174,7 @@ begin
     ip_list.each do |ip|
         count = db.execute("select ip from log where ip='#{ip}'")
         if count.size > 3
-            print "#{count.size} offenses from IP " #if $_verbose
+            print "#{count.size} offenses from IP " if $_verbose
             puts ip
         end
     end

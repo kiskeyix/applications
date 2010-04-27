@@ -1,4 +1,4 @@
-#!/usr/bin/ruby
+#!/usr/bin/env ruby
 # == Synopsis
 #
 # skeleton: foo bar

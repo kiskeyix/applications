@@ -1,0 +1,73 @@
+#!/usr/bin/env ruby
+# == Synopsis
+#
+# dispatcher: script to run commands from a FIFO
+#
+# == Usage
+#
+# dispatcher [OPTION] ... <CHILDREN_N>
+#
+# -h, --help:
+#    show help
+#
+# --usage, -U, -?:
+#    show usage
+#
+# <CHILDREN_N>
+#    maximun number of threads to execute
+
+=begin
+$Revision: 1.0 $
+$Date: 2010-04-26 14:40 EDT $
+Luis Mondesi <lmondesi@fotolog.com>
+
+DESCRIPTION:
+USAGE: dispatcher --help
+LICENSE: GPL
+=end
+
+require 'getoptlong'
+require 'rdoc/usage'
+
+opts = GetoptLong.new(
+    [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
+    [ '--usage', '-U', '-?', GetoptLong::NO_ARGUMENT ]
+)
+
+num_children = nil
+opts.each do |opt, arg|
+   case opt
+   when '--help'
+      RDoc::usage
+   when '--usage'
+      RDoc::usage
+   end
+end
+num_children = ARGV.shift.to_i or 10
+num_children=10 if num_children < 0
+
+puts num_children
+
+# main()
+
+threads = []
+
+STDIN.reopen("/dev/null", 'a')
+STDOUT.reopen("dispatcher.#{Process.pid}.out", 'a')
+STDERR.reopen("dispatcher.#{Process.pid}.err", 'a')
+CMDERRS = File.open("dispatcher.#{Process.pid}.failures", 'a')
+
+while true
+    # read fifo and spawn new thread
+    open( '/tmp/dispatcher-fifo', 'rb' ).each do |line|
+        if threads.size >= num_children
+            puts "waiting before: #{line}"
+            threads.each { |t|  t.join }
+        end
+        threads << Thread.new(line) do |cmd|
+            cmd.chomp!
+            system(cmd)
+        end
+    end
+end
+

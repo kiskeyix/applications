@@ -15,7 +15,7 @@ use Getopt::Long;
 Getopt::Long::Configure('bundling');
 
 my $USAGE =
-  'adduser-ldap [--uid="username"] <--first="First"> <--last="Lastname"> [--password="passwd"] [--email="mail_id"] <--domain="domain.com"> [--organizational-unit|--ou="People"] [--posix] [--nt] [--uid-number] [--gid=number] [--home-path|--home] [-D|--bind] [-w|--bind-password="ldapsecret"] [-W|--bind-password-file="/etc/adduser-ldap.secret"] [--groups="group1,group2,..."] [--host="ldapserver"] [| ldapadd -x -D "cn=Directory Manager" -W]'
+  'adduser-ldap [--uid="username"] <--first="First"> <--last="Lastname"> [--password="passwd"] [--email="mail_id"] <--domain="domain.com"> [--organizational-unit|--ou="People"] [--posix] [--nt] [--uid-number] [--gid=number] [--home-path|--home] [-D|--bind] [-w|--bind-password="ldapsecret"] [-W|--bind-password-file="/etc/adduser-ldap.secret"] [--groups="group1,group2,..."] [--host="ldapserver"] [| ldapadd -x -D "cn=Directory Manager" -W] [--shell=/bin/false]'
   . "\n\nExample: adduser-ldap --uid=ismith --first=ivan --last=smith --email='ismith\@example.org' --domain=example.org --posix --uid-number=1023 --ldif --home-path=/home/ismith --password=secret123 --ou=People --groups=mygroup |ldapadd -x -D 'cn=Directory Manager' -W\n";
 
 #my $pass_cmd = "slappasswd";
@@ -88,8 +88,8 @@ my %posix_rec = (
 
 my $domain = "";    # yields dc=domain,dc=com
 my @groups = ();    # --groups
-$rec{loginShell} = "/bin/false";    # TODO --shell
 my $edomain = "";                   # TODO --email-domain. defaults to $domain
+my $shell = "/bin/false";
 
 # visible domain from the outside word
 # TODO set this interactively:
@@ -122,7 +122,8 @@ GetOptions(
         }
     },
     'ldif'   => \$LDIF,
-    'h|help' => \$HELP
+    'h|help' => \$HELP,
+    's|shell=s' => \$shell,
           );
 
 if ($HELP) { print $USAGE; exit 0; }
@@ -156,6 +157,7 @@ sub random_password
 
 sub hash_password
 {
+    # passwor string is: {CRYPT}crypted_password_md5_hash
     my $str     = shift;
     my $_scheme = shift;
     my $hash    = $str;
@@ -163,7 +165,7 @@ sub hash_password
     {
 
         # generates an MD5 sum salted password with 8 random chars
-        $hash = crypt($str, "\$1\$" . random_password(8) . "\$");
+        $hash = $_scheme . crypt($str, "\$1\$" . random_password(8) . "\$");
     }
     return $hash;
 }
@@ -186,6 +188,14 @@ sub _modify_entry
 sub _add_entry
 {
     my ($ldap, $dn, $whatToModify) = @_;
+    if ($DEBUG)
+    {
+        _debug("Modifying $dn with: ");
+        foreach my $_i (keys %$whatToModify)
+        {
+            _debug($_i." => ".$whatToModify->{$_i});
+        }
+    }
     my $result = $ldap->modify($dn, 'add' => {%$whatToModify});
     return $result;
 }
@@ -257,8 +267,11 @@ $rec{userPassword} =
   ? hash_password($rec{userPassword}, $pass_scheme)
   : hash_password(random_password(8), $pass_scheme);
 
+$rec{loginShell} = $shell;
+
+# TODO edomain
 $rec{labeledURI} =
-  "http://people.$edomain/${rec{givenName}}_${rec{sn}} User Home Page";
+  "http://www.kiskeyix.org/user/${rec{uid}} User Home Page";
 
 # TODO
 $rec{title}                    = "Employee Title";
@@ -307,14 +320,26 @@ foreach my $_item (@records)
 
 if ((@groups + 0))
 {
+    # TODO --group-of-uniques
+#     foreach my $_group (@groups)
+#     {
+#         $ldif .= "
+# 
+# dn: cn=$_group,ou=Groups,$domain_joined
+# changetype: modify
+# add: uniqueMember
+# uniqueMember: uid=${rec{uid}}, $ou $domain_joined
+#         "
+#     }
+
     foreach my $_group (@groups)
     {
         $ldif .= "
 
 dn: cn=$_group,ou=Groups,$domain_joined
 changetype: modify
-add: uniqueMember
-uniqueMember: uid=${rec{uid}}, $ou $domain_joined
+add: memberUid
+memberUid: ${rec{uid}}
         "
     }
 }
@@ -330,19 +355,32 @@ $LDAPADMINCN = ($LDAPADMINCN) ? $LDAPADMINCN : "cn=admin, $domain_joined";
 
 _debug("connecting to $LDAPSERVER as $LDAPADMINCN");
 
+my $CODE = 0;               # assume we won't have errors
 my $ldap = Net::LDAP->new($LDAPSERVER);
 my $mesg = $ldap->bind(
     $LDAPADMINCN,
 
     # --bind-password takes precedence
-    'password' => ($LDAPPASSWORD)
-    ? $LDAPPASSWORD
-    : _get_password($LDAPPASSWORDFILE),
+    'password' => ($LDAPPASSWORD) ? $LDAPPASSWORD : _get_password($LDAPPASSWORDFILE),
     'version' => '3'
-                      );    # if bind() it binds anonymously
+);
+if ($mesg->code())
+{
+    print STDERR
+      " Error while binding on $LDAPSERVER\n";
+
+    print STDERR (  ". Server message => code: "
+                  . $mesg->code()
+                  . ". name: "
+                  . $mesg->error_name()
+                  . ". text: "
+                  . $mesg->error_text());
+    $CODE = 1;
+    goto EXIT;
+}
+
 my $_dn   = "uid=${rec{uid}},${ou}${domain_joined}";
 my $entry = Net::LDAP::Entry->new($_dn);
-my $CODE = 0;               # assume we won't have errors
 
 if ($POSIX)
 {
@@ -368,6 +406,8 @@ else
 foreach my $_item (@records)
 {
     next if ($posix_rec{$_item} and not $POSIX);
+
+    _debug("Adding entry: ".$_item);
     $entry->add($_item => $rec{$_item});
 }
 
@@ -376,7 +416,7 @@ my $entry_result = _create_entry($ldap, $entry);
 if ($entry_result->code())
 {
     print STDERR
-      " Error while creating entry for uid ${rec{uid}} on \$LDAPSERVER\n";
+      " Error while creating entry for uid ${rec{uid}} on $LDAPSERVER\n";
 
     print STDERR (  ". Server message => code: "
                   . $entry_result->code()
@@ -390,21 +430,25 @@ if ($entry_result->code())
 
 if (@groups + 0)
 {
+    my $_dn = undef;
     my $add_hash = undef;
     foreach my $_group (@groups)
     {
-        my $_dn = "cn=$_group,ou=Groups,$domain_joined";
-        my $add_hash =
-          ['uniqueMember' => "uid=" . $rec{uid} . ", $ou $domain_joined"];
-    }
+        _debug("Adding uid (".$rec{uid}.") to group: ".$_group);
 
-    my $entry_result = _add_entry($ldap, $_dn, $add_hash);
-    if ($entry_result->code())
-    {
-        print(
-            " Error while adding uid ${rec{uid}} to group $_dn on $LDAPSERVER: "
-              . $entry_result->error_text());
-        goto EXIT;
+        $_dn = "cn=$_group,ou=Groups,$domain_joined";
+        #FIXME add_hash is a arrayref not hashref?
+        # TODO --group-of-uniques
+        # ['uniqueMember' => "uid=" . $rec{uid} . ", $ou $domain_joined"];
+        $add_hash = { 'memberUid' => [ $rec{uid} ] };
+        my $entry_result = _add_entry($ldap, $_dn, $add_hash);
+        if ($entry_result->code())
+        {
+            print(
+                " Error while adding uid ${rec{uid}} to group $_dn on $LDAPSERVER: "
+                . $entry_result->error_text());
+            goto EXIT;
+        }
     }
 }
 

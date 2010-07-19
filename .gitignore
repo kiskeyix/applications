@@ -3,7 +3,7 @@ Changelog
 ChangeLog
 *.log
 *.bak
-share
+share/mutt/mail*
 lib
 JPL
 etc
@@ -14,3 +14,4 @@ include
 man
 opt
 think*
+pino

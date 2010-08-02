@@ -1,0 +1,17 @@
+#!/bin/bash
+
+NAME="Luis Mondesi"
+EMAIL="lemsx1@gmail.com"
+
+if [[ -f ~/.signaturerc ]]; then
+    . ~/.signaturerc
+fi
+
+if [[ -x `command -v git` ]]; then
+    git config --global user.name "$NAME"
+    git config --global user.email "$EMAIL"
+    git commit --amend --author="$NAME <$EMAIL>"
+else
+    echo "Git command missing" >> /dev/stderr
+    exit 1
+fi

@@ -8,7 +8,7 @@
 hash = Hash.new(&(p=lambda{|h,k| h[k] = Hash.new(&p)}))
 hash['one']['two']="two"
 
-puts hash
+p hash
 
 # http://blade.nagaokaut.ac.jp/cgi-bin/scat.rb/ruby/ruby-talk/13408 
 class HashMD < Hash
@@ -19,4 +19,4 @@ class HashMD < Hash
 end
 h = HashMD.new
 h['a']['b']['c'] = 'xxx'  #=>  {"a" => {"b" => {"c" => "xxx"}}}
-puts h
+p h

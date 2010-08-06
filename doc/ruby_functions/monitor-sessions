@@ -1,0 +1,39 @@
+#!/usr/bin/ruby
+# $Revision: 0.1 $
+# $Date: 2010-08-06 14:56 EDT $
+# Luis Mondesi <lemsx1@gmail.com>
+#
+# DESCRIPTION: paranoic script to inform you of remote users
+# USAGE:
+# LICENSE: GPL
+
+require 'logger'
+log = Logger.new("/tmp/#{$0.split(/\//).last}.#{$$}.log", "daily", 1048576)
+
+begin
+    while true
+        sessions=`/usr/bin/w | grep -v LOGIN@ | grep -v 'load average' | grep -v $USER`
+
+        if sessions.size > 0
+            remoteusers = Hash.new
+            sessions.each do |l|
+                u = l.split(/\s/).first
+                remoteusers[u] = 0
+            end
+            sessions.each do |l|
+                u = l.split(/\s/).first
+                remoteusers[u] += 1
+            end
+            report = String.new
+            remoteusers.each do |k,v|
+                report += k.to_s + " (" + v.to_s + ")\n"
+            end
+            log.info report
+            `zenity --error --text="New users logged in: #{report}"`
+        end
+        #log.info "#{$0} sleeping..."
+        sleep 10
+    end
+rescue Interrupt
+    log.fatal "#{$0} interrupted"
+end

@@ -6,33 +6,58 @@
 # DESCRIPTION: paranoic script to inform you of remote users
 # USAGE:
 # LICENSE: GPL
+# Bugs:
+# - if two or more sessions are open in the same minute, we only report 1
 
 require 'logger'
-log = Logger.new("/tmp/#{$0.split(/\//).last}.#{$$}.log", "daily", 1048576)
+
+# some defaults. change as needed
+time = 120      # after 120 sec report all sessions again
+sleep_sec = 10  # seconds to sleep
+log = Logger.new("/tmp/#{$0.split(/\//).last}.log", "daily", 1048576)
 
 begin
+    # internal use
+    remoteusers = Hash.new
+    _time = time
     while true
         sessions=`/usr/bin/w | grep -v LOGIN@ | grep -v 'load average' | grep -v $USER`
 
         if sessions.size > 0
-            remoteusers = Hash.new
             sessions.each do |l|
-                u = l.split(/\s/).first
-                remoteusers[u] = 0
+                fields = l.split(/\s+/)
+                u = fields.first.to_s
+                t = fields[3].to_s
+                
+                key =  "#{u} (#{t})"
+                unless remoteusers.has_key? key
+                    remoteusers[key] = true
+                end
             end
-            sessions.each do |l|
-                u = l.split(/\s/).first
-                remoteusers[u] += 1
-            end
-            report = String.new
-            remoteusers.each do |k,v|
-                report += k.to_s + " (" + v.to_s + ")\n"
-            end
-            log.info report
-            `zenity --error --text="New users logged in: #{report}"`
+            remoteusers.each do |k,reportuser|
+                if reportuser
+                    s = "User logged in: #{k}\n" 
+                    log.info "#{s}"
+                    # notify-send is part of libnotify-bin
+                    if test ?x, "/usr/bin/notify-send"
+                        `notify-send -i error "#{s}"`
+                    else
+                        `zenity --error --text="#{s}"`
+                    end
+                    remoteusers[k] = false # already reported this
+                end
+            end 
         end
-        #log.info "#{$0} sleeping..."
-        sleep 10
+        sleep sleep_sec
+        if _time < 0
+            _time = time
+            # clean and report all again
+            remoteusers = Hash.new
+
+            log.info "#{$0.split(/\//).last}: reseting..."
+        else
+            _time -= sleep_sec
+        end
     end
 rescue Interrupt
     log.fatal "#{$0} interrupted"

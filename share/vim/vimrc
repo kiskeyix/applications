@@ -501,9 +501,10 @@ if filereadable(expand("~/").".vimrc-".hostname)
     exe 'source '.expand("~/").".vimrc-".hostname
 endif
 
-" Rails support
-let g:rubycomplete_rails = 1
-
-" Ruby function autocompletion
-let g:rubycomplete_buffer_loading = 1       " not inside class def
-let g:rubycomplete_classes_in_global = 1    " inside class def
+" Ruby
+autocmd FileType ruby,eruby set omnifunc=rubycomplete#Complete
+autocmd FileType ruby,eruby let g:rubycomplete_buffer_loading = 1
+autocmd FileType ruby,eruby let g:rubycomplete_rails = 1
+autocmd FileType ruby,eruby let g:rubycomplete_classes_in_global = 1
+"improve autocomplete menu color
+highlight Pmenu ctermbg=238 gui=bold

@@ -310,8 +310,8 @@ augroup END
 augroup ruby
     if !exists("autocommands_ruby_loaded")
         let autocommands_ruby_loaded = 1
-"        au BufReadPre *.rb set sw=3 sts=3 nu | let IndentStyle = "ruby"
-        au BufNewFile *.rb 0r ~/.vim/skeleton.rb | let IndentStyle = "ruby"
+        au BufReadPre *.rb set sw=3 sts=3 nu | let IndentStyle = "ruby" 
+        au BufNewFile *.rb 0r ~/.vim/skeleton.rb | let IndentStyle = "ruby" 
     endif
 augroup END
 
@@ -500,3 +500,10 @@ let hostname = hostname()
 if filereadable(expand("~/").".vimrc-".hostname)
     exe 'source '.expand("~/").".vimrc-".hostname
 endif
+
+" Rails support
+let g:rubycomplete_rails = 1
+
+" Ruby function autocompletion
+let g:rubycomplete_buffer_loading = 1       " not inside class def
+let g:rubycomplete_classes_in_global = 1    " inside class def

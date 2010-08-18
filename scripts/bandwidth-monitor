@@ -5,13 +5,22 @@
 #
 # == Usage
 #
-# bandwidth-monitor [OPTION] ... <DIR>
+# bandwidth-monitor [OPTION]
+#
+# --create, -c:
+#   create iptables rules and exit
+#
+# --clean, -x:
+#   clean iptables rules and exit
 #
 # --debug, -D:
 #    show colorful debugging information
 #
 # --help, -h:
 #    show help
+#
+# --sleep, -s <SECONDS>:
+#    number of seconds to sleep
 #
 # --usage, -U, -?:
 #    show usage
@@ -37,11 +46,19 @@ opts = GetoptLong.new(
 [ '--debug',   '-D', GetoptLong::NO_ARGUMENT ],
 [ '--help',    '-h', GetoptLong::NO_ARGUMENT ],
 [ '--usage',   '-U', '-?', GetoptLong::NO_ARGUMENT ],
-[ '--verbose', '-v', GetoptLong::NO_ARGUMENT ]
+[ '--verbose', '-v', GetoptLong::NO_ARGUMENT ],
+[ '--create', '-c', GetoptLong::NO_ARGUMENT ],
+[ '--clean', '-x', GetoptLong::NO_ARGUMENT ],
+[ '--sleep', '-s', GetoptLong::REQUIRED_ARGUMENT ]
 )
 
 $_verbose   = false
 $_debug     = false
+
+create_rules = false
+monitor_traffic = true
+clean_rules = false
+sleep_sec = 1
 
 opts.each do |opt, arg|
    case opt
@@ -53,20 +70,12 @@ opts.each do |opt, arg|
       $_verbose=true
    when '--debug'
       $_debug=true
-   when '--repeat'
-      if arg.chomp.empty? || arg.to_i < 1
-         puts 'Repeat number is wrong (try --help)'
-         RDoc::usage 1
-      else
-         #puts "arg is:'" + arg + "'"
-         repetitions = arg.to_i
-      end
-   when '--name'
-      if not arg
-         name = 'John'
-      else
-         name = arg
-      end
+   when '--create'
+     create_rules = true
+   when '--clean'
+     clean_rules = true
+   when '--sleep'
+      sleep_sec = arg.to_i
    end
 end
 
@@ -103,10 +112,6 @@ end
 # end helpers
 
 # main()
-create_rules = false
-monitor_traffic = true
-clean_rules = false
-sleep_sec = 1
 rules = %w{ input_bandwidth output_bandwidth }
 tab = "\t"
 
@@ -128,23 +133,81 @@ begin
     end
     puts `iptables -nL`
   elsif monitor_traffic
-    verbose "monitoring traffic for #{rules.join(' ')}"
-    counter = Hash.new
-    rules.each do |rule|
-      counter[rule] = 0
-    end
-    while true
-      `iptables -nL -v`.each_line do |l|
-        _l = l.split(/\s+/)
-        if l =~ /(#{rules.first}|#{rules.last})[[:blank:]]+all/
-          rule = $1
-          persec = _l[2].gsub(/[^[:digit:]]+/,"").to_i - counter[rule]
-          unit = _l[2].gsub(/[[:digit:]]+/,"")
-          puts "#{_l[2..3].join(tab)} (#{persec}/#{unit}s)"
-          counter[rule] = _l[2].to_i
-        end
+    # sanity check
+    input_found = false
+    output_found = false
+    `iptables -nL -xv`.each_line do |l|
+      if l =~ /#{rules.first}/
+        input_found = true
+      elsif l =~ /#{rules.last}/
+        output_found = true
       end
-      puts "\n"
+    end
+    raise MyError, "Must create rules first, see --help" if not input_found or not output_found
+    # end sanity check
+    
+    verbose "monitoring traffic for #{rules.join(' ')}"
+    last_count = Hash.new
+    rules.each do |rule|
+      last_count[rule] = 0
+    end
+    out_count = 0
+    while true
+      out_count += 1
+      if out_count == 1 or out_count % 30 == 0
+        print sprintf("\n%15s#{tab}%25s", "INPUT", "OUTPUT")
+        puts sprintf("\n%10s#{tab}%10s %9s#{tab}%10s\n", "Value","Bandwidth", "Value","Bandwidth")
+      else
+        puts "\n"
+      end
+      `iptables -nL -xv`.each_line do |l|
+        if l =~ /(#{rules.first}|#{rules.last})[[:blank:]]+all/
+          debug l
+          
+          _l = l.chomp.gsub(/^\s+/,"").split(/\s+/)
+          p _l if $_debug
+
+          _rule = _l[2]
+          debug "rule", _rule
+          raise MyError, "rule is empty" if _rule.nil? or _rule.size < 15
+
+          _current_count = _l[1].gsub(/[^[:digit:]]+/,"").to_i
+          debug "_current_count", _current_count
+
+          persec = _current_count - last_count[_rule]
+          debug "persec", persec
+
+          last_count[_rule] = _current_count
+
+          unit = _l[1].gsub(/[[:digit:]]+/,"")
+          debug "unit", unit
+          if not unit or unit.size < 1
+            if persec > (1000 * 1000 * 1000)
+              persec = persec / (1000 * 1000 * 1000)
+              unit="Gb"
+            elsif persec > (1000 * 1000)
+              persec = persec / (1000 * 1000 )
+              unit="Mb"
+            elsif persec > 1000
+              persec = persec / 1000
+              unit="Kb"
+            end
+          end
+          if sleep_sec == 1
+            tunit = "s"
+          elsif sleep_sec > 59 and sleep_sec < 3600
+            tunit = "m"
+          elsif sleep_sec > 3600 and sleep_sec < 86400
+            tunit = "h"
+          elsif sleep_sec > 86400 and sleep_sec < 31536000
+            tunit = "y"
+          else
+            tunit = ""
+          end
+
+          print sprintf("%10d#{tab}%10s", _l[1], "#{persec}/#{unit}#{tunit}")
+        end
+      end 
       sleep sleep_sec
     end
   end

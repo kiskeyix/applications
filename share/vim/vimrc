@@ -60,8 +60,10 @@ set secure              " do not allow shell commands in au blocks
 set updatecount=20	" Number of characters typed before doing an update
 set updatetime=10000	" Number of milliseconds before doing an update
 set history=100		" Number of history commands to remember
-set viminfo='50,\"200	" read/write a .viminfo file, remember filemarks for 50
+"set viminfo='50,\"200	" read/write a .viminfo file, remember filemarks for 50
 			" files and store 200 lines of registers
+
+set viminfo^=!          " add recently accessed projects menu (project plugin)
 
 set confirm		" To get a dialog when a command fails
 
@@ -387,7 +389,7 @@ set t_Co=16
 " uncomment this if you want to cover your terminal's color
 " highlight normal ctermbg=15 ctermfg=0 guibg=#cccccc guifg=#000000
 " Default is some unreadable yellow
- highlight Search term=reverse  ctermbg=4 ctermfg=3 guibg=blue guifg=yellow
+highlight Search term=reverse  ctermbg=4 ctermfg=3 guibg=blue guifg=yellow
 " The selection highlight in gvim renders the font unreadable
 highlight Visual gui=reverse guifg=NONE guibg=NONE
 
@@ -508,3 +510,21 @@ autocmd FileType ruby,eruby let g:rubycomplete_rails = 1
 autocmd FileType ruby,eruby let g:rubycomplete_classes_in_global = 1
 "improve autocomplete menu color
 highlight Pmenu ctermbg=238 gui=bold
+
+" Rails
+" Minibuffer Explorer Settings
+let g:miniBufExplMapWindowNavVim = 1
+let g:miniBufExplMapWindowNavArrows = 1
+let g:miniBufExplMapCTabSwitchBufs = 1
+let g:miniBufExplModSelTarget = 1
+ 
+" alt+n or alt+p to navigate between entries in QuickFix
+map <silent> <m-p> :cp <cr>
+map <silent> <m-n> :cn <cr>
+ 
+" Change which file opens after executing :Rails command
+let g:rails_default_file='config/database.yml'
+
+set clipboard+=unnamed  " Yanks go on clipboard instead.
+set nowrap " wrapping lines off
+

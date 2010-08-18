@@ -191,6 +191,8 @@ begin
             elsif persec > 1000
               persec = persec / 1000
               unit="Kb"
+            else
+              unit="b"
             end
           end
           if sleep_sec == 1
@@ -205,7 +207,7 @@ begin
             tunit = ""
           end
 
-          print sprintf("%10d#{tab}%10s", _l[1], "#{persec}/#{unit}#{tunit}")
+          print sprintf("%10d#{tab}%10s", _l[1], "#{persec} #{unit}/#{tunit}")
         end
       end 
       sleep sleep_sec

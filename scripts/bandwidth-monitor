@@ -112,6 +112,11 @@ end
 # end helpers
 
 # main()
+if (Process.euid != 0)
+   puts "You must run this as root"
+   exit 1
+end
+
 rules = %w{ input_bandwidth output_bandwidth }
 tab = "\t"
 

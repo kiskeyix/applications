@@ -184,15 +184,15 @@ begin
           if not unit or unit.size < 1
             if persec > (1000 * 1000 * 1000)
               persec = persec / (1000 * 1000 * 1000)
-              unit="Gb"
+              unit="GB"
             elsif persec > (1000 * 1000)
               persec = persec / (1000 * 1000 )
-              unit="Mb"
+              unit="MB"
             elsif persec > 1000
               persec = persec / 1000
-              unit="Kb"
+              unit="KB"
             else
-              unit="b"
+              unit="B"
             end
           end
           if sleep_sec == 1

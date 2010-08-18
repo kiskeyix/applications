@@ -1,0 +1,155 @@
+#!/usr/bin/env ruby
+# == Synopsis
+#
+# bandwidth-monitor: use this to quickly monitor your input and output bandwidth on Linux
+#
+# == Usage
+#
+# bandwidth-monitor [OPTION] ... <DIR>
+#
+# --debug, -D:
+#    show colorful debugging information
+#
+# --help, -h:
+#    show help
+#
+# --usage, -U, -?:
+#    show usage
+#
+# --verbose, -v
+#    shows verbose messages
+#
+
+=begin
+$Revision: 1.0 $
+$Date: 2010-08-18 13:50 EDT $
+Luis Mondesi <lmondesi@fotolog.com>
+
+DESCRIPTION:
+USAGE: bandwidth-monitor --help
+LICENSE: GPL
+=end
+
+require 'getoptlong'
+require 'rdoc/usage'
+
+opts = GetoptLong.new(
+[ '--debug',   '-D', GetoptLong::NO_ARGUMENT ],
+[ '--help',    '-h', GetoptLong::NO_ARGUMENT ],
+[ '--usage',   '-U', '-?', GetoptLong::NO_ARGUMENT ],
+[ '--verbose', '-v', GetoptLong::NO_ARGUMENT ]
+)
+
+$_verbose   = false
+$_debug     = false
+
+opts.each do |opt, arg|
+   case opt
+   when '--help'
+      RDoc::usage
+   when '--usage'
+      RDoc::usage
+   when '--verbose'
+      $_verbose=true
+   when '--debug'
+      $_debug=true
+   when '--repeat'
+      if arg.chomp.empty? || arg.to_i < 1
+         puts 'Repeat number is wrong (try --help)'
+         RDoc::usage 1
+      else
+         #puts "arg is:'" + arg + "'"
+         repetitions = arg.to_i
+      end
+   when '--name'
+      if not arg
+         name = 'John'
+      else
+         name = arg
+      end
+   end
+end
+
+# helpers
+class MyError < StandardError
+end
+def scolor(msg,color)
+   colors = {
+      'red'    => "\033[1;31m",
+      'norm'   => "\033[0;39m",
+      'green'  => "\033[0;32m",
+      'blue'   => "\033[0;34m"
+   }
+   ansicolor = "#{colors[color.downcase]}#{msg}#{colors['norm']}"
+end
+def debug(msg,val="")
+   return if not $_debug
+  
+   $stderr.print scolor("DEBUG: ",'green')
+   if val
+      # val.to_s is called for us:
+      $stderr.puts "#{scolor(msg,'blue')} = #{scolor(val,'red')}"
+   else
+      $stderr.puts "#{scolor(msg,'blue')}"
+   end
+end
+def verbose(msg)
+   return if not $_verbose
+   puts "#{msg}"
+end
+def error(msg)
+   $stderr.puts scolor("ERROR: #{msg}","red")
+end
+# end helpers
+
+# main()
+create_rules = false
+monitor_traffic = true
+clean_rules = false
+sleep_sec = 1
+rules = %w{ input_bandwidth output_bandwidth }
+tab = "\t"
+
+#TODO run as root
+begin
+  if create_rules
+    rules.each do |rule|
+      `iptables -N #{rule} 2> /dev/null`
+      if $? == 0
+        verbose "Created #{rule} rule in iptables"
+        `iptables -I #{(rule =~ /input/) ? "INPUT":"OUTPUT"} -j #{rule}`
+      end
+    end
+  elsif clean_rules
+    verbose "cleaning rules"
+    rules.each do |rule|
+      `iptables -D #{(rule =~ /input/) ? "INPUT":"OUTPUT"} -j #{rule} 2> /dev/null`
+      `iptables -X #{rule} 2> /dev/null`
+    end
+    puts `iptables -nL`
+  elsif monitor_traffic
+    verbose "monitoring traffic for #{rules.join(' ')}"
+    counter = Hash.new
+    rules.each do |rule|
+      counter[rule] = 0
+    end
+    while true
+      `iptables -nL -v`.each_line do |l|
+        _l = l.split(/\s+/)
+        if l =~ /(#{rules.first}|#{rules.last})[[:blank:]]+all/
+          rule = $1
+          persec = _l[2].gsub(/[^[:digit:]]+/,"").to_i - counter[rule]
+          unit = _l[2].gsub(/[[:digit:]]+/,"")
+          puts "#{_l[2..3].join(tab)} (#{persec}/#{unit}s)"
+          counter[rule] = _l[2].to_i
+        end
+      end
+      puts "\n"
+      sleep sleep_sec
+    end
+  end
+rescue MyError => e
+   error e.message
+rescue Interrupt
+end
+

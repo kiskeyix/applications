@@ -240,6 +240,8 @@ alias vcp='git pull --rebase'   # think 'checkout from remote host'
 alias vcu='git push'            # think 'update'
 alias vcs='git status'          # think 'info'
 alias vcl='git log'
+alias vcf='git fsck'
+alias vcg='git gc'              # --prune is wrong as default
 
 alias diff='diff -burN'
 

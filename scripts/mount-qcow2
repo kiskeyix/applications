@@ -1,0 +1,16 @@
+#!/bin/sh
+USAGE="Usage: $0 <image>"
+if [ -n "$1" -a -f "$1"  ]; then
+    modprobe nbd max_part=63 > /dev/null 2>&1
+    qemu-nbd -c /dev/nbd0 $1
+    if [ $? = 0 ]; then
+        mount /dev/nbd0p1 /mnt
+        echo "$1 partition 1 mounted in /mnt"
+        echo "use 'mount /dev/nbd0p2 ...' to mount the second partition, if any..."
+    else
+        echo "Failed to use /dev/nbd0. Try: qemu-nbd -d /dev/nbd0"
+    fi
+else
+    echo $USAGE
+    exit 1
+fi

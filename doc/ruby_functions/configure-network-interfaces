@@ -1,0 +1,201 @@
+#!/usr/bin/env ruby
+# == Synopsis
+#
+# configure-network-interfaces: configures /etc/network/intefaces using information from lshw
+#
+# == Usage
+#
+# configure-network-interfaces [OPTIONS]
+#
+# configure-network-interfaces --bridge \
+#  --ip br0,10.0.0.1,255.0.0.0,10.10.0.2 \
+#  --ip br1,192.168.0.200,255.255.255.0,192.168.0.1 \
+#  --interfaces-file /etc/network/interfaces
+#
+# Configures 2 interfaces as bridges with the static IPs provided
+#
+# --debug, -D:
+#    enable debug mode
+#
+# --dry-run, -n:
+#    do not actually write the interfaces file or restart networking services
+#
+# --help, -h:
+#    show help
+#
+# --bridge, -b
+#    configure interfaces as bridges. Assumes bridge-utils is already installed
+#
+# --interfaces-file, -f
+#    file to modify. defaults to /etc/network/interfaces
+#
+# --ip, -i
+#    list of static IPs to use per interface. can be used multiple times. format is: iface:ip:netmask:gateway. When combined with --bridge, use the bridge inteface names, they map like: eth0 -> br0. i.e.: eth0,10.0.0.1,255.0.0.0,10.10.0.2 becomes br0,10.0.0.1,255.0.0.0,10.10.0.2
+#
+# --restart-network, -r
+#    restart network interfaces after changing /etc/network/interfaces. mutually exclusive with --debug and/or --dry-run
+#
+# --usage, -U, -?:
+#    show usage
+#
+# --verbose, -V:
+#    display extra messages
+#
+# == Bugs
+# * no validation of IPs if you mismatch IPv6 and IPv4 addresses. Use --dry-run until you're sure
+#
+# == Author
+# Luis Mondesi <lemsx1@gmail.com>
+
+# 2010-04-28 13:42 EDT
+#
+# 1. open /etc/network/interfaces
+# 2. setup ip via dhcp or static
+# 3. optinally restart networking
+#
+# all this is done quietly unless --verbose
+
+require 'getoptlong'
+require 'rdoc/usage'
+
+# helpers
+class IfaceFileError < StandardError
+end
+
+def is_valid_ip?(ip)
+    return true if ip =~ /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/ or ip =~ /^[:[:xdigit:]]+$/
+        false
+end
+
+def is_valid_nm?(ip)
+    return true if ip =~ /^255\.(?:255|0)\.(?:255|0)\.(?:255|0)/ or ip =~ /[[:xdigit:]]+$/
+        false
+end
+# end helpers
+
+opts = GetoptLong.new(
+    [ '--bridge', '-b', GetoptLong::NO_ARGUMENT ],
+    [ '--debug', '-D', GetoptLong::NO_ARGUMENT ],
+    [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
+    [ '--interfaces', '-f', GetoptLong::REQUIRED_ARGUMENT ],
+    [ '--ip', '-i', GetoptLong::REQUIRED_ARGUMENT ],
+    [ '--usage', '-U', '-?', GetoptLong::NO_ARGUMENT ],
+    [ '--dry-run', '-n', GetoptLong::NO_ARGUMENT ],
+    [ '--restart-network', '-r', GetoptLong::NO_ARGUMENT ],
+    [ '--verbose', '-V', GetoptLong::NO_ARGUMENT ]
+)
+
+iface_file = "/etc/network/interfaces"
+bridge=false
+static=false
+ip = Hash.new(&(p=lambda{|h,k| h[k] = Hash.new(&p)}))
+debugging = false
+dryrun = false
+restartnet = false
+verbose = false
+opts.each do |opt, arg|
+    case opt
+    when '--help'
+        RDoc::usage
+    when '--usage'
+        RDoc::usage
+    when '--bridge'
+        bridge=true
+    when '--interfaces'
+        iface_file=arg.to_s.chomp
+    when '--ip'
+        static=true
+        _iface, _ip, _nm, _gw = arg.split(/,/)
+        # any field can be empty except the iface name itself
+        # we support IPv6 addresses too
+        RDoc::usage if not _iface or _iface =~ /^\s*$/
+            ip[_iface][:ip] = _ip if is_valid_ip? _ip
+        ip[_iface][:nm] = _nm if is_valid_nm? _nm
+        ip[_iface][:gw] = _gw if is_valid_ip? _gw
+    when '--debug'
+        dryrun=true
+        debugging=true
+    when '--dry-run'
+        dryrun=true
+        restartnet = false
+    when '--restart-network'
+        restartnet = true
+    when '--verbose'
+        verbose = true
+    end
+end
+
+if (Process.euid != 0)
+    puts "You must run this as root"
+    exit 1
+end
+
+begin
+    if dryrun
+        fd = STDOUT
+    else
+        fd = open(iface_file,"w+")
+    end
+    iflist = `lshw | grep 'logical name'|sed 's/.*: //'`
+    raise IfaceFileError, "No interfaces found" if iflist.size < 1
+
+    # std debian messages
+    fd.puts "# See interfaces(5) for information"
+
+    # loopback
+    fd.puts "auto lo"
+    fd.puts "iface lo inet loopback\n\n"
+
+    if bridge
+        test ?x,"/usr/sbin/brctl" or raise "Command brctl not found"
+        # configure each interface as a bridge with dhcp
+        iflist.each do |net|
+            net.chomp!
+            next if not net =~ /^eth/ or net =~ /^wlan/
+
+                fd.puts "auto #{net}"
+            fd.puts "iface #{net} inet manual\n\n"
+            ifnum = net.gsub(/[^[:digit:]]+/,"")
+            _net = "br#{ifnum}"
+            fd.puts "auto #{_net}"
+            if static
+                if ip[_net][:ip] =~ /^[:[:xdigit:]]+$/
+                    fd.puts "iface #{_net} inet6 static"
+                else
+                    fd.puts "iface #{_net} inet static"
+                end
+                fd.puts "\taddress #{ip[_net][:ip]}" if is_valid_ip? ip[_net][:ip]
+                fd.puts "\tnetmask #{ip[_net][:nm]}" if is_valid_nm? ip[_net][:nm]
+                fd.puts "\tgateway #{ip[_net][:gw]}" if is_valid_ip? ip[_net][:gw]
+            else
+                fd.puts "iface #{_net} inet dhcp"
+            end
+            fd.puts "\tbridge_ports #{net}"
+            fd.puts "\tbridge_stp on"
+            fd.puts "\tbridge_fd 0"
+            fd.puts "\tbridge_maxwait 0"
+        end
+    else
+        iflist.each do |net|
+            net.chomp!
+            next if not net =~ /^eth/
+                fd.puts "auto #{net}"
+            fd.puts "iface #{net} inet dhcp\n\n"
+        end
+    end
+
+    if restartnet
+        unless debugging or dryrun
+            puts "Restarting networking" if verbose
+            `stop network-manager`
+            `start network-manager`
+        else
+            puts "Not restarting network due to --debug or --dry-run"
+        end
+    end
+
+    fd.close
+rescue Errno::EACCES, IfaceFileError, RuntimeError => e
+    STDERR.puts e.message
+    exit 1
+end

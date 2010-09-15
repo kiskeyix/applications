@@ -856,8 +856,17 @@ sub update_host
             if ($i =~ /Applications/)
             {
                 $i = "Applications.tar.bz2";    # sanity check
+                my $EXCLUDE_ARGS="";
+                open(EXCLUDE,"< Applications/.gitignore");
+                while(<EXCLUDE>)
+                {
+                    my $str = $_;
+                    chomp($str);
+                    $EXCLUDE_ARGS .= "--exclude=$str ";
+                }
+                close(EXCLUDE);
                 system(
-                    "tar --exclude=\"bin\" --exclude=\"include\" --exclude=\"man\" --exclude=\"CVS\" --exclude=\"etc\" --exclude=\".cvsignore\" --exclude=\".git\" -cjf $LOCAL_PATH/$i Applications"
+                    "tar $EXCLUDE_ARGS --exclude=\".git\" -cjf $LOCAL_PATH/$i Applications"
                 );
             }
             elsif ($i =~ /vim/)

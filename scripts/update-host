@@ -896,7 +896,10 @@ sub update_host
         printf STDOUT ("%20s", $h)
           ;                   # host name padded to print progressbar correctly
 
-        system("scp $LOCAL_PATH/$i " . $USERNAME . "$h:$TMP/ " . $silent);
+
+        my $scp_cmd = "scp $LOCAL_PATH/$i " . $USERNAME . "$h:$TMP/ ";
+        print $scp_cmd."\n\n" if $VERBOSE;
+        system($scp_cmd . $silent);
 
         my $_zcat    = ($i =~ /\.bz2$/i) ? "bzcat" : "zcat";    # zcat or bzcat?
         my $_tar_arg = ($i =~ /\.bz2$/i) ? "j"     : "z";       # gzip or bzip2?
@@ -906,6 +909,7 @@ sub update_host
           . " 'command $_zcat '$TMP/$i' | command $tar x"
           . $VERBOSE_ARGS . "f -' ";
 
+        print $cmd."\n\n" if $VERBOSE;
         my $err = system($cmd. $silent);
 
         if (!$err)

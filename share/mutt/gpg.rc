@@ -1,8 +1,8 @@
 # -*-muttrc-*-
 #
 # Command formats for gpg.
-# 
-# This version uses gpg-2comp from 
+#
+# This version uses gpg-2comp from
 #   http://muppet.faveve.uni-stuttgart.de/~gero/gpg-2comp.tar.gz
 #
 # $Revision: 1.1 $
@@ -66,10 +66,10 @@ set pgp_export_command="/usr/bin/gpg   --no-verbose --export --armor %r"
 set pgp_verify_key_command="/usr/bin/gpg   --verbose --batch  --fingerprint --check-sigs %r"
 
 # read in the public key ring
-set pgp_list_pubring_command="/usr/bin/gpg   --no-verbose --batch --quiet   --with-colons --list-keys %r" 
+set pgp_list_pubring_command="/usr/bin/gpg   --no-verbose --batch --quiet   --with-colons --list-keys %r"
 
 # read in the secret key ring
-set pgp_list_secring_command="/usr/bin/gpg   --no-verbose --batch --quiet   --with-colons --list-secret-keys %r" 
+set pgp_list_secring_command="/usr/bin/gpg   --no-verbose --batch --quiet   --with-colons --list-secret-keys %r"
 
 # fetch keys
 # set pgp_getkeys_command="pkspxycwrap %r"

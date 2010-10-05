@@ -5,7 +5,10 @@
  * Luis Mondesi <lemsx1@gmail.com>
  *
  * DESCRIPTION:
- * A sample daemon software downloaded from http://peterlombardo.wikidot.com/linux-daemon-in-c
+ * A sample daemon software downloaded (and modified) from 
+ * http://peterlombardo.wikidot.com/linux-daemon-in-c
+ *
+ * It opens a port and waits for connections from test_client.c
  *
  * USAGE:
  * LICENSE: public domain
@@ -38,6 +41,7 @@
 #include <string.h>
 #include <assert.h>
 #include <signal.h>
+#include <sys/socket.h>
 
 #define DAEMON_NAME "test_daemon"
 #define PID_FILE "/var/run/test_daemon.pid"
@@ -60,11 +64,11 @@ PrintUsage (int argc, char *argv[])
 {
         if (argc >= 1)
         {
-                printf ("Usage: %s -h -nn", argv[0]);
-                printf ("  Options:n");
-                printf ("      -ntDon't fork off as a daemon.n");
-                printf ("      -htShow this help screen.n");
-                printf ("n");
+                printf ("Usage: %s -h -n\n", argv[0]);
+                printf ("  Options\n");
+                printf ("      -n\tDon't fork off as a daemon.\n");
+                printf ("      -h\tShow this help screen.\n");
+                printf ("\n");
         }
 }
 
@@ -118,6 +122,7 @@ returns integer which is passed back to the parent process
 int
 main (int argc, char *argv[])
 {
+        int sockfd, backlog = 3;
 
 #if defined(DEBUG)
         int daemonize = 0;
@@ -223,9 +228,13 @@ main (int argc, char *argv[])
                 close (STDERR_FILENO);
         }
 
-        // ****************************************************
-        // TODO: Insert core of your daemon processing here
-        // ****************************************************
+        /* tcp connection non-blocking for all protocols */
+        sockfd = socket(AF_INET,SOCK_STREAM|SOCK_NONBLOCK,0);
+        if (sockfd < 0)
+        {
+                syslog (LOG_ERROR, "%s failed to open socket", DAEMON_NAME);
+                exit(EXIT_FAILURE);
+        }
 
         syslog (LOG_INFO, "%s daemon exiting", DAEMON_NAME);
 

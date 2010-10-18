@@ -312,8 +312,9 @@ augroup END
 augroup ruby
     if !exists("autocommands_ruby_loaded")
         let autocommands_ruby_loaded = 1
-        au BufReadPre *.rb set sw=3 sts=3 nu | let IndentStyle = "ruby" 
-        au BufNewFile *.rb 0r ~/.vim/skeleton.rb | let IndentStyle = "ruby" 
+        au BufReadPre *.rb set sw=3 sts=3 nu | let IndentStyle = "ruby"
+        au BufReadPre *.erb set sw=3 sts=3 nu | let IndentStyle = "ruby"
+        au BufNewFile *.rb 0r ~/.vim/skeleton.rb | let IndentStyle = "ruby"
     endif
 augroup END
 

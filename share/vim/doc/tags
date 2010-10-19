@@ -1,5 +1,3 @@
-.	rails.txt	/*.*
-/	rails.txt	/*\/*
 :CVSAdd	cvscommand.txt	/*:CVSAdd*
 :CVSAnnotate	cvscommand.txt	/*:CVSAnnotate*
 :CVSCommit	cvscommand.txt	/*:CVSCommit*

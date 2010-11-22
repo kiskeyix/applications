@@ -7,11 +7,23 @@
 #
 # mbssh [OPTION] ... <DNS-CLUSTER> <CMD>
 #
-# -h, --help:
+# --debug, -D:
+#    show debugging information
+#
+# --help, -h:
 #    show help
 #
 # --usage, -U, -?:
 #    show usage
+#
+# --children, -c, -t <DIGIT>:
+#    number of child threads to execute. defaults to 10
+#
+# --user, -u <USER>:
+#    user to use when connecting over ssh
+#
+# --verbose, -v:
+#    be verbose
 #
 # <DNS-CLUSTER>:
 #    comma-separated list of dns names computers to execute on.
@@ -37,12 +49,18 @@ require 'getoptlong'
 require 'rdoc/usage'
 
 opts = GetoptLong.new(
+    [ '--debug', '-D', GetoptLong::NO_ARGUMENT ],
     [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
     [ '--usage', '-U', '-?', GetoptLong::NO_ARGUMENT ],
-    [ '--children', '-c', GetoptLong::REQUIRED_ARGUMENT ]
+    [ '--children', '-c', '-t', GetoptLong::REQUIRED_ARGUMENT ],
+    [ '--user', '-u', GetoptLong::REQUIRED_ARGUMENT ],
+    [ '--verbose', '-v', GetoptLong::NO_ARGUMENT ]
 )
 
+$_debug = false
+$_verbose = false
 num_children = 10
+user = ""
 opts.each do |opt, arg|
    case opt
    when '--help'
@@ -50,10 +68,18 @@ opts.each do |opt, arg|
    when '--usage'
       RDoc::usage
    when '--children'
-       num_children = args.to_i
+       num_children = arg.to_i
+   when '--user'
+       user = arg.chomp
+   when '--verbose'
+       $_verbose = true
+   when '--debug'
+       $_debug = true
+       $_verbose = true
    end
 end
 num_children=10 if num_children < 0
+user = (user > "") ? user + '@' : user
 
 clusters = ARGV.shift
 cmd  = ARGV.join(" ")
@@ -65,28 +91,39 @@ end
 # helpers
 def resolv_hosts(hosts)
     hosts.each do |host|
-        yield Resolv.getaddress host
+        Resolv.getaddresses(host).each do |a|
+            yield a
+        end
+    end
+end
+
+def is_alive(remote_host)
+    begin
+        true if TCPSocket.new(remote_host, 22)
+    rescue
+        false
     end
 end
 # end helpers
 
 # main()
-
 threads = []
-
-STDIN.reopen("/dev/null", 'a')
-STDOUT.reopen("mbssh.#{Process.pid}.out", 'a')
-STDERR.reopen("mbssh.#{Process.pid}.err", 'a')
-CMDERRS = File.open("mbssh.#{Process.pid}.failures", 'a')
-
 hosts = clusters.split(/,/)
 resolv_hosts(hosts) do |ip|
     if threads.size >= num_children
-        puts "waiting before: #{ip}"
+        puts "waiting before: #{ip}" if $_verbose
         threads.each { |t|  t.join }
     end
-    threads << Thread.new(ip) do
-        p "ssh #{ip} #{cmd}"
+    if is_alive ip
+        threads << Thread.new(ip) do
+            _c = "ssh -x #{user}#{ip} #{cmd}"
+            if $_debug
+                p _c
+            else
+                system(_c)
+            end
+        end
+    else
+        STDERR.puts "#{ip} skipped because is offline?"
     end
 end
-

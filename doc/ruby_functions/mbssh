@@ -1,0 +1,92 @@
+#!/usr/bin/env ruby
+# == Synopsis
+#
+# mbssh: script to run commands over ssh to various remote hosts
+#
+# == Usage
+#
+# mbssh [OPTION] ... <DNS-CLUSTER> <CMD>
+#
+# -h, --help:
+#    show help
+#
+# --usage, -U, -?:
+#    show usage
+#
+# <DNS-CLUSTER>:
+#    comma-separated list of dns names computers to execute on.
+#    This can be st-cluster which is a common name with various A records
+#    or st01,st02,etc ... with a list of single A records
+#
+# <CMD>:
+#    command to execute on each hosts. a minimun of 10 threads will be
+#    launched to execute said commands remotely
+
+=begin
+$Revision: 1.0 $
+$Date: 2010-04-26 14:40 EDT $
+Luis Mondesi <lmondesi@fotolog.com>
+
+DESCRIPTION:
+USAGE: mbssh --help
+LICENSE: GPL
+=end
+
+require 'resolv'
+require 'getoptlong'
+require 'rdoc/usage'
+
+opts = GetoptLong.new(
+    [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
+    [ '--usage', '-U', '-?', GetoptLong::NO_ARGUMENT ],
+    [ '--children', '-c', GetoptLong::REQUIRED_ARGUMENT ]
+)
+
+num_children = 10
+opts.each do |opt, arg|
+   case opt
+   when '--help'
+      RDoc::usage
+   when '--usage'
+      RDoc::usage
+   when '--children'
+       num_children = args.to_i
+   end
+end
+num_children=10 if num_children < 0
+
+clusters = ARGV.shift
+cmd  = ARGV.join(" ")
+
+if not clusters or cmd.size < 1
+    RDoc::usage
+end
+
+# helpers
+def resolv_hosts(hosts)
+    hosts.each do |host|
+        yield Resolv.getaddress host
+    end
+end
+# end helpers
+
+# main()
+
+threads = []
+
+STDIN.reopen("/dev/null", 'a')
+STDOUT.reopen("mbssh.#{Process.pid}.out", 'a')
+STDERR.reopen("mbssh.#{Process.pid}.err", 'a')
+CMDERRS = File.open("mbssh.#{Process.pid}.failures", 'a')
+
+hosts = clusters.split(/,/)
+resolv_hosts(hosts) do |ip|
+    if threads.size >= num_children
+        puts "waiting before: #{ip}"
+        threads.each { |t|  t.join }
+    end
+    threads << Thread.new(ip) do
+        p "ssh #{ip} #{cmd}"
+    end
+end
+

@@ -53,7 +53,7 @@ opts = GetoptLong.new(
     [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
     [ '--usage', '-U', '-?', GetoptLong::NO_ARGUMENT ],
     [ '--children', '-c', '-t', GetoptLong::REQUIRED_ARGUMENT ],
-    [ '--user', '-u', GetoptLong::REQUIRED_ARGUMENT ],
+    [ '--user','--username', '-u', GetoptLong::REQUIRED_ARGUMENT ],
     [ '--verbose', '-v', GetoptLong::NO_ARGUMENT ]
 )
 
@@ -79,7 +79,7 @@ opts.each do |opt, arg|
    end
 end
 num_children=10 if num_children < 0
-user = (user > "") ? user + '@' : user
+user = (not user =~ /^[[:blank:]]*$/) ? user + '@' : user
 
 clusters = ARGV.shift
 cmd  = ARGV.join(" ")

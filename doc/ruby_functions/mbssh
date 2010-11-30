@@ -106,6 +106,10 @@ def is_alive(remote_host)
 end
 # end helpers
 
+if $_debug
+    p clusters
+end
+
 # main()
 threads = []
 hosts = clusters.split(/,/)
@@ -116,7 +120,7 @@ resolv_hosts(hosts) do |ip|
     end
     if is_alive ip
         threads << Thread.new(ip) do
-            _c = "ssh -x #{user}#{ip} #{cmd}"
+            _c = "ssh -x #{user}#{ip} '#{cmd}'"
             if $_debug
                 p _c
             else

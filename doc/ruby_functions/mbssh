@@ -111,6 +111,9 @@ if $_debug
 end
 
 # main()
+
+STDIN.reopen("/dev/null", 'a')
+
 threads = []
 hosts = clusters.split(/,/)
 resolv_hosts(hosts) do |ip|

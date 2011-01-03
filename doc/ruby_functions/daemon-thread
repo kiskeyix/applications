@@ -1,0 +1,180 @@
+#!/usr/bin/env ruby
+# == Synopsis
+#
+# daemon-thread: example priority queue managed by threads in daemon mode
+#
+# == Usage
+#
+# daemon-thread [OPTION] ... <DIR>
+#
+# --debug, -D:
+#    show colorful debugging information
+#
+# --help, -h:
+#    show help
+#
+# --usage, -U, -?:
+#    show usage
+#
+# --verbose, -v
+#    shows verbose messages
+
+=begin
+$Revision: 1.0 $
+$Date: 2011-01-03 11:13 EST $
+Luis Mondesi <lemsx1@gmail.com>
+
+DESCRIPTION:
+USAGE: daemon-thread --help
+LICENSE: GPL
+=end
+
+
+require 'getoptlong'
+require 'rdoc/usage'
+require 'priority_queue'
+
+opts = GetoptLong.new(
+    [ '--debug',   '-D', GetoptLong::NO_ARGUMENT ],
+    [ '--help',    '-h', GetoptLong::NO_ARGUMENT ],
+    [ '--usage',   '-U', '-?', GetoptLong::NO_ARGUMENT ],
+    [ '--verbose', '-v', GetoptLong::NO_ARGUMENT ]
+)
+
+$_verbose   = false
+$_debug     = $DEBUG
+
+opts.each do |opt, arg|
+    case opt
+    when '--help'
+        RDoc::usage
+    when '--usage'
+        RDoc::usage
+    when '--verbose'
+        $_verbose=true
+    when '--debug'
+        $_debug=true
+end
+
+# helpers
+class QueueError < StandardError
+end
+def scolor(msg,color)
+    colors = {
+        'red'    => "\033[1;31m",
+        'norm'   => "\033[0;39m",
+        'green'  => "\033[0;32m",
+        'blue'   => "\033[0;34m"
+    }
+    ansicolor = "#{colors[color.downcase]}#{msg}#{colors['norm']}"
+end
+def debug(msg,val="")
+    return if not $_debug
+
+    $stderr.print scolor("DEBUG: ",'green')
+    if val
+        # val.to_s is called for us:
+        $stderr.puts "#{scolor(msg,'blue')} = #{scolor(val,'red')}"
+    else
+        $stderr.puts "#{scolor(msg,'blue')}"
+    end
+end
+def verbose(msg)
+    return if not $_verbose
+    puts "#{msg}"
+end
+def error(msg)
+    $stderr.puts scolor("ERROR: #{msg}","red")
+end
+# end helpers
+
+# main()
+
+begin
+    if not $_debug
+        STDIN.reopen("/dev/null",'a')
+        STDOUT.reopen("/dev/null",'a')
+        STDERR.reopen("/dev/null",'a')
+    end
+    pid = fork do
+        q = PriorityQueue.new
+        # example usage for priority_queue.rb:
+        #        q.push ["foo","bar"],2
+        #        q.push ["fooa","barb"],0
+        #        q.push ["fooz","barz"],3
+        #        q.push ["fooz","barz"],100
+        #        p q
+        #        puts "size #{q.length}"
+        #        q.sort {|a,b| c,d = a; e,f = b; d <=> f  }.each do |k,p|
+        #           u,v = k
+        #           puts "#{u} #{v} #{p}"
+        #        end
+        #        first, priority = q.sort.reverse.first
+        #        puts "first " + first.to_s
+        #        q.delete first
+        #        p q
+        # 
+        #        first, priority = q.sort.reverse.first
+        #        puts "first " + first.to_s
+        #        q.delete first
+        #        p q
+        #        puts "last size #{q.length}"
+
+        qmutex = Mutex.new
+        worker = Thread.new("worker") do
+            threads = []
+            names = ('a'..'z').to_a
+            loop do
+                puts "** worker"
+                sleep 1
+                name = names[rand 26]
+                threads << Thread.new(name) do
+                    job = []
+                    qmutex.synchronize do
+                        if q.length > 0
+                            puts "** #{name} worker size #{q.length}"
+                            # we want to go through the queue in order of priority from:
+                            # highest -> lowest
+                            job = q.sort {|a,b| u,v = a; w,x = b; v <=> x}.last
+                            q.delete job[0]
+                            puts "** #{name} worker size after #{q.length}"
+                        end
+                    end
+                    # work on job
+                    if job.size > 0
+                        p job
+                    end
+                end
+                if threads.size > 9
+                    puts "threads size #{threads.size}"
+                    threads.each do |t|
+                        main = Thread.main
+                        current = Thread.current
+                        t.join unless t == current or t == main
+                    end
+                    threads = [] # free memory
+                end
+            end
+        end
+        main = Thread.new("main") do
+            loop do
+                puts "main"
+                sleep 3
+                qmutex.synchronize do
+                    q.push ["foo","bar"],2 or raise QueueError, "Failed to update queue"
+                    q.push ["fooa","barb"],0 or raise QueueError, "Failed to update queue"
+                    q.push ["fooz","barz"],3 or raise QueueError, "Failed to update queue"
+                    # overrides previous with same array content:
+                    q.push ["fooz","barz"],100 or raise QueueError, "Failed to update queue"
+                    puts "main size #{q.length}"
+                end
+                Thread.pass # yield CPU to other threads (optional)
+            end
+        end
+        main.join
+        worker.join
+    end
+    Process.detach pid
+rescue QueueError => e
+    error e.message
+end

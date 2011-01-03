@@ -63,6 +63,7 @@ while true
         if threads.size >= num_children
             puts "waiting before: #{line}"
             threads.each { |t|  t.join }
+            threads = []
         end
         threads << Thread.new(line) do |cmd|
             cmd.chomp!
@@ -70,4 +71,3 @@ while true
         end
     end
 end
-

@@ -105,9 +105,9 @@ def is_alive(remote_host)
     end
 end
 
-def join_all
+def join_all(list)
     # wait for all threads to finish
-    all = Thread.list
+    all = list
     main = Thread.main
     current = Thread.current
     all.each do |t|
@@ -129,7 +129,7 @@ hosts = clusters.split(/,/)
 resolv_hosts(hosts) do |ip|
     if threads.size >= num_children
         puts "waiting before: #{ip}" if $_verbose
-        join_all
+        join_all threads
         threads = []
     end
     if is_alive ip
@@ -147,4 +147,4 @@ resolv_hosts(hosts) do |ip|
         STDERR.puts "#{ip} skipped because is offline?"
     end
 end
-join_all
+join_all threads

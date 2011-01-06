@@ -57,8 +57,8 @@ opts = GetoptLong.new(
     [ '--verbose', '-v', GetoptLong::NO_ARGUMENT ]
 )
 
-$_debug = false
-$_verbose = false
+$_debug = $DEBUG
+$_verbose = $VERBOSE
 num_children = 10
 user = ""
 opts.each do |opt, arg|
@@ -104,6 +104,16 @@ def is_alive(remote_host)
         false
     end
 end
+
+def join_all
+    # wait for all threads to finish
+    all = Thread.list
+    main = Thread.main
+    current = Thread.current
+    all.each do |t|
+        t.join unless t == main or t == current
+    end
+end
 # end helpers
 
 if $_debug
@@ -119,11 +129,13 @@ hosts = clusters.split(/,/)
 resolv_hosts(hosts) do |ip|
     if threads.size >= num_children
         puts "waiting before: #{ip}" if $_verbose
-        threads.each { |t|  t.join }
+        join_all
         threads = []
     end
     if is_alive ip
         threads << Thread.new(ip) do
+            #STDIN.reopen("/dev/null", 'a')
+
             _c = "ssh -x #{user}#{ip} '#{cmd}'"
             if $_debug
                 p _c
@@ -135,3 +147,4 @@ resolv_hosts(hosts) do |ip|
         STDERR.puts "#{ip} skipped because is offline?"
     end
 end
+join_all

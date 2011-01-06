@@ -122,7 +122,7 @@ end
 
 # main()
 
-STDIN.reopen("/dev/null", 'a')
+$stdin.reopen("/dev/null", 'a')
 
 threads = []
 hosts = clusters.split(/,/)
@@ -134,7 +134,7 @@ resolv_hosts(hosts) do |ip|
     end
     if is_alive ip
         threads << Thread.new(ip) do
-            STDIN.reopen("/dev/null", 'a')
+            $stdin.reopen("/dev/null", 'a')
 
             _c = "ssh -x #{user}#{ip} '#{cmd}'"
             if $_debug

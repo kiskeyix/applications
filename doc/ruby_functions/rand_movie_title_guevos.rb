@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # == Synopsis
 #
-# Randon Movie Title from imdb's top 250 
+# Random Movie Title from imdb's top 250 
 # and adds the string "guevos" to the title
 #
 # == Usage

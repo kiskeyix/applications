@@ -47,7 +47,7 @@ chomp( my $domain = `/bin/hostname -d` )
   ;    # this will hopefully make people edit before
        # running if necessary!
 my $from = 'openrelaytest@' . $domain;
-my @to   = ( 'nobody@' . $domain, 'listme@listme.dsbl.org' );
+my @to   = ( 'nobody@' . $domain, "lemsx1\@gmail.com" );#, 'listme@listme.dsbl.org' );
 
 # Deal with a debug option if it's there
 if ( $ARGV[0] eq "-d" ) {

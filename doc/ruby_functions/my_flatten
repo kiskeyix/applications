@@ -1,0 +1,28 @@
+#!/usr/bin/env ruby
+# vi: ft=ruby :
+#
+# Luis Mondesi <lemsx1@gmail.com>
+
+# open class Array and implement our own flatten() method
+class Array
+  def flatten
+    ret = Array.new
+    self.each do |ar|
+      if ar.is_a? Array
+        ret += ar.flatten
+      else
+        ret << ar
+      end
+    end
+    ret
+  end
+end
+
+require 'test/unit'
+class TestArray < Test::Unit::TestCase
+  def test_array_flat
+    test_array = ["foo",["a","b",["c","d"]],"bar",[0,1,2,[3]]]
+    expected   = ["foo", "a", "b", "c", "d", "bar", 0, 1, 2, 3]
+    assert_equal(expected,test_array.flatten,"Array flatten failed")
+  end
+end

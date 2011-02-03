@@ -1,0 +1,58 @@
+require 'net/http'
+
+RUBYGEMSVER = "1.3.7"
+RUBYGEMS = "rubygems"
+RUBYGEMSTAR = "#{RUBYGEMS}-#{RUBYGEMSVER}.tgz"
+TMPDIR = ( ENV['TMPDIR'] ) ? ENV['TMPDIR'] : '/tmp'
+
+namespace :common do
+  namespace :rubygem do
+    desc "installs new rubygems"
+    task :install => [:get,:untar,:setup]
+
+    desc "setup rubygem"
+    task :setup do
+      sh "cd #{TMPDIR}/#{RUBYGEMS}-#{RUBYGEMSVER} && sudo ruby setup.rb"
+    end
+    desc "untar rubygem"
+    task :untar do
+      sh "cd #{TMPDIR} && tar xzf #{TMPDIR}/#{RUBYGEMSTAR}"
+    end
+    desc "get new rubygem"
+    task :get do
+      open("#{TMPDIR}/#{RUBYGEMSTAR}","w+") do |fd|
+        fd.print Net::HTTP.get( URI.parse("http://production.cf.rubygems.org/rubygems/#{RUBYGEMSTAR}"))
+      end
+    end
+  end
+  namespace :rails do
+    desc "install new rails"
+    task :install do
+      sh 'sudo gem install rails'
+    end
+  end
+  namespace :perms do
+      desc "tmp dir permission fixes"
+      task :tmp do
+          sh "sudo chown -R :www-data */tmp"
+          sh "sudo chmod -R g+w */tmp"
+          sh "sudo chmod 2775 */tmp"
+      end
+
+      desc "sqlite3 permission fixes"
+      task :db do
+          sh "sudo chown -R www-data:www-data */db/*.sqlite3"
+          sh "sudo chmod -R g+w */db/*.sqlite3"
+          sh "sudo chown :www-data */db"
+          sh "sudo chmod 2775 */db"
+      end
+
+      desc "log permission fixes"
+      task :log do
+          sh "sudo chown -R :www-data */log"
+          sh "sudo chmod -R g+w */log"
+          sh "sudo chmod 2775 */log"
+          sh "sudo chmod 0660 */log/*.log"
+      end
+  end
+end

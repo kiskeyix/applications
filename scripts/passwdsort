@@ -1,0 +1,2 @@
+#!/bin/sh
+getent passwd|sort -k3 -n -t:

@@ -1,17 +1,20 @@
 #!/usr/bin/env ruby
 # == Synopsis
 #
-# fgrep.rb: foo bar
+# fgrep.rb: finds a string in a set of files
 #
 # == Usage
 #
-# fgrep.rb [OPTION] ... <DIR>
+# fgrep.rb [OPTION] <REGEX>
 #
 # --debug, -D:
 #    show colorful debugging information
 #
 # --help, -h:
 #    show help
+#
+# --replace, -r <STRING>:
+#    use STRING as replacement
 #
 # --usage, -U, -?:
 #    show usage
@@ -110,6 +113,7 @@ begin
       line_num = 0
       tmp_file = nil
       rfile    = nil
+      modified = false
       if replacement
          tmp_file = file + ".#{$$}"
          rfile = open(tmp_file,"w")
@@ -118,6 +122,7 @@ begin
          line_num += 1
          if replacement
             if line.gsub!(/#{regex}/,replacement)
+               modified = true
                report "#{file}[#{line_num}]", line, 'red'
             end
             rfile.puts line
@@ -125,9 +130,13 @@ begin
             report "#{file}[#{line_num}]", line, 'blue' if line =~ /#{regex}/
          end
       end
-      if rfile
-         rfile.close
-         File.rename tmp_file, file if tmp_file and File.file? tmp_file
+      rfile.close if rfile
+      if tmp_file and File.file? tmp_file
+         if modified
+            File.rename tmp_file, file
+         else
+            File.unlink tmp_file
+         end
       end
    end
 rescue MyError => e

@@ -97,11 +97,6 @@ if [[ "x$TERM" == "xcygwin" ]]; then
     export TERM="ansi"
 fi
 
-## lastly, read user host-specific entries
-HOST_BASHRC="$HOME/.bashrc-`hostname`"
-if [[ -r "$HOST_BASHRC" ]]; then
-    . $HOST_BASHRC
-fi
 # check the window size after each command and, if necessary,
 # update the values of LINES and COLUMNS.
 shopt -s checkwinsize
@@ -185,7 +180,7 @@ function powerprompt()
             LOAD="NOLOAD_CMD"
         fi
         case $TERM in 
-            *term | rxvt* )
+            *term | rxvt* | ansi )
                 # changes xterm title and icon to this string.
                 # the sequence is ESC]0+string+BELL
                 # where ESC is \033 and BELL is \007
@@ -436,6 +431,12 @@ fi
 
 if [[ -n "$PRINTUSERS" && $PRINTUSERS -eq 1 && -n "$PS1" && $SHLVL -gt 0 ]]; then
     printusers
+fi
+
+## lastly, read user host-specific entries
+HOST_BASHRC="$HOME/.bashrc-$HOSTNAME"
+if [[ -r "$HOST_BASHRC" ]]; then
+    . $HOST_BASHRC
 fi
 
 #----------------------#

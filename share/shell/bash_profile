@@ -59,7 +59,7 @@ LESS='-F -i -w -R -z-4 -g -e -M -X -P%t?f%f \
 ## $HOME (mounted over NFS or something like that)
 ## NOTE that this is attempted now before locales are setup and before
 ## any environment varible is exported:
-HOST_PROFILE="$HOME/.profile-`hostname`"
+HOST_PROFILE="$HOME/.profile-$HOSTNAME"
 if [[ -r "$HOST_PROFILE" ]]; then
     . "$HOST_PROFILE"
 fi

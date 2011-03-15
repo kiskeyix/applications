@@ -1,0 +1,37 @@
+# vi: ft=sh :
+# Luis Mondesi <lemsx1@gmail.com>
+# 2011-03-14 13:39 EDT
+# save this file as ~/.path.setup on machines where
+# applications are installed under /opt/$PACKAGE/$VERSION/{bin,share/man}
+
+# sanity path
+OLDPATH=$PATH
+PATH=/bin:/usr/bin:/usr/local/bin:/opt/csw/gnu; export PATH
+
+# binary places to add first
+PLACES=/usr/local:/opt
+
+## bin
+### new paths
+NPATH=
+for place in `echo $PLACES|sed 's/:/\n/g'`; do
+    for path in `find $place -type d -name bin 2>/dev/null` `find $place -type d -name sbin 2>/dev/null`; do
+        NPATH=$path:$NPATH
+    done
+done
+
+### old paths
+#### NOTE: ruby is faster than sed|sort|uniq. LM
+#for opath in `echo $OLDPATH|sed 's/:/\n/g'|sort|uniq`;do
+PATH=`echo $NPATH:~/bin:$OLDPATH|ruby -ne 'ar=$_.gsub(/:+/,":").split(/:/).uniq; print ar.compact.join(":")'`
+export PATH
+
+## man
+NMANPATH=
+for mplace in `echo $PLACES|sed 's/:/\n/g'`; do
+    for mpath in `find $mplace -type d -name man 2>/dev/null`; do
+        NMANPATH=$mpath:$NMANPATH
+    done
+done
+MANPATH=`echo $NMANPATH:$MANPATH|ruby -ne 'ar=$_.gsub(/:+/,":").split(/:/).uniq; print ar.compact.join(":")'`
+export MANPATH

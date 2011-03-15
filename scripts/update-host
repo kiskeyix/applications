@@ -734,60 +734,41 @@ sub slurp_hosts
     }
 }
 
-# @desc checks whether a given host is alive by pinging it.
-#  pinging to a given host will be cached/saved for us so that we don't
-#  have to test for a given host more than once.
+# @desc checks whether a given host is alive by
+#  connecting to TCP port 22. Response will be cached
 # @arg 1 $host string or ip representing a given host
 # @return 1 if true 0 if false
 sub is_alive
 {
     my $host = shift;
     return undef if (not defined($host));
-    $hosts{$host}{'alive'} = 0 if (not exists($hosts{$host}{'alive'}));
-    my $ping_args = (qx/ping -V/ =~ /iputils/) ? " -w 4 " : "";
-    if ($hosts{$host}{'alive'} == 0)
+    if (not exists($hosts{$host}) 
+            or not exists($hosts{$host}{'alive'}) 
+            or $hosts{$host}{'alive'} == 0)
     {
-        my $tmp_str = undef;
-        $tmp_str = qx/ping $ping_args -c 1 $host/
-          if ($hosts{$host}{'alive'} < 1);
-
-        # 0 when good
-        # 256 when not good
-        debug("*** pinging $host returned $?");
-
-        # return the opposite of ping's return output
-        $hosts{$host}{'alive'} = ($?) ? 0 : 1;
-        if ($hosts{$host}{'alive'} > 0)
-        {
-
-            # test to see if host is listening on SSH port
-            use IO::Socket;
-            my $socket =
-              IO::Socket::INET->new(
-                                    PeerAddr => $host,
-                                    PeerPort => $ssh_port,
-                                    Proto    => "tcp",
-                                    Type     => SOCK_STREAM
-                                   );
-            if (!$socket)
-            {
-                debug(
-                    "*** couldn't connect to remove host ssh port $ssh_port. $@\n"
-                );
-                $hosts{$host}{'alive'} = 0;
-            }
-            else
-            {
-                debug("*** ssh to $host on port $ssh_port is possible");
-                close($socket);
-            }
-        }
-    }
-    else
-    {
-        debug(
-            "*** uh? We should never reach this... This means that we previously check for this host already. All checks were skipped."
+        $hosts{$host}{'alive'} = 0; # be safe
+        # test to see if host is listening on SSH port
+        use IO::Socket;
+        my $socket =
+        IO::Socket::INET->new(
+            PeerAddr => $host,
+            PeerPort => $ssh_port,
+            Proto    => "tcp",
+            Type     => SOCK_STREAM
         );
+        if ($socket)
+        {
+            debug("*** ssh to $host on port $ssh_port is possible");
+            $hosts{$host}{'alive'} = 1;
+            close($socket);
+        }
+        else
+        {
+            debug(
+                "*** couldn't connect to remove host ssh port $ssh_port. $@\n"
+            );
+            $hosts{$host}{'alive'} = 0;
+        }
     }
     debug("is_alive returning " . $hosts{$host}{'alive'} . " for $host");
     return $hosts{$host}{'alive'};

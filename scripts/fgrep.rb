@@ -34,7 +34,6 @@ LICENSE: GPL
 
 
 require 'getoptlong'
-require 'rdoc/usage'
 
 opts = GetoptLong.new(
 [ '--debug',   '-D', GetoptLong::NO_ARGUMENT ],
@@ -48,12 +47,33 @@ $_verbose   = false
 $_debug     = false
 replacement = nil
 
+def usage
+   puts "fgrep.rb [OPTION] <REGEX>"
+   puts <<EOF
+  --debug, -D:
+     show colorful debugging information
+
+  --help, -h:
+     show help
+
+  --replace, -r <STRING>:
+     use STRING as replacement
+
+  --usage, -U, -?:
+     show usage
+
+  --verbose, -v
+     shows verbose messages
+EOF
+   exit 0
+end
+
 opts.each do |opt, arg|
    case opt
    when '--help'
-      RDoc::usage
+      usage
    when '--usage'
-      RDoc::usage
+      usage
    when '--verbose'
       $_verbose=true
    when '--debug'
@@ -141,4 +161,5 @@ begin
    end
 rescue MyError => e
    error e.message
+rescue Interrupt
 end

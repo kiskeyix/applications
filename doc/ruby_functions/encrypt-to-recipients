@@ -19,8 +19,8 @@ f = ARGV[1]
 r.nil? and usage 1
 f.nil? and usage 1
 
-test ?r, r or usage 2
-test ?r, f or usage 2
+File.readable? r or usage 2
+File.readable? f or usage 2
 
 recipients = Array.new
 

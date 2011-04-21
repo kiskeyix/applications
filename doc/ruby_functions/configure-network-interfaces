@@ -150,7 +150,7 @@ begin
     fd.puts "iface lo inet loopback\n\n"
 
     if bridge
-        test ?x,"/usr/sbin/brctl" or raise "Command brctl not found"
+        File.executable? "/usr/sbin/brctl" or raise "Command brctl not found"
         # configure each interface as a bridge with dhcp
         iflist.each do |net|
             net.chomp!

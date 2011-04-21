@@ -39,7 +39,7 @@ begin
                     s = "User logged in: #{k}\n" 
                     log.info "#{s}"
                     # notify-send is part of libnotify-bin
-                    if test ?x, "/usr/bin/notify-send"
+                    if File.executable? "/usr/bin/notify-send"
                         `notify-send -i error "#{s}"`
                     else
                         `zenity --error --text="#{s}"`

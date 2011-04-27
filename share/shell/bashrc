@@ -217,9 +217,6 @@ powerprompt	# this is the default prompt - might be slow
 alias bye='exit'
 alias abul='exit'
 
-#alias ssh='ssh -c blowfish'
-alias cvs='cvs -q -w -z3'
-
 # git-pull does not cut it for you?
 alias gitpull='git fetch origin; git rebase origin;'
 # how about git-push?
@@ -273,8 +270,6 @@ else
     alias swremove="echo command not found"
 fi
 
-alias bittorrent-console='bittorrent-console --max_upload_rate 4 --save_in .'
-
 alias ww=printusers
 
 # nifty way to rename files quickly ~/Applications/scripts/rename perl script
@@ -297,13 +292,15 @@ else
     alias rm='rm -i'
 fi
 
-if [[ -x "`command -v gls 2> /dev/null`" ]]; then
-    alias ls='gls -hF --color'
-elif [[ "Linux" = "`uname -s`" ]]; then
+_UNAME=`uname -s`
+if [[ "Linux" == $_UNAME || "Cygwin" == $_UNAME ]]; then
     alias ls='ls -hF --color' 
-elif [[ "Darwin" = "`uname -s`" ]]; then
-    alias ls='ls -GF' 
+elif [[ "Darwin" == $_UNAME ]]; then
+    alias ls='ls -GF --color' 
+elif [[ -x "`command -v gls 2> /dev/null`" ]]; then
+    alias ls='gls -hF --color'
 fi
+unset _UNAME
 
 if [[ -x "`command -v gcp 2> /dev/null`" ]]; then
     alias cp='gcp -i'

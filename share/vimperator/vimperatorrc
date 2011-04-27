@@ -1,23 +1,5 @@
-" embedded JavaScript is possible:
-" move the RSS icon from the now-hidden location bar to the status bar instead
-javascript <<EOF
-(function(){
-    var feedPanel = document.createElement("statusbarpanel");
-    feedPanel.setAttribute("id", "feed-panel-clone");
-    feedPanel.appendChild(document.getElementById("feed-button"));
-    feedPanel.firstChild.setAttribute("style", "padding: 0; max-height: 16px;");
-    document.getElementById("status-bar")
-            .insertBefore(feedPanel, document.getElementById("security-button"));
-})();
-EOF
-
 map ,s :mapc<CR>:cmapc<CR>:imapc<CR>:so<Space>~/.vimperatorrc<CR>
 map <C-r> :restart<CR>
-
-" plugin
-map T :twitter<Space>
-map ,l :copy<Space>titleAndURL<CR>:twitter<Space>predicante:<M-v><CR>
-map Y :twitter<Space>@<Space>
 
 " copy.js
 map c :copy<Space>

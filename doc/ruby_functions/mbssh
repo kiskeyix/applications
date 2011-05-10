@@ -49,12 +49,12 @@ require 'getoptlong'
 require 'rdoc/usage'
 
 opts = GetoptLong.new(
-    [ '--debug', '-D', GetoptLong::NO_ARGUMENT ],
-    [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
-    [ '--usage', '-U', '-?', GetoptLong::NO_ARGUMENT ],
-    [ '--children', '-c', '-t', GetoptLong::REQUIRED_ARGUMENT ],
-    [ '--user','--username', '-u', GetoptLong::REQUIRED_ARGUMENT ],
-    [ '--verbose', '-v', GetoptLong::NO_ARGUMENT ]
+[ '--debug', '-D', GetoptLong::NO_ARGUMENT ],
+[ '--help', '-h', GetoptLong::NO_ARGUMENT ],
+[ '--usage', '-U', '-?', GetoptLong::NO_ARGUMENT ],
+[ '--children', '-c', '-t', GetoptLong::REQUIRED_ARGUMENT ],
+[ '--user','--username', '-u', GetoptLong::REQUIRED_ARGUMENT ],
+[ '--verbose', '-v', GetoptLong::NO_ARGUMENT ]
 )
 
 $_debug = $DEBUG
@@ -68,14 +68,14 @@ opts.each do |opt, arg|
    when '--usage'
       RDoc::usage
    when '--children'
-       num_children = arg.to_i
+      num_children = arg.to_i
    when '--user'
-       user = arg.chomp
+      user = arg.chomp
    when '--verbose'
-       $_verbose = true
+      $_verbose = true
    when '--debug'
-       $_debug = true
-       $_verbose = true
+      $_debug = true
+      $_verbose = true
    end
 end
 num_children=10 if num_children < 0
@@ -85,39 +85,39 @@ clusters = ARGV.shift
 cmd  = ARGV.join(" ")
 
 if not clusters or cmd.size < 1
-    RDoc::usage
+   RDoc::usage
 end
 
 # helpers
 def resolv_hosts(hosts)
-    hosts.each do |host|
-        Resolv.getaddresses(host).each do |a|
-            yield a
-        end
-    end
+   hosts.each do |host|
+      Resolv.getaddresses(host).each do |a|
+         yield a
+      end
+   end
 end
 
 def is_alive(remote_host)
-    begin
-        true if TCPSocket.new(remote_host, 22)
-    rescue
-        false
-    end
+   begin
+      true if TCPSocket.new(remote_host, 22)
+   rescue
+      false
+   end
 end
 
 def join_all(list)
-    # wait for all threads to finish
-    all = list
-    main = Thread.main
-    current = Thread.current
-    all.each do |t|
-        t.join unless t == main or t == current
-    end
+   # wait for all threads to finish
+   all = list
+   main = Thread.main
+   current = Thread.current
+   all.each do |t|
+      t.join unless t == main or t == current
+   end
 end
 # end helpers
 
 if $_debug
-    p clusters
+   p clusters
 end
 
 # main()
@@ -127,24 +127,24 @@ $stdin.reopen("/dev/null", 'a')
 threads = []
 hosts = clusters.split(/,/)
 resolv_hosts(hosts) do |ip|
-    if threads.size >= num_children
-        puts "waiting before: #{ip}" if $_verbose
-        join_all threads
-        threads = []
-    end
-    if is_alive ip
-        threads << Thread.new(ip) do
-            $stdin.reopen("/dev/null", 'a')
+   if threads.size >= num_children
+      puts "waiting before: #{ip}" if $_verbose
+      join_all threads
+      threads = []
+   end
+   if is_alive ip
+      threads << Thread.new(ip) do
+         $stdin.reopen("/dev/null", 'a')
 
-            _c = "ssh -x #{user}#{ip} '#{cmd}'"
-            if $_debug
-                p _c
-            else
-                system(_c)
-            end
-        end
-    else
-        STDERR.puts "#{ip} skipped because is offline?"
-    end
+         _c = "ssh -x #{user}#{ip} '#{cmd}'"
+         if $_debug
+            p _c
+         else
+            system(_c)
+         end
+      end
+   else
+      STDERR.puts "#{ip} skipped because is offline?"
+   end
 end
 join_all threads

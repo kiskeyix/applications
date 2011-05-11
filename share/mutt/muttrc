@@ -29,7 +29,7 @@ set connect_timeout=90
 # set pop_delete=yes
 # set pop_reconnect=yes
 
-set certificate_file="~/.mutt-certificates" # save certificates in localhost
+#set certificate_file="~/.mutt-certificates" # save certificates in localhost
 
 set smart_wrap  # attempt to be smart about wrapping lines
 set allow_8bit	# Don't do any Quoted-Printable encoding on 8-bit data!

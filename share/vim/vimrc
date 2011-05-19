@@ -26,7 +26,7 @@ set bs=2		" allow backspacing over everything in insert mode
 set modeline            " reads modelines like '# vi: ft=foo :' lines
 
 " force utf-8
-set encoding=utf-8
+"set encoding=utf-8	" breaks gpg vim plugin
 set fileencodings=""
 " end utf-8
 

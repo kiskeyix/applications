@@ -1,0 +1,28 @@
+" vi: ft=vim :
+" Get gnupg.vim and place it in ~/.vim/plugin
+" http://www.vim.org/scripts/script.php?script_id=661
+"
+" Then source this from vim like: vim -u .vimrc MySecret.gpg
+"
+" Note: this is my first Vim script so do not laugh!
+" Luis Mondesi <lmondesi@bloomberg.net>
+" 2011-05-13 14:33 EDT
+"
+set nocompatible
+
+" returns List of GPG IDs from a file with lines:
+" pub:u:1024:17:7772313375572632:2011-03-11:::u:Luis Mondesi <lmondesi@bloomberg.net>::scESC:
+"
+" See: gpg --list-keys --with-colons | egrep '^pub'
+fun GetRecipients(file)
+   let _list = []
+   if !filereadable(a:file) | return _list | endif
+   for _line in readfile(a:file)
+       let _tok = split(_line,':')
+       call add(_list,_tok[4])
+   endfor
+   return _list
+endfun
+
+let GPGDefaultRecipients=GetRecipients("Private/recipients")
+"let GPGDebugLevel=3

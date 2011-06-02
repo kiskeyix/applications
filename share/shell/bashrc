@@ -296,7 +296,7 @@ _UNAME=`uname -s`
 if [[ "Linux" == $_UNAME || "Cygwin" == $_UNAME ]]; then
     alias ls='ls -hF --color' 
 elif [[ "Darwin" == $_UNAME ]]; then
-    alias ls='ls -GF --color' 
+    alias ls='ls -GF' 
 elif [[ -x "`command -v gls 2> /dev/null`" ]]; then
     alias ls='gls -hF --color'
 fi

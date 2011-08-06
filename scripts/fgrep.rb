@@ -138,7 +138,7 @@ begin
          tmp_file = file + ".#{$$}"
          rfile = open(tmp_file,"w")
       end
-      open(file,"r").each do |line|
+      open(file,"rb").each do |line|
          line_num += 1
          if replacement
             if line.gsub!(/#{regex}/,replacement)

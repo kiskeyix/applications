@@ -1,5 +1,0 @@
-#!/bin/sh
-# quick way to touch a file in Natilus
-
-touch untitle.txt
-

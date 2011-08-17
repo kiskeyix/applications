@@ -13,7 +13,7 @@ LICENSE: ___
 require 'optparse'
 require 'optparse/time'
 require 'ostruct'
-require 'pp'
+#require 'pp'
 
 CODES = %w[iso-2022-jp shift_jis euc-jp utf8 binary]
 CODE_ALIASES = { "jis" => "iso-2022-jp", "sjis" => "shift_jis" }

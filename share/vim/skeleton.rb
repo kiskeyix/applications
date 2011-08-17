@@ -1,35 +1,8 @@
 #!/usr/bin/env ruby
-# == Synopsis
-#
-# skeleton: foo bar
-#
-# == Usage
-#
-# skeleton [OPTION] ... <DIR>
-#
-# --debug, -D:
-#    show colorful debugging information
-#
-# --help, -h:
-#    show help
-#
-# --name, -n [name]:
-#    greet user by name, if name not supplied default is John
-#
-# --repeat, -r x:
-#    repeat x times
-#
-# --usage, -U, -?:
-#    show usage
-#
-# --verbose, -v
-#    shows verbose messages
-#
-# DIR: The directory in which to issue the greeting.
 
 =begin
 $Revision: 1.0 $
-$Date: 2007-03-01 21:41:46 $
+$Date: 2011-08-16 21:31 EDT $
 my_name < email@example.com >
 
 DESCRIPTION:
@@ -37,51 +10,109 @@ USAGE: skeleton --help
 LICENSE: ___
 =end
 
+require 'optparse'
+require 'optparse/time'
+require 'ostruct'
+require 'pp'
 
-require 'getoptlong'
-require 'rdoc/usage'
+CODES = %w[iso-2022-jp shift_jis euc-jp utf8 binary]
+CODE_ALIASES = { "jis" => "iso-2022-jp", "sjis" => "shift_jis" }
 
-opts = GetoptLong.new(
-[ '--debug',   '-D', GetoptLong::NO_ARGUMENT ],
-[ '--help',    '-h', GetoptLong::NO_ARGUMENT ],
-[ '--name',    '-n', GetoptLong::OPTIONAL_ARGUMENT ],
-[ '--repeat',  '-r', GetoptLong::REQUIRED_ARGUMENT ],
-[ '--usage',   '-U', '-?', GetoptLong::NO_ARGUMENT ],
-[ '--verbose', '-v', GetoptLong::NO_ARGUMENT ]
-)
+# The options specified on the command line will be collected in *options*.
+# We set default values here.
+options = OpenStruct.new
+options.library = []
+options.inplace = false
+options.encoding = "utf8"
+options.transfer_type = :auto
+options.verbose = false
 
-dir         = nil
-name        = nil
-repetitions = 1
-$_verbose   = false
-$_debug     = false
+opts = OptionParser.new do |opts|
+   opts.banner = "Usage: skeleton [options]"
 
-opts.each do |opt, arg|
-   case opt
-   when '--help'
-      RDoc::usage
-   when '--usage'
-      RDoc::usage
-   when '--verbose'
-      $_verbose=true
-   when '--debug'
-      $_debug=true
-   when '--repeat'
-      if arg.chomp.empty? || arg.to_i < 1
-         puts 'Repeat number is wrong (try --help)'
-         RDoc::usage 1
-      else
-         #puts "arg is:'" + arg + "'"
-         repetitions = arg.to_i
-      end
-   when '--name'
-      if not arg
-         name = 'John'
-      else
-         name = arg
-      end
+   opts.separator ""
+   opts.separator "Specific options:"
+
+   # Mandatory argument.
+   opts.on("-r", "--require LIBRARY",
+   "Require the LIBRARY before executing your script") do |lib|
+      options.library << lib
+   end
+
+   # Optional argument; multi-line description.
+   opts.on("-i", "--inplace [EXTENSION]",
+   "Edit ARGV files in place",
+   "  (make backup if EXTENSION supplied)") do |ext|
+      options.inplace = true
+      options.extension = ext || ''
+      options.extension.sub!(/\A\.?(?=.)/, ".")  # Ensure extension begins with dot.
+   end
+
+   # Cast 'delay' argument to a Float.
+   opts.on("--delay N", Float, "Delay N seconds before executing") do |n|
+      options.delay = n
+   end
+
+   # Cast 'time' argument to a Time object.
+   opts.on("-t", "--time [TIME]", Time, "Begin execution at given time") do |time|
+      options.time = time
+   end
+
+   # Cast to octal integer.
+   opts.on("-F", "--irs [OCTAL]", OptionParser::OctalInteger,
+   "Specify record separator (default \\0)") do |rs|
+      options.record_separator = rs
+   end
+
+   # List of arguments.
+   opts.on("--list x,y,z", Array, "Example 'list' of arguments") do |list|
+      options.list = list
+   end
+
+   # Keyword completion.  We are specifying a specific set of arguments (CODES
+   # and CODE_ALIASES - notice the latter is a Hash), and the user may provide
+   # the shortest unambiguous text.
+   code_list = (CODE_ALIASES.keys + CODES).join(',')
+   opts.on("--code CODE", CODES, CODE_ALIASES, "Select encoding",
+   "  (#{code_list})") do |encoding|
+      options.encoding = encoding
+   end
+
+   # Optional argument with keyword completion.
+   opts.on("--type [TYPE]", [:text, :binary, :auto],
+   "Select transfer type (text, binary, auto)") do |t|
+      options.transfer_type = t
+   end
+
+   # Boolean switch.
+   opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
+      options.verbose = v
+   end
+   opts.on("-D", "--[no-]debug", "Show debug messages") do |v|
+      options.debug = v
+   end
+
+   opts.separator ""
+   opts.separator "Common options:"
+
+   # No argument, shows at tail.  This will print an options summary.
+   # Try it and see!
+   opts.on_tail("-h", "--help", "Show this message") do
+      puts opts
+      exit
+   end
+
+   # Another typical switch to print the version.
+   opts.on_tail("--version", "Show version") do
+      puts OptionParser::Version.join('.')
+      exit
    end
 end
+
+opts.parse!(ARGV)
+
+$_verbose   = options.verbose
+$_debug     = options.debug
 
 # helpers
 class MyError < StandardError
@@ -97,7 +128,7 @@ def scolor(msg,color)
 end
 def debug(msg,val="")
    return if not $_debug
-  
+
    $stderr.print scolor("DEBUG: ",'green')
    if val
       # val.to_s is called for us:
@@ -117,42 +148,18 @@ end
 
 # main()
 
-# if ARGV.length != 1
-#    puts "Missing dir argument (try --help)"
-#    RDoc::usage 1
-#    exit 1 # never reaches here
-# end
-#
-# dir = ARGV.shift
-#
-# Dir.chdir(dir)
-# for i in (1..repetitions)
-#    print "Hello"
-#    if name
-#       print ", #{name}"
-#    end
-#    puts
-# end
-
 begin
    str = "Hello"
    val = "World"
 
    # demonstrates debug:
    debug(str,val)
-   debug("name",name)
-   debug("repetitions",repetitions)
 
    # demonstrates verbose:
    verbose("printing all variables: ")
 
-   print "#{name}, " if name
-
-   raise MyError, "Too many repetitions" if repetitions > 10
-
-   1.upto(repetitions) do
-      puts str + " " + val
-   end
+   # demonstrates raising/throwing errors
+   raise MyError, "Too many repetitions" if options.list and options.list.size > 10
 rescue MyError => e
    error e.message
 end

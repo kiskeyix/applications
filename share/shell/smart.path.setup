@@ -5,7 +5,7 @@
 # applications are installed under /opt/$PACKAGE/$VERSION/{bin,share/man}
 
 # sanity path
-OLDPATH=$PATH
+OLDPATH=$PATH:/sbin:/usr/sbin
 PATH=/bin:/usr/bin:/usr/local/bin:/opt/csw/gnu; export PATH
 
 # binary places to add first

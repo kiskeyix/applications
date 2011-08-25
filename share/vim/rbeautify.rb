@@ -78,7 +78,8 @@ module RBeautify
       return line
    end
 
-   def RBeautify.beautify_string(source, path = "")
+   def RBeautify.beautify_string(str, path = "")
+      source = str.split(/\n/)
       comment_block = false
       in_here_doc = false
       here_doc_term = ""
@@ -115,7 +116,7 @@ module RBeautify
                   in_here_doc = false if tline =~ %r{\s*#{here_doc_term}\s*}
                else # not in here_doc
                   if tline =~ %r{=\s*<<}
-                     here_doc_term = tline.sub(%r{.*=\s*<<-?\s*([_|\w]+).*},"\\1")
+                     here_doc_term = tline.sub(%r{.*=\s*<<\-?\s*([|\w]+).*},"\\1")
                      in_here_doc = here_doc_term.size > 0
                   end
                end

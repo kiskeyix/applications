@@ -14,5 +14,4 @@ opt
 pino
 share/mutt/mail*
 think*
-NS*.desktop
-tttt*.desktop
+*.desktop

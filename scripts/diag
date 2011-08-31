@@ -1,0 +1,2 @@
+#!/bin/sh
+while true; do sar -d -w -b -B -P ALL -q -p -n DEV -n EDEV -r 5 1|egrep -vi 'nodev|average|vif'; done

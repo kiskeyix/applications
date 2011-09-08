@@ -4,7 +4,7 @@
 # (0.2ms)
 #
 # Luis Mondesi <lemsx1@gmail.com>
-# 2011-09-08 14:36 EDT
+# 2011-09-08 14:37 EDT
 
 require 'socket'
 serv = TCPServer.new(8000)
@@ -20,6 +20,9 @@ begin
          retry
       end
    end
+rescue Interrupt
+   $stderr.puts "caught CTRL+C"
+end
 rescue Interrupt
    $stderr.puts "caught CTRL+C"
 end

@@ -23,6 +23,3 @@ begin
 rescue Interrupt
    $stderr.puts "caught CTRL+C"
 end
-rescue Interrupt
-   $stderr.puts "caught CTRL+C"
-end

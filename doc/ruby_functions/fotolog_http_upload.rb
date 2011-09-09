@@ -38,7 +38,7 @@
 =begin
 $Revision: 1.0 $
 $Date: 2009-04-09 18:36 EDT $
-Luis Mondesi <lmondesi@fotolog.biz>
+Luis Mondesi <lemsx1@gmail.com>
 
 DESCRIPTION:
 USAGE: fotolog_http_upload --help

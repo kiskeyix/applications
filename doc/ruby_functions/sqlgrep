@@ -57,7 +57,7 @@
 =begin
 $Revision: 0.3 $
 $Date: 2010-01-16 10:33 EST $
-Luis Mondesi <lmondesi@fotolog.com>
+Luis Mondesi <lemsx1@gmail.com>
 
 DESCRIPTION: use this to grep process IDs for a given set of queries
 USAGE: sqlgrep [OPTIONS] <-h HOST> <regex>

@@ -5,7 +5,7 @@
 # a simple script to encrypt to a list of GPG users given by recipients
 #
 # Sample Recipients File created with: gpg -k --with-colons | grep '^pub' > recipients
-# pub:u:1024:17:5C1814A42C53C3DF:2007-10-09:::u:Luis Mondesi (UNIX SysAdmin) <lmondesi@fotolog.com>::scaESCA:
+# pub:u:1024:17:5C1814A42C53C3DF:2007-10-09:::u:Luis Mondesi (UNIX SysAdmin) <lemsx1@gmail.com>::scaESCA:
 # pub:f:1024:17:CD2548594C516AF9:2002-01-16:::f:Luis Mondesi <lemsx1@gmail.com>::scESC:
 
 def usage(e=1)

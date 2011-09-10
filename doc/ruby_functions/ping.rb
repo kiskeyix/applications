@@ -22,10 +22,11 @@ begin
       e = Time.now - s
       if obj.duration
          times << obj.duration
+         puts "#{obj.duration} s (#{e})"
       else
          times << 0
+         puts "failed..."
       end
-      puts "#{obj.duration} s (#{e})"
    end
    avg = times.reduce(:+) / times.size
    puts "avg #{avg}"

@@ -8,10 +8,10 @@
 
 UNAME=`uname -s`
 if [ $UNAME = 'Darwin' ]; then
-    PS='ps -eco pid,user,rss,comm'
+    PS='ps -eco pid,ppid,user,rss,comm'
     SORT='sort --key=3 --reverse --numeric-sort'
 elif [ $UNAME = 'Linux' ] || [ $UNAME = 'SunOS' ]; then
-    PS='ps -eo pid,user,nice,rss,s,args'
+    PS='ps -eo pid,ppid,user,nice,rss,s,args'
     SORT='sort -k4 -r -n'
 else # cygwin
     PS='ps -ef'

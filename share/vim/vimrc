@@ -46,6 +46,10 @@ if version>=508
     set nomousehide     " Do not hide the mouse cursor in gVim when typing
 endif
 
+if version>=703
+    set relativenumber
+endif
+
 set fileformats=unix	" I want to see those ^M if I'm editing a dos file. See below (Key Mappings) for ^M removal!
 
 set expandtab		" use spaces as tabs :-) 

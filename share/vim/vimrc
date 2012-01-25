@@ -327,7 +327,7 @@ augroup END
 augroup ruby
     if !exists("autocommands_ruby_loaded")
         let autocommands_ruby_loaded = 1
-        au BufReadPre *.rb,*.erb,*.rake set sw=3 sts=3 nu
+        au BufReadPre *.rb,*.erb,*.rake set sw=3 sts=3
         au BufNewFile *.rb,*.erb 0r ~/.vim/skeleton.rb
         au BufNewFile *.rake,Rakefile 0r ~/.vim/skeleton.rake
     endif

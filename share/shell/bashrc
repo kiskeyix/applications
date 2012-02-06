@@ -314,6 +314,11 @@ else
     alias mv='mv -i'
 fi
 
+# Ruby 'rake' command can be problematic sometimes, use bundle exec
+if [[ -x `command -v bundle 2> /dev/null` ]]; then
+    alias rake='bundle exec rake'
+fi
+
 alias h='history'
 alias j='jobs -l'
 

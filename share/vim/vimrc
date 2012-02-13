@@ -46,15 +46,15 @@ if version>=508
     set nomousehide     " Do not hide the mouse cursor in gVim when typing
 endif
 
-if version>=703
-    set relativenumber
-endif
+"if version>=703
+"    set relativenumber
+"endif
 
 set fileformats=unix	" I want to see those ^M if I'm editing a dos file. See below (Key Mappings) for ^M removal!
 
 set expandtab		" use spaces as tabs :-) 
-set sts=4               " use 4 softtabstops
-set sw=4                " shiftwidth fixes tab
+set sts=3               " use 3 softtabstops
+set sw=3                " shiftwidth fixes tab
 
 set ignorecase		" for pattern machine
 set smartcase		" Except when a mix of case is given
@@ -245,7 +245,7 @@ if has("autocmd")
 " Default (global) group
 if !exists("autocommands_loaded")
     let autocommands_loaded = 1
-    au BufReadPre * set sw=4 tw=0 sts=4 nosm nocindent formatoptions=""
+    au BufReadPre * set sw=3 tw=0 sts=3 nosm nocindent formatoptions=""
 endif
 
 augroup mail
@@ -327,7 +327,7 @@ augroup END
 augroup ruby
     if !exists("autocommands_ruby_loaded")
         let autocommands_ruby_loaded = 1
-        au BufReadPre *.rb,*.erb,*.rake set sw=3 sts=3
+        au BufReadPre *.rb,*.erb,*.rake set sw=3 sts=3 nu
         au BufNewFile *.rb,*.erb 0r ~/.vim/skeleton.rb
         au BufNewFile *.rake,Rakefile 0r ~/.vim/skeleton.rake
     endif

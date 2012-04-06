@@ -234,6 +234,7 @@ alias vcs='git status'          # think 'info'
 alias vcl='git log'
 alias vcf='git fsck'
 alias vcg='git gc'              # --prune is wrong as default
+alias vct='git tag'
 
 alias diff='diff -burN'
 

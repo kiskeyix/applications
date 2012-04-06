@@ -257,17 +257,15 @@ alias diff='diff -burN'
 # TODO if apt-get not install, then use lsb_release
 # to know what distro we are running and set alias
 # accordingly using yast2, yum or even rpm and dpkg
-if [[ -f /etc/debian_release ]]; then
-    alias swinstall="sudo apt-get install "
-    alias swremove="sudo apt-get remove "
-elif [[ -f /etc/redhat-release ]]; then
+if command -v apt-get > /dev/null 2>&1; then
+    alias swinstall="sudo apt-get install"
+    alias swremove="sudo apt-get remove"
+    alias swupgrade="sudo apt-get update; sudo apt-get upgrade -y"
+elif command -v yum > /dev/null 2>&1; then
     # assume Fedora
-    alias swinstall="sudo yum install "
-    alias swremove="sudo yum remove "
-# TODO parse lsb_release output
-else
-    alias swinstall="echo command not found"
-    alias swremove="echo command not found"
+    alias swinstall="sudo yum install"
+    alias swremove="sudo yum remove"
+    alias swupgrade="sudo yum update"
 fi
 
 alias ww=printusers
@@ -280,13 +278,13 @@ alias nospace="rename 's/ /_/g' *"
 # I like using 'perl -pe' instead of stupid 'sed' and psed command is a clone of sed. So, we re-define it
 alias psed='perl -pe'
 
-if [[ -x "`command -v less 2> /dev/null`" ]]; then
+if command -v less > /dev/null 2>&1; then
     # less is just better than more
     # no pun intended
     alias more='less'
 fi
 
-if [[ -x "`command -v grm 2> /dev/null`" ]]; then
+if command -v grm > /dev/null 2>&1; then
     alias rm='grm -i'
 else
     alias rm='rm -i'
@@ -297,25 +295,25 @@ if [[ "Linux" == $_UNAME || "Cygwin" == $_UNAME ]]; then
     alias ls='ls -hF --color' 
 elif [[ "Darwin" == $_UNAME ]]; then
     alias ls='ls -GF' 
-elif [[ -x "`command -v gls 2> /dev/null`" ]]; then
+elif command -v gls > /dev/null 2>&1; then
     alias ls='gls -hF --color'
 fi
 unset _UNAME
 
-if [[ -x "`command -v gcp 2> /dev/null`" ]]; then
+if command -v gcp > /dev/null 2>&1; then
     alias cp='gcp -i'
 else
     alias cp='cp -i'
 fi
 
-if [[ -x "`command -v gmv 2> /dev/null`" ]]; then
+if command -v gmv > /dev/null 2>&1; then
     alias mv='gmv -i'
 else
     alias mv='mv -i'
 fi
 
 # Ruby 'rake' command can be problematic sometimes, use bundle exec
-if [[ -x `command -v bundle 2> /dev/null` ]]; then
+if command -v bundle > /dev/null 2>&1; then
     alias rake='bundle exec rake'
 fi
 
@@ -352,16 +350,11 @@ alias tm='tail -f /var/log/messages'
 alias cd='cd_pushd' # keep a stack of all directories visited
                     # use 'popd' to go back in the stack
 
-# adduser is a better implementaion of useradd
-if [[ -x "`command -v adduser 2> /dev/null`" ]]; then
-    alias useradd="adduser" 
-fi
-
 alias cdclose="eject -t" # close CDROM tray ;-)
 
 # TODO we need to see if vim exists in our PATH first
 ## Vim baby!
-if [[ -x "`command -v vim 2> /dev/null`" ]]; then
+if command -v vim > /dev/null 2>&1; then
     if [[ -f "$HOME/.vim/vimrc" ]]; then
         alias vi='vim -u "$HOME/.vim/vimrc"'
     else
@@ -373,7 +366,7 @@ fi
 ## (via ssh)
 if [[ -z "$SSH_TTY" && -x "`command -v gvim 2> /dev/null`" ]]; then
     alias vim="gvim"
-    if [[ -x "`command -v gvimdiff 2> /dev/null`" ]]; then
+    if command -v gvimdiff > /dev/null 2>&1; then
         alias vimdiff="gvimdiff"
     fi
 fi

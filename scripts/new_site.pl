@@ -82,19 +82,18 @@ my $APACHE_HOST_TEMPLATE=qq(
 ServerSignature Off
 # matches all .$SITE sub-domains     
 SetEnvIfNoCase Referer "^http.?://.*\.$SITE/" local_img_ref=1
-# matches kiskeyix.org domain (main)
+# matches $SITE domain (main)
 SetEnvIfNoCase Referer "^http.?://$SITE/" local_img_ref=1
 
 <VirtualHost $SERVER_IP>
     #ThrottlePolicy Volume $VOLUME $PERIOD
     ServerAdmin $WEBMASTER_EMAIL
-    #DocumentRoot /usr/share/phpslash/public_html
     DocumentRoot /srv/web/$SITE
     ServerName  $SITE
     ServerAlias www.$SITE test.$SITE
     ErrorLog /var/log/apache2/$SITE-error.log
     CustomLog /var/log/apache2/$SITE-access.log combined
-    #ErrorDocument 404 /sh/missing.php
+    #ErrorDocument 404 missing.html
 
     # 3 MB for POST and GET
     #LimitRequestBody 3145728
@@ -103,6 +102,9 @@ SetEnvIfNoCase Referer "^http.?://$SITE/" local_img_ref=1
         Options MultiViews Indexes
         Order allow,deny
 	allow from all
+        <IfModule mod_dir.c>
+            DirectoryIndex index.html
+        </IfModule>
     </Directory>
     # stop image pouchers!
     # http://apache-server.com/tutorials/ATimage-theft.html

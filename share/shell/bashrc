@@ -266,7 +266,7 @@ elif command -v yum > /dev/null 2>&1; then
     # assume Fedora
     alias swinstall="sudo yum install"
     alias swremove="sudo yum remove"
-    alias swupgrade="sudo yum update"
+    alias swupgrade="sudo yum -y update"
 fi
 
 alias ww=printusers
@@ -314,9 +314,9 @@ else
 fi
 
 # Ruby 'rake' command can be problematic sometimes, use bundle exec
-if command -v bundle > /dev/null 2>&1; then
-    alias rake='bundle exec rake'
-fi
+# if command -v bundle > /dev/null 2>&1; then
+#     alias rake='test -f Gemfile && bundle exec rake || rake'
+# fi
 
 alias h='history'
 alias j='jobs -l'

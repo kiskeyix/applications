@@ -29,7 +29,7 @@ module RBeautify
    # user-customizable values
 
    RBeautify::TabStr = " "
-   RBeautify::TabSize = 3
+   RBeautify::TabSize = 2
 
    # indent regexp tests
 

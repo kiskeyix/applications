@@ -1,6 +1,6 @@
 #!/bin/sh
-# "Luis Mondesi <lemsx1@gmail.com>"  
-#  2011-03-03 09:59 EST
+# Luis Mondesi <lmondesi@bloomberg.net>
+# 2012-07-27
 #
 # . ssh-agent-setup from bashrc-`hostname`
 #
@@ -12,20 +12,18 @@ if [ -S "$SSH_AUTH_SOCK" ]; then
     SSH_AGENT_PID=`echo $SSH_AUTH_SOCK|cut -d. -f2`
     export SSH_AUTH_SOCK SSH_AGENT_PID
 else
-    echo executing ssh-agent -s
-    eval `ssh-agent -s`
-fi
-ssh-add
-if [ $? != 0 ]; then
-    # apparently ssh-agent died without cleaning a socket?
     if [ -e "$SSH_AUTH_SOCK" ]; then
-        rm -f $SSH_AUTH_SOCK; unset SSH_AUTH_SOCK SSH_AGENT_PID
-        rmdir /tmp/ssh-*
+        rm -f $SSH_AUTH_SOCK
     fi
-    echo repairing ssh-agent
+    # remove all empty directories
+    rmdir /tmp/ssh-* > /dev/null 2>&1
+    unset SSH_AUTH_SOCK SSH_AGENT_PID
+    #echo executing: ssh-agent -s
     eval `ssh-agent -s`
-    ssh-add
-    if [ $? != 0 ]; then
-        echo Please launch "eval 'ssh-agent -s'" manually > /dev/stderr
-    fi
 fi
+for key in ~/.ssh/id_[rd]sa*; do
+    if echo $key | egrep -q '\.pub$'; then
+        continue
+    fi
+    ssh-add $key
+done

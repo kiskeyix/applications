@@ -1,12 +1,22 @@
 #!/bin/sh
 # Luis Mondesi <lmondesi@bloomberg.net>
-# 2012-07-27
+# 2012-07-30
 #
 # . ssh-agent-setup from bashrc-`hostname`
 #
 # License: GPL
 
 SSH_AUTH_SOCK=`find /tmp -name "agent.[0-9]*" -print|sort|tail -1`
+
+load_keys()
+{
+    for key in ~/.ssh/id_[rd]sa*; do
+        if echo $key | egrep -q '\.pub$'; then
+            continue
+        fi
+        ssh-add $key
+    done
+}
 
 if [ -S "$SSH_AUTH_SOCK" ]; then
     SSH_AGENT_PID=`echo $SSH_AUTH_SOCK|cut -d. -f2`
@@ -21,9 +31,6 @@ else
     #echo executing: ssh-agent -s
     eval `ssh-agent -s`
 fi
-for key in ~/.ssh/id_[rd]sa*; do
-    if echo $key | egrep -q '\.pub$'; then
-        continue
-    fi
-    ssh-add $key
-done
+if [ $(ssh-add -l|grep -v 'has no identities'|wc -l) -lt 1 ]; then
+    load_keys
+fi

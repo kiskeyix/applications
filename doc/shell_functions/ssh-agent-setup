@@ -41,5 +41,6 @@ load_keys()
 if [ -S "$SSH_AUTH_SOCK" ]; then
     SSH_AGENT_PID=`echo $SSH_AUTH_SOCK|cut -d. -f2`
     export SSH_AUTH_SOCK SSH_AGENT_PID
+else
+    load_keys
 fi
-load_keys

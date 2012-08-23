@@ -12,29 +12,31 @@ shells on all UNIX OSes known, including but not limited to:
   * CygWin
 
 To use this scripts, just copy this folder to ~/Applications 
-and make some simple setup steps:
+and make some simple setup steps.
 
-  cd ~/
-  ln -s Applications/share/shell/bashrc .bashrc
-  ln -s Applications/share/shell/bash_profile .bash_profile
-  ln -s Applications/share/shell/dir_colors .dir_colors
-  ln -s Applications/share/shell/inputrc .inputrc
+  - cd ~/
+  - wget http://kiskeyix.org/Applications.tar.bz2
+  - tar xjf Applications.tar.bz2
+  - ./Applications/scripts/update-host --master --local
 
-(there are other sample files in Applications/share/shell/ 
-that you might want to copy or symlink)
+update-host will then execute the following actions for you:
+  - ln -s Applications/share/shell/bashrc .bashrc
+  - ln -s Applications/share/shell/bash_profile .bash_profile
+  - ln -s Applications/share/shell/dir_colors .dir_colors
+  - ln -s Applications/share/shell/inputrc .inputrc
 
-You might want to use other share items like vim and mutt files:
+  * original files are saved with .bak extensions.
 
-  cd ~/
-  ln -s Applications/share/vim .vim
-  ln -s .vim/vimrc .vimrc
-  ln -s .vim/gvimrc .gvimrc
-  ln -s Applications/share/mutt .mutt
+If you do not want a functionality, simply remove the symlink like:
+
+    cd ~/
+    rm .vim # do not use .vim dir from ~/Applications/share/vim
+    rm .mutt # do not use .mutt from ~/Applications/share/mutt
 
 All changes needed to modify your environment should be done 
 on local files. For instance, to modify your bashrc settings:
 
-  touch ~/.bashrc-`hostname`
+    touch ~/.bashrc-`hostname`
 
 And add your changes to this new .bashrc-`hostname` file.
 
@@ -54,7 +56,7 @@ The actual files are saved to:
 That means that you can now use update-host to push your changes 
 to local computers with:
 
-  update-host [--send-key] system1.example.com system2.example.com system{3..10}.example.com
+    update-host [--send-key] system1.example.com system2.example.com system{3..10}.example.com
 
 NOTE: --send-key is optional and it should be used only once.
 It sends your public key to the ~/.ssh/authorized_keys file on 
@@ -67,7 +69,7 @@ are not prompted for passwords/passphrases).
 If you make changes to Applications and you want these to be sent to 
 remote systems instead of the tarball from --master, you can do:
 
-  update-host --local server1 server2 ... serverN
+    update-host --local server1 server2 ... serverN
 
 Ideas patches and the like, should be submitted to myself at:
 
@@ -77,4 +79,4 @@ Luis Mondesi < lemsx1 !! gmail !! c0m >
 able to type the address correctly)
 
 Created: 2007-06-07 11:59 EDT
-Updated: 2011-04-20 23:47 EDT
+Updated: 2012-08-23 00:24 EDT

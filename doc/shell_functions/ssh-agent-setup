@@ -39,10 +39,10 @@ load_keys()
     done
 }
 
-SSH_AGENT_PID=`echo $SSH_AUTH_SOCK|cut -d. -f2`
 if [ -S "$SSH_AUTH_SOCK" ]; then
     export SSH_AUTH_SOCK SSH_AGENT_PID
-    if ! pgrep ssh-agent | grep $SSH_AGENT_PID >/dev/null; then
+    if [ $(ssh-add -l|wc -l) -lt 1 ]; then
+        rm -f $SSH_AUTH_SOCK; rmdir `dirname $SSH_AUTH_SOCK`
         echo "starting new ssh-agent"
         eval `ssh-agent -s`
         load_keys

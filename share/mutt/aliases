@@ -9,6 +9,6 @@
 # most of these should go in your .muttrc-`hostname` file
 # unless you need them globally in all your servers/workstations
 # and places that you work :-)
-alias me "Luis M" <lemsx1@gmail.com> # me!
+#alias me "Luis M" <lemsx1@gmail.com> # me!
 #alias other email1, email2
 

@@ -43,9 +43,9 @@ fi
 
 # signature header
 if [ $STDOUT -eq 1 ]; then
-    printf -- "--$ENDLINE----)(----- $ENDLINE $NAME $ENDLINE $POSITION $ENDLINE $COMPANY $ENDLINE $PHONE $ENDLINE $EMAIL $ENDLINE"
+    printf -- "----)(----- $ENDLINE $NAME $ENDLINE $POSITION $ENDLINE $COMPANY $ENDLINE $PHONE $ENDLINE $EMAIL $ENDLINE"
 else
-    printf -- "--$ENDLINE----)(----- $ENDLINE $NAME $ENDLINE $POSITION $ENDLINE $COMPANY $ENDLINE $PHONE $ENDLINE $EMAIL $ENDLINE" > "$HOME/.signature"
+    printf -- "----)(----- $ENDLINE $NAME $ENDLINE $POSITION $ENDLINE $COMPANY $ENDLINE $PHONE $ENDLINE $EMAIL $ENDLINE" > "$HOME/.signature"
 fi
 
 # body

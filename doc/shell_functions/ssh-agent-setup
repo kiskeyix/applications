@@ -7,7 +7,7 @@
 # License: GPL
 
 SSH_AUTH_SOCK=`find /tmp -uid $UID -name "agent.[0-9]*" -print 2> /dev/null|sort|tail -1`
-
+SSH_AGENT_PID=`echo $SSH_AUTH_SOCK|cut -d. -f2`
 clean_old_sock()
 {
     rm -f $SSH_AUTH_SOCK
@@ -22,6 +22,7 @@ launch_agent()
 load_keys()
 {
     for key in ~/.ssh/id_[rd]sa*; do
+        echo loading $key
         if echo $key | egrep -q '\.pub$'; then
             continue
         fi
@@ -39,8 +40,13 @@ load_keys()
 }
 
 if [ -S "$SSH_AUTH_SOCK" ]; then
-    SSH_AGENT_PID=`echo $SSH_AUTH_SOCK|cut -d. -f2`
     export SSH_AUTH_SOCK SSH_AGENT_PID
+    if [ $(ssh-add -l|wc -l) -lt 1 ]; then
+        rm -f $SSH_AUTH_SOCK; rmdir `dirname $SSH_AUTH_SOCK`
+        echo "starting new ssh-agent"
+        eval `ssh-agent -s`
+        load_keys
+    fi
 else
     load_keys
 fi

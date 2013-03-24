@@ -1,2 +1,4 @@
 #!/bin/sh
+# use -f to pass a file like -f /var/log/sa/sa22
+# use -e and -s to pass end and start date respectively
 while true; do sar -d -w -b -B -P ALL -q -p -n DEV -n EDEV -r 5 1|egrep -vi 'nodev|average|vif'; done

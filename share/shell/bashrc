@@ -175,34 +175,35 @@ function powerprompt()
     {
         ## trick: first put command in command history, then find it in
         ## the list. TODO find a better way of doing this:
-        LOAD=$(command uptime 2> /dev/null | sed -e "s/.*: \([^,\ ]*\).*/\1/" -e "s/ //g")	
-        if [[ -z "${LOAD:-}" ]]; then
-            LOAD="NOLOAD_CMD"
+        _LOAD=$(command uptime 2> /dev/null | sed -e "s/.*: \([^,\ ]*\).*/\1/" -e "s/ //g")
+        if [[ -z "${_LOAD:-}" ]]; then
+            _LOAD="NOLOAD_CMD"
         fi
-        case $TERM in 
+        _GIT_BRANCH=$(__git_ps1 " (%s)")
+        case $TERM in
             *term | rxvt* | ansi )
                 # changes xterm title and icon to this string.
                 # the sequence is ESC]0+string+BELL
                 # where ESC is \033 and BELL is \007
-                echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD/$HOME/~}\007" ;;
+                echo -ne "\033]0;${USER}@${HOSTNAME}${_GIT_BRANCH}: ${PWD/$HOME/~}\007" ;;
         esac
-    } 
+    }
 
     PROMPT_COMMAND=_powerprompt;
     case $TERM in
         *term | rxvt* | vt100 | ansi )
-            PS1="${cyan}[\t - \$LOAD \u@\h]$NC \w \n\\$> " ;;
-            # \[\033]0;[\h/\u] \w\007\]" ;; this creates a problem 
-            # on Ubuntu 6.06/6.10's Gnome-Terminal. The first 32 (or so) 
-            # characters typed cause the cursor to re-scan the number 
-            # of characters from beginning to ending rapidly, 
-            # causing a weird (ie annoying) visual effect. 
+            PS1="${cyan}[\t - \$_LOAD \u@\h\$_GIT_BRANCH]$NC \w \n\\$> " ;;
+            # \[\033]0;[\h/\u] \w\007\]" ;; this creates a problem
+            # on Ubuntu 6.06/6.10's Gnome-Terminal. The first 32 (or so)
+            # characters typed cause the cursor to re-scan the number
+            # of characters from beginning to ending rapidly,
+            # causing a weird (ie annoying) visual effect.
             # Now echo -ne '' in _powerprompt fixes this.
         linux )
-            PS1="${cyan}[\t - \$LOAD]$NC\n[\u@\h \#] \w \n\\$> " ;;
+            PS1="${cyan}[\t - \$_LOAD]$NC\n[\u@\h \#\$_GIT_BRANCH] \w \n\\$> " ;;
         * )
             # sets no terminal title and has no color
-            PS1="[\t - \$LOAD \u@\h] \w \n\\$> " ;;
+            PS1="[\t - \$_LOAD \u@\h\$_GIT_BRANCH] \w \n\\$> " ;;
     esac
 }
 

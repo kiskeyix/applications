@@ -109,7 +109,13 @@ opts = OptionParser.new do |opts|
    end
 end
 
-opts.parse!(ARGV)
+begin
+   opts.parse!(ARGV)
+rescue OptionParser::MissingArgument => e
+   $stderr.puts e.message
+rescue => e
+   $stderr.puts "Unknown error: #{e.message}"
+end
 
 $_verbose   = options.verbose
 $_debug     = options.debug

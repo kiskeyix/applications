@@ -138,17 +138,21 @@ begin
          tmp_file = file + ".#{$$}"
          rfile = open(tmp_file,"w")
       end
-      open(file,"rb").each do |line|
-         line_num += 1
-         if replacement
+      begin
+        open(file,"rb").each do |line|
+          line_num += 1
+          if replacement
             if line.gsub!(/#{regex}/,replacement)
-               modified = true
-               report "#{file}[#{line_num}]", line, 'red'
+              modified = true
+              report "#{file}[#{line_num}]", line, 'red'
             end
             rfile.puts line
-         else
+          else
             report "#{file}[#{line_num}]", line, 'blue' if line =~ /#{regex}/
-         end
+          end
+        end
+      rescue => e
+        $stderr.puts "ERROR: while opening #{file}: #{e.class} #{e.message}"
       end
       rfile.close if rfile
       if tmp_file and File.file? tmp_file

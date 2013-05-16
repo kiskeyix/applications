@@ -245,7 +245,7 @@ if has("autocmd")
 " Default (global) group
 if !exists("autocommands_loaded")
     let autocommands_loaded = 1
-    au BufReadPre * set sw=3 tw=0 sts=3 nosm nocindent formatoptions=""
+    au BufReadPre * set sw=2 tw=0 sts=2 nosm nocindent formatoptions=""
 endif
 
 augroup mail
@@ -308,6 +308,7 @@ augroup perl
     if !exists("autocommands_perl_loaded")
         let autocommands_perl_loaded = 1
         au BufReadPre *.pl,*.ph,*.pm,*.t set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu
+        au FileType   perl set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu " files without extension
         " using ptags, generate a "tags" file in the same directory as the
         " Perl script is. To view what tags file are used, type: <ESC> :echo &tags
         " To set tag files use: set tags=./tags,tags 
@@ -327,7 +328,8 @@ augroup END
 augroup ruby
     if !exists("autocommands_ruby_loaded")
         let autocommands_ruby_loaded = 1
-        au BufReadPre *.rb,*.erb,*.rake set sw=2 sts=2 nu
+        "au BufReadPre    *.rb,*.erb,*.rake set sw=2 sts=2 nu
+        au FileType   ruby set sw=2 sts=2 nu " files without extension
         au BufNewFile *.rb,*.erb 0r ~/.vim/skeleton.rb
         au BufNewFile *.rake,Rakefile 0r ~/.vim/skeleton.rake
     endif
@@ -336,7 +338,8 @@ augroup END
 augroup python
     if !exists("autocommands_python_loaded")
         let autocommands_python_loaded = 1
-        au BufReadPre *.py set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e'
+        au BufReadPre *.py set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu
+        au FileType   python set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu " files without extension
     endif
 augroup END
 

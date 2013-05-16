@@ -53,8 +53,8 @@ endif
 set fileformats=unix	" I want to see those ^M if I'm editing a dos file. See below (Key Mappings) for ^M removal!
 
 set expandtab		" use spaces as tabs :-) 
-set sts=3               " use 3 softtabstops
-set sw=3                " shiftwidth fixes tab
+set sts=2               " use 2 softtabstops
+set sw=2                " shiftwidth fixes tab
 
 set ignorecase		" for pattern machine
 set smartcase		" Except when a mix of case is given

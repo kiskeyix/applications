@@ -362,6 +362,13 @@ augroup tcl
     endif
 augroup END
 
+augroup md
+  if !exists("autocommands_markdown_loaded")
+    let autocommands_markdown_loaded = 1
+    au BufRead *.md set ft=markdown
+  endif
+augroup END
+
 endif " end if has(autocmd)
 
 " Luis 2002-07-10 00:14

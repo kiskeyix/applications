@@ -1,0 +1,2 @@
+#!/bin/sh
+ip route get $1

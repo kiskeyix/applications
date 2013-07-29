@@ -179,7 +179,9 @@ function powerprompt()
         if [[ -z "${_LOAD:-}" ]]; then
             _LOAD="NOLOAD_CMD"
         fi
-        _GIT_BRANCH=$(__git_ps1 " (%s)")
+        if command -v __git_ps1; then
+            _GIT_BRANCH=$(__git_ps1 " (%s)")
+        fi
         case $TERM in
             *term | rxvt* | ansi )
                 # changes xterm title and icon to this string.

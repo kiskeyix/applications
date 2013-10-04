@@ -1,37 +1,34 @@
 # vi: ft=sh :
 # Luis Mondesi <lemsx1@gmail.com>
-# 2011-03-14 13:39 EDT
+# 2013-10-03
 # save this file as ~/.path.setup on machines where
-# applications are installed under /opt/$PACKAGE/$VERSION/{bin,share/man}
+# applications are installed under /opt/$PACKAGE/$VERSION/{bin,share/man} (opt-portage.git)
+# or /usr/local/Cellar (Mac HomeBrew)
 
 # sanity path
 OLDPATH=$PATH:/sbin:/usr/sbin
 PATH=/bin:/usr/bin:/usr/local/bin:/opt/csw/gnu; export PATH
 
-# binary places to add first
-PLACES=/usr/local:/opt
-
-## bin
-### new paths
+### binary places to add first
+PLACES=(/usr/local /opt)
+echo ${PLACES[@]}
 NPATH=
-for place in `echo $PLACES|sed 's/:/\n/g'`; do
+for place in ${PLACES[@]}; do
     for path in `find $place -type d -name bin 2>/dev/null` `find $place -type d -name sbin 2>/dev/null`; do
         NPATH=$path:$NPATH
     done
 done
 
 ### old paths
-#### NOTE: ruby is faster than sed|sort|uniq. LM
-#for opath in `echo $OLDPATH|sed 's/:/\n/g'|sort|uniq`;do
-PATH=`echo $NPATH:~/bin:$OLDPATH|ruby -ne 'ar=$_.gsub(/:+/,":").split(/:/).uniq; print ar.compact.join(":")'`
+PATH=`echo $NPATH:~/bin:$OLDPATH|tr ':' '\n'|sort -u|tr '\n' ':'`
 export PATH
 
 ## man
 NMANPATH=
-for mplace in `echo $PLACES|sed 's/:/\n/g'`; do
+for mplace in ${PLACES[@]}; do
     for mpath in `find $mplace -type d -name man 2>/dev/null`; do
         NMANPATH=$mpath:$NMANPATH
     done
 done
-MANPATH=`echo $NMANPATH:$MANPATH|ruby -ne 'ar=$_.gsub(/:+/,":").split(/:/).uniq; print ar.compact.join(":")'`
+MANPATH=`echo $NMANPATH:$MANPATH|tr ':' '\n'|sort -u|tr '\n' ':'`
 export MANPATH

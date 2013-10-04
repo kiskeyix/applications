@@ -6,12 +6,11 @@
 # or /usr/local/Cellar (Mac HomeBrew)
 
 # sanity path
-OLDPATH=$PATH:/sbin:/usr/sbin
+OLDPATH=`echo $PATH:/sbin:/usr/sbin|tr ':' '\n'|sort -u|tr '\n' ':'`
 PATH=/bin:/usr/bin:/usr/local/bin:/opt/csw/gnu; export PATH
 
 ### binary places to add first
 PLACES=(/usr/local /opt)
-echo ${PLACES[@]}
 NPATH=
 for place in ${PLACES[@]}; do
     for path in `find $place -type d -name bin 2>/dev/null` `find $place -type d -name sbin 2>/dev/null`; do
@@ -20,7 +19,10 @@ for place in ${PLACES[@]}; do
 done
 
 ### old paths
-PATH=`echo $NPATH:~/bin:$OLDPATH|tr ':' '\n'|sort -u|tr '\n' ':'`
+PATH=`echo $NPATH:~/bin|tr ':' '\n'|sort -u|tr '\n' ':'`:$OLDPATH
+if [[ -x `command -v ruby` ]]; then
+    PATH=$(ruby -e 'puts Gem.bindir'):$PATH
+fi
 export PATH
 
 ## man

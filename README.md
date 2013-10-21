@@ -94,12 +94,10 @@ remote systems instead of the tarball from --master, you can do:
 
 # Contributing #
 
-Ideas patches and the like, should be submitted to myself at:
-
-Luis Mondesi < lemsx1 !! gmail !! c0m >
-
-(Sorry for the mangled email address, but you as a human will be 
-able to type the address correctly)
+- Fork the repository on Github
+- Create a named feature branch (like `add_component_x`)
+- Write you change
+- Submit a Pull Request using Github
 
 Created: 2007-06-07 11:59 EDT
-Updated: 2012-08-23 00:24 EDT
+Updated: 2013-10-20 21:59 EDT

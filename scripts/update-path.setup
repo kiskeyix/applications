@@ -6,6 +6,9 @@
 # * /opt/$PACKAGE/$VERSION/{bin,share/man}  (opt-portage.git)
 # * /usr/local/Cellar                       (Mac HomeBrew)
 # * /usr/local/bin                          (always be first in list)
+#
+# Usage:
+# update-path.setup > ~/.path.setup
 
 # sanity path
 OLDPATH=`echo $PATH:/sbin:/usr/sbin|tr ':' '\n'|sort -u|tr '\n' ':'`

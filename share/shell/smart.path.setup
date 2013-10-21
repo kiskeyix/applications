@@ -13,13 +13,13 @@ PATH=/bin:/usr/bin:/usr/local/bin:/opt/csw/gnu; export PATH
 PLACES=(/usr/local /opt)
 NPATH=
 for place in ${PLACES[@]}; do
-    for path in `find $place -type d -name bin 2>/dev/null` `find $place -type d -name sbin 2>/dev/null`; do
+    for path in `find $place -depth 3 -type d -name bin 2>/dev/null` `find $place -type d -name sbin 2>/dev/null`; do
         NPATH=$path:$NPATH
     done
 done
 
 ### old paths
-PATH=`echo $NPATH:~/bin|tr ':' '\n'|sort -u|tr '\n' ':'`:$OLDPATH
+PATH=/usr/local/bin:`echo $NPATH:~/bin|tr ':' '\n'|sort -u|tr '\n' ':'`:$OLDPATH
 if [[ -x `command -v ruby` ]]; then
     PATH=$(ruby -e 'puts Gem.bindir'):$PATH
 fi

@@ -4,6 +4,7 @@
 # save this file as ~/.path.setup on machines where
 # applications are installed under /opt/$PACKAGE/$VERSION/{bin,share/man} (opt-portage.git)
 # or /usr/local/Cellar (Mac HomeBrew)
+# /usr/local/bin will always be first in list
 
 # sanity path
 OLDPATH=`echo $PATH:/sbin:/usr/sbin|tr ':' '\n'|sort -u|tr '\n' ':'`

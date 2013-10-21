@@ -1,10 +1,11 @@
+#!/bin/sh
 # vi: ft=sh :
 # Luis Mondesi <lemsx1@gmail.com>
-# 2013-10-03
-# save this file as ~/.path.setup on machines where
-# applications are installed under /opt/$PACKAGE/$VERSION/{bin,share/man} (opt-portage.git)
-# or /usr/local/Cellar (Mac HomeBrew)
-# /usr/local/bin will always be first in list
+# 2013-10-20
+# Finds applications installed under:
+# * /opt/$PACKAGE/$VERSION/{bin,share/man}  (opt-portage.git)
+# * /usr/local/Cellar                       (Mac HomeBrew)
+# * /usr/local/bin                          (always be first in list)
 
 # sanity path
 OLDPATH=`echo $PATH:/sbin:/usr/sbin|tr ':' '\n'|sort -u|tr '\n' ':'`
@@ -24,7 +25,7 @@ PATH=/usr/local/bin:`echo $NPATH:~/bin|tr ':' '\n'|sort -u|tr '\n' ':'`:$OLDPATH
 if [[ -x `command -v ruby` ]]; then
     PATH=$(ruby -e 'puts Gem.bindir'):$PATH
 fi
-export PATH
+echo PATH=$PATH
 
 ## man
 NMANPATH=
@@ -34,4 +35,6 @@ for mplace in ${PLACES[@]}; do
     done
 done
 MANPATH=`echo $NMANPATH:$MANPATH|tr ':' '\n'|sort -u|tr '\n' ':'`
-export MANPATH
+echo MANPATH=$MANPATH
+
+echo export PATH MANPATH

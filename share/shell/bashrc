@@ -111,7 +111,7 @@ if [[ 1 == $USE_BASH_COMPLETION ]]; then
         . /usr/local/etc/bash_completion
     elif [[ -r "/opt/csw/etc/bash_completion" ]]; then
         . /opt/csw/etc/bash_completion
-    elif [[ -f /opt/local/etc/bash_completion ]]; then
+    elif [[ -r /opt/local/etc/bash_completion ]]; then
         . /opt/local/etc/bash_completion
     fi
 fi

@@ -161,7 +161,7 @@ function fastprompt()
 {
     unset PROMPT_COMMAND
     case $TERM in
-	*term | rxvt | vt100 )	
+	*term* | rxvt | vt100 )	
 	    PS1="\u@\h:\W > \[\033]0;\u@\h:\w\007\]" ;;
 	*) 
 	    PS1="\u@\h:\W > " ;;
@@ -183,7 +183,7 @@ function powerprompt()
             _GIT_BRANCH=$(__git_ps1 " (%s)")
         fi
         case $TERM in
-            *term | rxvt* | ansi )
+            *term* | rxvt* | ansi )
                 # changes xterm title and icon to this string.
                 # the sequence is ESC]0+string+BELL
                 # where ESC is \033 and BELL is \007
@@ -193,7 +193,7 @@ function powerprompt()
 
     PROMPT_COMMAND=_powerprompt;
     case $TERM in
-        *term | rxvt* | vt100 | ansi )
+        *term* | rxvt* | vt100 | ansi )
             PS1="${cyan}[\t - \$_LOAD \u@\h\$_GIT_BRANCH]$NC \w \n\\$> " ;;
             # \[\033]0;[\h/\u] \w\007\]" ;; this creates a problem
             # on Ubuntu 6.06/6.10's Gnome-Terminal. The first 32 (or so)

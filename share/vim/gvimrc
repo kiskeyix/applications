@@ -21,8 +21,8 @@ set mousehide
 " (this is probably already done by vimrc, but just in case...)
 if &t_Co > 2 || has("gui_running")
   syntax on
-  ":colorscheme peachpuff
-  :colorscheme default
+  :colorscheme peachpuff
+  ":colorscheme default
 endif
 
 " open a big window please

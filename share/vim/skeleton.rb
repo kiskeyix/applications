@@ -15,9 +15,6 @@ require 'optparse/time'
 require 'ostruct'
 #require 'pp'
 
-CODES = %w[iso-2022-jp shift_jis euc-jp utf8 binary]
-CODE_ALIASES = { "jis" => "iso-2022-jp", "sjis" => "shift_jis" }
-
 # The options specified on the command line will be collected in *options*.
 # We set default values here.
 options = OpenStruct.new
@@ -34,55 +31,29 @@ opts = OptionParser.new do |opts|
    opts.separator "Specific options:"
 
    # Mandatory argument.
-   opts.on("-r", "--require LIBRARY",
-   "Require the LIBRARY before executing your script") do |lib|
-      options.library << lib
-   end
+#    opts.on("-r", "--require LIBRARY",
+#    "Require the LIBRARY before executing your script") do |lib|
+#       options.library << lib
+#    end
 
    # Optional argument; multi-line description.
-   opts.on("-i", "--inplace [EXTENSION]",
-   "Edit ARGV files in place",
-   "  (make backup if EXTENSION supplied)") do |ext|
-      options.inplace = true
-      options.extension = ext || ''
-      options.extension.sub!(/\A\.?(?=.)/, ".")  # Ensure extension begins with dot.
-   end
+   #opts.on("-i", "--inplace [EXTENSION]",
 
-   # Cast 'delay' argument to a Float.
-   opts.on("--delay N", Float, "Delay N seconds before executing") do |n|
-      options.delay = n
-   end
+#    # Cast 'time' argument to a Time object.
+#    opts.on("-t", "--time [TIME]", Time, "Begin execution at given time") do |time|
+#       options.time = time
+#    end
 
-   # Cast 'time' argument to a Time object.
-   opts.on("-t", "--time [TIME]", Time, "Begin execution at given time") do |time|
-      options.time = time
-   end
+#    # List of arguments.
+#    opts.on("--list x,y,z", Array, "Example 'list' of arguments") do |list|
+#       options.list = list
+#    end
 
-   # Cast to octal integer.
-   opts.on("-F", "--irs [OCTAL]", OptionParser::OctalInteger,
-   "Specify record separator (default \\0)") do |rs|
-      options.record_separator = rs
-   end
-
-   # List of arguments.
-   opts.on("--list x,y,z", Array, "Example 'list' of arguments") do |list|
-      options.list = list
-   end
-
-   # Keyword completion.  We are specifying a specific set of arguments (CODES
-   # and CODE_ALIASES - notice the latter is a Hash), and the user may provide
-   # the shortest unambiguous text.
-   code_list = (CODE_ALIASES.keys + CODES).join(',')
-   opts.on("--code CODE", CODES, CODE_ALIASES, "Select encoding",
-   "  (#{code_list})") do |encoding|
-      options.encoding = encoding
-   end
-
-   # Optional argument with keyword completion.
-   opts.on("--type [TYPE]", [:text, :binary, :auto],
-   "Select transfer type (text, binary, auto)") do |t|
-      options.transfer_type = t
-   end
+#    # Optional argument with keyword completion.
+#    opts.on("--type [TYPE]", [:text, :binary, :auto],
+#    "Select transfer type (text, binary, auto)") do |t|
+#       options.transfer_type = t
+#    end
 
    # Boolean switch.
    opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
@@ -130,7 +101,11 @@ def scolor(msg,color)
       'green'  => "\033[0;32m",
       'blue'   => "\033[0;34m"
    }
-   ansicolor = "#{colors[color.downcase]}#{msg}#{colors['norm']}"
+   if STDOUT.tty?
+     ansicolor = "#{colors[color.downcase]}#{msg}#{colors['norm']}"
+   else
+     msg
+   end
 end
 def debug(msg,val="")
    return if not $_debug
@@ -163,6 +138,8 @@ begin
 
    # demonstrates verbose:
    verbose("printing all variables: ")
+
+   puts "sample"
 
    # demonstrates raising/throwing errors
    raise MyError, "Too many repetitions" if options.list and options.list.size > 10

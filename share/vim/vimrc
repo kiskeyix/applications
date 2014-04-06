@@ -19,6 +19,8 @@
 "
 
 " Override default options
+"let g:snipMate = {}
+"let g:snippet_no_indentation_settings = 0
 
 set nocompatible	" we want vim's features, not stupid vi compatiblity
 set ruler		" shows ruler at the bottom of the screen

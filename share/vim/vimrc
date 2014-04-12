@@ -557,3 +557,18 @@ let g:rails_default_file='config/database.yml'
 set clipboard+=unnamed  " Yanks go on clipboard instead.
 set nowrap " wrapping lines off
 
+" map F8 to Hex editor mode ;)
+map ,hex :call HexMe()<CR>
+
+let $in_hex=0
+function HexMe()
+  set binary
+  set noeol
+  if $in_hex>0
+    :%!xxd -r
+    let $in_hex=0
+  else
+    :%!xxd
+    let $in_hex=1
+  endif
+endfunction

@@ -16,3 +16,4 @@ share/mutt/mail*
 think*
 *.desktop
 *.app
+share/vim/systags

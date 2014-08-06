@@ -38,7 +38,7 @@ require 'rubygems'
 require 'hpricot'
 require 'net/http'
 require 'getoptlong'
-require 'rdoc/usage'
+#require 'rdoc/usage'
 
 opts = GetoptLong.new(
 [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
@@ -49,9 +49,9 @@ opts = GetoptLong.new(
 opts.each do |opt, arg|
    case opt
    when '--help'
-      RDoc::usage
+#      RDoc::usage
    when '--usage'
-      RDoc::usage
+#      RDoc::usage
    when '--count'
       if arg == ''
          raise "number missing. See --usage"

@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 
 =begin
-$Revision: 1.0 $
+$Revision: 1.0.1 $
 $Date: 2011-08-16 21:31 EDT $
 my_name < email@example.com >
 
@@ -11,18 +11,16 @@ LICENSE: ___
 =end
 
 require 'optparse'
-require 'optparse/time'
 require 'ostruct'
-#require 'pp'
 
 # The options specified on the command line will be collected in *options*.
 # We set default values here.
 options = OpenStruct.new
-options.library = []
-options.inplace = false
-options.encoding = "utf8"
-options.transfer_type = :auto
-options.verbose = false
+# options.library = []
+# options.inplace = false
+# options.encoding = "utf8"
+# options.transfer_type = :auto
+options.verbose = 0 # levels 0 - 10
 
 opts = OptionParser.new do |opts|
    opts.banner = "Usage: skeleton [options]"
@@ -56,11 +54,12 @@ opts = OptionParser.new do |opts|
 #    end
 
    # Boolean switch.
-   opts.on("-v", "--[no-]verbose", "Run verbosely") do |v|
-      options.verbose = v
+   opts.on("-v", "--[no-]verbose", "Run verbosely. Increase level of verbosity by using multiple -v") do |v|
+      options.verbose += 1
    end
    opts.on("-D", "--[no-]debug", "Show debug messages") do |v|
       options.debug = v
+      options.verbose += 10
    end
 
    opts.separator ""
@@ -75,7 +74,7 @@ opts = OptionParser.new do |opts|
 
    # Another typical switch to print the version.
    opts.on_tail("--version", "Show version") do
-      puts OptionParser::Version.join('.')
+      puts "v1.0" # revision
       exit
    end
 end
@@ -118,9 +117,9 @@ def debug(msg,val="")
       $stderr.puts "#{scolor(msg,'blue')}"
    end
 end
-def verbose(msg)
-   return if not $_verbose
-   puts "#{msg}"
+def verbose(msg,level=1)
+   return if $_verbose <= 0
+   puts "#{msg}" if $_verbose >= level
 end
 def error(msg)
    $stderr.puts scolor("ERROR: #{msg}","red")
@@ -137,7 +136,8 @@ begin
    debug(str,val)
 
    # demonstrates verbose:
-   verbose("printing all variables: ")
+   verbose("printing verbose message level 1")
+   verbose("printing verbose message level 2",2)
 
    puts "sample"
 

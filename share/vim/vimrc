@@ -28,8 +28,8 @@ set bs=2		" allow backspacing over everything in insert mode
 set modeline            " reads modelines like '# vi: ft=foo :' lines
 
 " force utf-8
-"set encoding=utf-8	" This breaks gnupg.vim
-set fileencodings=""
+set encoding=utf-8
+set fileencodings=""    " empty uses `encoding` from above
 " end utf-8
 
 set ic			" comment this out if you want to search non case sensitive

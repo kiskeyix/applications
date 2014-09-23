@@ -4,7 +4,6 @@
 # DESCRIPTION: a simple way to list running processes
 # USAGE: lsproc [process_name]
 # LICENSE: GPL
-#
 
 UNAME=`uname -s`
 if [ $UNAME = 'Darwin' ]; then

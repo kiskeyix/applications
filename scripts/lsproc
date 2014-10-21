@@ -11,7 +11,7 @@ if [ $UNAME = 'Darwin' ]; then
     PS='ps -eco pid,ppid,user,rss,comm'
     SORT='sort --key=4 --reverse --numeric-sort'
 elif [ $UNAME = 'Linux' ] || [ $UNAME = 'SunOS' ]; then
-    PS='ps -eo pid,ppid,user,nice,rss,s,args'
+    PS='ps -eo pid,ppid,user,nice,rss,s,stime,args'
     SORT='sort -k5 -r -n'
 else # cygwin
     PS='ps -ef'

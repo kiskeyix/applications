@@ -99,10 +99,14 @@ if [[ -f "$HOME/.distcc/hosts" ]]; then
 fi
 ## end compiling
 
+## history format: YYYY-MM-DD HH:MM:SS
+HISTTIMEFORMAT='%F %T %t'
+
 ## one big export:
 export BASH_ENV PATH CVS_RSH EDITOR MAIL MANPATH HISTSIZE LC_ALL \
         LANG LANGUAGE CCACHE_PREFIX CCACHE_DIR DISTCC_HOSTS \
-        LESS LESSCHARSET PAGER MANPAGER MAKEFLAGS CONCURRENCY_LEVEL
+        LESS LESSCHARSET PAGER MANPAGER MAKEFLAGS CONCURRENCY_LEVEL \
+        HISTTIMEFORMAT
 
 ## read admin bashrc files ?? maybe we don't need these
 if [[ -f /etc/bashrc ]]; then

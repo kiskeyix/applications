@@ -1,0 +1,5 @@
+#!/bin/sh
+
+cmd="dpkg --get-selections \* > ~/Documents/selections.txt"
+echo $cmd
+eval "$cmd"

@@ -1,5 +1,10 @@
 #!/bin/sh
-
+# Luis Mondesi <lemsx1@gmail.com>
+# LICENSE: GPL
+#
+# restore selections with:
+# sudo dpkg --set-selections < ~/Documents/selections.txt
+# sudo apt-get dselect-upgrade # or sudo dselect install
 cmd="dpkg --get-selections \* > ~/Documents/selections.txt"
 echo $cmd
 eval "$cmd"

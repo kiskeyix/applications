@@ -37,6 +37,18 @@ function! RailsDetect(...) abort
     let b:rails_root = fnamemodify(file, ':p:h:h')
     return 1
   endif
+  let ofn = ""
+  let fns = []
+  while fn != ofn && fn !=# '/' && fn !=# '.'
+    call add(fns, fn)
+    if filereadable(fn . "/config/environment.rb")
+      let b:rails_root = resolve(fn)
+      return 1
+    endif
+    let ofn = fn
+    let fn = fnamemodify(ofn,':h')
+  endwhile
+  return 0
 endfunction
 
 " }}}1
@@ -44,9 +56,6 @@ endfunction
 
 if !exists('g:did_load_ftplugin')
   filetype plugin on
-endif
-if !exists('g:loaded_projectionist')
-  runtime! plugin/projectionist.vim
 endif
 
 augroup railsPluginDetect

@@ -332,7 +332,7 @@ augroup ruby
         let autocommands_ruby_loaded = 1
         "au BufReadPre    *.rb,*.erb,*.rake set sw=2 sts=2 nu
         au FileType   eruby,ruby set sw=2 sts=2 nu path=.,./lib " files without extension
-        au BufNewFile *.rb,*.erb 0r ~/.vim/skeleton.rb
+        au BufNewFile *.rb 0r ~/.vim/skeleton.rb
         au BufNewFile *.rake,Rakefile 0r ~/.vim/skeleton.rake
     endif
 augroup END

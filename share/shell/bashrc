@@ -375,6 +375,11 @@ if [[ -z "$SSH_TTY" && -x "`command -v gvim 2> /dev/null`" ]]; then
     if command -v gvimdiff > /dev/null 2>&1; then
         alias vimdiff="gvimdiff"
     fi
+elif [[ -z "$SSH_TTY" && -x "`command -v mvim 2> /dev/null`" ]]; then
+    alias vim="mvim"
+    if command -v mvimdiff > /dev/null 2>&1; then
+        alias vimdiff="mvimdiff"
+    fi
 fi
 
 alias dpkg-buildpackage='dpkg-buildpackage -rfakeroot'

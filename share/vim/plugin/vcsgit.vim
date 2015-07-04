@@ -235,7 +235,8 @@ endfunction
 
 " Function: s:gitFunctions.Update(argList) {{{2
 function! s:gitFunctions.Update(argList)
-	throw "This command is not implemented for git because file-by-file update doesn't make much sense in that context.  If you have an idea for what it should do, please let me know."
+        "throw "This command is not implemented for git because file-by-file update doesn't make much sense in that context.  If you have an idea for what it should do, please let me know."
+	return s:DoCommand(join(['push'] + a:argList), 'push', join(a:argList), {'allowNonZeroExit': 1})
 endfunction
 
 " Annotate setting {{{2

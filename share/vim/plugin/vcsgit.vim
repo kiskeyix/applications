@@ -237,6 +237,21 @@ endfunction
 function! s:gitFunctions.Update(argList)
         "throw "This command is not implemented for git because file-by-file update doesn't make much sense in that context.  If you have an idea for what it should do, please let me know."
         let output = s:VCSCommandUtility.system("git push")
+
+        if strlen(output) == 0
+		" Handle case of no output.  In this case, it is important to check the
+		" file status, especially since cvs edit/unedit may change the attributes
+		" of the file with no visible output.
+
+		checktime
+		return 0
+	endif
+
+        let originalBuffer = VCSCommandGetOriginalBuffer(bufnr('%'))
+	if originalBuffer == -1
+		throw 'Original buffer no longer exists, aborting.'
+	endif
+	call s:EditFile("push", originalBuffer, "git push")
 	return bufnr('%')
 endfunction
 

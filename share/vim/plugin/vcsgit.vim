@@ -253,8 +253,11 @@ function! s:gitFunctions.Update(argList)
 	"endif
 	"call s:EditFile("push", originalBuffer, "git push")
 
-	vert rightbelow split
+	rightbelow split
+	"vert rightbelow split
         enew
+        setlocal buftype=nofile
+	setlocal noswapfile
 
 	silent 0put=output
 	return bufnr('%')

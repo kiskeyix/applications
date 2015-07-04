@@ -253,6 +253,9 @@ function! s:gitFunctions.Update(argList)
 	"endif
 	"call s:EditFile("push", originalBuffer, "git push")
 
+	vert rightbelow split
+        enew
+
 	silent 0put=output
 	return bufnr('%')
 endfunction

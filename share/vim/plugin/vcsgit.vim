@@ -247,14 +247,7 @@ function! s:gitFunctions.Update(argList)
 		return 0
 	endif
 
-        "let originalBuffer = VCSCommandGetOriginalBuffer(bufnr('%'))
-	"if originalBuffer == -1
-	"	throw 'Original buffer no longer exists, aborting.'
-	"endif
-	"call s:EditFile("push", originalBuffer, "git push")
-
 	rightbelow split
-	"vert rightbelow split
         enew
         setlocal buftype=nofile
 	setlocal noswapfile

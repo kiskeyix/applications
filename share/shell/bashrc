@@ -236,7 +236,9 @@ alias vco='git checkout'        # think 'rcs/cvs/svn co'
 alias vcp='git pull --rebase'   # think 'checkout from remote host'
 alias vcu='git push'            # think 'update'
 alias vcs='git status'          # think 'info'
-alias vcl='git log'
+# This requires ~/.gitconfig to define logline. Example:
+#  git config --global alias.logline "log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
+alias vcl='git logline'
 alias vcf='git fsck'
 alias vcg='git gc'              # --prune is wrong as default
 alias vct='git tag'

@@ -523,6 +523,18 @@ if has("autocmd")
     \ if line("'\"") > 0 && line("'\"") <= line("$") |
     \   exe "normal g`\"" |
     \ endif
+  " Ruby
+  autocmd FileType ruby,eruby set omnifunc=rubycomplete#Complete
+  autocmd FileType ruby,eruby let g:rubycomplete_buffer_loading = 1
+  autocmd FileType ruby,eruby let g:rubycomplete_rails = 1
+  autocmd FileType ruby,eruby let g:rubycomplete_classes_in_global = 1
+
+  " if using the Rails.vim plugin, also open NERDTree
+  autocmd VimEnter *
+        \ if exists('b:rails_root') |
+        \ NERDTree |
+        \ endif
+
 endif " has("autocmd")
 
 " include other vim commands specific to this host (~/.vimrc-`hostname`)
@@ -531,11 +543,6 @@ if filereadable(expand("~/").".vimrc-".hostname)
     exe 'source '.expand("~/").".vimrc-".hostname
 endif
 
-" Ruby
-autocmd FileType ruby,eruby set omnifunc=rubycomplete#Complete
-autocmd FileType ruby,eruby let g:rubycomplete_buffer_loading = 1
-autocmd FileType ruby,eruby let g:rubycomplete_rails = 1
-autocmd FileType ruby,eruby let g:rubycomplete_classes_in_global = 1
 "improve autocomplete menu color
 highlight Pmenu ctermbg=238 gui=bold
 
@@ -552,12 +559,6 @@ map <silent> <m-n> :cn <cr>
  
 " Change which file opens after executing :Rails command
 let g:rails_default_file='config/database.yml'
-
-" if using the Rails.vim plugin, also open NERDTree
-autocmd VimEnter *
-  \ if exists('b:rails_root') |
-  \ NERDTree |
-  \ endif
 
 set clipboard+=unnamed  " Yanks go on clipboard instead.
 set nowrap " wrapping lines off

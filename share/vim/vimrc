@@ -508,7 +508,6 @@ if has("autocmd")
   " filetype plugin indent on
 
   if v:version >= 600
-    runtime! pubplugin/*.vim
     filetype plugin on
     filetype indent on
   else

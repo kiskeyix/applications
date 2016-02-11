@@ -554,6 +554,12 @@ map <silent> <m-n> :cn <cr>
 " Change which file opens after executing :Rails command
 let g:rails_default_file='config/database.yml'
 
+" if using the Rails.vim plugin, also open NERDTree
+autocmd VimEnter *
+  \ if exists('b:rails_root') |
+  \ NERDTree |
+  \ endif
+
 set clipboard+=unnamed  " Yanks go on clipboard instead.
 set nowrap " wrapping lines off
 

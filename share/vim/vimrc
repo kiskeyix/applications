@@ -530,7 +530,7 @@ if has("autocmd")
   autocmd VimEnter *
         \ if exists('b:rails_root') |
         \ NERDTree |
-        \ :winc j |
+        \ :wincmd w |
         \ endif
 
 endif " has("autocmd")

@@ -69,9 +69,6 @@ set updatetime=10000	" Number of milliseconds before doing an update
 set history=100		" Number of history commands to remember
 "set viminfo='50,\"200	" read/write a .viminfo file, remember filemarks for 50
 			" files and store 200 lines of registers
-
-set viminfo^=!          " add recently accessed projects menu (project plugin)
-
 set confirm		" To get a dialog when a command fails
 
 " For debugging
@@ -533,6 +530,7 @@ if has("autocmd")
   autocmd VimEnter *
         \ if exists('b:rails_root') |
         \ NERDTree |
+        \ :winc j |
         \ endif
 
 endif " has("autocmd")

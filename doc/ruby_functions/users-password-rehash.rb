@@ -21,6 +21,7 @@ end
 begin
   USERS.each do |user|
     user, password = user.split(/:/)
+    # $6$ refers to sha512
     puts "%s: %s" % [user, password.crypt("$6$%s$" % random_salt(8))]
   end
 rescue => e

@@ -262,10 +262,11 @@ alias diff='diff -burN'
 #     alias debuild="debuild -e MAKEFLAGS"
 # fi
 
-# TODO if apt-get not install, then use lsb_release
-# to know what distro we are running and set alias
-# accordingly using yast2, yum or even rpm and dpkg
-if command -v apt-get > /dev/null 2>&1; then
+if command -v apt > /dev/null 2>&1; then
+    alias swinstall="sudo apt install"
+    alias swremove="sudo apt remove"
+    alias swupgrade="sudo apt update; sudo apt upgrade -y"
+elif command -v apt-get > /dev/null 2>&1; then
     alias swinstall="sudo apt-get install"
     alias swremove="sudo apt-get remove"
     alias swupgrade="sudo apt-get update; sudo apt-get upgrade -y"

@@ -490,6 +490,12 @@ map Q gq
 " Make p in Visual mode replace the selected text with the "" register.
 vnoremap p <Esc>:let current_reg = @"<CR>gvs<C-R>=current_reg<CR><Esc>
 
+" search for visually hightlighted text
+vnoremap <c-f> y<ESC>/<c-r>"<CR>
+
+" then do: :%s//replace text/gc
+" it will use last search text (highlighted above) to replace with new text
+
 " Switch syntax highlighting on, when the terminal has colors
 if &t_Co > 2 || has("gui_running")
   syntax on

@@ -532,13 +532,6 @@ if has("autocmd")
   autocmd FileType ruby,eruby let g:rubycomplete_rails = 1
   autocmd FileType ruby,eruby let g:rubycomplete_classes_in_global = 1
 
-  " if using the Rails.vim plugin, also open NERDTree
-  autocmd VimEnter *
-        \ if exists('b:rails_root') |
-        \ NERDTree |
-        \ :wincmd w |
-        \ endif
-
 endif " has("autocmd")
 
 " include other vim commands specific to this host (~/.vimrc-`hostname`)

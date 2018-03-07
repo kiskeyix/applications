@@ -131,3 +131,6 @@ if [[ -f "$HOME/.bashrc" ]]; then
 	. "$HOME/.bashrc"
 fi
 ## EOF ##
+
+test -e "${HOME}/.iterm2_shell_integration.bash" && source "${HOME}/.iterm2_shell_integration.bash"
+

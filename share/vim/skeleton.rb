@@ -21,58 +21,58 @@ options = OpenStruct.new
 # options.library = []
 options.verbose = 0 # levels 0 - 10
 
-opts = OptionParser.new do |opts|
-  opts.banner = "Usage: skeleton [options]"
+opts = OptionParser.new do |o|
+  o.banner = "Usage: skeleton [options]"
 
-  opts.separator ""
-  opts.separator "Specific options:"
+  o.separator ""
+  o.separator "Specific options:"
 
   # Mandatory argument.
-  #    opts.on("-r", "--require LIBRARY",
+  #    o.on("-r", "--require LIBRARY",
   #    "Require the LIBRARY before executing your script") do |lib|
   #       options.library << lib
   #    end
 
   # Optional argument; multi-line description.
-  #opts.on("-i", "--inplace [EXTENSION]",
+  #o.on("-i", "--inplace [EXTENSION]",
 
   #    # Cast 'time' argument to a Time object.
-  #    opts.on("-t", "--time [TIME]", Time, "Begin execution at given time") do |time|
+  #    o.on("-t", "--time [TIME]", Time, "Begin execution at given time") do |time|
   #       options.time = time
   #    end
 
   #    # List of arguments.
-  #    opts.on("--list x,y,z", Array, "Example 'list' of arguments") do |list|
+  #    o.on("--list x,y,z", Array, "Example 'list' of arguments") do |list|
   #       options.list = list
   #    end
 
   #    # Optional argument with keyword completion.
-  #    opts.on("--type [TYPE]", [:text, :binary, :auto],
+  #    o.on("--type [TYPE]", [:text, :binary, :auto],
   #    "Select transfer type (text, binary, auto)") do |t|
   #       options.transfer_type = t
   #    end
 
   # Boolean switch.
-  opts.on("-v", "--[no-]verbose", "Run verbosely. Increase level of verbosity by using multiple -v") do |v|
+  o.on("-v", "--[no-]verbose", "Run verbosely. Increase level of verbosity by using multiple -v") do |v|
     options.verbose += 1
   end
-  opts.on("-D", "--[no-]debug", "Show debug messages") do |v|
+  o.on("-D", "--[no-]debug", "Show debug messages") do |v|
     options.debug = v
     options.verbose += 10
   end
 
-  opts.separator ""
-  opts.separator "Common options:"
+  o.separator ""
+  o.separator "Common options:"
 
   # No argument, shows at tail.  This will print an options summary.
   # Try it and see!
-  opts.on_tail("-h", "--help", "Show this message") do
-    puts opts
+  o.on_tail("-h", "--help", "Show this message") do
+    puts o
     exit
   end
 
   # Another typical switch to print the version.
-  opts.on_tail("--version", "Show version") do
+  o.on_tail("--version", "Show version") do
     puts VERSION
     exit
   end

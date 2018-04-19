@@ -4,6 +4,11 @@
 #
 # License: GPL
 
-for remote in $(git remote); do
-    git pull $remote $(git branch|grep '^*'|head -1|awk '{print $NF}')
-done
+if [[ -x $(command -v git) ]]; then
+    for remote in $(git remote); do
+        git pull $remote $(git branch|grep '^*'|head -1|awk '{print $NF}')
+    done
+else
+    echo "git command not found"
+    exit 1
+fi

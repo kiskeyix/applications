@@ -1,0 +1,9 @@
+#!/bin/bash
+# Syncs all upstream repositories to this branch
+# Luis Mondesi <lemsx1@gmail.com>
+#
+# License: GPL
+
+for remote in $(git remote); do
+    git pull $remote $(git branch|grep '^*'|head -1|awk '{print $NF}')
+done

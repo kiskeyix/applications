@@ -2,7 +2,7 @@
 # executes a command in a new screen session and detach
 #
 NAME=$1
-if [ -n "$NAME" ]; then
+if [ -n "$NAME" ] && [ $# -gt 1 ]; then
     shift
     for exec in $*; do
         #-S `basename $exec` - name

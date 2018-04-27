@@ -1,0 +1,7 @@
+#!/bin/bash
+
+HOSTNAME=$1
+
+screen -S $HOSTNAME.ssh -md ssh $HOSTNAME
+screen -ls
+screen -r $HOSTNAME.ssh

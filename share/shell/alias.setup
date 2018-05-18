@@ -8,7 +8,7 @@ alias vimrc='tar -cjvf ~/vimrc-`date -I`.tar.bz2 .vim'
 
 alias bashrc='tar -h -cjvf ~/bashrc-`date -I`.tar.bz2 .bashrc .bash_profile .dir_colors .inputrc'
 	
-alias scripts='tar --exclude="CVS" -cjvf ~/Applications-`date -I`.tar.bz2 Applications'
+alias tarscripts='tar --exclude="CVS" -cjvf ~/Applications-`date -I`.tar.bz2 Applications'
 
 alias ta='tail -f /var/log/apache2/access_log'
 alias te='tail -f /var/log/apache2/error.log'

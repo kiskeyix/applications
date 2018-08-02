@@ -360,6 +360,8 @@ augroup python
         let autocommands_python_loaded = 1
         au BufReadPre *.py set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu
         au FileType   python set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu " files without extension
+        " A simple python starter
+        au BufNewFile *.py 0r ~/.vim/skeleton.py
     endif
 augroup END
 

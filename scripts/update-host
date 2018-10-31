@@ -457,7 +457,7 @@ if ($MASTER)
         printf STDOUT ("%20s", "localhost");    # host padded
         if (!$err)
         {
-            printf STDOUT ("|%-" . $n_files . "s|", "#" x $j);    # progress
+            printf STDOUT ("\r|%-" . $n_files . "s|", "#" x $j);    # progress
             $SUCESS_FLAG++;
         }
         else
@@ -469,7 +469,7 @@ if ($MASTER)
             # last tar command failed?
             if (!$SUCESS_FLAG)
             {
-                printf STDOUT ("|%-" . $n_files . "s|", "!" x $n_failed)
+                printf STDOUT ("\r|%-" . $n_files . "s|", "!" x $n_failed)
                   ;    # failed progress
             }
             else
@@ -477,7 +477,7 @@ if ($MASTER)
 
                 # TODO keep the order of file failures
                 printf STDOUT (
-                               "|%-" . ($n_files - $n_failed) . "s",
+                               "\r|%-" . ($n_files - $n_failed) . "s",
                                "#" x ($n_files - $n_failed)
                               );    # successful progress
                 printf STDOUT ("%-" . ($n_failed) . "s|", "!" x $n_failed)

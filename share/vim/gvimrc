@@ -26,7 +26,7 @@ if &t_Co > 2 || has("gui_running")
 endif
 
 " open a big window please
-set lines=30
+set lines=50
 set columns=100
 
 " You can also specify a different font:

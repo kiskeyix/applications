@@ -1,0 +1,197 @@
+#!/usr/bin/env ruby
+# Maintainer: Luis Mondesi
+# License: GPLv3
+#
+# given a number of parameters, this script attempts to see how
+# often those events happened in the given log file. Example:
+#
+# syslog-frequency-report -f /var/log/messages TBK local3.err
+#
+# This will produce a report like:
+# || Hour || Msgs/h || Filter ||
+#  | 01 | 32      | TBK && local3.err |
+#
+# You may also use Regex to match a given pattern like: .*ba[0-9]+
+# This will match all appliance hostnames like: foo-ba1234 or ba1234
+#
+# syslog-frequency-report -f /var/log/messages 'my_string\[*.*\]*'
+#
+# Running report on /var/log/messages for strings my_string\[*.*\]*
+# || Hour || Msgs/h || Filter                            ||
+#  |   03 |    4150 |  my_string\[*.*\]*           |
+#  |   04 |   13735 |  my_string\[*.*\]*           |
+#  |   05 |   13703 |  my_string\[*.*\]*           |
+#  |   06 |   13504 |  my_string\[*.*\]*           |
+#  |   07 |     960 |  my_string\[*.*\]*           |
+# ||      ||        ||                                   ||
+#
+# If you provide more than one string, then all of them must match:
+#
+# syslog-frequency-report -f /var/log/system.log 'objc\[[0-9]+\]: ' '0x10c5cd048'
+#
+# Running report on /var/log/system.log for strings objc\[[0-9]+\]:  && 0x10c5cd048
+# || Hour || Msgs/h || Filter                            ||
+#  |   07 |       1 |  objc[61343]:  && 0x10c5cd048      |
+# ||      ||        ||                                   ||
+# 
+# Caveats:
+#
+# * Runs in about 1:25 min in a 2 million lines file to match 2 strings
+# * Note that strings are passed from the command line in any order.
+# * You may want to practice on a sample file to make sure your regexes match what you want
+#
+# Changes:
+# * 2019-11-03 - Added support to show the string matched not only the filter used - LM
+
+require 'optparse'
+require 'ostruct'
+
+options = OpenStruct.new
+$_debug = false
+opts = OptionParser.new do |o|
+  o.banner = "Usage: syslog-frequency-report [options] <-f FILE> <STRING_MATCH [STRING_MATCH]>"
+
+  o.separator ""
+  o.separator "Specific options:"
+
+  o.on("-f", "--file FILE", "Log file to sample frequency from") do |f|
+    options.file = f
+  end
+  o.on("-D", "--[no-]debug", "Show debug messages") do |v|
+      $_debug = v
+   end
+  o.on_tail("-h","-U", "--help", "--usage", "Show this message") do
+    puts opts
+    puts <<-EOS.gsub(/^\s*/,'')
+    STRING_MATCH strings or regex to match
+    EOS
+    exit 0
+  end
+end
+
+strings = []
+begin
+   opts.parse!(ARGV)
+   strings = ARGV.dup
+   strings.flatten!
+   strings.uniq!
+rescue OptionParser::MissingArgument => e
+   $stderr.puts e.message
+   exit 1
+rescue => e
+   $stderr.puts "Unknown error: #{e.message}"
+   exit 1
+end
+
+class Report
+  class NoSuchFile < StandardError; end
+
+  attr_accessor :file, :strings
+  def initialize(opts={})
+    raise NoSuchFile, "No such file" unless opts[:file] and File.exists? opts[:file]
+    @file = opts[:file]
+    @strings = (opts[:strings].is_a?(Array) and opts[:strings].size > 0) ? opts[:strings] : [%r{.*}]
+    @entries = {}
+  end
+  # we need to match every string in strings to every
+  # line read from @file. Any of the strings can be
+  # found in any order.
+  def parse
+    fd = case @file
+         when /\.gz$/
+           require 'zlib'
+           Zlib::GzipReader.new(File.open(@file,'rb'), external_encoding: 'ASCII-8BIT')
+         else
+           File.open(@file,'rb')
+         end
+    fd.each do |line|
+      next if line =~ /^\s*$/
+      # Oct 18 07:01:38 secaucus-ba30137 {user.info} god: msgs here
+      tokens = line.split(/\s+/)
+      hour = tokens[2].split(/:/).first
+      @entries[hour] ||= {}
+      matched_keys = []
+      @strings.each_with_index do |str,i|
+        line.match(%r{\b#{str}\b}i) do |md|
+          md.to_a.each do |val|
+            matched_keys << val
+            debug 'val', val
+            if matched_keys.size == @strings.size # all regex requested must match
+              _key = matched_keys.join(' && ')
+              @entries[hour][_key] ||= 0 # default to 0
+              @entries[hour][_key] += 1
+            end 
+          end
+        end
+      end
+      debug hour, @entries[hour]
+    end
+    fd.close
+    @entries
+  end
+  def print_report
+    puts "Running report on #{@file} for strings #{@strings.first.is_a?(Regexp) ? 'ALL': @strings.join(' && ')}"
+    print_header
+    print_lines
+    print_footer
+  end
+  private
+  def print_lines
+    #filter = @strings.first.is_a?(Regexp) ? 'ALL' : @strings.join(' && ')
+    @entries.keys.sort.each do |key|
+      @entries[key].keys.sort.each do |key2|
+        puts scolor(" |   %02d | % 7d |  % -32s  |" % [key.to_i,@entries[key][key2],key2],'green')
+      end
+    end
+  end
+  def print_header
+    puts scolor("|| Hour || Msgs/h || Filter                            ||",'blue')
+  end
+  def print_footer
+    puts "||      ||        ||                                   ||"
+  end
+end
+
+def scolor(msg,color)
+   colors = {
+      'red'    => "\033[1;31m",
+      'norm'   => "\033[0;39m",
+      'green'  => "\033[0;32m",
+      'blue'   => "\033[0;34m"
+   }
+   if STDOUT.tty?
+     ansicolor = "#{colors[color.downcase]}#{msg}#{colors['norm']}"
+   else
+     msg
+   end
+end
+def debug(msg,val="")
+   return if not $_debug
+
+   $stderr.print scolor("DEBUG: ",'green')
+   if val.is_a? FalseClass or val
+      # val.to_s is called for us:
+      $stderr.puts "#{scolor(msg,'blue')} = #{scolor(val,'red')}"
+   else
+      $stderr.puts "#{scolor(msg,'blue')}"
+   end
+end
+def error(msg)
+  $stderr.puts scolor("ERROR: #{msg}","red")
+end
+
+# main()
+begin
+  r = Report.new file: options.file, strings: strings
+  r.parse
+  r.print_report
+rescue Errno::EACCES => e
+  error e.message
+rescue Report::NoSuchFile => e
+  error " File must exist\n\n"
+  puts opts
+rescue Interrupt
+  puts scolor("Interrupt signal caught. Aborting...",'red')
+rescue => e
+  error "%s: %s" % [e.class, e.message]
+end

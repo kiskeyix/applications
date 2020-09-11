@@ -27,7 +27,7 @@ endif
 
 " open a big window please
 set lines=50
-set columns=100
+set columns=180
 
 " You can also specify a different font:
 " set guifont=-misc-fixed-medium-r-normal--14-130-75-75-c-70-iso8859-1

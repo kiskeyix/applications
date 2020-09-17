@@ -347,7 +347,7 @@ augroup ruby
     if !exists("autocommands_ruby_loaded")
         let autocommands_ruby_loaded = 1
         "au BufReadPre    *.rb,*.erb,*.rake set sw=2 sts=2 nu
-        au FileType   eruby,ruby set sw=2 sts=2 nu path=.,./lib " files without extension
+        au FileType   eruby,ruby set sw=2 sts=2 nu path=.,lib,,
 
         " this is cool when we are not in a Rails app
         au BufNewFile *.rb if !MyRailsDetect() | 0r ~/.vim/skeleton.rb | echo "# Turned off skeleton.rb" | endif

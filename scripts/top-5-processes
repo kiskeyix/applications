@@ -1,0 +1,4 @@
+#!/bin/bash
+# In Linux, display the 5 processes that are running the most
+
+cat /proc/*/task/*/stat | cut -d' ' -f 2 | sort | uniq -c | sort -grk 1 | head -n 5

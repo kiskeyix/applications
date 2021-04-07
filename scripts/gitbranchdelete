@@ -11,7 +11,7 @@
 if [[ -x `command -v git` ]]; then
     git checkout master 2> /dev/null || git checkout main
     git branch -d $1
-    git remote origin --delete $1
+    git push origin --delete $1
     git remote prune origin
 else
     echo "Git command missing" >> /dev/stderr

@@ -7,6 +7,7 @@
 if [[ -x $(command -v git) ]]; then
     for remote in $(git remote); do
         git pull $remote $(git branch|grep '^*'|head -1|awk '{print $NF}')
+        git remote prune $remote
     done
 else
     echo "git command not found"

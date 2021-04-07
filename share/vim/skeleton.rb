@@ -67,7 +67,7 @@ opts = OptionParser.new do |o|
   # No argument, shows at tail.  This will print an options summary.
   # Try it and see!
   o.on_tail("-h", "--help", "Show this message") do
-    puts o
+    puts opts
     exit
   end
 

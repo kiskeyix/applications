@@ -1,0 +1,28 @@
+#!/bin/bash
+#
+# Create a new tag matching the commit ID for the
+# tag to be renamed.
+# Delete the old tag from all remotes and local,
+# then push tags to all remotes.
+#
+# Luis Mondesi <lemsx1@gmail.com>
+# 2021-04-08
+#
+# License: GPL
+#
+if [[ $1 == '' ]] || [[ $2 == '' ]]; then
+    echo "Usage: $0 OLD_TAG NEW_TAG"
+    exit 1
+fi
+
+COMMIT_ID=$(git show -1 --pretty='format:"%h"' $1|head -1|sed 's/"//g')
+if [[ -n "$COMMIT_ID" ]]; then 
+    git tag -m "Release $2" -f $2 $COMMIT_ID
+    git tag -d $1
+
+    for remote in $(git remote); do
+        git push --tags $remote
+        git push $remote --delete $1
+    done
+fi
+# use `git rev-parse $TAG` to know you're using the right tag

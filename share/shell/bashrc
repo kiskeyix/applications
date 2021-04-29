@@ -161,9 +161,10 @@ function cd_pushd()
 
 # This should be the last function to be called
 # Start a screen session only if running under SSH
+# and not under screen itself
 function start_screen()
 {
-    if [[ -n $SSH_CLIENT ]]; then
+    if [[ -n $SSH_TTY ]] && [[ -z $STY ]]; then
         if command -v screen > /dev/null; then
             #
             # check if we have a screen session running, if not,

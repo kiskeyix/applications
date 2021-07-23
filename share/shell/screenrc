@@ -1,3 +1,5 @@
+defshell -bash # make bash my (login) shell (dash is important)
+
 autodetach on # Autodetach session on hangup instead of terminating screen completely
 
 startup_message off # Turn off the splash screen

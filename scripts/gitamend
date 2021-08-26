@@ -11,6 +11,12 @@ if [[ -x `command -v git` ]]; then
     git config --global user.name "$NAME"
     git config --global user.email "$EMAIL"
     git commit --amend --author="$NAME <$EMAIL>"
+    echo "You might want to make sure that you did no leave objects dangling"
+    echo "Dangling blobs are staged changes not committed"
+    echo "Dangling commit are commits not linked to any ref: commit, branch, tag, etc"
+    echo "git fsck --full # to check"
+    echo "git reflog expire --expire=now --all # expire all"
+    echo "git gc --prune=now # prune all now"
 else
     echo "Git command missing" >> /dev/stderr
     exit 1

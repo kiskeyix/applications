@@ -170,7 +170,7 @@ function start_screen()
             # check if we have a screen session running, if not,
             # start a new one and attach to it
             #
-            screen -xRR -S BashSession
+            screen -t "${USER}@${HOSTNAME}${_GIT_BRANCH}" -xRR -S BashSession
         fi
     fi
 }

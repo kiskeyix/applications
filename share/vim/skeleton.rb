@@ -22,7 +22,7 @@ options = OpenStruct.new
 options.verbose = 0 # levels 0 - 10
 
 opts = OptionParser.new do |o|
-  o.banner = "Usage: skeleton [options]"
+  o.banner = "Usage: #{File.basename $0} [options]"
 
   o.separator ""
   o.separator "Specific options:"
@@ -124,7 +124,8 @@ def verbose(msg,level=1)
   puts "#{msg}" if $_verbose >= level
 end
 def error(msg)
-  $stderr.puts scolor("ERROR: #{msg}","red")
+  prefix = 'ERROR: ' unless msg =~ /^\*ERROR:/
+  $stderr.puts scolor("#{prefix}#{msg}","red")
 end
 # end helpers
 

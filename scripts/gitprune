@@ -1,0 +1,16 @@
+#!/bin/bash
+# 
+# Save space on git repositories
+#
+# Usage: gitprune
+#
+# Luis Mondesi <lemsx1@gmail.com>
+# License: GPL
+
+if [[ -x `command -v git` ]]; then
+    git gc --aggressive --prune=now
+    git reflog expire --expire=now --all
+else
+    echo "Git command missing" >> /dev/stderr
+    exit 1
+fi

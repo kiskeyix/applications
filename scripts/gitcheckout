@@ -1,17 +1,21 @@
 #!/usr/bin/env ruby
 #
-# Makes my life easier to do a git checkout by:
+# Luis Mondesi <lemsx1@gmail.com> 
+# 2022-02-16
+# LICENSE: GPL
 #
-# 1. allow me to paste one or more URLs, plus text, and figure out the name for this branch
+# Makes my life easier to do a 'git checkout' by:
+#
+# 1. allowing me to paste one or more URLs, plus text, and figure out the name for this branch
 # 2. create a new branch from the current branch (say 'main')
 # 3. push this new branch to origin and,
 # 4. set a remote tracker for it
 #
 # Example:
-#    gitcheckout https://jira.prod.bloomberg.com/browse/MSEMGMTSVC-851 cloud customer rejection
+#    gitcheckout https://foo/browse/PROJECT-851 cloud customer rejection
 #    
-#    git checkout -b msemgmtsvc-851_cloud_customer_rejection
-#    git push -u origin msemgmtsvc-851_cloud_customer_rejection
+#    git checkout -b project-851_cloud_customer_rejection
+#    git push -u origin project-851_cloud_customer_rejection
 
 # given an array of strings, create a valid branch name
 # example: $0 http://foo/bar this is bar for TICKET_NUMBER -> 'bar_this_is_bar_for_TICKET_NUMBER'.downcase

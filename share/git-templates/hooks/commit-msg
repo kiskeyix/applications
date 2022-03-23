@@ -1,0 +1,132 @@
+#!/usr/bin/env ruby
+#
+# Luis Mondesi <lemsx1@gmail.com>
+# License: GPLv3
+# 2022-03-23
+#
+# Conventional Commits Git Hook
+#
+# This sript enforces conventional commits as defined in
+# https://www.conventionalcommits.org/en/v1.0.0/
+#
+# Synopsis
+#
+# mkdir -p ~/.git-templates/hooks
+# ln -s `pwd`/THIS_SCRIPT ~/.git-templates/hooks/commit-msg
+# chmod u+x ~/.git-templates/hooks/commit-msg
+# git config --global init.templatedir '~/.git-templates'
+#
+# Notes:
+#   * `git revert` and `git merge` rewrite might not work via commit-msg
+#     this is because git calls `git commit -n` by default
+
+# helper
+
+##
+# Checks if +msg+ is valid according to our config defintion
+# If config has rewrite for revert/merge/etc... it re-writes
+# the message file
+#
+# returns true/false (boolean)
+def commit_msg_invalid? msg_file, config
+  lines = IO.read(msg_file).split("\n")
+  subject = lines[0]
+  body = lines[1,lines.size]
+
+  types = config[:types]
+  revert = config[:rewrite][:revert]
+  merge = config[:rewrite][:merge]
+  min_length = config[:length][:min]
+  max_length = config[:length][:max]
+  rewrite_file = false
+
+  # re-write messages
+  case subject
+  when /^\s*Revert/
+    if revert
+      subject = 'revert: %s' % subject.gsub(/Revert/,'')
+      rewrite_file = true
+    end
+  when /^\s*Merge/
+    if merge
+      subject = 'merge: %s' % subject.gsub(/Merge/,'')
+      rewrite_file = true
+    end
+  end
+
+  type, message = subject.split(/:/)
+
+  if types.include?(type) && message.size >= min_length && message.size <= max_length
+    if rewrite_file
+      File.open(msg_file,'wb') do |fd|
+        fd.puts subject
+        fd.puts "\n"
+        fd.puts body
+      end
+    end
+    return false
+  end
+  # all other messages are invalid
+  puts subject
+  true
+end
+
+# defaults
+# you can change this by creating a file named: ~/.git-templates/commit-msg.config.json
+config = {
+  enabled: true, # enable checks
+  rewrite: {
+    revert: true, # TODO by default `git revert FOO` does a `git commit -n` which prevents commit-msg hook from running
+    merge: true,
+  },
+  length: {
+    min: 1,
+    max: 52,
+  },
+  types: [
+    "build",
+    "ci",
+    "docs",
+    "feat",
+    "fix",
+    "perf",
+    "refactor",
+    "style",
+    "test",
+    "chore",
+    "merge",
+    "revert",
+  ]
+} 
+
+# main()
+begin
+  config_file = File.join(ENV['HOME'],'.git-templates','commit-msg.config.json')
+  if File.exist?(config_file)
+    require 'json'
+    config = JSON.parse(IO.read(config_file))
+  end
+
+  # convenience variables
+  enabled=config[:enabled]
+  types=config[:types]
+  min_length=config[:length][:min]
+  max_length=config[:length][:max]
+
+  if enabled && commit_msg_invalid?(ARGV.first, config)
+    puts "\n\e[1m\e[31m[INVALID COMMIT MESSAGE]"
+    puts "------------------------\033[0m\e[0m"
+    puts "\e[1mValid types:\e[0m \e[34m#{types.join(', ')}\033[0m"
+    puts "\e[1mMin length (first line):\e[0m \e[34m#{min_length}\033[0m\n"
+    puts "\e[1mMax length (first line):\e[0m \e[34m#{max_length}\033[0m"
+
+    # exit with an error
+    exit 1
+  end
+rescue => e
+  $stderr.puts "\e[1m\e[31mERROR: #{e.class} #{e.message}.\033[0m\e[0m\n\n#{e.backtrace.join("\n")}"
+  exit 1
+rescue Interrupt => e
+  $stderr.puts "\e[1m\e[31mCaught CTRL+C. Exiting...\033[0m\e[0m"
+  exit 1
+end

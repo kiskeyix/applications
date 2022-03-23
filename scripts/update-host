@@ -134,6 +134,7 @@ my @_CONFIG_FILES = (
                      "Applications/share/vim",
                      "Applications/share/mutt",
                      "Applications/share/shell/screenrc",
+                     "Applications/share/git-templates",
                     );
 
 # files that should be tidied!

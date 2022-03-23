@@ -15,6 +15,7 @@
 # ln -s `pwd`/THIS_SCRIPT ~/.git-templates/hooks/commit-msg
 # chmod u+x ~/.git-templates/hooks/commit-msg
 # git config --global init.templatedir '~/.git-templates'
+# git config --global core.hooksPath '~/.git-templates/hooks'
 #
 # Notes:
 #   * `git revert` and `git merge` rewrite might not work via commit-msg

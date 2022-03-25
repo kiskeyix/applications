@@ -52,7 +52,7 @@ done
 if [[ -f 'metadata.rb' ]]; then
     if command -v codespell > /dev/null; then
         cookstyle -A recipes attributes spec test
-        git commit -m 'auto cookstyle fixes' -a
+        git commit -m 'fix: auto cookstyle' -a
     else
         echo "Do: gem install cookstyle"
         exit 1

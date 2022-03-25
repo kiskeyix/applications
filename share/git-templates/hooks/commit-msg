@@ -57,7 +57,7 @@ def commit_msg_invalid? msg_file, config
 
   type, message = subject.split(/:/)
   type.gsub!(/\s*\([^)]+\)\s*/,'')
-  if types.include?(type) && message.size >= min_length && message.size <= max_length
+  if types.include?(type) && message.to_s.size >= min_length && message.to_s.size <= max_length
     if rewrite_file
       File.open(msg_file,'wb') do |fd|
         fd.puts subject

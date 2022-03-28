@@ -49,8 +49,9 @@ do
 	fi
 done
 
+# cookbooks
 if [[ -f 'metadata.rb' ]]; then
-    if command -v codespell > /dev/null; then
+    if command -v cookstyle > /dev/null; then
         cookstyle -A recipes attributes spec test
         git commit -m 'fix: auto cookstyle' -a
     else
@@ -59,6 +60,24 @@ if [[ -f 'metadata.rb' ]]; then
     fi
     if command -v codespell > /dev/null; then
         codespell recipes/*
+    else
+        echo "WARN: codespell missing"
+        echo "Do: brew install codespell"
+    fi
+fi
+
+# Ruby on Rails or other Rack-based apps
+if [[ -f config.ru ]]; then
+    if command -v rubocop > /dev/null; then
+        rubocop app lib
+        git commit -m 'fix: auto rubocop' -a
+    else
+        echo "Do: gem install rubocop"
+        exit 1
+    fi
+    if command -v codespell > /dev/null; then
+        codespell app/*
+        codespell lib/*
     else
         echo "WARN: codespell missing"
         echo "Do: brew install codespell"

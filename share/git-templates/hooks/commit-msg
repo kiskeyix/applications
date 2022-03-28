@@ -6,7 +6,7 @@
 #
 # Conventional Commits Git Hook
 #
-# This sript enforces conventional commits as defined in
+# This script enforces conventional commits as defined in
 # https://www.conventionalcommits.org/en/v1.0.0/
 #
 # Synopsis

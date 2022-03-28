@@ -1,6 +1,14 @@
 #!/bin/sh
-
-##
+#
+# Luis Mondesi <lemsx1@gmail.com>
+# License: GPLv3
+# 2022-03-23
+#
+# Conventional Pre-push Git Hook
+#
+# This script checks pushes before sending them. If this is a Rack application or a chef cookbook
+# it will try to run rubocop or cookstyle respectively. It also runs codespell if found.
+#
 # Runs cookstyle with autocorrect on cookbooks. If corrections are done, they are automatically commited.
 #
 # This hook is called with the following parameters:
@@ -17,6 +25,18 @@
 #
 # This sample shows how to prevent push of commits where the log message starts
 # with "WIP" (work in progress).
+#
+# Synopsis
+#
+# mkdir -p ~/.git-templates/hooks
+# ln -s `pwd`/THIS_SCRIPT ~/.git-templates/hooks/pre-push
+# chmod u+x ~/.git-templates/hooks/pre-push
+# git config --global init.templatedir '~/.git-templates'
+# git config --global core.hooksPath '~/.git-templates/hooks'
+#
+# Notes:
+#   * `git revert` and `git merge` rewrite might not work via commit-msg
+#     this is because git calls `git commit -n` by default
 
 remote="$1"
 url="$2"

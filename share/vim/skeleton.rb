@@ -93,8 +93,13 @@ $_verbose   = options.verbose
 $_debug     = options.debug
 
 # helpers
-class MyError < StandardError
+class MyError < StandardError; end
+
+class MyExample
+  def initialize(opts={})
+  end
 end
+
 def scolor(msg,color)
   colors = {
     'red'    => "\033[1;31m",

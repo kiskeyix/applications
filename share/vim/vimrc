@@ -306,7 +306,8 @@ augroup END
 augroup perl
     if !exists("autocommands_perl_loaded")
         let autocommands_perl_loaded = 1
-        au BufReadPre *.pl,*.ph,*.pm,*.t set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu
+        let perl_fold = 1
+        au BufReadPre *.pl,*.ph,*.pm,*.t set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu  fdn=2
         au FileType   perl set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu " files without extension
         " using ptags, generate a "tags" file in the same directory as the
         " Perl script is. To view what tags file are used, type: <ESC> :echo &tags
@@ -346,8 +347,14 @@ augroup ruby
 
     if !exists("autocommands_ruby_loaded")
         let autocommands_ruby_loaded = 1
+        let ruby_fold = 1
+        let ruby_no_comment_fold = 1
+        set foldcolumn=4
+        " set number 
+        " set relativenumber
+
         "au BufReadPre    *.rb,*.erb,*.rake set sw=2 sts=2 nu
-        au FileType   eruby,ruby set sw=2 sts=2 nu path=.,lib,,
+        au FileType   eruby,ruby set sw=2 sts=2 nu path=.,lib,, fdn=2 fdo=all fcl=all
 
         " this is cool when we are not in a Rails app
         au BufNewFile *.rb if !MyRailsDetect() | 0r ~/.vim/skeleton.rb | echo "# Turned off skeleton.rb" | endif
@@ -368,7 +375,8 @@ augroup END
 augroup shell
     if !exists("autocommands_shell_loaded")
         let autocommands_shell_loaded = 1
-        au BufRead  profile,bashrc,.profile,.bashrc,.bash_*,.kshrc,*.sh,*.ksh,*.bash,*.env,.login,.cshrc,*.csh,*.tcsh,.z*,zsh*,zlog* set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu
+        let sh_fold_enabled = 4
+        au BufRead  profile,bashrc,.profile,.bashrc,.bash_*,.kshrc,*.sh,*.ksh,*.bash,*.env,.login,.cshrc,*.csh,*.tcsh,.z*,zsh*,zlog* set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu fdn=2 fdo=all fcl=all
         au FileType sh set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu
         " On new files do..."  
         au BufNewFile *.sh 0r ~/.vim/skeleton.sh

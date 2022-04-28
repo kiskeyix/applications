@@ -349,7 +349,7 @@ augroup ruby
         let autocommands_ruby_loaded = 1
         let ruby_fold = 1
         let ruby_no_comment_fold = 1
-        set foldcolumn=4
+        " set foldcolumn=4
         " set number 
         " set relativenumber
 

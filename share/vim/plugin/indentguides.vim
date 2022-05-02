@@ -9,8 +9,8 @@ let g:indentguides_spacechar = get(g:, 'indentguides_spacechar', '┆')
 let g:indentguides_tabchar = get(g:, 'indentguides_tabchar', '|')
 let g:indentguides_toggleListMode = get(g:, 'indentguides_toggleListMode', 1)
 let g:indentguides_guidewidth = get(g:, 'indentguides_guidewidth', &l:shiftwidth)
-let g:indentguides_conceal_color = get(g:, 'indentguides_conceal_color', 'ctermfg=238 ctermbg=NONE guifg=Grey27 guibg=NONE')
-let g:indentguides_specialkey_color = get(g:, 'indentguides_specialkey_color',  'ctermfg=238 ctermbg=NONE guifg=Grey27 guibg=NONE')
+let g:indentguides_conceal_color = get(g:, 'indentguides_conceal_color', 'ctermfg=238 ctermbg=NONE guifg=#ff8060 guibg=NONE')
+let g:indentguides_specialkey_color = get(g:, 'indentguides_specialkey_color',  'ctermfg=238 ctermbg=NONE guifg=#ff8060 guibg=NONE')
 
 function! s:SetIndentGuideHighlights(user_initiated)
   if index(g:indentguides_ignorelist, &filetype) == -1 || a:user_initiated

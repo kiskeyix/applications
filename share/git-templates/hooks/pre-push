@@ -89,7 +89,7 @@ fi
 # Ruby on Rails or other Rack-based apps
 if [[ -f config.ru ]]; then
     if command -v rubocop > /dev/null; then
-        rubocop app lib
+        rubocop -l --format simple app lib
         git commit -m 'fix: auto rubocop' -a
     else
         echo "Do: gem install rubocop"

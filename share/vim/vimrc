@@ -571,6 +571,8 @@ if filereadable(expand("~/").".vimrc-".hostname)
     exe 'source '.expand("~/").".vimrc-".hostname
 endif
 
+set completefunc=syntaxcomplete#Complete
+
 "improve autocomplete menu color
 highlight Pmenu ctermbg=238 gui=bold
 

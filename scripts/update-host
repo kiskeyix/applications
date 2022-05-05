@@ -17,7 +17,7 @@
 # CHANGES:
 # * 2008-09-10 14:14 EDT --links (DOLINKS) is now the default. Everything is kept under Applications tarball
 #
-my $VERSION="1.9";
+my $VERSION="1.10";
 
 use strict;
 $|++;
@@ -40,6 +40,7 @@ update-host - by Luis Mondesi L<<lemsx1@gmail.com>>
 =head1 SYNOPSIS
 
 B<update-host>  
+[-C,--tarball]
 [-D,--debug]
 [-d,--delete-obsolete]
 [--files <file1,file2,...>]
@@ -73,9 +74,13 @@ The format of the remote-hosts file is the same as /etc/hosts.
 
 =head1 EXAMPLES
 
+B<update-host>  --tarball
+
+Creates applications tarball in $LOCAL_PATH
+
 B<update-host>  --master --links --local
 
-updates localhost using files from the default local settings folder ($ENV{"HOME"}/Shared/Software/settings. See --local-path) and creates symlinks from Applications/share/* to the respective locations.
+updates localhost using files from the default local settings folder ($LOCAL_PATH. See --local-path) and creates symlinks from Applications/share/* to the respective locations.
 
 B<update-host>  --master --host URL
 
@@ -109,7 +114,7 @@ Creates tarball files for ~/Applications and sends these to the remote host HOST
 
 my $PVERSION          = 0;
 my $HELP              = 0;
-my $MASTER_HOST       = "http://lems.kiskeyix.org";
+my $MASTER_HOST       = "http://kiskeyix.org";
 my $LOCAL_PATH        = "$ENV{'HOME'}/Shared/Software/settings";
 my $REMOTE_HOSTS_FILE = "$ENV{'HOME'}/.remote-hosts";
 my $PG_KEY = "";    # when empty adds all for us... $ENV{'HOME'}."/.ssh/id_rsa";
@@ -197,12 +202,17 @@ my $USERNAME     = undef;
 my $PASSWORD     = undef;
 
 my $CONF_FILES = undef;    # comma separated list
+my $CREATE_APPLICATIONS_TARBALL = undef;
 
 ## GET OPTIONS ##
 
 =pod
 
 =over 8
+
+=item -C,--tarball
+
+Creates tarball in $LOCAL_PATH
 
 =item -D,--debug
 
@@ -240,7 +250,7 @@ This will create the Applications.tar.bz2, bashrc.tar.bz2, vimrc.tar.bz2 and mut
 
 =item --local-path PATH
 
-Sets $LOCAL_PATH to PATH instead of the default $ENV{"HOME"}/Shared/Software/settings
+Sets $LOCAL_PATH to PATH instead of the default $HOME/Shared/Software/settings
 
 =item -L,--symlinks,--links
 
@@ -315,6 +325,7 @@ GetOptions(
     'print-files'        => \$PRINT_FILES,
     'L|symlinks|links'   => \$DOLINKS,
     's|send-key'         => \$PKEY,
+    'C|tarball'          => \$CREATE_APPLICATIONS_TARBALL,
 
     # strings
     'k|key=s'      => \$PG_KEY,
@@ -380,6 +391,12 @@ if ((@FILES + 0) > 1)
 if ($PRINT_FILES)
 {
     print STDOUT (join(",", @FILES), "\n");
+    _exit_safe(0);
+}
+
+if ($CREATE_APPLICATIONS_TARBALL)
+{
+    create_applications_tarball();
     _exit_safe(0);
 }
 
@@ -803,6 +820,25 @@ sub debug
     print STDERR ("$RED $msg $NORM\n") if ($DEBUG);
 }
 
+# @desc creates tarball in $HOME/Share/settings/Applications.tar.bz2
+sub create_applications_tarball
+{
+    my $tarball = "Applications.tar.bz2";
+    my $EXCLUDE_ARGS="";
+    open(EXCLUDE,"< $ENV{'HOME'}/Applications/.gitignore");
+    while(<EXCLUDE>)
+    {
+        my $str = $_;
+        chomp($str);
+        $EXCLUDE_ARGS .= "--exclude=$str ";
+    }
+    close(EXCLUDE);
+    system(
+        "cd $ENV{'HOME'} && tar $EXCLUDE_ARGS --exclude='.git' -cjf $LOCAL_PATH/$tarball Applications"
+    );
+    print "# Created $LOCAL_PATH/$tarball" if $? == 0;
+}
+
 # @desc do all needed steps to update a given host
 # @return error string if any errors were found
 sub update_host
@@ -842,19 +878,7 @@ sub update_host
             die("Could not create directory $LOCAL_PATH. $!\n") if ($? != 0);
             if ($i =~ /Applications/)
             {
-                $i = "Applications.tar.bz2";    # sanity check
-                my $EXCLUDE_ARGS="";
-                open(EXCLUDE,"< Applications/.gitignore");
-                while(<EXCLUDE>)
-                {
-                    my $str = $_;
-                    chomp($str);
-                    $EXCLUDE_ARGS .= "--exclude=$str ";
-                }
-                close(EXCLUDE);
-                system(
-                    "tar $EXCLUDE_ARGS --exclude=\".git\" -cjf $LOCAL_PATH/$i Applications"
-                );
+                create_applications_tarball();
             }
             elsif ($i =~ /vim/)
             {

@@ -21,7 +21,7 @@ launch_agent()
 
 load_keys()
 {
-    for key in ~/.ssh/id_[rd]sa*; do
+    for key in ~/.ssh/id_[rd]sa* ~/.ssh/*/id_[rd]sa*; do
         echo loading $key
         if echo $key | egrep -q '\.pub$'; then
             continue

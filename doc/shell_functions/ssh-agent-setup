@@ -2,9 +2,11 @@
 # Luis Mondesi <lmondesi@bloomberg.net>
 # 2012-07-30
 #
-# . ssh-agent-setup from bashrc-`hostname`
+# . ssh-agent-setup # from ~/.profile
 #
 # License: GPL
+# CHANGES:
+#   2022-05-24 - adds logic to support Darwin
 
 if [ ! -S $SSH_AUTH_SOCK ]; then
     SSH_AUTH_SOCK=`find /tmp /var/folders -uid $UID -name "agent.[0-9]*" -print 2> /dev/null|sort|tail -1`

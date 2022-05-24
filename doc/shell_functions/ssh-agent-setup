@@ -6,8 +6,20 @@
 #
 # License: GPL
 
-SSH_AUTH_SOCK=`find /tmp -uid $UID -name "agent.[0-9]*" -print 2> /dev/null|sort|tail -1`
-SSH_AGENT_PID=`echo $SSH_AUTH_SOCK|cut -d. -f2`
+if [ ! -S $SSH_AUTH_SOCK ]; then
+    SSH_AUTH_SOCK=`find /tmp -uid $UID -name "agent.[0-9]*" -print 2> /dev/null|sort|tail -1`
+    if [ ! -S $SSH_AUTH_SOCK ]; then
+        SSH_AUTH_SOCK=`find /var/folders -uid $UID -name "agent.[0-9]*" -print 2> /dev/null|sort|tail -1`
+    fi
+fi
+
+if [ -S $SSH_AUTH_SOCK ]; then
+    echo export SSH_AUTH_SOCK=$SSH_AUTH_SOCK
+
+    SSH_AGENT_PID=`echo $SSH_AUTH_SOCK|cut -d. -f2`
+    echo export SSH_AGENT_PID=$SSH_AGENT_PID
+fi
+
 clean_old_sock()
 {
     rm -f $SSH_AUTH_SOCK
@@ -22,19 +34,19 @@ launch_agent()
 load_keys()
 {
     for key in ~/.ssh/id_[rd]sa* ~/.ssh/*/id_[rd]sa*; do
-        echo loading $key
+        echo "# Loading $key"
         if echo $key | egrep -q '\.pub$'; then
             continue
         fi
         ssh-add $key
         rc=$?
         if [ $rc = 2 ]; then
-            echo "Repairing ssh-agent ($rc)"
+            echo "# Repairing ssh-agent ($rc)"
             clean_old_sock
             launch_agent
             ssh-add $key
         elif [ $rc = 1 ]; then
-            echo "Your key $key could not be loaded"
+            echo "# Your key $key could not be loaded"
         fi
     done
 }
@@ -46,6 +58,8 @@ if [ -S "$SSH_AUTH_SOCK" ]; then
         echo "starting new ssh-agent"
         eval `ssh-agent -s`
         load_keys
+    else
+        echo "# Re-using agent $SSH_AUTH_SOCK"
     fi
 else
     load_keys

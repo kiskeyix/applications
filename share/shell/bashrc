@@ -159,22 +159,6 @@ function cd_pushd()
     fi
 }
 
-# This should be the last function to be called
-# Start a screen session only if running under SSH
-# and not under screen itself
-function start_screen()
-{
-    if [[ -n $SSH_TTY ]] && [[ -z $STY ]]; then
-        if command -v screen > /dev/null; then
-            #
-            # check if we have a screen session running, if not,
-            # start a new one and attach to it
-            #
-            screen -l -a -t "${USER}@${HOSTNAME}${_GIT_BRANCH}" -xRR -S BashSession
-        fi
-    fi
-}
-
 #---------------#
 #  Shell prompt #
 #---------------#
@@ -475,7 +459,22 @@ fi
 
 unset PRINTUSERS NAME POSITION COMPANY PHONE EMAIL QUOTE DEFAULT_QUOTE DEFAULT_LANG DEFAULT_LC_ALL DEFAULT_LANGUAGE HOST_PROFILE HOST_BASHRC SIGNATURE
 
-# very last thing is to start screen if needed (login screen shell)
-start_screen
+# very last thing is to start tmux/screen if needed (login screen shell)
+# Start a screen session only if running under SSH
+# and not under screen itself
+if [[ -n $SSH_TTY ]] && [[ -z $STY ]]; then
+    # we favor tmux in UTF-8 mode
+    if command -v tmux > /dev/null; then
+        tmux -CC -u attach
+    elif command -v screen > /dev/null; then
+        #
+        # check if we have a screen session running, if not,
+        # start a new one and attach to it
+        #
+        screen -l -a -t "${USER}@${HOSTNAME}${_GIT_BRANCH}" -xRR -S BashSession
+    else
+        echo "Neither tmux nor screen commands found"
+    fi
+fi
 ## EOF ##
 

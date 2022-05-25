@@ -465,7 +465,7 @@ unset PRINTUSERS NAME POSITION COMPANY PHONE EMAIL QUOTE DEFAULT_QUOTE DEFAULT_L
 if [[ -n $SSH_TTY ]] && [[ -z $STY ]]; then
     # we favor tmux in UTF-8 mode
     if command -v tmux > /dev/null; then
-        tmux -CC -u attach
+        tmux -CC -u # tmux -CC has || tmux -CC -u attach
     elif command -v screen > /dev/null; then
         #
         # check if we have a screen session running, if not,

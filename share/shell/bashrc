@@ -466,7 +466,7 @@ if [[ -n $SSH_TTY ]] && [[ -z $STY ]]; then
     # we favor tmux in UTF-8 mode
     if command -v tmux > /dev/null; then
         if [[ -z $TMUX ]]; then
-            tmux -CC -u # tmux -CC has || tmux -CC -u attach
+            tmux -CC -u new -A -s main
         fi
     elif command -v screen > /dev/null; then
         #

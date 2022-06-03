@@ -466,13 +466,13 @@ if [[ -n $SSH_TTY ]] && [[ -z $STY ]]; then
     # we favor tmux in UTF-8 mode
     if command -v tmux > /dev/null; then
         if [[ -z $TMUX ]]; then
-            tmux -CC -u new -A -s main || true
+            tmux -CC -u new -A -s main || tmux -u new -s main
         fi
     elif command -v screen > /dev/null; then
         #
         # check if we have a screen session running, if not,
         # start a new one and attach to it
-        #
+
         screen -l -a -t "${USER}@${HOSTNAME}${_GIT_BRANCH}" -xRR -S BashSession
     else
         echo "Neither tmux nor screen commands found"

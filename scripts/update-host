@@ -401,8 +401,7 @@ if ($CREATE_APPLICATIONS_TARBALL)
     _exit_safe(0);
 }
 
-my $j       = 0;
-my $n_files = @FILES + 0;
+my $total_steps = 3; # 1. prepare, 2. copy files, 3. unpack
 my $silent  = (!$VERBOSE) ? " > /dev/null 2>&1" : "";
 
 # update localhost from master and exit
@@ -411,6 +410,7 @@ if ($MASTER)
     my @failed      = ();    # array of files that failed
     my $FAIL_FLAG   = 0;
     my $SUCESS_FLAG = 0;
+    my $progress_chars = "";
 
     _mkdir("$ENV{'HOME'}/.backup");
     _mkdir("$ENV{'HOME'}/tmp");
@@ -446,7 +446,8 @@ if ($MASTER)
             next;
         }
         next if ($DOLINKS and $i =~ /bashrc|vim|mutt/i);    # skip shell config
-        $j++;
+        $progress_chars .= "#";
+        update_progress("localhost", $progress_chars);
         print STDOUT "\r";
         my $cmd = "";
         my $_zcat =
@@ -473,36 +474,26 @@ if ($MASTER)
         }
 
         my $err = system($cmd. $silent);
-        printf STDOUT ("%20s", "localhost");    # host padded
         if (!$err)
         {
-            printf STDOUT ("\r|%-" . $n_files . "s|", "#" x $j);    # progress
+            $progress_chars .= "#";
             $SUCESS_FLAG++;
         }
         else
         {
             $FAIL_FLAG++;
             push(@failed, $i);
-            my $n_failed = $#failed + 1;
 
             # last tar command failed?
             if (!$SUCESS_FLAG)
             {
-                printf STDOUT ("\r|%-" . $n_files . "s|", "!" x $n_failed)
-                  ;    # failed progress
-            }
-            else
-            {
-
-                # TODO keep the order of file failures
-                printf STDOUT (
-                               "\r|%-" . ($n_files - $n_failed) . "s",
-                               "#" x ($n_files - $n_failed)
-                              );    # successful progress
-                printf STDOUT ("%-" . ($n_failed) . "s|", "!" x $n_failed)
-                  ;                 # failed progress
+                $progress_chars .= "!";
             }
         }
+        update_progress("localhost", $progress_chars);
+        # fake since we do not have a 3rd step
+        $progress_chars .= "#";
+        update_progress("localhost", $progress_chars);
     }
     print STDERR ("\nlocalhost: These files failed: " . join(" ", @failed))
       if ($FAIL_FLAG);
@@ -847,9 +838,10 @@ sub update_host
     my $h           = shift;
     my @failed      = ();      # array of failes that failed
     my $tar         = "tar";
-    my $j           = 0;       # number of files done
     my $SUCESS_FLAG = 0;
     my $FAIL_FLAG   = 0;
+
+    my $progress_chars = "";
 
     # sanity check. make sure host is alive:
     return "ERROR: host $h is dead or no ssh server on port $ssh_port\n"
@@ -903,15 +895,16 @@ sub update_host
                 die("What is this?? $i?\n");
             }
         }
-        $j++;
-        print STDOUT "\r";    # return cursor to beginning of line
-        printf STDOUT ("%20s", $h)
-          ;                   # host name padded to print progressbar correctly
-
-
         my $scp_cmd = "scp $LOCAL_PATH/$i " . $USERNAME . "$h:$TMP/ ";
         print $scp_cmd."\n\n" if $VERBOSE;
         system($scp_cmd . $silent);
+        if ($? == 0)
+        {
+            $progress_chars .= "#";
+        } else {
+            $progress_chars .= "!";
+        }
+        update_progress($h, $progress_chars);
 
         my $_zcat    = ($i =~ /\.bz2$/i) ? "bzcat" : "zcat";    # zcat or bzcat?
         my $_tar_arg = ($i =~ /\.bz2$/i) ? "j"     : "z";       # gzip or bzip2?
@@ -927,40 +920,43 @@ sub update_host
         if (!$err)
         {
             $SUCESS_FLAG++;
-            printf STDOUT ("|%-" . $n_files . "s|", "#" x $j);    # progress
+            $progress_chars .= "#";
         }
         else
         {
             $FAIL_FLAG++;
             push(@failed, $i);
-            my $n_failed = $#failed + 1;
 
             # last tar command failed?
             if (!$SUCESS_FLAG)
             {
-                printf STDOUT ("|%-" . $n_files . "s|", "!" x $n_failed)
-                  ;    # failed progress
-            }
-            else
-            {
-
-                # TODO keep the order of file failures
-                printf STDOUT (
-                               "|%-" . ($n_files - $n_failed) . "s",
-                               "#" x ($n_files - $n_failed)
-                              );    # successful progress
-                printf STDOUT ("%-" . ($n_failed) . "s|", "!" x $n_failed)
-                  ;                 # failed progress
+                $progress_chars .= "!";
             }
         }
+        update_progress($h, $progress_chars);
 
         if ($REMOVE_FILES)
         {
             system(  "ssh "
-                   . $USERNAME
-                   . $h
-                   . " command rm -f '$TMP/$i' "
-                   . $silent);
+                . $USERNAME
+                . $h
+                . " command rm -f '$TMP/$i' "
+                . $silent);
+            if ($? == 0)
+            {
+                $progress_chars .= "#";
+            }
+            else
+            {
+                $progress_chars .= "!";
+            }
+            update_progress($h, $progress_chars);
+        }
+        else
+        {
+            # fake since we do not have a 3rd step
+            $progress_chars .= "#";
+            update_progress($h, $progress_chars);
         }
     }
 
@@ -1094,3 +1090,10 @@ sub _exit_safe
     exit $exit{$status};
 }
 
+sub update_progress
+{
+    my $number_of_steps = $total_steps;
+    my $host = shift;
+    my $chars = shift;
+    printf STDOUT ("\r%20s|%-" . $number_of_steps . "s|", $host, $chars);
+}

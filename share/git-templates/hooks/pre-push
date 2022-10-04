@@ -84,7 +84,12 @@ if [[ -f 'metadata.rb' ]]; then
         codespell recipes/*
     else
         echo "WARN: codespell missing"
-        echo "Do: brew install codespell"
+        uname=`uname -s`
+        if [[ $uname == "Darwin" ]]; then
+            echo "Do: brew install codespell"
+        else
+            echo "Do: sudo pip3 install codespell"
+        fi
     fi
 fi
 

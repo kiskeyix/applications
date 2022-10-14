@@ -466,7 +466,12 @@ if [[ -n $SSH_TTY ]] && [[ -z $STY ]]; then
     # we favor tmux in UTF-8 mode
     if command -v tmux > /dev/null; then
         if [[ -z $TMUX ]]; then
-            tmux -CC -u new -A -s main || tmux attach || tmux -u new -s main
+            # we want to use controlling windows if tmux supports it (2.x)
+            # if not fallback to a new session on older tmux (1.x)
+            # Use CTRL+Space s to see other sessions (or CTRL+b s)
+            # This setup allows us to open multiple windows to the same server, and
+            # have independent input.
+            tmux -CC -u new -A -s main || tmux -u new
         fi
     elif command -v screen > /dev/null; then
         #

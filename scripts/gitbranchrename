@@ -1,0 +1,26 @@
+#!/bin/bash
+# Renames a branch and sets it as tracking branch to remote 'origin'
+#
+# Usage: gitbranchrename OLD_NAME NEW_NAME
+#
+# Example: gitbranchrename master main
+#
+# Luis Mondesi <lemsx1@gmail.com>
+# License: GPL
+
+if [[ -x `command -v git` ]]; then
+    set -e
+    if git fetch --all; then
+        git branch -m $1 $2
+        git branch -u origin/$2 $2
+        git remote set-head origin -a
+        git remote prune origin
+        git push -u origin $2
+    else
+        echo "Could not fetch all branches from origins" >> /dev/stderr
+        exit 1
+    fi
+else
+    echo "Git command missing" >> /dev/stderr
+    exit 1
+fi

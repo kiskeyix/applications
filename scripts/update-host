@@ -141,6 +141,7 @@ my @_CONFIG_FILES = (
                      "Applications/share/shell/screenrc",
                      "Applications/share/shell/tmux.conf",
                      "Applications/share/git-templates",
+                     "Applications/share/shell/iterm2_shell_integration.bash",
                     );
 
 # files that should be tidied!
@@ -259,7 +260,7 @@ Do symlinks instead of unpacking bashrc.tar.bz2, vimrc.tar.bz2, muttrc.tar.bz2. 
 
 .bashrc -> Applications/share/shell/bashrc
 
-.bash_profile -> Applications/share/shell/bashrc
+.bash_profile -> Applications/share/shell/bash_profile
 
 .inputrc -> Applications/share/shell/inputrc
 
@@ -268,6 +269,8 @@ Do symlinks instead of unpacking bashrc.tar.bz2, vimrc.tar.bz2, muttrc.tar.bz2. 
 .vim -> Applications/share/vim
 
 .mutt -> Applications/share/mutt
+
+.iterm2_shell_integration.bash -> Applications/share/shell/iterm2_shell_integration.bash
 
 See @_CONFIG_FILES
 

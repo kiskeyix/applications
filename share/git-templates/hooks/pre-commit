@@ -1,0 +1,8 @@
+#!/bin/sh
+
+branch="$(git branch --show-current 2> /dev/null || git rev-parse --abbrev-ref HEAD)"
+
+if [ "$branch" = "master" ] || [ "$branch" = "main" ]; then
+  echo "You can't commit directly to '$branch' branch"
+  exit 1
+fi

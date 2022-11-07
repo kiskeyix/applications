@@ -84,6 +84,10 @@ remote systems:
 
     update-host --local server1 server2 ... serverN
 
+# Testing
+
+    bundle exec rake test
+
 # Contributing #
 
 - Fork the repository on Github

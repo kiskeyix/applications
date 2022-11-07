@@ -1,5 +1,22 @@
 #!/bin/sh
-
+#
+# Conventional Pre-commit Git Hook
+#
+# This script checks to which branch you're committing. It prevents you from committing
+# directly to either 'master' or 'main' branch so you get into the habit of doing:
+#
+#   git checkout -b new_branch_name
+#   git add .
+#   git commit -m 'fix: foo bar'
+#   git push -u new_branch_name origin
+#
+# Synopsis
+#
+# ln -s `pwd`/share/git-templates ~/.git-templates
+# chmod u+x ~/.git-templates/hooks/*
+# git config --global init.templatedir '~/.git-templates'
+# git config --global core.hooksPath '~/.git-templates/hooks'
+#
 branch="$(git branch --show-current 2> /dev/null || git rev-parse --abbrev-ref HEAD)"
 
 if [ "$branch" = "master" ] || [ "$branch" = "main" ]; then

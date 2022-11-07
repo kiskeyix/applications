@@ -20,6 +20,7 @@ VERSION="0.0.1"
 options = OpenStruct.new
 # options.library = []
 options.verbose = 0 # levels 0 - 10
+options.debug = false
 
 opts = OptionParser.new do |o|
   o.banner = "Usage: #{File.basename $0} [options]"
@@ -89,48 +90,47 @@ rescue => e
   exit 2
 end
 
-$_verbose   = options.verbose
-$_debug     = options.debug
-
 # helpers
 class MyError < StandardError; end
 
 class MyExample
   def initialize(opts={})
+    @debug = opts[:debug]
+    @verbose = opts[:verbose] || 0
   end
-end
 
-def scolor(msg,color)
-  colors = {
-    'red'    => "\033[1;31m",
-    'norm'   => "\033[0;39m",
-    'green'  => "\033[0;32m",
-    'blue'   => "\033[0;34m"
-  }
-  if STDOUT.tty?
-    ansicolor = "#{colors[color.downcase]}#{msg}#{colors['norm']}"
-  else
-    msg
+  def scolor(msg,color)
+    colors = {
+      'red'    => "\033[1;31m",
+      'norm'   => "\033[0;39m",
+      'green'  => "\033[0;32m",
+      'blue'   => "\033[0;34m"
+    }
+    if STDOUT.tty?
+      ansicolor = "#{colors[color.downcase]}#{msg}#{colors['norm']}"
+    else
+      msg
+    end
   end
-end
-def debug(msg,val="")
-  return if not $_debug
+  def debug(msg,val="")
+    return if not @debug
 
-  $stderr.print scolor("DEBUG: ",'green')
-  if val
-    # val.to_s is called for us:
-    $stderr.puts "#{scolor(msg,'blue')} = #{scolor(val,'red')}"
-  else
-    $stderr.puts "#{scolor(msg,'blue')}"
+    $stderr.print scolor("DEBUG: ",'green')
+    if val
+      # val.to_s is called for us:
+      $stderr.puts "#{scolor(msg,'blue')} = #{scolor(val,'red')}"
+    else
+      $stderr.puts "#{scolor(msg,'blue')}"
+    end
   end
-end
-def verbose(msg,level=1)
-  return if $_verbose <= 0
-  puts "#{msg}" if $_verbose >= level
-end
-def error(msg)
-  prefix = 'ERROR: ' unless msg =~ /^\*ERROR:/
-  $stderr.puts scolor("#{prefix}#{msg}","red")
+  def verbose(msg,level=1)
+    return if @verbose <= 0
+    puts "#{msg}" if @verbose >= level
+  end
+  def error(msg)
+    prefix = 'ERROR: ' unless msg =~ /^\*ERROR:/
+    $stderr.puts scolor("#{prefix}#{msg}","red")
+  end
 end
 # end helpers
 
@@ -140,12 +140,14 @@ begin
   str = "Hello"
   val = "World"
 
+  obj = MyExample.new debug: options.debug, verbose: options.verbose
+
   # demonstrates debug:
-  debug(str,val)
+  obj.debug(str,val)
 
   # demonstrates verbose:
-  verbose("printing verbose message level 1")
-  verbose("printing verbose message level 2",2)
+  obj.verbose("printing verbose message level 1")
+  obj.verbose("printing verbose message level 2",2)
 
   puts "sample" unless $_testing
 

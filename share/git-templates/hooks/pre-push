@@ -27,10 +27,8 @@
 # with "WIP" (work in progress).
 #
 # Synopsis
-#
-# mkdir -p ~/.git-templates/hooks
-# ln -s `pwd`/THIS_SCRIPT ~/.git-templates/hooks/pre-push
-# chmod u+x ~/.git-templates/hooks/pre-push
+# ln -s `pwd`/share/git-templates ~/.git-templates
+# chmod u+x ~/.git-templates/hooks/*
 # git config --global init.templatedir '~/.git-templates'
 # git config --global core.hooksPath '~/.git-templates/hooks'
 #

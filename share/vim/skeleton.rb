@@ -147,7 +147,7 @@ begin
   verbose("printing verbose message level 1")
   verbose("printing verbose message level 2",2)
 
-  puts "sample"
+  puts "sample" unless $_testing
 
   # demonstrates raising/throwing errors
   raise MyError, "Too many repetitions" if options.list and options.list.size > 10

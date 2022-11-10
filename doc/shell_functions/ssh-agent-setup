@@ -17,7 +17,7 @@ echo "# running $0 (~/.ssh-agent-setup.bash)"
 clean_old_sock()
 {
     pkill -u $UID ssh-agent
-    find /tmp /var/folders -uid $UID -name "agent.[0-9]*" -exec rm {} \;
+    find /tmp /var/folders -uid $UID -name "agent.[0-9]*" -exec rm {} \; 2> /dev/null
     rmdir /tmp/ssh-* > /dev/null 2>&1
 }
 

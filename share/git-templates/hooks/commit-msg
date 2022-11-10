@@ -76,8 +76,8 @@ def commit_msg_invalid? msg_file, config
   $stderr.puts subject
   $stderr.puts "\n\e[1m\e[31mERRORS:\033[0m\e[0m"
   $stderr.puts "  * bad type: #{type}" unless types.include?(type)
-  $stderr.puts "  * message too short" if message.size < min_length
-  $stderr.puts "  * message too long" if message.size > max_length
+  $stderr.puts "  * message too short" if message.to_s.size < min_length
+  $stderr.puts "  * message too long" if message.to_s.size > max_length
   $stderr.puts "\n\e[1m\e[31m[INVALID COMMIT MESSAGE]"
   $stderr.puts "------------------------\033[0m\e[0m"
   $stderr.puts "\e[1mValid types:\e[0m \e[34m#{types.join(', ')}\033[0m"

@@ -10,3 +10,7 @@ end
 
 desc "run all tests"
 task :default => :test
+
+task :tar do
+  sh "scripts/update-host --tar"
+end

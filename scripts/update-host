@@ -829,7 +829,7 @@ sub create_applications_tarball
     }
     close(EXCLUDE);
     system(
-        "cd $ENV{'HOME'} && tar $EXCLUDE_ARGS --exclude='.git' -cjf $LOCAL_PATH/$tarball Applications"
+        "cd $ENV{'HOME'} && tar $EXCLUDE_ARGS --exclude='.git' --exclude='.gitignore' --exclude='.github' -cjf $LOCAL_PATH/$tarball Applications"
     );
     print "# Created $LOCAL_PATH/$tarball" if $? == 0;
 }
@@ -875,23 +875,6 @@ sub update_host
             if ($i =~ /Applications/)
             {
                 create_applications_tarball();
-            }
-            elsif ($i =~ /vim/)
-            {
-                $i = " vimrc . tar . bz2 ";
-                system(" tar-- exclude = \"CVS\" -h -cjf $LOCAL_PATH/$i .vim");
-            }
-            elsif ($i =~ /mutt/)
-            {
-                $i = "muttrc.tar.bz2";
-                system("tar --exclude=\"CVS\" -h -cjf $LOCAL_PATH/$i .mutt");
-            }
-            elsif ($i =~ /bash/)
-            {
-                $i = "bashrc.tar.bz2";
-                system(
-                    "tar -h -cjf $LOCAL_PATH/$i .bashrc .bash_profile .dir_colors .inputrc .cvsrc"
-                );
             }
             else
             {

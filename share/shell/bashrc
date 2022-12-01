@@ -471,7 +471,17 @@ if [[ -n $SSH_TTY ]] && [[ -z $STY ]]; then
             # Use CTRL+Space s to see other sessions (or CTRL+b s)
             # This setup allows us to open multiple windows to the same server, and
             # have independent input.
-            tmux -CC -u new -A -s main || tmux -u new
+            tmux_cmd="tmux -CC -u new -A -s main"$
+            if tmux -V|awk '{print $NF}'|egrep -q '1\.[0-9]+'; then
+                tmux_cmd="tmux -u new -s main"
+            fi
+            if tmux has-session -t main; then
+                tmux attach -t main
+            else
+                $tmux_cmd
+            fi
+            ec=$?
+            echo ec=$ec
         fi
     elif command -v screen > /dev/null; then
         #

@@ -466,20 +466,21 @@ if [[ -n $SSH_TTY ]] && [[ -z $STY ]]; then
     # we favor tmux in UTF-8 mode
     if command -v tmux > /dev/null; then
         if [[ -z $TMUX ]]; then
-            # we want to use controlling windows if tmux supports it (2.x)
-            # if not fallback to a new session on older tmux (1.x)
+            # we want to use controlling session if tmux supports it (1.7 and up)
+            # if not, fallback to an existing session ('main') or create one non-controlling if older tmux (1.x)
+            #
             # Use CTRL+Space s to see other sessions (or CTRL+b s)
             # This setup allows us to open multiple windows to the same server, and
             # have independent input.
             tmux_cmd="tmux -CC -u new -A -s main"$
-            if tmux -V|awk '{print $NF}'|egrep -q '1\.[0-6]+'; then
-                tmux_cmd="tmux -u new -s main"
+            if tmux -V|head -1|awk '{print $NF}'|egrep -q '1\.[0-6]+'; then
+                if tmux has-session -t main; then
+                    tmux_cmd="tmux attach -t main"
+                else
+                    tmux_cmd="tmux -u new -s main"
+                fi
             fi
-            if tmux has-session -t main; then
-                tmux attach -t main
-            else
-                $tmux_cmd
-            fi
+            $tmux_cmd
             ec=$?
             echo ec=$ec
         fi

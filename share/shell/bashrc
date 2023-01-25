@@ -118,6 +118,26 @@ if [[ 1 == $USE_BASH_COMPLETION ]]; then
             . $(brew --prefix)/etc/bash_completion
         fi
     fi
+
+    ## Completion setup
+
+    if [[ -r "$HOME/.completion.setup" ]]; then
+        . "$HOME/.completion.setup"
+    fi
+
+    __my_git_complete_heads()
+    {
+        __gitcomp_nl "$(__git_heads)"
+    }
+    # git completion were setup, let's use them. See complete -p|grep git
+    # __git_complete_revlist
+    if command -v __gitcomp_nl > /dev/null && command -v __git_heads > /dev/null; then
+        for cmd in gitbranchdelete gitbranchrename; do
+            if command -v $cmd > /dev/null; then
+                complete -F __my_git_complete_heads $cmd
+            fi
+        done
+    fi
 fi
 
 # at this point is a good time to cleanup our PATH from dups

@@ -127,17 +127,11 @@ if [[ 1 == $USE_BASH_COMPLETION ]]; then
 
     __my_git_complete_heads()
     {
-        __gitcomp_nl "$(__git_heads)"
+        COMPREPLY=($(compgen -W '$(git for-each-ref --format="%(refname:strip=2)" "refs/heads/*" "refs/heads/*/**")' -- $2))
     }
-    # git completion were setup, let's use them. See complete -p|grep git
-    # __git_complete_revlist
-    if command -v __gitcomp_nl > /dev/null && command -v __git_heads > /dev/null; then
-        for cmd in gitbranchdelete gitbranchrename; do
-            if command -v $cmd > /dev/null; then
-                complete -F __my_git_complete_heads $cmd
-            fi
-        done
-    fi
+    for cmd in gitbranchdelete gitbranchrename; do
+        complete -F __my_git_complete_heads $cmd
+    done
 fi
 
 # at this point is a good time to cleanup our PATH from dups

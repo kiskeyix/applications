@@ -1,29 +1,51 @@
 #!/bin/bash
 # Delete a branch both local and in the remote repo
-# This assumes you actually merged this to 'main' (or master) and
-# it won't stop you
+#
+# If the branch is not merged to HEAD, it stops you.
 #
 # Usage: gitbranchdelete BRANCH_NAME
 #
 # Luis Mondesi <lemsx1@gmail.com>
 # License: GPL
 
+# We remove the branch from a remote repository
+_git_remote_delete()
+{
+    git push origin --delete $1
+    git remote prune origin
+}
+
+# only remove local branch if not merged to HEAD
+_git_local_delete()
+{
+    _merged=0
+    for branch in $(git branch --no-color --merged | awk '{print $NF}'); do
+        if [[ $branch == $1 ]]; then
+            _merged=1
+        fi
+    done
+    if [[ $_merged == 1 ]]; then
+        git branch -d $1
+    else
+        printf "  ERROR: cannot delete local branch '$1'. It is not merged to HEAD\n"
+        printf "\t delete by hand with: git branch -d '$1'\n"
+        exit 1
+    fi
+}
+
 if [[ -x `command -v git` ]]; then
     if git checkout main 2> /dev/null || git checkout master; then
-        _merged=0
-        for branch in $(git branch --merged); do
+        _local_found=0
+        for branch in $(git branch --no-color | awk '{print $NF}'); do
             if [[ $branch == $1 ]]; then
-                _merged=1
+                _local_found=1
             fi
         done
-        if [[ $_merged == 1 ]]; then
-            git branch -d $1
-            git push origin --delete $1
-            git remote prune origin
+        if [[ $_local_found == 1 ]]; then
+            _git_local_delete $1
+            _git_remote_delete $1
         else
-            printf "  ERROR: cannot delete local branch '$1'. It is not merged to HEAD\n"
-            printf "\t delete by hand with: git branch -d '$1'\n"
-            exit 1
+            _git_remote_delete $1
         fi
     else
         echo "No 'main' (or 'master') branch" >> /dev/stderr

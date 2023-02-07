@@ -19,9 +19,11 @@ _git_remote_delete()
 _git_local_delete()
 {
     _merged=0
-    for branch in $(git branch --no-color --merged | awk '{print $NF}'); do
+    #git branch --no-color --merged | awk '{print $NF}'
+    for branch in $(git for-each-ref --color=never --format='%(refname:lstrip=2)' refs/heads --merged); do
         if [[ $branch == $1 ]]; then
             _merged=1
+            break
         fi
     done
     if [[ $_merged == 1 ]]; then
@@ -36,9 +38,10 @@ _git_local_delete()
 if [[ -x `command -v git` ]]; then
     if git checkout main 2> /dev/null || git checkout master; then
         _local_found=0
-        for branch in $(git branch --no-color | awk '{print $NF}'); do
+        for branch in $(git for-each-ref --color=never --format='%(refname:lstrip=2)' refs/heads); do
             if [[ $branch == $1 ]]; then
                 _local_found=1
+                break
             fi
         done
         if [[ $_local_found == 1 ]]; then

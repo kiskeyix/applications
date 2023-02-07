@@ -10,9 +10,21 @@
 
 if [[ -x `command -v git` ]]; then
     if git checkout main 2> /dev/null || git checkout master; then
-        git branch -d $1
-        git push origin --delete $1
-        git remote prune origin
+        _merged=0
+        for branch in $(git branch --merged); do
+            if [[ $branch == $1 ]]; then
+                _merged=1
+            fi
+        done
+        if [[ $_merged == 1 ]]; then
+            git branch -d $1
+            git push origin --delete $1
+            git remote prune origin
+        else
+            printf "  ERROR: cannot delete local branch '$1'. It is not merged to HEAD\n"
+            printf "\t delete by hand with: git branch -d '$1'\n"
+            exit 1
+        fi
     else
         echo "No 'main' (or 'master') branch" >> /dev/stderr
         exit 1

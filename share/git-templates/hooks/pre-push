@@ -79,7 +79,7 @@ if [[ -f 'metadata.rb' ]]; then
         exit 1
     fi
     if command -v codespell > /dev/null; then
-        codespell --config ~/.codespellrc recipes/*
+        codespell --config ~/.codespellrc --config . recipes/*
     else
         echo "WARN: codespell missing"
         uname=`uname -s`
@@ -101,8 +101,8 @@ if [[ -f config.ru ]]; then
         exit 1
     fi
     if command -v codespell > /dev/null; then
-        codespell --config ~/.codespellrc app/*
-        codespell --config ~/.codespellrc lib/*
+        codespell --config ~/.codespellrc --config . app/*
+        codespell --config ~/.codespellrc --config . lib/*
     else
         echo "WARN: codespell missing"
         echo "Do: brew install codespell"

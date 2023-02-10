@@ -8,6 +8,9 @@
 #
 # This script checks pushes before sending them. If this is a Rack application or a chef cookbook
 # it will try to run rubocop or cookstyle respectively. It also runs codespell if found.
+# You can add ignore words to codespell by creating a file for your directory like:
+#   cd ~/Projects/my_repo
+#   echo 'ignore_this_word' > ~/.codespell.ignore.$(basename $(pwd))
 #
 # Runs cookstyle with autocorrect on cookbooks. If corrections are done, they are automatically commited.
 #
@@ -70,6 +73,10 @@ do
 done
 
 # cookbooks
+codespellargs=""
+workdir=$(pwd)
+baseworkdir=$(basename $workdir)
+
 if [[ -f 'metadata.rb' ]]; then
     if command -v cookstyle > /dev/null; then
         cookstyle -A recipes attributes spec test
@@ -79,7 +86,10 @@ if [[ -f 'metadata.rb' ]]; then
         exit 1
     fi
     if command -v codespell > /dev/null; then
-        codespell --config ~/.codespellrc --config . recipes/*
+        if [[ -f $HOME/.codespell.ignore.$baseworkdir ]]; then
+            codespellargs=" --ignore-words $HOME/.codespell.ignore.$baseworkdir $codespellargs"
+        fi
+        codespell --config ~/.codespellrc $codespellargs recipes/*
     else
         echo "WARN: codespell missing"
         uname=`uname -s`
@@ -101,8 +111,11 @@ if [[ -f config.ru ]]; then
         exit 1
     fi
     if command -v codespell > /dev/null; then
-        codespell --config ~/.codespellrc --config . app/*
-        codespell --config ~/.codespellrc --config . lib/*
+        if [[ -f $HOME/.codespell.ignore.$baseworkdir ]]; then
+            codespellargs=" --ignore-words $HOME/.codespell.ignore.$baseworkdir $codespellargs"
+        fi
+        codespell --config ~/.codespellrc $codespellargs app/*
+        codespell --config ~/.codespellrc $codespellargs lib/*
     else
         echo "WARN: codespell missing"
         echo "Do: brew install codespell"

@@ -127,7 +127,8 @@ if [[ 1 == $USE_BASH_COMPLETION ]]; then
 
     __my_git_complete_heads()
     {
-        COMPREPLY=($(compgen -W '$(git for-each-ref --format="%(refname:strip=2)" "refs/heads/*" "refs/heads/*/**")' -- $2))
+        #COMPREPLY=($(compgen -W '$(git for-each-ref --format="%(refname:strip=2)" "refs/heads/*" "refs/heads/*/**")' -- $2))
+        COMPREPLY=($(compgen -W '$(git for-each-ref --format="%(refname:strip=2)" "refs/heads/*" "refs/heads/*/**")' -- ${COMP_WORDS[COMP_CWORD]}))
     }
     for cmd in gitbranchdelete gitbranchrename vco; do
         complete -F __my_git_complete_heads $cmd

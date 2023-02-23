@@ -79,8 +79,12 @@ baseworkdir=$(basename $workdir)
 
 if [[ -f 'metadata.rb' ]]; then
     if command -v cookstyle > /dev/null; then
-        cookstyle -A recipes attributes spec test
-        git commit -m 'fix: auto cookstyle' -a
+        if cookstyle recipes attributes spec test 2>&1 | egrep -q 'offense detected'; then
+            echo "Offenses detected by cookstyle. Fix them with:"
+            echo "  cookstyle -A recipes attributes spec test"
+            #git commit -m 'fix: auto cookstyle' -a
+            exit 1
+        fi
     else
         echo "Do: gem install cookstyle"
         exit 1
@@ -104,8 +108,12 @@ fi
 # Ruby on Rails or other Rack-based apps
 if [[ -f config.ru ]]; then
     if command -v rubocop > /dev/null; then
-        rubocop -l --format simple app lib
-        git commit -m 'fix: auto rubocop' -a
+        if rubocop -l --format simple app lib 2>&1 | egrep -q 'offense detected'; then
+            echo "Offenses detected by rubocop. Fix them with:"
+            echo "  rubocop -a app lib"
+            #git commit -m 'fix: auto rubocop' -a
+            exit 1
+        fi
     else
         echo "Do: gem install rubocop"
         exit 1

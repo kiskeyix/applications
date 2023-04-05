@@ -419,6 +419,8 @@ endif
 " Colors
 "
 
+colorscheme default
+
 " XTerm colors
 " 16 seems to trigger a bug on Solaris, which then shows
 " almost no colors. 

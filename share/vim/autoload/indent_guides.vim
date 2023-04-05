@@ -253,6 +253,10 @@ endfunction
 " Returns: 'Normal xxx guifg=#323232 guibg=#ffffff'
 "
 function! indent_guides#capture_highlight(group_name) abort
+  " vim > 7.0.4-2008 supports execute()
+  if v:version < 705
+    return 'Normal xxx cleared'
+  endif
   let l:output = execute('hi ' . a:group_name, 'silent')
   let l:output = substitute(l:output, '\n', '', '')
   return l:output

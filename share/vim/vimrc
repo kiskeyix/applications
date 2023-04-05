@@ -171,7 +171,7 @@ fun BenIndent()
             elseif b:current_syntax == "php"
                 :%!tidy -quiet -utf8 -indent -clean 
             elseif b:current_syntax  == "ruby"
-                :%!rubocop -a
+                :!rubocop -a %
             else
                 "b:current_syntax == "C"
                 :%!indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments

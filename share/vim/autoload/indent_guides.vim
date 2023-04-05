@@ -254,7 +254,7 @@ endfunction
 "
 function! indent_guides#capture_highlight(group_name) abort
   " vim > 7.0.4-2008 supports execute()
-  if v:version < 705
+  if v:version < 705 || ! hlexists(a:group_name)
     return a:group_name . ' xxx cleared'
   endif
   let l:output = execute('hi ' . a:group_name, 'silent')

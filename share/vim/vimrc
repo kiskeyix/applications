@@ -582,7 +582,15 @@ let g:miniBufExplMapWindowNavVim = 1
 let g:miniBufExplMapWindowNavArrows = 1
 let g:miniBufExplMapCTabSwitchBufs = 1
 let g:miniBufExplModSelTarget = 1
- 
+
+" IndentGuides plugin settings
+let g:indent_guides_enable_on_vim_startup = 1
+"let g:indent_guides_auto_colors=0
+let g:indent_guides_start_level=2
+let g:indent_guides_guide_size=1
+"autocmd VimEnter,Colorscheme * :hi IndentGuidesOdd  guibg=red   ctermbg=3
+"autocmd VimEnter,Colorscheme * :hi IndentGuidesEven guibg=green ctermbg=4
+
 " alt+n or alt+p to navigate between entries in QuickFix
 map <silent> <m-p> :cp <cr>
 map <silent> <m-n> :cn <cr>
@@ -593,7 +601,7 @@ let g:rails_default_file='config/database.yml'
 set clipboard+=unnamed  " Yanks go on clipboard instead.
 set nowrap " wrapping lines off
 
-" map F8 to Hex editor mode ;)
+" map -F8- ',hex' to Hex editor mode ;)
 map ,hex :call HexMe()<CR>
 
 let $in_hex=0

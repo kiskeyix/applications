@@ -28,7 +28,7 @@ if &t_Co > 2 || has("gui_running")
   :colorscheme peachpuff
   " let's set better colors for the folding characters
   :hi FoldColumn term=standout ctermfg=4 ctermbg=7 guifg=#ff8060 guibg=PeachPuff
-  ":colorscheme default
+  " :colorscheme default
 endif
 
 " open a big window please
@@ -47,6 +47,7 @@ if has("autocmd")
         \ NERDTree |
         \ :wincmd w |
         \ endif
-
+  " autocmd VimEnter,Colorscheme * :hi IndentGuidesOdd  guibg=red   ctermbg=3
+  " autocmd VimEnter,Colorscheme * :hi IndentGuidesEven guibg=green ctermbg=4
 endif " has("autocmd")
 

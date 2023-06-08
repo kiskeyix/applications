@@ -79,7 +79,7 @@ baseworkdir=$(basename $workdir)
 
 if [[ -f 'metadata.rb' ]]; then
     if command -v cookstyle > /dev/null; then
-        if cookstyle recipes attributes spec test 2>&1 | egrep -q 'offense detected'; then
+        if cookstyle recipes attributes spec test 2>&1 | egrep -q 'offense[s]? detected'; then
             echo "Offenses detected by cookstyle. Fix them with:"
             echo "  cookstyle -A recipes attributes spec test"
             #git commit -m 'fix: auto cookstyle' -a

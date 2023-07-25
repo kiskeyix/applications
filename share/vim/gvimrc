@@ -6,13 +6,6 @@
 
 set guipty
 
-" Set a reasonable font
-"set guifont=6x10
-" in MacVim select a font with:
-"set guifont=*
-" Example:
-"set guifont=Menlo:h18,DejaVu\ Sans\ Mono:h13
-
 " full mouse mode here :-)
 set mouse=a
 
@@ -29,6 +22,12 @@ if &t_Co > 2 || has("gui_running")
   " let's set better colors for the folding characters
   :hi FoldColumn term=standout ctermfg=4 ctermbg=7 guifg=#ff8060 guibg=PeachPuff
   " :colorscheme default
+  " Set a reasonable font
+  "set guifont=6x10
+  " in MacVim select a font with:
+  "set guifont=*
+  " Example:
+  set guifont=Menlo:h18,DejaVu\ Sans\ Mono:h13
 endif
 
 " open a big window please

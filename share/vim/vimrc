@@ -97,11 +97,6 @@ set suffixes=.bak,~,.swp,.o,.info,.aux,.log,.dvi,.bbl,.blg,.brf,.cb,.ind,.idx,.i
 " space bar scrolls one page at a time
 nmap <Space> 
 
-" So what, I can't type...
-nmap :W :w
-nmap :X :x
-nmap :Q :q
-
 " use <C-F6> for spell checking (see ~/.vim/plugin/vimspell.vim)
 "
 " Switches match highlighting on and off
@@ -568,6 +563,23 @@ if has("autocmd")
   autocmd FileType ruby,eruby let g:rubycomplete_classes_in_global = 1
 
 endif " has("autocmd")
+
+" if we are under a Git project, let's use `git grep` for :grep FOO
+let git_dir = finddir('.git')
+if !empty(git_dir)
+  set grepprg=git\ grep
+  " set grepformat="%f:%l:%m,%f:%l%m,%f  %l%m"
+endif
+
+fun GrepOpen(m_args)
+  " bufdo vimgrepadd threading % | copen
+  bufdo grep a:m_args | copen
+endfun
+" Usage: :Ogrep foo
+"   This will open a new buffer with the results that you can interact with
+"   It will use the `grepprg` defined above (git grep ...)
+"   Essentially it will run: :!git grep foo -> Open New Window
+:command -nargs=+ Ogrep call GrepOpen(<f-args>)
 
 " include other vim commands specific to this host (~/.vimrc-`hostname`)
 let hostname = hostname()

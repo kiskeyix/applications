@@ -78,7 +78,16 @@ workdir=$(pwd)
 baseworkdir=$(basename $workdir)
 
 if [[ -f 'metadata.rb' ]]; then
-    if command -v cookstyle > /dev/null; then
+    if command -v chef > /dev/null; then
+        echo using chef exec cookstyle
+        if chef exec cookstyle recipes attributes spec test 2>&1 | grep -v 'no offenses' | egrep -q 'offense[s]? detected'; then
+            echo "Offenses detected by cookstyle. Fix them with:"
+            echo "  chef exec cookstyle -A recipes attributes spec test"
+            #git commit -m 'fix: auto cookstyle' -a
+            exit 1
+        fi
+    elif command -v cookstyle > /dev/null; then
+        echo using cookstyle
         if cookstyle recipes attributes spec test 2>&1 | grep -v 'no offenses' | egrep -q 'offense[s]? detected'; then
             echo "Offenses detected by cookstyle. Fix them with:"
             echo "  cookstyle -A recipes attributes spec test"
@@ -89,11 +98,14 @@ if [[ -f 'metadata.rb' ]]; then
         echo "Do: gem install cookstyle"
         exit 1
     fi
+    echo cookstyle no issues
     if command -v codespell > /dev/null; then
+        echo using codespell
         if [[ -f $HOME/.codespell.ignore.$baseworkdir ]]; then
             codespellargs=" --ignore-words $HOME/.codespell.ignore.$baseworkdir $codespellargs"
         fi
         codespell --config ~/.codespellrc $codespellargs recipes/*
+        echo codespell done
     else
         echo "WARN: codespell missing"
         uname=`uname -s`
@@ -108,6 +120,7 @@ fi
 # Ruby on Rails or other Rack-based apps
 if [[ -f config.ru ]]; then
     if command -v rubocop > /dev/null; then
+        echo using rubocop
         if rubocop --fail-fast -l --format simple app lib 2> /dev/null | egrep -q 'offense detected'; then
             rubocop --fail-fast -l --format simple app lib 2> /dev/null
             echo
@@ -115,16 +128,19 @@ if [[ -f config.ru ]]; then
             echo "  rubocop -a app lib"
             exit 1
         fi
+        echo rubocop done
     else
         echo "Do: gem install rubocop"
         exit 1
     fi
     if command -v codespell > /dev/null; then
+        echo using codespell
         if [[ -f $HOME/.codespell.ignore.$baseworkdir ]]; then
             codespellargs=" --ignore-words $HOME/.codespell.ignore.$baseworkdir $codespellargs"
         fi
         codespell --config ~/.codespellrc $codespellargs app/*
         codespell --config ~/.codespellrc $codespellargs lib/*
+        echo codespell done
     else
         echo "WARN: codespell missing"
         echo "Do: brew install codespell"

@@ -78,19 +78,22 @@ workdir=$(pwd)
 baseworkdir=$(basename $workdir)
 
 if [[ -f 'metadata.rb' ]]; then
-    if command -v chef > /dev/null; then
-        echo using chef exec cookstyle
-        if chef exec cookstyle recipes attributes spec test 2>&1 | grep -v 'no offenses' | egrep -q 'offense[s]? detected'; then
+    if command -v cookstyle > /dev/null; then
+        echo using cookstyle
+        # | grep -v 'no offenses' | egrep -q 'offense[s]? detected'
+        if ! cookstyle recipes attributes spec test 2>&1; then
             echo "Offenses detected by cookstyle. Fix them with:"
-            echo "  chef exec cookstyle -A recipes attributes spec test"
+            echo "  cookstyle -A recipes attributes spec test"
             #git commit -m 'fix: auto cookstyle' -a
             exit 1
         fi
-    elif command -v cookstyle > /dev/null; then
-        echo using cookstyle
-        if cookstyle recipes attributes spec test 2>&1 | grep -v 'no offenses' | egrep -q 'offense[s]? detected'; then
+    elif command -v chef > /dev/null; then
+        echo using chef exec cookstyle
+        # TODO we need a better logic here. if cookstyle is old, no actual files are tested here "0 files tested"
+        # | grep -v 'no offenses' | egrep -q 'offense[s]? detected'
+        if ! chef exec cookstyle recipes attributes spec test 2>&1; then
             echo "Offenses detected by cookstyle. Fix them with:"
-            echo "  cookstyle -A recipes attributes spec test"
+            echo "  chef exec cookstyle -A recipes attributes spec test"
             #git commit -m 'fix: auto cookstyle' -a
             exit 1
         fi

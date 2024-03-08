@@ -11,5 +11,15 @@ if [[ -z "$EDITOR" ]]; then
     echo "       export EDITOR=macvim"
     exit 1
 fi
+if [[ -z "$1" || -n "$2" ]]; then
+    echo "Usage: $(basename $0) <STRING>"
+    exit 1
+fi
 
-$EDITOR $(git grep "$*"|awk -F: '{print $1}'|uniq)
+ARGS=""
+if [[ $EDITOR =~ 'vim' ]]; then
+  # after opening files in Vim, place cursor in the first instance of this pattern
+  ARGS="+/$1"
+fi
+
+$EDITOR $ARGS $(git grep "$1"|awk -F: '{print $1}'|uniq)

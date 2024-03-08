@@ -1,10 +1,13 @@
 #!/bin/bash
 #
 # Given a string, use `git grep STRING` to find all files where this is present, and then
-# pass the resulting filenames to Vim for editing
+# pass the resulting filenames to $EDITOR for editing. If `vim` is used, it will highlight
+# the string and move the cursor to the first instance in the first file opened.
 #
 # export EDITOR=gvim # mvim, neovim, or any other tool
 #
+# Luis Mondesi
+# License: GPLv2
 
 if [[ -z "$EDITOR" ]]; then
     echo "ERROR: Environment variable \$EDITOR=$EDITOR not defined"

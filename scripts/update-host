@@ -6,12 +6,11 @@
 # You can get the latest copy from: 
 # cd ~/
 # git clone git://github.com/kiskeyix/applications.git Applications
-# ./Applications/scripts/update-host --local --master # optional setup
+# ./Applications/scripts/update-host --local # optional setup
 #
 # USAGE: update-host [OPTIONS] [host1 host2 host3 ...]
 #
 # TODO:
-#  - because --links is now default, we don't need --links and --files among others, remove all references to the old code
 #  - tests host file and print their new IP to STDOUT. hint slurp_hosts() and do host lookups on the names. Allow a --reconcile-hosts option so the new IP for the hostnames can be save to the file passed from the command line.
 # LICENSE: GPL
 # CHANGES:
@@ -43,7 +42,6 @@ B<update-host>
 [-C,--tarball]
 [-D,--debug]
 [-d,--delete-obsolete]
-[--files <file1,file2,...>]
 [--host <hostname>] 
 [-h,--help]
 [--hosts-file <path/to/file>]
@@ -51,11 +49,10 @@ B<update-host>
 [-l,--local]
 [--local-path]
 [-L,--links,--symlinks]
-[-m,--master] 
-[--print-files]
 [--password PASSWORD]
 [-r,--remove]
 [-s,--send-key]
+[--ssh-port PORT]
 [-u,--username USER]
 [-U,--usage]
 [-V,--verbose]
@@ -66,11 +63,9 @@ B<update-host>
 
 This script updates my user configurations (bash,vim,mutt,cvs) on this computer from a remote host, or distributes them from this host to others as defined in ~/.remote-hosts.
 
-The files from the master host will be downloaded using a URL (wget). And all other downloads will be done via ssh (for hosts in ~/.remote-hosts by default).
+A tarball is created into the local shared directory $LOCAL_PATH. This file is then copied via SSH to all hosts defined in `~/.remote-hosts`. The format of the remote-hosts file is the same as /etc/hosts.
 
 The script tries to find if a given host is alive first by using ping.
-
-The format of the remote-hosts file is the same as /etc/hosts.
 
 =head1 EXAMPLES
 
@@ -78,21 +73,17 @@ B<update-host>  --tarball
 
 Creates applications tarball in $LOCAL_PATH
 
-B<update-host>  --master --links --local
+B<update-host>  --links --local
 
 updates localhost using files from the default local settings folder ($LOCAL_PATH. See --local-path) and creates symlinks from Applications/share/* to the respective locations.
 
-B<update-host>  --master --host URL
+B<update-host>
 
-updates localhost using files from URL. If not --host is given
+updates localhost using files from local git repository
 
 B<update-host> --hosts-file ~/.hosts
 
 updates all hosts found in ~/.hosts. If --hosts-file is omitted, it will upgrade all hosts found in ~/.remote-hosts
-
-B<update-host> --hosts-file ~/.hosts --files "bashrc.tar.bz2,vimrc.tar.bz2"
-
-updates only bashrc and vimrc files to all hosts found in ~/.hosts
 
 B<update-host> --delete-obsolete HOST HOST2 ...
 
@@ -103,8 +94,6 @@ B<update-host> --local --links HOST
 Creates tarball files for ~/Applications and sends these to the remote host HOST
 
 =head1 BUGS
-
-* --files cannot contain spaces and must be .tar.bz2 or .tar.gz.
 
 * there is no way to pass $EXCEPTIONS from the command line.
 
@@ -182,7 +171,6 @@ my %hosts;    # global multi-dimensional hash to store hosts' information
 my $VERBOSE      = 0;
 my $DEBUG        = 0;
 my $USAGE        = 0;
-my $PRINT_FILES  = 0;
 my $REMOVE_FILES = 0;
 my $DOLINKS      = 1;   # now default. 2008-09-10 14:09 EDT 
 my $DOOBSOLETE   = 0;
@@ -190,8 +178,7 @@ my $LOCAL        = 0;   # do not get any new copies, use the local files instead
 my $PKEY         = 0;   # should we push our id_rsa.pub key to the remote host?
 my $_ssh_agent   = 0;   # should we kill ssh-agent when done?
 my $_ssh_id      = 0;   # should we remove id when done?
-my $ssh_port =
-  22;    # TODO add --ssh-port to allow users to change the ssh port at will
+my $ssh_port     = 22;
 my $RED          = "\033[1;31m";
 my $NORM         = "\033[0;39m";
 my $GREEN        = "\033[0;32m";
@@ -236,7 +223,7 @@ Uses private key KEY instead of ~/.ssh/id_rsa for ssh-agent
 
 =item -l,--local
 
-Use copies in $LOCAL_PATH instead of remote $MASTER_HOST when --master is given. @see --local-path.
+Use copies in $LOCAL_PATH. @see --local-path.
 Otherwise, it will create local versions of the files using ~/Applications and these new files will be used instead on the remote hosts. 
 
 Example: 
@@ -250,7 +237,7 @@ Sets $LOCAL_PATH to PATH instead of the default $HOME/Shared/Software/settings
 
 =item -L,--symlinks,--links
 
-Do symlinks instead of unpacking bashrc.tar.bz2, vimrc.tar.bz2, muttrc.tar.bz2. See --files.
+Do symlinks
 
 .bashrc -> Applications/share/shell/bashrc
 
@@ -268,14 +255,6 @@ Do symlinks instead of unpacking bashrc.tar.bz2, vimrc.tar.bz2, muttrc.tar.bz2. 
 
 See @_CONFIG_FILES
 
-=item -m,--master
-
-Update localhost from master. Default is to upgrade all the computers found in ~/.remote-hosts. @see --host
-
-=item --print-files
-
-Prints a list of files and exits. @see --files
-
 =item --password
 
 Send this password if prompted by ssh. This is highly insecure! Use this only if you know what you are doing and trust the security of your computer. This only makes sense when sending keys to various hosts and you don't want to retype the password for the given account e/a time. Needs Expect.pm.
@@ -287,6 +266,10 @@ Remove all temporary files after updating
 =item -s,--send-key
 
 Pushes local ~/.ssh/id_rsa.pub key to remote host ~/.ssh/authorized_keys file and exits
+
+=item --ssh-port PORT
+
+Uses PORT number for SSH instead of $ssh_port/tcp.
 
 =item -u,--username USER
 
@@ -318,21 +301,18 @@ GetOptions(
     'd|delete-obsolete'  => \$DOOBSOLETE,
     'r|remove'           => \$REMOVE_FILES,
     'V|verbose'          => \$VERBOSE,
-    'm|master|localhost' => \$MASTER,
     'l|local'            => \$LOCAL,
-    'print-files'        => \$PRINT_FILES,
     'L|symlinks|links'   => \$DOLINKS,
     's|send-key'         => \$PKEY,
     'C|tarball'          => \$CREATE_APPLICATIONS_TARBALL,
 
     # strings
     'k|key=s'      => \$PG_KEY,
-    'host=s'       => \$MASTER_HOST,
-    'files=s'      => \$CONF_FILES,
     'local-path=s' => \$LOCAL_PATH,
     'hosts-file=s' => \$REMOTE_HOSTS_FILE,
     'u|username=s' => \$USERNAME,
-    'password=s'   => \$PASSWORD
+    'password=s'   => \$PASSWORD,
+    'ssh-port=s'   => \$ssh_port
 ) and $HOST = shift;
 
 ## START SCRIPT ##
@@ -379,19 +359,6 @@ else
 
 ## main ##
 
-# when doing symlinks, we only need one file. And this is now the default behavior.
-if ((@FILES + 0) > 1)
-{
-    print STDERR ("--links is now default. Do not use --files anymore\n"); # will remove this in a few months. LM
-}
-@FILES = ("Applications.tar.bz2");
-
-if ($PRINT_FILES)
-{
-    print STDOUT (join(",", @FILES), "\n");
-    _exit_safe(0);
-}
-
 if ($CREATE_APPLICATIONS_TARBALL)
 {
     create_applications_tarball();
@@ -401,8 +368,8 @@ if ($CREATE_APPLICATIONS_TARBALL)
 my $total_steps = 3; # 1. prepare, 2. copy files, 3. unpack
 my $silent  = (!$VERBOSE) ? " > /dev/null 2>&1" : "";
 
-# update localhost from master and exit
-if ($MASTER)
+# update localhost and exit
+if ($LOCAL)
 {
     my @failed      = ();    # array of files that failed
     my $FAIL_FLAG   = 0;
@@ -416,24 +383,6 @@ if ($MASTER)
 
     _mkdir($LOCAL_PATH);
     chdir($LOCAL_PATH) or die("$LOCAL_PATH $!");
-    if (!$LOCAL)
-    {
-
-        # download files from remote (master) host:
-        foreach my $i (@FILES)
-        {
-            if ($MASTER_HOST =~ m/^http:/i && -r $i)
-            {
-
-                # wget is not too smart when using http
-                debug("Deleting $i");
-                unlink($i);    # silently delete old copies
-            }
-            printf STDOUT ("%20s", "Downloading $MASTER_HOST/$i ");
-            system("wget $WGET_ARGS $MASTER_HOST/$i " . $silent);
-            print STDOUT ($?) ? " failed\n" : " done\n";
-        }
-    }
     chdir($ENV{'HOME'});
     foreach my $i (@FILES)
     {

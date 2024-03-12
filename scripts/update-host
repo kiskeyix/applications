@@ -84,7 +84,7 @@ updates localhost using files from the default local settings folder ($LOCAL_PAT
 
 B<update-host>  --master --host URL
 
-updates localhost using files from URL. If not --host is given, it assumes: lems.kiskeyix.org
+updates localhost using files from URL. If not --host is given
 
 B<update-host> --hosts-file ~/.hosts
 
@@ -114,7 +114,6 @@ Creates tarball files for ~/Applications and sends these to the remote host HOST
 
 my $PVERSION          = 0;
 my $HELP              = 0;
-my $MASTER_HOST       = "http://kiskeyix.org";
 my $LOCAL_PATH        = "$ENV{'HOME'}/Shared/Software/settings";
 my $REMOTE_HOSTS_FILE = "$ENV{'HOME'}/.remote-hosts";
 my $PG_KEY = "";    # when empty adds all for us... $ENV{'HOME'}."/.ssh/id_rsa";
@@ -187,7 +186,6 @@ my $PRINT_FILES  = 0;
 my $REMOVE_FILES = 0;
 my $DOLINKS      = 1;   # now default. 2008-09-10 14:09 EDT 
 my $DOOBSOLETE   = 0;
-my $MASTER       = 0;   # update current host from $MASTER_HOST
 my $LOCAL        = 0;   # do not get any new copies, use the local files instead
 my $PKEY         = 0;   # should we push our id_rsa.pub key to the remote host?
 my $_ssh_agent   = 0;   # should we kill ssh-agent when done?
@@ -227,10 +225,6 @@ Deletes the obsolete scripts from the @_OBSOLETE array (hard coded)
 =item -h,--help
 
 Prints this help and exits
-
-=item --host URL
-
-Sets $MASTER_HOST to URL. This is the URL from where the original files will be downloaded.
 
 =item --hosts-file FILE
 

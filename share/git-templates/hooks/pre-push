@@ -72,6 +72,12 @@ do
 	fi
 done
 
+# when FORCE in use, warn and skip all tests
+if (( FORCE == 1 )); then
+    echo "WARNING: force settings in place. Remove with: unset FORCE"
+    exit 0
+fi
+
 # cookbooks
 codespellargs=""
 workdir=$(pwd)
@@ -81,9 +87,16 @@ if [[ -f 'metadata.rb' ]]; then
     if command -v cookstyle > /dev/null; then
         echo using cookstyle
         # | grep -v 'no offenses' | egrep -q 'offense[s]? detected'
-        if ! cookstyle recipes attributes spec test 2>&1; then
+        DIRS=''
+        if [[ -d spec ]]; then
+            DIRS="$DIRS spec"
+        fi
+        if [[ -d test ]]; then
+            DIRS="$DIRS test"
+        fi
+        if ! cookstyle recipes attributes $DIRS 2>&1; then
             echo "Offenses detected by cookstyle. Fix them with:"
-            echo "  cookstyle -A recipes attributes spec test"
+            echo "  cookstyle -A recipes attributes $DIRS"
             #git commit -m 'fix: auto cookstyle' -a
             exit 1
         fi

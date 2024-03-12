@@ -25,4 +25,4 @@ if [[ $EDITOR =~ 'vim' ]]; then
   ARGS="+/$1"
 fi
 
-$EDITOR $ARGS $(git grep "$1"|awk -F: '{print $1}'|uniq)
+$EDITOR $ARGS $(git grep -l "$1")

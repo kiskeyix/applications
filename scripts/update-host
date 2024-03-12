@@ -772,7 +772,7 @@ sub create_applications_tarball
     }
     close(EXCLUDE);
     system(
-        "cd $ENV{'HOME'} && tar $EXCLUDE_ARGS --exclude='.git' --exclude='.gitignore' --exclude='.github' -cjf $LOCAL_PATH/$tarball Applications"
+        "cd $ENV{'HOME'} && tar $EXCLUDE_ARGS --exclude='.git' --exclude='.gitignore' --exclude='.github' -cjf $LOCAL_PATH/$tarball --no-mac-metadata --no-acls --no-xattrs --no-fflags Applications"
     );
     print "# Created $LOCAL_PATH/$tarball" if $? == 0;
 }

@@ -25,4 +25,9 @@ if [[ $EDITOR =~ 'vim' ]]; then
   ARGS="+/$1"
 fi
 
-$EDITOR $ARGS $(git grep -l "$1")
+files=$(git grep -l "$1")
+if [[ -n $files ]]; then
+    $EDITOR $ARGS $files
+else
+    echo No files found matching $1
+fi

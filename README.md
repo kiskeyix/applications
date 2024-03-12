@@ -20,7 +20,7 @@ and make some simple setup steps.
 
   - cd ~/
   - git clone https://github.com/kiskeyix/applications.git Applications
-  - ./Applications/scripts/update-host --master --local
+  - ./Applications/scripts/update-host --local
 
 `update-host` will then execute the following actions for you:
   - ln -s Applications/share/shell/bashrc .bashrc

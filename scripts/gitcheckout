@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 #
 # Luis Mondesi <lemsx1@gmail.com> 
-# 2022-02-16
+# 2024-05-02
 # LICENSE: GPL
 #
 # Makes my life easier to do a 'git checkout' by:
@@ -10,6 +10,8 @@
 # 2. create a new branch from the current branch (say 'main')
 # 3. push this new branch to origin and,
 # 4. set a remote tracker for it
+#
+# If a remote branch of the same name exists, then it will simply checkout a tracking branch locally
 #
 # Example:
 #    gitcheckout https://foo/browse/PROJECT-851 cloud customer rejection
@@ -27,23 +29,41 @@ def branch_name(args)
   name.gsub(/^_/,'').downcase
 end
 
-# perform a git checkout usign the current branch as base to fork from
-# then push to origin and set remote tracking for it
-def git_checkout_and_push_u(name, opts={})
-  cmd = "git checkout -B #{name}"
+def git_push_u(name)
+  cmd = "git push -u origin #{name}"
   puts cmd
   out = `#{cmd}`
   if $? == 0
-    cmd = "git push -u origin #{name}"
+    # nothing
+  else
+    $stderr.puts "ERROR: failed to push '#{name}' to origin"
+  end
+end
+
+# perform a git checkout usign the current branch as base to fork from
+# then push to origin and set remote tracking for it
+def git_checkout_and_push_u(name, opts={})
+  # check if we have a remote branch already with this name,
+  system "git fetch origin #{name}" # silently try to fetch this
+  if `git branch -rl '*#{name}'`.strip == "origin/#{name}"
+    cmd = "git checkout -b #{name} origin/#{name}"
     puts cmd
     out = `#{cmd}`
     if $? == 0
-      # nothing
+      git_push_u(name)
     else
-      $stderr.puts "ERROR: failed to push '#{name}' to origin"
+      $stderr.puts "ERROR: failed to checkout '#{name}'"
     end
   else
-    $stderr.puts "ERROR: failed to checkout '#{name}'"
+    # if no, create one
+    cmd = "git checkout -b #{name}"
+    puts cmd
+    out = `#{cmd}`
+    if $? == 0
+      git_push_u(name)
+    else
+      $stderr.puts "ERROR: failed to checkout '#{name}'"
+    end
   end
 end
 

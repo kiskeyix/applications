@@ -30,7 +30,7 @@ end
 # perform a git checkout usign the current branch as base to fork from
 # then push to origin and set remote tracking for it
 def git_checkout_and_push_u(name, opts={})
-  cmd = "git checkout -b #{name}"
+  cmd = "git checkout -B #{name}"
   puts cmd
   out = `#{cmd}`
   if $? == 0

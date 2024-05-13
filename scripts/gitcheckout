@@ -1,15 +1,20 @@
 #!/usr/bin/env ruby
 #
 # Luis Mondesi <lemsx1@gmail.com> 
-# 2024-05-02
+# 2024-05-13
 # LICENSE: GPL
 #
-# Makes my life easier to do a 'git checkout' by:
+# Makes my life easier to do a 'git checkout -b <string>' by:
 #
 # 1. allowing me to paste one or more URLs, plus text, and figure out the name for this branch
 # 2. create a new branch from the current branch (say 'main')
 # 3. push this new branch to origin and,
 # 4. set a remote tracker for it
+# 5. if a local branch exists or not, handle it correctly
+#
+# Usage:
+#   gitcheckout my name here # -> my_name_here
+#   gitcheckout https://foo/bar my name here # -> bar_my_name_here
 #
 # If a remote branch of the same name exists, then it will simply checkout a tracking branch locally
 #
@@ -18,6 +23,15 @@
 #    
 #    git checkout -b project-851_cloud_customer_rejection
 #    git push -u origin project-851_cloud_customer_rejection
+#
+#    # if the branch already exists, either upstream or locally, handle this. e.g.:
+#
+#    git checkout main
+#    git branch -D project-851_cloud_customer_rejection
+#    gitcheckout https://foo/browse/PROJECT-851 cloud customer rejection
+#    git checkout project-851_cloud_customer_rejection 2> /dev/null || git push -u origin project-851_cloud_customer_rejection
+#    git push -u origin project-851_cloud_customer_rejection
+#
 
 # given an array of strings, create a valid branch name
 # example: $0 http://foo/bar this is bar for TICKET_NUMBER -> 'bar_this_is_bar_for_TICKET_NUMBER'.downcase
@@ -46,7 +60,10 @@ def git_checkout_and_push_u(name, opts={})
   # check if we have a remote branch already with this name,
   system "git fetch origin #{name}" # silently try to fetch this
   if `git branch -rl '*#{name}'`.strip == "origin/#{name}"
-    cmd = "git checkout -b #{name} origin/#{name}"
+    # if remote branch exist, see if we have a local branch with the same name (which supposedly
+    # is the upstream tracking version), or if not, create one with the remote name.
+    # Later we will push upstream and track it
+    cmd = "git checkout #{name} 2> /dev/null || git checkout -b #{name} origin/#{name}"
     puts cmd
     out = `#{cmd}`
     if $? == 0
@@ -68,5 +85,4 @@ def git_checkout_and_push_u(name, opts={})
 end
 
 name = branch_name(ARGV)
-#p name # debug
 git_checkout_and_push_u name

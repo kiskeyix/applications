@@ -2,7 +2,7 @@
 #
 # Luis Mondesi <lemsx1@gmail.com>
 # License: GPLv3
-# 2022-03-23
+# 2024-05-13
 #
 # Conventional Pre-push Git Hook
 #
@@ -83,84 +83,121 @@ codespellargs=""
 workdir=$(pwd)
 baseworkdir=$(basename $workdir)
 
-if [[ -f 'metadata.rb' ]]; then
-    if command -v cookstyle > /dev/null; then
-        echo using cookstyle
-        # | grep -v 'no offenses' | egrep -q 'offense[s]? detected'
-        DIRS=''
-        if [[ -d spec ]]; then
-            DIRS="$DIRS spec"
-        fi
-        if [[ -d test ]]; then
-            DIRS="$DIRS test"
-        fi
-        if ! cookstyle recipes attributes $DIRS 2>&1; then
-            echo "Offenses detected by cookstyle. Fix them with:"
-            echo "  cookstyle -A recipes attributes $DIRS"
-            #git commit -m 'fix: auto cookstyle' -a
-            exit 1
-        fi
-    elif command -v chef > /dev/null; then
-        echo using chef exec cookstyle
-        # TODO we need a better logic here. if cookstyle is old, no actual files are tested here "0 files tested"
-        # | grep -v 'no offenses' | egrep -q 'offense[s]? detected'
-        if ! chef exec cookstyle recipes attributes spec test 2>&1; then
-            echo "Offenses detected by cookstyle. Fix them with:"
-            echo "  chef exec cookstyle -A recipes attributes spec test"
-            #git commit -m 'fix: auto cookstyle' -a
-            exit 1
-        fi
+run_cookstyle()
+{
+    CMD="cookstyle"
+    DIRS='recipes attributes'
+    if [[ -d spec ]]; then
+        DIRS="$DIRS spec"
+    fi
+    if [[ -d test ]]; then
+        DIRS="$DIRS test"
+    fi
+    if command -v chef > /dev/null; then
+        CMD="chef exec $CMD"
+    elif command -v cookstyle > /dev/null; then
+        CMD="cookstyle"
     else
-        echo "Do: gem install cookstyle"
+        # no cookstyle?
+        if [[ `uname -s` == "Darwin" ]]; then
+            echo "Do: brew install --cask chef-workstation"
+        else
+            echo "Do: gem install cookstyle"
+        fi
+        echo "You can also download it directly from: https://docs.chef.io/workstation/install_workstation/"
+        exit 1
+    fi
+    echo "using '$CMD' ($($CMD --version | awk '/Cookstyle/ {print $NF}'))"
+    if ! $CMD $DIRS 2>&1; then
+        echo "Offenses detected by cookstyle. Fix them with:"
+        echo "  $(echo $CMD | sed 's/cookstyle/cookstyle -A/') $DIRS"
         exit 1
     fi
     echo "  * cookstyle no issues"
+}
+
+run_codespell()
+{
+    CMD="codespell --config ~/.codespellrc"
+    DIRS=''
+    for _dir in recipes app lib; do
+        if [[ -d $_dir ]]; then
+            DIRS="$_dir/* $DIRS"
+        fi
+    done
     if command -v codespell > /dev/null; then
-        echo using codespell
+        echo "using codespell $(codespell --version)"
         if [[ -f $HOME/.codespell.ignore.$baseworkdir ]]; then
             codespellargs=" --ignore-words $HOME/.codespell.ignore.$baseworkdir $codespellargs"
         fi
-        codespell --config ~/.codespellrc $codespellargs recipes/*
-        echo "  * codespell done"
+        if ! $CMD $codespellargs $DIRS; then
+            echo "Spelling errors detected. Fix them before proceeding"
+            echo "Or add them to the ignore file(s): $codespellargs"
+            exit 1
+        fi
     else
         echo "WARN: codespell missing"
-        uname=`uname -s`
-        if [[ $uname == "Darwin" ]]; then
+        if [[ `uname -s` == "Darwin" ]]; then
             echo "Do: brew install codespell"
         else
             echo "Do: sudo pip3 install codespell"
         fi
     fi
-fi
+    echo "  * codespell done"
+}
 
-# Ruby on Rails or other Rack-based apps
-if [[ -f config.ru ]]; then
+# rubocop can be used inside cookbooks as well as Rails applications
+run_rubocop()
+{
+    CMD='rubocop'
+    if command -v chef > /dev/null && ! [[ -f config.ru ]]; then
+        CMD="chef exec $CMD"
+    elif command -v rubocop > /dev/null; then
+        CMD="rubocop"
+    else
+        # no cookstyle?
+        if [[ `uname -s` == "Darwin" ]]; then
+            echo "Do: brew install --cask chef-workstation"
+        else
+            echo "Do: gem install cookstyle"
+        fi
+        echo "You can also download it directly from: https://docs.chef.io/workstation/install_workstation/"
+        exit 1
+    fi
+    DIRS=''
+    for _dir in app lib; do
+        if [[ -d $_dir ]]; then
+            DIRS="$_dir $DIRS"
+        fi
+    done
     if command -v rubocop > /dev/null; then
-        echo using rubocop
-        if rubocop --fail-fast -l --format simple app lib 2> /dev/null | egrep -q 'offense detected'; then
-            rubocop --fail-fast -l --format simple app lib 2> /dev/null
+        echo using rubocop $(rubocop --version)
+        if $CMD --fail-fast -l --format simple $DIRS 2> /dev/null | egrep -q 'offense detected'; then
             echo
             echo "Offenses detected by rubocop. Fix them with:"
-            echo "  rubocop -a app lib"
+            echo "  $(echo $CMD | sed 's/rubocop/rubocop -a/') $DIRS"
             exit 1
         fi
         echo "  * rubocop done"
     else
-        echo "Do: gem install rubocop"
+        if [[ `uname -s` == "Darwin" ]]; then
+            echo "Do: brew install --cask chef-workstation"
+        else
+            echo "Do: gem install rubocop"
+        fi
         exit 1
     fi
-    if command -v codespell > /dev/null; then
-        echo using codespell
-        if [[ -f $HOME/.codespell.ignore.$baseworkdir ]]; then
-            codespellargs=" --ignore-words $HOME/.codespell.ignore.$baseworkdir $codespellargs"
-        fi
-        codespell --config ~/.codespellrc $codespellargs app/*
-        codespell --config ~/.codespellrc $codespellargs lib/*
-        echo "  * codespell done"
-    else
-        echo "WARN: codespell missing"
-        echo "Do: brew install codespell"
-    fi
+}
+
+if [[ -f 'metadata.rb' ]]; then
+    run_cookstyle
+    run_codespell
+fi
+
+# Ruby on Rails or other Rack-based apps
+if [[ -f config.ru ]]; then
+    run_rubocop
+    run_codespell
 fi
 
 exit 0

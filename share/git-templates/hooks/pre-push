@@ -130,6 +130,7 @@ run_codespell()
         if [[ -f $HOME/.codespell.ignore.$baseworkdir ]]; then
             codespellargs=" --ignore-words $HOME/.codespell.ignore.$baseworkdir $codespellargs"
         fi
+        #echo "$CMD $codespellargs $DIRS"
         if ! $CMD $codespellargs $DIRS; then
             echo "Spelling errors detected. Fix them before proceeding"
             echo "Or add them to the ignore file(s): $codespellargs"

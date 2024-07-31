@@ -112,24 +112,24 @@ class MyExample
       msg
     end
   end
-  def debug(msg,val="")
+  def debug(*msg)
     return if not @debug
 
-    $stderr.print scolor("DEBUG: ",'green')
-    if val
+    $stderr.print scolor('DEBUG: ', 'green')
+    if msg[1].to_s > ''
       # val.to_s is called for us:
-      $stderr.puts "#{scolor(msg,'blue')} = #{scolor(val,'red')}"
+      $stderr.puts "#{scolor(msg[0], 'blue')} = #{scolor(msg[1..-1].join(' '), 'red')}"
     else
-      $stderr.puts "#{scolor(msg,'blue')}"
+      $stderr.puts "#{scolor(msg.join(' '), 'blue')}"
     end
   end
   def verbose(msg,level=1)
     return if @verbose <= 0
     puts "#{msg}" if @verbose >= level
   end
-  def error(msg)
-    prefix = 'ERROR: ' unless msg =~ /^\*ERROR:/
-    $stderr.puts scolor("#{prefix}#{msg}","red")
+  def error(*msg)
+    prefix = 'ERROR: ' unless msg[0] =~ /^\*ERROR:/
+    $stderr.puts scolor("#{prefix}#{msg.join(' ')}", "red")
   end
 end
 # end helpers

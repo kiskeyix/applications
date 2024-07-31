@@ -127,6 +127,7 @@ class MyExample
     prefix = 'INFO: ' unless msg[0] =~ /^\s*INFO:/
     $stderr.puts scolor("#{prefix}#{msg.join(' ')}", "blue")
   end
+  alias warn info
   def verbose(msg,level=1)
     return if @verbose <= 0
     puts "#{msg}" if @verbose >= level

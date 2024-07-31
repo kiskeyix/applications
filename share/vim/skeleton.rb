@@ -123,12 +123,16 @@ class MyExample
       $stderr.puts "#{scolor(msg.join(' '), 'blue')}"
     end
   end
+  def info(*msg)
+    prefix = 'INFO: ' unless msg[0] =~ /^\s*INFO:/
+    $stderr.puts scolor("#{prefix}#{msg.join(' ')}", "blue")
+  end
   def verbose(msg,level=1)
     return if @verbose <= 0
     puts "#{msg}" if @verbose >= level
   end
   def error(*msg)
-    prefix = 'ERROR: ' unless msg[0] =~ /^\*ERROR:/
+    prefix = 'ERROR: ' unless msg[0] =~ /^\s*ERROR:/
     $stderr.puts scolor("#{prefix}#{msg.join(' ')}", "red")
   end
 end
@@ -143,11 +147,14 @@ begin
   obj = MyExample.new debug: options.debug, verbose: options.verbose
 
   # demonstrates debug:
-  obj.debug(str,val)
+  obj.debug(str, val, 'extra')
+  obj.error('this', 'is', 'error', 'with', 'extra')
+  obj.info('this', 'is', 'info', 'with', 'extra')
+  obj.info('this is also info with', 'extra')
 
   # demonstrates verbose:
   obj.verbose("printing verbose message level 1")
-  obj.verbose("printing verbose message level 2",2)
+  obj.verbose("printing verbose message level 2", 2)
 
   puts "sample" unless $_testing
 

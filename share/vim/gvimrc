@@ -34,19 +34,3 @@ endif
 set lines=50
 set columns=180
 
-" You can also specify a different font:
-" set guifont=-misc-fixed-medium-r-normal--14-130-75-75-c-70-iso8859-1
-
-" Only do this part when compiled with support for autocommands.
-if has("autocmd")
-
-  " if using the Rails.vim plugin, also open NERDTree
-  autocmd VimEnter *
-        \ if exists('b:rails_root') |
-        \ NERDTree |
-        \ :wincmd w |
-        \ endif
-  " autocmd VimEnter,Colorscheme * :hi IndentGuidesOdd  guibg=red   ctermbg=3
-  " autocmd VimEnter,Colorscheme * :hi IndentGuidesEven guibg=green ctermbg=4
-endif " has("autocmd")
-

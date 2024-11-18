@@ -97,7 +97,7 @@ set suffixes=.bak,~,.swp,.o,.info,.aux,.log,.dvi,.bbl,.blg,.brf,.cb,.ind,.idx,.i
 " space bar scrolls one page at a time
 nmap <Space> 
 
-" use <C-F6> for spell checking (see ~/.vim/plugin/vimspell.vim)
+" use <C-F6> for spell checking (see ~/.config/vim/plugin/vimspell.vim)
 "
 " Switches match highlighting on and off
 " nmap <C-F7> :set hls!<CR>
@@ -138,7 +138,7 @@ map ,cr :call RmCR()<CR>
 " in your custom .vimrc-`hostname` file create a function like:
 "fun ReplMe()
 "    let oldLine=line('.')
-"    exe ":%s/my_name\\s*<\\s*email\@example\.com\\s*>/NAME <EMAIL@example.com>/g"
+"    exe \":%s/my_name\\s*<\\s*email\@example\.com\\s*>/NAME <EMAIL@example.com>/g"
 "    exe ':' . oldLine
 " endfun
 " map ,me :call ReplMe()<CR>
@@ -188,7 +188,7 @@ map -- :call BenIndent()<CR>
 
 " 2002-10-30 09:39 
 " comment out highlighted lines according to file type
-" put a line like the following in your ~/.vim/filetype.vim file
+" put a line like the following in your ~/.config/vim/filetype.vim file
 " and remember to turn on filetype detection: filetype on
 " au! BufRead,BufNewFile *.sh,*.tcl,*.php,*.pl let Comment="#"
 " if the comment character for a given filetype happens to be @
@@ -257,7 +257,7 @@ augroup html
         let autocommands_html_loaded = 1
         au BufRead *.shtml,*.html,*.htm set formatoptions=tcqro2 autoindent
   " Show default HTML file when new.
-        au BufNewFile *.shtml,*.html,*.htm 0r ~/.vim/skeleton.html
+        au BufNewFile *.shtml,*.html,*.htm 0r ~/.config/vim/skeleton.html
 
   " Setup browser to display when writing files
   "au BufWritePost *.shtml,*.html,*.htm !netscape -remote 'openFile(%:p)'
@@ -273,11 +273,11 @@ augroup php
         " This takes those annoying missing highlight colors for certain files. 
         " could be slow for slow connections. see help 
         " Show default php file when new 
-        au BufNewFile *.php,*.php3,*.phps 0r ~/.vim/skeleton.php
+        au BufNewFile *.php,*.php3,*.phps 0r ~/.config/vim/skeleton.php
 
         " Add HTML menu
-        "au BufEnter  *.php,*.php3,*.phps so ~/.vim/html.vim
-        "au BufLeave  *.php,*.php3,*.phps so ~/.vim/unhtml.vim
+        "au BufEnter  *.php,*.php3,*.phps so ~/.config/vim/html.vim
+        "au BufLeave  *.php,*.php3,*.phps so ~/.config/vim/unhtml.vim
 
         " Setup browser to display when writing files
         "au BufWritePost *.shtml,*.html,*.htm !netscape -remote 'openFile(%:p)'
@@ -289,14 +289,14 @@ augroup cprog
         let autocommands_cprog_loaded = 1
         " C programs should have 8 spaces as tabs. makes things better
         au BufRead *.cpp,*.c,*.h,*.cxx,*.cc,*.hh set formatoptions=croq sm sw=8 sts=8 comments=sr:/*,mb:*,el:*/,:// nu cino='t8' cindent | if filereadable("tags.vim") | so tags.vim | endif
-        au BufNewFile *.c 0r ~/.vim/skeleton.c
-        au BufNewFile *.cc,*.cpp,*.c++ 0r ~/.vim/skeleton.cc
+        au BufNewFile *.c 0r ~/.config/vim/skeleton.c
+        au BufNewFile *.cc,*.cpp,*.c++ 0r ~/.config/vim/skeleton.cc
     endif
 augroup END
 
 augroup java
     if !exists("autocommands_java_loaded")
-        au BufNewFile *.java 0r ~/.vim/skeleton.java
+        au BufNewFile *.java 0r ~/.config/vim/skeleton.java
     endif
 augroup END
 
@@ -309,11 +309,11 @@ augroup perl
         " using ptags, generate a "tags" file in the same directory as the
         " Perl script is. To view what tags file are used, type: <ESC> :echo &tags
         " To set tag files use: set tags=./tags,tags 
-        " or: set tags+=~/.vim/systags
+        " or: set tags+=~/.config/vim/systags
 
-        au BufNewFile *.pl 0r ~/.vim/skeleton.pl
-        au BufNewFile *.pm 0r ~/.vim/skeleton.pm
-        au BufNewFile *.t  0r ~/.vim/skeleton.t
+        au BufNewFile *.pl 0r ~/.config/vim/skeleton.pl
+        au BufNewFile *.pm 0r ~/.config/vim/skeleton.pm
+        au BufNewFile *.t  0r ~/.config/vim/skeleton.t
 
         " au BufReadPost */CVS/lib/perl5/netapp/*.pm so ~/devel/CVS/bin/contrib/tags.vim
         " The default syntax highlight syncing scheme is too slow (which makes
@@ -354,8 +354,8 @@ augroup ruby
         au FileType   eruby,ruby set sw=2 sts=2 nu path=.,lib,, fdn=2 fdo=all fcl=all
 
         " this is cool when we are not in a Rails app
-        au BufNewFile *.rb if !MyRailsDetect() | 0r ~/.vim/skeleton.rb | echo "# Turned off skeleton.rb" | endif
-        au BufNewFile *.rake,Rakefile 0r ~/.vim/skeleton.rake
+        au BufNewFile *.rb if !MyRailsDetect() | 0r ~/.config/vim/skeleton.rb | echo "# Turned off skeleton.rb" | endif
+        au BufNewFile *.rake,Rakefile 0r ~/.config/vim/skeleton.rake
     endif
 augroup END
 
@@ -365,7 +365,7 @@ augroup python
         au BufReadPre *.py set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu
         au FileType   python set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu " files without extension
         " A simple python starter
-        au BufNewFile *.py 0r ~/.vim/skeleton.py
+        au BufNewFile *.py 0r ~/.config/vim/skeleton.py
     endif
 augroup END
 
@@ -376,7 +376,7 @@ augroup shell
         au BufRead  profile,bashrc,.profile,.bashrc,.bash_*,.kshrc,*.sh,*.ksh,*.bash,*.env,.login,.cshrc,*.csh,*.tcsh,.z*,zsh*,zlog* set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu fdn=2 fdo=all fcl=all
         au FileType sh set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu
         " On new files do..."  
-        au BufNewFile *.sh 0r ~/.vim/skeleton.sh
+        au BufNewFile *.sh 0r ~/.config/vim/skeleton.sh
     endif
 augroup END
 
@@ -385,7 +385,7 @@ augroup tcl
         let autocommands_tcl_loaded = 1
         au BufRead *.tcl,*.tk set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e'
         " On new files do..."  
-        au BufNewFile *.tcl 0r ~/.vim/skeleton.tcl
+        au BufNewFile *.tcl 0r ~/.config/vim/skeleton.tcl
     endif
 augroup END
 
@@ -410,12 +410,12 @@ endif " end if has(autocmd)
 " These groups, gzip and bz2, are handle by the standard plugins
 " in $VIMRUNTIME/plugins
 
-let myscriptsfile = "~/.vim/myscripts.vim"
+let myscriptsfile = "~/.config/vim/myscripts.vim"
 
 " generate tags file with:
-" ctags -R -f ~/.vim/systags /usr/include /usr/local/include
-if filereadable(expand("~/").".vim/systags")
-    set tags+=~/.vim/systags
+" ctags -R -f ~/.config/vim/systags /usr/include /usr/local/include
+if filereadable(expand("~/").".config/vim/systags")
+    set tags+=~/.config/vim/systags
 endif
 
 "
@@ -589,12 +589,6 @@ endfun
 "   Essentially it will run: :!git grep foo -> Open New Window
 :command -nargs=+ Ogrep call GrepOpen(<f-args>)
 
-" include other vim commands specific to this host (~/.vimrc-`hostname`)
-let hostname = hostname()
-if filereadable(expand("~/").".vimrc-".hostname)
-    exe 'source '.expand("~/").".vimrc-".hostname
-endif
-
 set completefunc=syntaxcomplete#Complete
 
 "improve autocomplete menu color
@@ -640,3 +634,27 @@ function HexMe()
     let $in_hex=1
   endif
 endfunction
+
+" NERDtree support
+
+autocmd StdinReadPre * let s:std_in=1
+
+" Start NERDTree when Vim starts with a directory argument.
+autocmd VimEnter * if argc() == 1 && isdirectory(argv()[0]) && !exists('s:std_in') |
+    \ execute 'NERDTree' argv()[0] | wincmd p | enew | execute 'cd '.argv()[0] | endif
+
+" Exit Vim if NERDTree is the only window remaining in the only tab.
+autocmd BufEnter * if tabpagenr('$') == 1 && winnr('$') == 1 && exists('b:NERDTree') && b:NERDTree.isTabTree() | call feedkeys(":quit\<CR>:\<BS>") | endif
+
+" Start NERDTree when Vim starts under a Rails application or Chef cookbook
+autocmd VimEnter * if exists('b:rails_root') || filereadable("metadata.rb") |
+    \ execute 'NERDTree' | wincmd p | endif
+" end NERDtree support
+
+" include other vim commands specific to this host (~/.vimrc-`hostname`)
+let hostname = hostname()
+if filereadable(expand("~/").".vimrc-".hostname)
+    exe 'source '.expand("~/").".vimrc-".hostname
+endif
+
+

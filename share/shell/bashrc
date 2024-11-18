@@ -367,8 +367,8 @@ alias cdclose="eject -t" # close CDROM tray ;-)
 # TODO we need to see if vim exists in our PATH first
 ## Vim baby!
 if command -v vim > /dev/null 2>&1; then
-    if [[ -f "$HOME/.vim/vimrc" ]]; then
-        alias vi='vim -u "$HOME/.vim/vimrc"'
+    if [[ -f "$HOME/.config/vim/vimrc" ]]; then
+        alias vi='vim -u "$HOME/.config/vim/vimrc"'
     else
         alias vi='vim'
     fi

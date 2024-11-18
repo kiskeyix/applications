@@ -983,7 +983,7 @@ sub _do_links
             system(  "ssh "
                    . $USERNAME
                    . $host
-                   . " 'command rm -fr $_conf;"
+                   . " 'command rm -fr $_conf; command mkdir -p ~/.config; "
                    . "command ln -sf $_config_file $_conf $silent'");
         }
     }

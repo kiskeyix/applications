@@ -974,7 +974,7 @@ sub _do_links
                 # for now, we simply remove the link
                 next if (!unlink($_conf));
             }
-            symlink($_config_file, $_conf);
+            symlink($ENV{'HOME'} . "/" . $_config_file, $_conf);
         }
         else
         {

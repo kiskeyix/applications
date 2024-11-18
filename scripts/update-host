@@ -1,5 +1,4 @@
 #!/usr/bin/perl -w
-# $Revision: 1.0.1 $
 # Luis Mondesi < lemsx1@gmail.com >
 #
 # DESCRIPTION: A simple script to update my settings in $HOME @see --help.
@@ -247,7 +246,7 @@ Do symlinks
 
 .cvsrc -> Applications/share/shell/cvsrc
 
-.vim -> Applications/share/vim
+.config/vim -> Applications/share/vim
 
 .mutt -> Applications/share/mutt
 
@@ -941,6 +940,11 @@ sub _do_links
     foreach my $_config_file (@_CONFIG_FILES)
     {
         my $_conf = "." . basename($_config_file);    # dot file
+        # xdg-base-dir support
+        if ($_config_file =~ /vim/i)
+        {
+            $_conf = ".config/" . basename($_config_file); # .config/DIR
+        }
         if ($host eq "localhost")
         {
             if (!-l $_conf)

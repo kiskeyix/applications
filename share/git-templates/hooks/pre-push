@@ -202,7 +202,6 @@ run_mypy()
         else
             echo "Do: apt install ..."
         fi
-        echo "You can also download it directly from: https://docs.chef.io/workstation/install_workstation/"
         exit 1
     fi
 

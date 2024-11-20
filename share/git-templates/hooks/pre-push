@@ -156,7 +156,7 @@ run_rubocop()
     elif command -v rubocop > /dev/null; then
         CMD="rubocop"
     else
-        # no cookstyle?
+        # no rubocop?
         if [[ `uname -s` == "Darwin" ]]; then
             echo "Do: brew install --cask chef-workstation"
         else
@@ -190,6 +190,29 @@ run_rubocop()
     fi
 }
 
+# mypy can be used inside projects with python code
+run_mypy()
+{
+    CMD='mypy'
+    if command -v mypy > /dev/null; then
+        CMD="mypy"
+    else
+        if [[ `uname -s` == "Darwin" ]]; then
+            echo "Do: brew install python3 mypy"
+        else
+            echo "Do: apt install ..."
+        fi
+        exit 1
+    fi
+
+    # use --verbose when needed
+    if $CMD $(find . -name '*.py'); then
+        : nothing
+    else
+        exit 1
+    fi
+}
+
 if [[ -f 'metadata.rb' ]]; then
     run_cookstyle
     run_codespell
@@ -201,4 +224,7 @@ if [[ -f config.ru ]]; then
     run_codespell
 fi
 
+if (( $(find . -name '*.py'|wc -l) > 0 )); then
+    run_mypy
+fi
 exit 0

@@ -121,7 +121,7 @@ nmap    ,r  :TlistSync<CR>
 map ,13 mzggVGg?'z
 
 " please utf8 my stuff
-nmap ,utf8 !recode -q ISO-8859-1..utf-8
+nmap ,utf8 %!recode -q ISO-8859-1..utf-8
 
 "set pastetoggle=<F9>
 

@@ -29,10 +29,10 @@ parser.add_argument('--required', required=True)
 
 try:
     args = parser.parse_args()
-    print args.accumulate(args.integers)
+    print(args.accumulate(args.integers))
 #except BaseException as e:
 except Exception as e:
-    print "ERROR: typical error %s\n" % str(e)
-    print sys.exc_type
-    print sys.exc_info
-    print sys.exc_traceback
+    print("ERROR: typical error %s\n" % str(e))
+    print(sys.exc_type)
+    print(sys.exc_info)
+    print(sys.exc_traceback)

@@ -206,7 +206,7 @@ run_mypy()
     fi
 
     # use --verbose when needed
-    if $CMD; then
+    if $CMD $(find . -name '*.py'); then
         : nothing
     else
         exit 1

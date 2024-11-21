@@ -196,6 +196,7 @@ run_mypy()
     CMD='mypy'
     if command -v mypy > /dev/null; then
         CMD="mypy"
+        echo using mypy $(mypy --version)
     else
         if [[ `uname -s` == "Darwin" ]]; then
             echo "Do: brew install python3 mypy"
@@ -205,9 +206,13 @@ run_mypy()
         exit 1
     fi
 
-    # use --verbose when needed
-    if $CMD --show-error-codes $(find . -name '*.py'); then
-        : nothing
+    if [[ -f mypy.ini ]]; then
+        CMD="$CMD"
+    else
+        CMD="$CMD --show-error-codes $(find . -name '*.py')"
+    fi
+    if $CMD; then
+        echo "  * mypy done"
     else
         exit 1
     fi

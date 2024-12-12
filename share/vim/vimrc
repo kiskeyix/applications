@@ -6,13 +6,13 @@
 " (I wrote it over my years of using vim and after reading all the docs)
 "
 " I'll get part of the blame for enhancing this file for VIM 6.0 and up
-" -- Luis M < lemsx1@gmail.com > 2002-10-30 19:47 
+" -- Luis M < lemsx1@gmail.com > 2002-10-30 19:47
 
 "
 " Tips:
 " - use ga (normal mode) to know the numeric value of the char under cursor
 " - CTRL-v u 1234 in insert mode to type a char (:help utf-8-typing)
-" 
+"
 
 "
 " Options
@@ -22,9 +22,9 @@
 "let g:snipMate = {}
 "let g:snippet_no_indentation_settings = 0
 
-set nocompatible	" we want vim's features, not stupid vi compatiblity
-set ruler		" shows ruler at the bottom of the screen
-set bs=2		" allow backspacing over everything in insert mode
+set nocompatible        " we want vim's features, not stupid vi compatiblity
+set ruler               " shows ruler at the bottom of the screen
+set bs=2                " allow backspacing over everything in insert mode
 set modeline            " reads modelines like '# vi: ft=foo :' lines
 
 " force utf-8
@@ -32,19 +32,19 @@ set encoding=utf-8
 set fileencodings=""    " empty uses `encoding` from above
 " end utf-8
 
-set ic			" comment this out if you want to search non case sensitive
+set ic      " comment this out if you want to search non case sensitive
 
-set showcmd		" Show (partial) command in status line
+set showcmd    " Show (partial) command in status line
 
 " Those 2 are really useful, but they may confuse unsuspecting users -- Marc
-set hlsearch		" Switch on syntax highlighting.
-set incsearch		" show matches on the fly
+set hlsearch    " Switch on syntax highlighting.
+set incsearch    " show matches on the fly
 
 " Newer vims let you paste without holding shift, so let's make this a default
 if version>=508
-    set mouse=v		" Use mouse to select and point in visual mode
+    set mouse=v    " Use mouse to select and point in visual mode
                         " for all use mouse=a
-			" (use shift+click to get old cut/paste behavior)
+      " (use shift+click to get old cut/paste behavior)
     set nomousehide     " Do not hide the mouse cursor in gVim when typing
 endif
 
@@ -52,24 +52,24 @@ endif
 "    set relativenumber
 "endif
 
-set fileformats=unix	" I want to see those ^M if I'm editing a dos file. See below (Key Mappings) for ^M removal!
+set fileformats=unix  " I want to see those ^M if I'm editing a dos file. See below (Key Mappings) for ^M removal!
 
-set expandtab		" use spaces as tabs :-) 
+set expandtab    " use spaces as tabs :-)
 set sts=2               " use 2 softtabstops
 set sw=2                " shiftwidth fixes tab
 
-set ignorecase		" for pattern machine
-set smartcase		" Except when a mix of case is given
+set ignorecase    " for pattern machine
+set smartcase    " Except when a mix of case is given
 set exrc
 set secure              " do not allow shell commands in au blocks
 
-" set swapsync=sync	" the swap is synced with sync, not fsync
-set updatecount=20	" Number of characters typed before doing an update
-set updatetime=10000	" Number of milliseconds before doing an update
-set history=100		" Number of history commands to remember
-"set viminfo='50,\"200	" read/write a .viminfo file, remember filemarks for 50
-			" files and store 200 lines of registers
-set confirm		" To get a dialog when a command fails
+" set swapsync=sync  " the swap is synced with sync, not fsync
+set updatecount=20  " Number of characters typed before doing an update
+set updatetime=10000  " Number of milliseconds before doing an update
+set history=100    " Number of history commands to remember
+"set viminfo='50,\"200  " read/write a .viminfo file, remember filemarks for 50
+      " files and store 200 lines of registers
+set confirm    " To get a dialog when a command fails
 
 " For debugging
 "set verbose=9
@@ -164,7 +164,7 @@ fun BenIndent()
             elseif b:current_syntax == "html"
                 :%!tidy -quiet -utf8 -indent -clean -asxhtml
             elseif b:current_syntax == "php"
-                :%!tidy -quiet -utf8 -indent -clean 
+                :%!tidy -quiet -utf8 -indent -clean
             elseif b:current_syntax  == "ruby"
                 " :!rubocop -a %
                 " help us format syntax only
@@ -186,7 +186,7 @@ fun BenIndent()
 endfun
 map -- :call BenIndent()<CR>
 
-" 2002-10-30 09:39 
+" 2002-10-30 09:39
 " comment out highlighted lines according to file type
 " put a line like the following in your ~/.config/vim/filetype.vim file
 " and remember to turn on filetype detection: filetype on
@@ -198,7 +198,7 @@ map -- :call BenIndent()<CR>
 let Comment="#"
 let EndComment=""
 
-fun CommentLines() 
+fun CommentLines()
     let oldLine=line('.')
     "let Comment="#" " shell, tcl, php, perl
     exe ":s@^@".g:Comment."@g"
@@ -213,11 +213,11 @@ vmap co :call CommentLines()<CR>
 " Plugins
 
 " Abbreviations
-" 
+"
 " i stands for insert
 " so these work in insert mode only
-" 
-" date format: YYYY-mm-dd . eg. 2002-01-06 
+"
+" date format: YYYY-mm-dd . eg. 2002-01-06
 " USAGE: just type the test after iab and space (or CR)
 iab idate <C-R>=strftime("%Y-%m-%d")<CR>
 iab ifdate <C-R>=strftime("%Y-%m-%d %H:%M %Z")<CR>
@@ -264,15 +264,15 @@ augroup html
     endif
 augroup END
 
-augroup php 
+augroup php
     if !exists("autocommands_php_loaded")
         let autocommands_php_loaded = 1
         au BufRead *.php,*.php3,*.phps set formatoptions=tcqro2 cindent cinkeys='0{,0},!^F,o,O,e' nu
-        au BufEnter *.class,*.inc,*.tpl,*.php,*.php3,*.phps syntax sync fromstart 
-        " set syntax higlight starting from start. 
-        " This takes those annoying missing highlight colors for certain files. 
-        " could be slow for slow connections. see help 
-        " Show default php file when new 
+        au BufEnter *.class,*.inc,*.tpl,*.php,*.php3,*.phps syntax sync fromstart
+        " set syntax higlight starting from start.
+        " This takes those annoying missing highlight colors for certain files.
+        " could be slow for slow connections. see help
+        " Show default php file when new
         au BufNewFile *.php,*.php3,*.phps 0r ~/.config/vim/skeleton.php
 
         " Add HTML menu
@@ -308,7 +308,7 @@ augroup perl
         au FileType   perl set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu " files without extension
         " using ptags, generate a "tags" file in the same directory as the
         " Perl script is. To view what tags file are used, type: <ESC> :echo &tags
-        " To set tag files use: set tags=./tags,tags 
+        " To set tag files use: set tags=./tags,tags
         " or: set tags+=~/.config/vim/systags
 
         au BufNewFile *.pl 0r ~/.config/vim/skeleton.pl
@@ -347,7 +347,7 @@ augroup ruby
         let ruby_fold = 1
         let ruby_no_comment_fold = 1
         " set foldcolumn=4
-        " set number 
+        " set number
         " set relativenumber
 
         "au BufReadPre    *.rb,*.erb,*.rake set sw=2 sts=2 nu
@@ -375,7 +375,7 @@ augroup shell
         let sh_fold_enabled = 4
         au BufRead  profile,bashrc,.profile,.bashrc,.bash_*,.kshrc,*.sh,*.ksh,*.bash,*.env,.login,.cshrc,*.csh,*.tcsh,.z*,zsh*,zlog* set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu fdn=2 fdo=all fcl=all
         au FileType sh set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu
-        " On new files do..."  
+        " On new files do..."
         au BufNewFile *.sh 0r ~/.config/vim/skeleton.sh
     endif
 augroup END
@@ -384,7 +384,7 @@ augroup tcl
     if !exists("autocommands_tcl_loaded")
         let autocommands_tcl_loaded = 1
         au BufRead *.tcl,*.tk set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e'
-        " On new files do..."  
+        " On new files do..."
         au BufNewFile *.tcl 0r ~/.config/vim/skeleton.tcl
     endif
 augroup END
@@ -426,10 +426,10 @@ colorscheme default
 
 " XTerm colors
 " 16 seems to trigger a bug on Solaris, which then shows
-" almost no colors. 
+" almost no colors.
 " It doesn't seem to work with Eterm on Suse 6.3 either...
 " So change to 8 if you use any of these systems ...
-" luis, 2002-07-09 22:01 
+" luis, 2002-07-09 22:01
 " switched back to 16
 set t_Co=16
 " on RedHat EL 4/5 and others, t_AF causes vim to display escape chars
@@ -507,7 +507,7 @@ endif
 
 set dictionary+=/usr/share/dict/words
 
-set ai			" always set autoindenting on
+set ai      " always set autoindenting on
 
                         " skip making backups for these files
 set backupskip=/tmp/*,~/tmp/*,$TMPDIR/*,$TMP/*,$TEMP/*
@@ -517,7 +517,7 @@ set backupskip=/tmp/*,~/tmp/*,$TMPDIR/*,$TMP/*,$TEMP/*
                         " keep backups in one of these directories
                         " when possible
 set backupdir=~/.backup,~/tmp
-set backup		" do not keep a backup file. use a .vimrc
+set backup    " do not keep a backup file. use a .vimrc
                         " file in every folder where you think
                         " you might need a backup with the option
                         " set backup
@@ -555,7 +555,7 @@ if has("autocmd")
       filetype on
   endif
 
-		
+
   " For all text files set 'textwidth' to 78 characters.
   au FileType text setlocal tw=78
 
@@ -612,7 +612,7 @@ let g:indent_guides_guide_size=1
 " alt+n or alt+p to navigate between entries in QuickFix
 map <silent> <m-p> :cp <cr>
 map <silent> <m-n> :cn <cr>
- 
+
 " Change which file opens after executing :Rails command
 let g:rails_default_file='config/database.yml'
 

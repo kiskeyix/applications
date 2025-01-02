@@ -201,7 +201,8 @@ run_mypy()
         if [[ `uname -s` == "Darwin" ]]; then
             echo "Do: brew install python3 mypy"
         else
-            echo "Do: apt install ..."
+            echo "ERROR: Could not find 'mypy' in PATH"
+            echo "Setup your python3 virtual environment correctly: . ~/.venv/bin/activate"
         fi
         exit 1
     fi

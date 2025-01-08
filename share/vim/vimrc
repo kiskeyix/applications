@@ -403,6 +403,12 @@ if isdirectory('.git')
   " :set verbose=9
   if v:version >= 800
     au CmdLineEnter * call gitblame#echo()
+  else
+    " this kludge allows us to use gitblame in vim 7.x
+    " you will need to go into insert mode and then use :messages to see the
+    " message
+    set runtimepath=~/.config/vim,$VIMRUNTIME
+    au InsertEnter * call gitblame#echo()
   endif
 endif
 

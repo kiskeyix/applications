@@ -400,8 +400,13 @@ if isdirectory('.git')
   " when we are in a git repository, display the blame information on the
   " current line whenever the user tries to enter a command (:)
   " TODO we would like this to be display in the status line?
-  " au CmdLineEnter * call gitblame#echo()
-  au CmdLineEnter * call gitblame#echo()
+  if exists('g:loaded_gitblame')
+    au CmdLineEnter * call gitblame#echo()
+  else
+    " we modified the plugin to use echowin instead of just `echo`. This is a
+    " better display and it goes away after a few seconds
+    echo "WARN: gitblame plugin missing. Try https://github.com/MoserMichael/gitblame"
+  endif
 endif
 
 endif " end if has(autocmd)

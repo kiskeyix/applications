@@ -90,7 +90,14 @@ function! gitblame#echo()
        call nvim_buf_set_virtual_text(l:buffer, l:ns, l:line-1, [[g:GBlameVirtualTextPrefix.l:echoMsg, 'GBlameMSG']], {})
        call timer_start(g:GBlameVirtualTextDelay, { tid -> nvim_buf_clear_namespace(l:buffer, l:ns, 0, -1)})
     endif
-    echowin l:echoMsg
+    if v:version >= 800
+      echowin l:echoMsg
+    else
+      " use :messages to see the messages in older Vim
+      " TODO find a better way to display this message, like echowin, in older
+      " vim
+      echom l:echoMsg
+    endif
 endfunction
 
 let &cpo = s:save_cpo

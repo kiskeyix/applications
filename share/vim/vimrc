@@ -400,7 +400,10 @@ if isdirectory('.git')
   " when we are in a git repository, display the blame information on the
   " current line whenever the user tries to enter a command (:)
   " TODO we would like this to be display in the status line?
-  au CmdLineEnter * call gitblame#echo()
+  " :set verbose=9
+  if v:version >= 800
+    au CmdLineEnter * call gitblame#echo()
+  endif
 endif
 
 endif " end if has(autocmd)

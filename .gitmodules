@@ -1,3 +1,6 @@
 [submodule "share/vim/pack/vendor/start/nerdtree"]
 	path = share/vim/pack/vendor/start/nerdtree
 	url = https://github.com/preservim/nerdtree.git
+[submodule "share/vim/pack/vendor/start/copilot"]
+	path = share/vim/pack/vendor/start/copilot
+	url = https://github.com/github/copilot.vim.git

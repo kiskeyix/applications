@@ -15,7 +15,7 @@ if [[ -x `command -v git` ]]; then
         git branch -u origin/$2 $2
         git remote set-head origin -a
         git remote prune origin
-        git push -u origin $2
+        FORCE=1 git push -u origin $2
     else
         echo "Could not fetch all branches from origins" >> /dev/stderr
         exit 1

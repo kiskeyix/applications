@@ -13,3 +13,4 @@ else
     echo "git command not found"
     exit 1
 fi
+git push

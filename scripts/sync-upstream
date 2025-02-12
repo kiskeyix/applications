@@ -9,6 +9,7 @@ if [[ -x $(command -v git) ]]; then
         git pull $remote $(git branch|grep '^*'|head -1|awk '{print $NF}')
         git remote prune $remote
     done
+    git push
 else
     echo "git command not found"
     exit 1

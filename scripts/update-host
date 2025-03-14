@@ -119,16 +119,16 @@ my @FILES =
 
 # links to $ENV{HOME} if DOLINKS is true
 my @_CONFIG_FILES = (
-                     "Applications/share/shell/bash_profile",
-                     "Applications/share/shell/bashrc",
-                     "Applications/share/shell/inputrc",
-                     "Applications/share/shell/cvsrc",
-                     "Applications/share/vim",
-                     "Applications/share/mutt",
-                     "Applications/share/shell/screenrc",
-                     "Applications/share/shell/tmux.conf",
-                     "Applications/share/git-templates",
-                     "Applications/share/shell/iterm2_shell_integration.bash",
+                     "$ENV{'HOME'}/Applications/share/shell/bash_profile",
+                     "$ENV{'HOME'}/Applications/share/shell/bashrc",
+                     "$ENV{'HOME'}/Applications/share/shell/inputrc",
+                     "$ENV{'HOME'}/Applications/share/shell/cvsrc",
+                     "$ENV{'HOME'}/Applications/share/vim",
+                     "$ENV{'HOME'}/Applications/share/mutt",
+                     "$ENV{'HOME'}/Applications/share/shell/screenrc",
+                     "$ENV{'HOME'}/Applications/share/shell/tmux.conf",
+                     "$ENV{'HOME'}/Applications/share/git-templates",
+                     "$ENV{'HOME'}/Applications/share/shell/iterm2_shell_integration.bash",
                     );
 
 # files that should be tidied!

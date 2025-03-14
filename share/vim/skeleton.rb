@@ -107,7 +107,7 @@ class MyExample
       'blue'   => "\033[0;34m"
     }
     if STDOUT.tty?
-      ansicolor = "#{colors[color.downcase]}#{msg}#{colors['norm']}"
+      "#{colors[color.downcase]}#{msg}#{colors['norm']}"
     else
       msg
     end

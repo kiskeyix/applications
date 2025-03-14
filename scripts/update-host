@@ -932,6 +932,16 @@ sub _mkdir
     return $flag;    # number of directories created
 }
 
+# http://www.perlmonks.org/?node_id=103364
+sub _is_broken_symlink
+{
+    my $file = shift;
+    return 1 if (!-l $file);
+    my $link = readlink($file);
+    return 0 if (-e $link);
+    return 1;
+}
+
 sub _do_links
 {
     my $host = shift;
@@ -947,7 +957,7 @@ sub _do_links
         }
         if ($host eq "localhost")
         {
-            if (!-l $_conf)
+            if (_is_broken_symlink($_conf))
             {
                 # TODO we need to ensure that the user did not purposely create a regular file here... say, somebody who changes .inputrc -> Applications/share/shell/inputrc
                 if (-e $_conf)

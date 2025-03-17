@@ -957,22 +957,11 @@ sub _do_links
         }
         if ($host eq "localhost")
         {
+
             if (_is_broken_symlink($_conf))
             {
-                # TODO we need to ensure that the user did not purposely create a regular file here... say, somebody who changes .inputrc -> Applications/share/shell/inputrc
-                if (-e $_conf)
-                {
-
-                    # backup
-                    if (!rename($_conf, "$_conf.bak"))
-                    {
-
-                        # oops
-                        print STDERR (
-                              "Failed to backup " . $ENV{'HOME'} . "/$_conf\n");
-                        next;
-                    }
-                }
+                # backup
+                rename($ENV{'HOME'}."/$_conf", "$_conf.bak");
             }
             else
             {
@@ -982,9 +971,9 @@ sub _do_links
                 # correct path:
                 # TODO test that symlink is valid and move on
                 # for now, we simply remove the link
-                next if (!unlink($_conf));
+                next if (!unlink($ENV{'HOME'}."/$_conf"));
             }
-            symlink($ENV{'HOME'} . "/" . $_config_file, $_conf);
+            symlink($_config_file, $ENV{'HOME'}."/$_conf");
         }
         else
         {

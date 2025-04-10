@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# Launch parallel processes for `chef exec kitchen test`
+# NOTE: this assumes your instances have your name, if not, remove the $USER
+
+kitchen list | awk '{print $1}' | grep -vi INSTANCE | grep $USER | xargs -n1 -P4 kitchen test
+

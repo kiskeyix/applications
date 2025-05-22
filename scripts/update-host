@@ -368,13 +368,20 @@ if ($CREATE_APPLICATIONS_TARBALL)
 my $total_steps = 3; # 1. prepare, 2. copy files, 3. unpack
 my $silent  = (!$VERBOSE) ? " > /dev/null 2>&1" : "";
 
-# update localhost and exit
+# update localhost and exit. This assumes ~/Applications is a git repository
 if ($LOCAL)
 {
+    debug('local mode');
+    die(
+        "We do not have a copy of Applications yet! Get one using: cd ~/ && git clone https://github.com/kiskeyix/applications\n"
+    ) if (!-d "$ENV{'HOME'}/Applications/.git");
+
     my @failed      = ();    # array of files that failed
     my $FAIL_FLAG   = 0;
     my $SUCESS_FLAG = 0;
     my $progress_chars = "";
+
+    debug('local mode: make local dirs');
 
     _mkdir("$ENV{'HOME'}/.backup");
     _mkdir("$ENV{'HOME'}/tmp");
@@ -384,63 +391,7 @@ if ($LOCAL)
     _mkdir($LOCAL_PATH);
     chdir($LOCAL_PATH) or die("$LOCAL_PATH $!");
     chdir($ENV{'HOME'});
-    foreach my $i (@FILES)
-    {
-        if (!-r "$LOCAL_PATH/$i")
-        {
-            debug("Skipping $LOCAL_PATH/$i because we can't read it");
-            next;
-        }
-        next if ($DOLINKS and $i =~ /bashrc|vim|mutt/i);    # skip shell config
-        $progress_chars .= "#";
-        update_progress("localhost", $progress_chars);
-        print STDOUT "\r";
-        my $cmd = "";
-        my $_zcat =
-          ($i =~ /\.bz2$/i) ? which("bzcat") : which("zcat");   # zcat or bzcat?
-        my $_tar_arg = ($i =~ /\.bz2$/i) ? "j" : "z";           # gzip or bzip2?
 
-        my $tar = which("tar");
-        if (-x $_zcat)
-        {
-            $cmd =
-              "command $_zcat '$LOCAL_PATH/$i' | command $tar x"
-              . $VERBOSE_ARGS . "f - ";
-        }
-        else
-        {
-
-            # assume tar can decompress on the fly
-            debug("Falling back to $tar...");
-            $cmd =
-                "command $tar x"
-              . $VERBOSE_ARGS
-              . $_tar_arg
-              . "f '$LOCAL_PATH/$i'";
-        }
-
-        my $err = system($cmd. $silent);
-        if (!$err)
-        {
-            $progress_chars .= "#";
-            $SUCESS_FLAG++;
-        }
-        else
-        {
-            $FAIL_FLAG++;
-            push(@failed, $i);
-
-            # last tar command failed?
-            if (!$SUCESS_FLAG)
-            {
-                $progress_chars .= "!";
-            }
-        }
-        update_progress("localhost", $progress_chars);
-        # fake since we do not have a 3rd step
-        $progress_chars .= "#";
-        update_progress("localhost", $progress_chars);
-    }
     print STDERR ("\nlocalhost: These files failed: " . join(" ", @failed))
       if ($FAIL_FLAG);
 
@@ -810,13 +761,14 @@ sub update_host
         if (!-r "$LOCAL_PATH/$i" or $LOCAL)
         {
             die(
-                "We do not have a copy of Applications yet! Get one using: cd ~/ && git clone http://git.kiskeyix.org/git/Applications\n"
-               ) if (!-d "$ENV{'HOME'}/Applications");
+                "We do not have a copy of Applications yet! Get one using: cd ~/ && git clone https://github.com/kiskeyix/applications\n"
+               ) if (!-d "$ENV{'HOME'}/Applications/.git");
             chdir($ENV{'HOME'}) or die("Cannot change to \$HOME. $!.\n");
             system("mkdir -p $LOCAL_PATH");
             die("Could not create directory $LOCAL_PATH. $!\n") if ($? != 0);
             if ($i =~ /Applications/)
             {
+                # update our local copy of Applications.tar.bz2
                 create_applications_tarball();
             }
             else
@@ -945,6 +897,7 @@ sub _is_broken_symlink
 
 sub _do_links
 {
+    debug('_do_links called');
     my $host = shift;
     return undef if (!defined($host));
     chdir($ENV{'HOME'}) if ($host eq "localhost");
@@ -954,6 +907,7 @@ sub _do_links
         # xdg-base-dir support
         if ($_config_file =~ /vim/i)
         {
+            debug('_do_links vim config');
             $_conf = ".config/" . basename($_config_file); # .config/DIR
         }
         if ($host eq "localhost")
@@ -974,12 +928,15 @@ sub _do_links
                 # for now, we simply remove the link
                 next if (!unlink($ENV{'HOME'}."/$_conf"));
             }
+            debug('_do_links creating symlink', $ENV{'HOME'}."/$_conf");
             symlink($_config_file, $ENV{'HOME'}."/$_conf");
         }
         else
         {
 
             # dealing with a remote hosts
+            
+            debug('_do_links creating remote symlink', $_conf);
             system(  "ssh "
                    . $USERNAME
                    . $host
@@ -1004,6 +961,7 @@ sub _exit_safe
 {
     my $status = shift;
     $status = 0 if (not defined($status));
+    debug('_exit_safe status=', $status);
 
     # TODO handle more signals
     my %exit = (INT => '9');

@@ -15,7 +15,7 @@
 #DEFAULT_LC_ALL="en_US" # shells like this
 #DEFAULT_LANG="en_US" # vim loves this
 ## Other variables you might want to put in your hosts profile:
-PATH="$HOME/Applications/bin:$HOME/Applications/scripts:$HOME/bin:/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
+PATH="$HOME/Applications/bin:$HOME/Applications/scripts:$HOME/bin:$HOME/.local/bin:/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
 MANPATH="$HOME/bin/man:$HOME/Applications/man:/usr/local/man:/usr/local/share/man:/usr/share/man:/usr/man:$MANPATH"
 BASH_ENV="$HOME/.bashrc"
 

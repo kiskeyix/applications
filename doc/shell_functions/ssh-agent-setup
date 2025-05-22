@@ -45,13 +45,15 @@ load_agent() {
 }
 
 add_keys() {
-    for key in ~/.ssh/id_[rd]sa ~/.ssh/*/id_[rd]sa; do
-        [ -f "$key" ] || continue
-        [[ "$key" =~ \.pub$ ]] && continue
+    find ~/.ssh -type f \
+        \( -name 'id_rsa*' -o -name 'id_dsa*' \) \
+        ! -name '*.pub' | while read -r key; do
+
         if ssh-add -l 2>/dev/null | grep -q "$key"; then
             echo "# Key $key already loaded"
             continue
         fi
+
         echo "# Loading key $key"
         ssh-add "$key"
         rc=$?

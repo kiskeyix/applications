@@ -371,7 +371,7 @@ my $silent  = (!$VERBOSE) ? " > /dev/null 2>&1" : "";
 # update localhost and exit. This assumes ~/Applications is a git repository
 if ($LOCAL)
 {
-
+    debug('local mode');
     die(
         "We do not have a copy of Applications yet! Get one using: cd ~/ && git clone https://github.com/kiskeyix/applications\n"
     ) if (!-d "$ENV{'HOME'}/Applications/.git");
@@ -380,6 +380,8 @@ if ($LOCAL)
     my $FAIL_FLAG   = 0;
     my $SUCESS_FLAG = 0;
     my $progress_chars = "";
+
+    debug('local mode: make local dirs');
 
     _mkdir("$ENV{'HOME'}/.backup");
     _mkdir("$ENV{'HOME'}/tmp");
@@ -895,6 +897,7 @@ sub _is_broken_symlink
 
 sub _do_links
 {
+    debug('_do_links called');
     my $host = shift;
     return undef if (!defined($host));
     chdir($ENV{'HOME'}) if ($host eq "localhost");
@@ -904,6 +907,7 @@ sub _do_links
         # xdg-base-dir support
         if ($_config_file =~ /vim/i)
         {
+            debug('_do_links vim config');
             $_conf = ".config/" . basename($_config_file); # .config/DIR
         }
         if ($host eq "localhost")
@@ -924,12 +928,15 @@ sub _do_links
                 # for now, we simply remove the link
                 next if (!unlink($ENV{'HOME'}."/$_conf"));
             }
+            debug('_do_links creating symlink', $ENV{'HOME'}."/$_conf");
             symlink($_config_file, $ENV{'HOME'}."/$_conf");
         }
         else
         {
 
             # dealing with a remote hosts
+            
+            debug('_do_links creating remote symlink', $_conf);
             system(  "ssh "
                    . $USERNAME
                    . $host

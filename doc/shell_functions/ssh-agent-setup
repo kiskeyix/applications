@@ -12,57 +12,61 @@
 #   2022-10-20 - simplify loading keys
 #   2022-05-24 - adds logic to support Darwin
 
+#!/usr/bin/env bash
 echo "# running $0 (~/.ssh-agent-setup.bash)"
 
-clean_old_sock()
-{
-    pkill -u $UID ssh-agent
-    find /tmp /var/folders -uid $UID -name "agent.[0-9]*" -exec rm {} \; 2> /dev/null
-    rmdir /tmp/ssh-* > /dev/null 2>&1
+ENV_FILE="$HOME/.ssh-agent.env"
+
+clean_old_sock() {
+    pkill -u "$UID" ssh-agent
+    rm -f "$ENV_FILE"
 }
 
-launch_agent()
-{
-    eval `ssh-agent -s`
+launch_agent() {
+    echo "# launching new ssh-agent"
+    ssh-agent -s > "$ENV_FILE"
+    source "$ENV_FILE" >/dev/null
+    echo "# ssh-agent started and environment saved to $ENV_FILE"
 }
 
-load_keys()
-{
-    if [ ! -S "$SSH_AUTH_SOCK" ]; then
-        if [ -z $UID ]; then
-            echo "# setting UUID env var"
-            UID=`id -u`
+load_agent() {
+    if [ -f "$ENV_FILE" ]; then
+        echo "# loading ssh-agent from $ENV_FILE"
+        source "$ENV_FILE"
+        if ! ssh-add -l > /dev/null 2>&1; then
+            echo "# agent not responding, launching new one"
+            clean_old_sock
+            launch_agent
         fi
-        echo "# setting SSH_AUTH_SOCK env var"
-        SSH_AUTH_SOCK=`find /tmp /var/folders -uid $UID -name "agent.[0-9]*" -print 2> /dev/null|sort|tail -1`
-        SSH_AGENT_PID=`echo $SSH_AUTH_SOCK|cut -d. -f2`
-        echo export SSH_AUTH_SOCK=$SSH_AUTH_SOCK
-        echo export SSH_AGENT_PID=$SSH_AGENT_PID
-        export SSH_AUTH_SOCK SSH_AGENT_PID
     else
-        echo "# reusing SSH_AUTH_SOCK='$SSH_AUTH_SOCK'"
+        echo "# no existing agent, launching new one"
+        launch_agent
     fi
-    for key in ~/.ssh/id_[rd]sa* ~/.ssh/*/id_[rd]sa*; do
-        if echo $key | egrep -q '\.pub$'; then
+}
+
+add_keys() {
+    for key in ~/.ssh/id_[rd]sa ~/.ssh/*/id_[rd]sa; do
+        [ -f "$key" ] || continue
+        [[ "$key" =~ \.pub$ ]] && continue
+        if ssh-add -l 2>/dev/null | grep -q "$key"; then
+            echo "# Key $key already loaded"
             continue
         fi
-        # if key not loaded, attempt to load it
-        if ssh-add -l |egrep -q "$key "; then
-            continue
-        fi
-        echo "# Loading $key"
-        ssh-add $key
+        echo "# Loading key $key"
+        ssh-add "$key"
         rc=$?
-        if [ $rc = 2 ]; then
+        if [ "$rc" = 2 ]; then
             echo "# Repairing ssh-agent ($rc)"
             clean_old_sock
             launch_agent
-            echo "# Retry loading $key"
-            ssh-add $key
-        elif [ $rc = 1 ]; then
+            ssh-add "$key"
+        elif [ "$rc" = 1 ]; then
             echo "# Your key $key could not be loaded"
         fi
     done
 }
 
-load_keys
+# Main execution
+load_agent
+add_keys
+

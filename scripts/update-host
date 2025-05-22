@@ -961,6 +961,7 @@ sub _exit_safe
 {
     my $status = shift;
     $status = 0 if (not defined($status));
+    debug('_exit_safe status=', $status);
 
     # TODO handle more signals
     my %exit = (INT => '9');

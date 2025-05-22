@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # Luis Mondesi <lmondesi@bloomberg.net>
 # 2012-07-30
 #
@@ -9,10 +9,10 @@
 #
 # License: GPL
 # CHANGES:
+#   2025-05-22 - add support for ssh-agent
 #   2022-10-20 - simplify loading keys
 #   2022-05-24 - adds logic to support Darwin
 
-#!/usr/bin/env bash
 echo "# running $0 (~/.ssh-agent-setup.bash)"
 
 ENV_FILE="$HOME/.ssh-agent.env"

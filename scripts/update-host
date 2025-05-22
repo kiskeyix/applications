@@ -129,6 +129,7 @@ my @_CONFIG_FILES = (
                      "$ENV{'HOME'}/Applications/share/shell/tmux.conf",
                      "$ENV{'HOME'}/Applications/share/git-templates",
                      "$ENV{'HOME'}/Applications/share/shell/iterm2_shell_integration.bash",
+                     "$ENV{'HOME'}/Applications/share/shell/ssh-agent-setup.bash",
                     );
 
 # files that should be tidied!

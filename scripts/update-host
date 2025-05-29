@@ -114,22 +114,21 @@ my $TMP = "tmp";
 my $EXCLUDE = "172.16.1.250|as400";
 
 # files we will be updating
-my @FILES =
-  ("Applications.tar.bz2"); # --links is default: , "bashrc.tar.bz2", "vimrc.tar.bz2", "muttrc.tar.bz2");
+my $_tar_file = "Applications.tar.bz2";
 
 # links to $ENV{HOME} if DOLINKS is true
 my @_CONFIG_FILES = (
-                     "$ENV{'HOME'}/Applications/share/shell/bash_profile",
-                     "$ENV{'HOME'}/Applications/share/shell/bashrc",
-                     "$ENV{'HOME'}/Applications/share/shell/inputrc",
-                     "$ENV{'HOME'}/Applications/share/shell/cvsrc",
-                     "$ENV{'HOME'}/Applications/share/vim",
-                     "$ENV{'HOME'}/Applications/share/mutt",
-                     "$ENV{'HOME'}/Applications/share/shell/screenrc",
-                     "$ENV{'HOME'}/Applications/share/shell/tmux.conf",
-                     "$ENV{'HOME'}/Applications/share/git-templates",
-                     "$ENV{'HOME'}/Applications/share/shell/iterm2_shell_integration.bash",
-                     "$ENV{'HOME'}/Applications/share/shell/ssh-agent-setup.bash",
+                     "Applications/share/shell/bash_profile",
+                     "Applications/share/shell/bashrc",
+                     "Applications/share/shell/inputrc",
+                     "Applications/share/shell/cvsrc",
+                     "../Applications/share/vim",
+                     "Applications/share/mutt",
+                     "Applications/share/shell/screenrc",
+                     "Applications/share/shell/tmux.conf",
+                     "Applications/share/git-templates",
+                     "Applications/share/shell/iterm2_shell_integration.bash",
+                     "Applications/share/shell/ssh-agent-setup.bash",
                     );
 
 # files that should be tidied!
@@ -399,6 +398,8 @@ if ($LOCAL)
     _do_links("localhost") if ($DOLINKS);
     unlink(@_OBSOLETE)     if ($DOOBSOLETE);
 
+    _do_submodules('localhost');
+
     print STDOUT ("\n");
     _exit_safe(0);
 }
@@ -605,12 +606,7 @@ foreach my $h (keys %hosts)
 {
     debug("*** DOING: $h");
     next if (grep(/$EXCLUDE/, $h));
-    if (is_alive($h) != 1)
-    {
-        printf STDOUT ("%20s", $h);
-        print STDOUT (" is dead or no ssh server on port $ssh_port\n");
-        next;
-    }
+
     if (!$DEBUG)
     {
         print update_host($h);    # prints error if any
@@ -661,7 +657,8 @@ sub is_alive
             PeerAddr => $host,
             PeerPort => $ssh_port,
             Proto    => "tcp",
-            Type     => SOCK_STREAM
+            Type     => SOCK_STREAM,
+            Timeout => 3
         );
         if ($socket)
         {
@@ -741,8 +738,7 @@ sub update_host
     my $progress_chars = "";
 
     # sanity check. make sure host is alive:
-    return "ERROR: host $h is dead or no ssh server on port $ssh_port\n"
-      if (!is_alive($h));
+    return "$RED ERROR: host $h is dead or no ssh server on port $ssh_port $NORM\n" if (!is_alive($h));
 
     # make sure the .backup and $TMP dir exists
     # and make sure this signature file exists:
@@ -752,93 +748,82 @@ sub update_host
            . " 'mkdir -p $TMP ~/.backup; chmod 0700 ~/.backup; touch ~/.signaturerc' "
            . $silent);
 
-    # copy and unpack files:
-    foreach my $i (@FILES)
+    # create a local tarball if it does not exist
+    if (!-r "$LOCAL_PATH/$_tar_file" or $LOCAL)
     {
-        next if ($DOLINKS and $i =~ /bashrc|vim|mutt/i);    # skip shell config
+        die(
+            "We do not have a copy of Applications yet! Get one using: cd ~/ && git clone https://github.com/kiskeyix/applications\n"
+        ) if (!-d "$ENV{'HOME'}/Applications/.git");
+        chdir($ENV{'HOME'}) or die("Cannot change to \$HOME. $!.\n");
+        system("mkdir -p $LOCAL_PATH");
+        die("Could not create directory $LOCAL_PATH. $!\n") if ($? != 0);
+        # before we create the tarball, we need to update our git submodules
+        _do_submodules('localhost');
+        # update our local copy of Applications.tar.bz2
+        create_applications_tarball();
+    }
+    my $scp_cmd = "scp $LOCAL_PATH/$_tar_file " . $USERNAME . "$h:$TMP/ ";
+    print $scp_cmd."\n\n" if $VERBOSE;
+    system($scp_cmd . $silent);
+    if ($? == 0)
+    {
+        $progress_chars .= "#";
+    } else {
+        $progress_chars .= "!";
+    }
+    update_progress($h, $progress_chars);
 
-        # if the file does not exist, then we create our own on the fly
-        if (!-r "$LOCAL_PATH/$i" or $LOCAL)
+    my $_zcat    = ($_tar_file =~ /\.bz2$/i) ? "bzcat" : "zcat";    # zcat or bzcat?
+    my $_tar_arg = ($_tar_file =~ /\.bz2$/i) ? "j"     : "z";       # gzip or bzip2?
+    my $cmd = "ssh "
+    . $USERNAME
+    . $h
+    . " 'command $_zcat '$TMP/$_tar_file' | command $tar x"
+    . $VERBOSE_ARGS . "f -' ";
+
+    print $cmd."\n\n" if $VERBOSE;
+    my $err = system($cmd. $silent);
+
+    if (!$err)
+    {
+        $SUCESS_FLAG++;
+        $progress_chars .= "#";
+    }
+    else
+    {
+        $FAIL_FLAG++;
+        push(@failed, $_tar_file);
+
+        # last tar command failed?
+        if (!$SUCESS_FLAG)
         {
-            die(
-                "We do not have a copy of Applications yet! Get one using: cd ~/ && git clone https://github.com/kiskeyix/applications\n"
-               ) if (!-d "$ENV{'HOME'}/Applications/.git");
-            chdir($ENV{'HOME'}) or die("Cannot change to \$HOME. $!.\n");
-            system("mkdir -p $LOCAL_PATH");
-            die("Could not create directory $LOCAL_PATH. $!\n") if ($? != 0);
-            if ($i =~ /Applications/)
-            {
-                # update our local copy of Applications.tar.bz2
-                create_applications_tarball();
-            }
-            else
-            {
-                die("What is this?? $i?\n");
-            }
+            $progress_chars .= "!";
         }
-        my $scp_cmd = "scp $LOCAL_PATH/$i " . $USERNAME . "$h:$TMP/ ";
-        print $scp_cmd."\n\n" if $VERBOSE;
-        system($scp_cmd . $silent);
+    }
+    update_progress($h, $progress_chars);
+
+    if ($REMOVE_FILES)
+    {
+        system(  "ssh "
+            . $USERNAME
+            . $h
+            . " command rm -f '$TMP/$_tar_file' "
+            . $silent);
         if ($? == 0)
         {
             $progress_chars .= "#";
-        } else {
+        }
+        else
+        {
             $progress_chars .= "!";
         }
         update_progress($h, $progress_chars);
-
-        my $_zcat    = ($i =~ /\.bz2$/i) ? "bzcat" : "zcat";    # zcat or bzcat?
-        my $_tar_arg = ($i =~ /\.bz2$/i) ? "j"     : "z";       # gzip or bzip2?
-        my $cmd = "ssh "
-          . $USERNAME
-          . $h
-          . " 'command $_zcat '$TMP/$i' | command $tar x"
-          . $VERBOSE_ARGS . "f -' ";
-
-        print $cmd."\n\n" if $VERBOSE;
-        my $err = system($cmd. $silent);
-
-        if (!$err)
-        {
-            $SUCESS_FLAG++;
-            $progress_chars .= "#";
-        }
-        else
-        {
-            $FAIL_FLAG++;
-            push(@failed, $i);
-
-            # last tar command failed?
-            if (!$SUCESS_FLAG)
-            {
-                $progress_chars .= "!";
-            }
-        }
+    }
+    else
+    {
+        # fake since we do not have a 3rd step
+        $progress_chars .= "#";
         update_progress($h, $progress_chars);
-
-        if ($REMOVE_FILES)
-        {
-            system(  "ssh "
-                . $USERNAME
-                . $h
-                . " command rm -f '$TMP/$i' "
-                . $silent);
-            if ($? == 0)
-            {
-                $progress_chars .= "#";
-            }
-            else
-            {
-                $progress_chars .= "!";
-            }
-            update_progress($h, $progress_chars);
-        }
-        else
-        {
-            # fake since we do not have a 3rd step
-            $progress_chars .= "#";
-            update_progress($h, $progress_chars);
-        }
     }
 
     if ($DOOBSOLETE)
@@ -900,11 +885,11 @@ sub _do_links
     debug('_do_links called');
     my $host = shift;
     return undef if (!defined($host));
-    chdir($ENV{'HOME'}) if ($host eq "localhost");
     foreach my $_config_file (@_CONFIG_FILES)
     {
         my $_conf = "." . basename($_config_file);    # dot file
         # xdg-base-dir support
+        # TODO: some Vim packges are not compiled with xdg-base-dir support, we need a work around
         if ($_config_file =~ /vim/i)
         {
             debug('_do_links vim config');
@@ -912,6 +897,7 @@ sub _do_links
         }
         if ($host eq "localhost")
         {
+            chdir($ENV{'HOME'});
 
             if (_is_broken_symlink($_conf))
             {
@@ -944,6 +930,37 @@ sub _do_links
                    . "command ln -sf $_config_file $_conf $silent'");
         }
     }
+    debug('_do_links done');
+}
+
+sub _do_submodules
+{
+    debug('_do_submodules called');
+    my $host = shift;
+    return undef if (!defined($host));
+
+    if ($host eq "localhost")
+    {
+        chdir("$ENV{'HOME'}/Applications") or die("Cannot change to Applications dir: $!\n");
+        system("git submodule init");
+        system("git submodule update");
+        if ($? != 0)
+        {
+            print STDERR ("Failed to update git submodules. Please run:\n");
+            print STDERR ("cd $ENV{'HOME'}/Applications && git submodule update --remote --merge\n");
+            _exit_safe(1);
+        }
+    }
+    else
+    {
+        # dealing with a remote hosts
+        system(  "ssh "
+            . $USERNAME
+            . $host
+            . " 'cd $ENV{'HOME'}/Applications && "
+            . "git submodule init $silent && git submodule update --remote --merge $silent'");
+    }
+    debug('_do_submodules done');
 }
 
 sub prompt

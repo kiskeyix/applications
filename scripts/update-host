@@ -606,12 +606,7 @@ foreach my $h (keys %hosts)
 {
     debug("*** DOING: $h");
     next if (grep(/$EXCLUDE/, $h));
-    if (is_alive($h) != 1)
-    {
-        printf STDOUT ("%20s", $h);
-        print STDOUT (" is dead or no ssh server on port $ssh_port\n");
-        next;
-    }
+
     if (!$DEBUG)
     {
         print update_host($h);    # prints error if any
@@ -662,7 +657,8 @@ sub is_alive
             PeerAddr => $host,
             PeerPort => $ssh_port,
             Proto    => "tcp",
-            Type     => SOCK_STREAM
+            Type     => SOCK_STREAM,
+            Timeout => 3
         );
         if ($socket)
         {

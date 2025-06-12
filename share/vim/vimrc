@@ -665,6 +665,12 @@ autocmd VimEnter * if exists('b:rails_root') || filereadable("metadata.rb") |
     \ execute 'NERDTree' | wincmd p | endif
 " end NERDtree support
 
+" Open terminal with bash
+set shell=/bin/bash
+autocmd TerminalWinOpen,BufWinEnter * if &buftype == 'terminal'
+          \ | setlocal shell=/bin/bash
+          \ | endif
+
 " include other vim commands specific to this host (~/.vimrc-`hostname`)
 let hostname = hostname()
 if filereadable(expand("~/").".vimrc-".hostname)

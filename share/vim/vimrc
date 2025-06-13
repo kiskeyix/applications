@@ -667,7 +667,7 @@ autocmd VimEnter * if exists('b:rails_root') || filereadable("metadata.rb") |
 
 " Open terminal with bash
 set shell=/bin/bash
-autocmd TerminalWinOpen,BufWinEnter * if &buftype == 'terminal'
+autocmd TerminalOpen,BufWinEnter * if &buftype == 'terminal'
           \ | setlocal shell=/bin/bash
           \ | endif
 

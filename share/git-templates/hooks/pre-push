@@ -99,10 +99,11 @@ run_cookstyle()
         CMD="cookstyle"
     else
         # no cookstyle?
-        if [[ `uname -s` == "Darwin" ]]; then
+        if [[ "$(uname -s)" == "Darwin" ]]; then
+        
             echo "Do: brew install --cask chef-workstation"
         else
-            echo "Do: gem install cookstyle"
+            echo "Do: gem install $CMD"
         fi
         echo "You can also download it directly from: https://docs.chef.io/workstation/install_workstation/"
         exit 1
@@ -157,10 +158,10 @@ run_rubocop()
         CMD="rubocop"
     else
         # no rubocop?
-        if [[ `uname -s` == "Darwin" ]]; then
+        if [[ "$(uname -s)" == "Darwin" ]]; then
             echo "Do: brew install --cask chef-workstation"
         else
-            echo "Do: gem install cookstyle"
+            echo "Do: gem install $CMD"
         fi
         echo "You can also download it directly from: https://docs.chef.io/workstation/install_workstation/"
         exit 1

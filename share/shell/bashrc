@@ -84,7 +84,7 @@ blue='\e[0;34m'
 BLUE='\e[1;34m'
 cyan='\e[0;36m'
 CYAN='\e[1;36m'
-NC='\e[0m'		# No Color
+NC='\e[0m'    # No Color
 
 ## dircolors fallback to these defaults
 LS_COLORS="no=00:fi=00:di=01;34:ln=01;36:pi=40;33:so=01;35:bd=40;33;01:cd=40;33;01:or=01;05;37;41:mi=01;05;37;41:ex=01;32:*.cmd=01;32:*.exe=01;32:*.bin=01;32:*.com=01;32:*.btm=01;32:*.bat=01;32:*.sh=01;32:*.csh=01;32:*.tar=01;31:*.tgz=01;31:*.tbz2=01;31:*.arc=01;31:*.lha=01;31:*.arj=01;31:*.taz=01;31:*.lzh=01;31:*.zip=01;31:*.z=01;31:*.Z=01;31:*.gz=01;31:*.bz2=01;31:*.bz=01;31:*.tz=01;31:*.rpm=01;31:*.cpio=01;31:*.jpg=01;35:*.jpeg=01;35:*.gif=01;35:*.bmp=01;35:*.xbm=01;35:*.xpm=01;35:*.png=01;35:*.tif=01;35:*.tiff=01;35:*.html=00;31:*.tpl=00;31:*.cpp=04;31:*.cc=04;31:*.c++=04;31:*.c=04;31:*.php=04;31:*.php3=04;31:*.js=04;31:*.pl=04;31:*.h=04;35:*.inc=04;35:*.class=04;35:"
@@ -159,7 +159,7 @@ function printusers()
 
 }
 
-function _exit()	# function to run upon exit of shell
+function _exit()  # function to run upon exit of shell
 {
     printf -- "${RED}Hasta la vista, $HOSTNAME ${NC}"
 }
@@ -182,10 +182,10 @@ function fastprompt()
 {
     unset PROMPT_COMMAND
     case $TERM in
-	*term* | rxvt | vt100 )	
-	    PS1="\u@\h:\W > \[\033]0;\u@\h:\w\007\]" ;;
-	*) 
-	    PS1="\u@\h:\W > " ;;
+  *term* | rxvt | vt100 )  
+      PS1="\u@\h:\W > \[\033]0;\u@\h:\w\007\]" ;;
+  *) 
+      PS1="\u@\h:\W > " ;;
     esac
 }
 
@@ -231,8 +231,8 @@ function powerprompt()
 }
 
 #fastprompt
-powerprompt	# this is the default prompt - might be slow
-		# If too slow, use fastprompt instead....
+powerprompt  # this is the default prompt - might be slow
+    # If too slow, use fastprompt instead....
 
 #-------------------#
 # Personal Aliases  #
@@ -463,32 +463,41 @@ unset PRINTUSERS NAME POSITION COMPANY PHONE EMAIL QUOTE DEFAULT_QUOTE DEFAULT_L
 # and not under screen itself
 if [[ -n $SSH_TTY ]] && [[ -z $STY ]]; then
     # we favor tmux in UTF-8 mode
-    if command -v tmux > /dev/null && [ -z "$TMUX" ]; then
-        # Detect tmux version
-        tmux_version=$(tmux -V | awk '{print $2}')
-        major=$(echo "$tmux_version" | cut -d. -f1)
-        minor=$(echo "$tmux_version" | cut -d. -f2)
+    if command -v tmux > /dev/null; then
+        if [ -z "$TMUX" ]; then
+            # Detect tmux version
+            tmux_version=$(tmux -V | awk '{print $2}')
+            major=$(echo "$tmux_version" | cut -d. -f1)
+            minor=$(echo "$tmux_version" | cut -d. -f2)
 
-        # Use -CC if tmux >= 1.7 (controlling client support)
-        if [ "$major" -gt 1 ] || { [ "$major" -eq 1 ] && [ "$minor" -ge 7 ]; }; then
-            tmux_cmd="tmux -CC -u new -A -s main"
+      # Compose tmux command based on version
+      if [ "$major" -gt 1 ] || { [ "$major" -eq 1 ] && [ "$minor" -ge 7 ]; }; then
+          tmux_cmd="tmux -CC -u new -A -s main"
+      else
+          if tmux has-session -t main 2>/dev/null; then
+              tmux_cmd="tmux attach -t main"
+          else
+              tmux_cmd="tmux -u new -s main"
+          fi
+      fi
+
+      echo "Running: $tmux_cmd # (tmux v$tmux_version)"
+      eval "$tmux_cmd"
+        fi
+    elif command -v screen > /dev/null; then
+        # Construct a descriptive screen session name
+        session_name="BashSession"
+        if [ -n "$_GIT_BRANCH" ]; then
+            session_name="${USER}@${HOSTNAME}-${_GIT_BRANCH}"
         else
-            if tmux has-session -t main 2>/dev/null; then
-                tmux_cmd="tmux attach -t main"
-            else
-                tmux_cmd="tmux -u new -s main"
-            fi
+            session_name="${USER}@${HOSTNAME}"
         fi
 
-        echo "Running: $tmux_cmd # v$tmux_version"
-        eval "$tmux_cmd"
-    elif command -v screen > /dev/null; then
-        # check if we have a screen session running, if not, start a new one and attach to it
-
-        screen -l -a -t "${USER}@${HOSTNAME}${_GIT_BRANCH}" -xRR -S BashSession
+        echo "Attaching to screen session: $session_name"
+        screen -l -a -t "$session_name" -xRR -S "$session_name"
     else
-        echo "Neither tmux nor screen commands found"
-    fi
+        echo "Neither tmux nor screen is installed. Cannot start session manager."
+    fi 
 fi
 ## EOF ##
 

@@ -463,30 +463,27 @@ unset PRINTUSERS NAME POSITION COMPANY PHONE EMAIL QUOTE DEFAULT_QUOTE DEFAULT_L
 # and not under screen itself
 if [[ -n $SSH_TTY ]] && [[ -z $STY ]]; then
     # we favor tmux in UTF-8 mode
-    if command -v tmux > /dev/null; then
-        if [[ -z $TMUX ]]; then
-            # we want to use controlling session if tmux supports it (1.7 and up)
-            # if not, fallback to an existing session ('main') or create one non-controlling if older tmux (1.x)
-            #
-            # Use CTRL+Space s to see other sessions (or CTRL+b s)
-            # This setup allows us to open multiple windows to the same server, and
-            # have independent input.
-            tmux_cmd="tmux -CC -u new -A -s main"$
-            if tmux -V|head -1|awk '{print $NF}'|egrep -q '1\.[0-6]+'; then
-                if tmux has-session -t main; then
-                    tmux_cmd="tmux attach -t main"
-                else
-                    tmux_cmd="tmux -u new -s main"
-                fi
+    if command -v tmux > /dev/null && [ -z "$TMUX" ]; then
+        # Detect tmux version
+        tmux_version=$(tmux -V | awk '{print $2}')
+        major=$(echo "$tmux_version" | cut -d. -f1)
+        minor=$(echo "$tmux_version" | cut -d. -f2)
+
+        # Use -CC if tmux >= 1.7 (controlling client support)
+        if [ "$major" -gt 1 ] || { [ "$major" -eq 1 ] && [ "$minor" -ge 7 ]; }; then
+            tmux_cmd="tmux -CC -u new -A -s main"
+        else
+            if tmux has-session -t main 2>/dev/null; then
+                tmux_cmd="tmux attach -t main"
+            else
+                tmux_cmd="tmux -u new -s main"
             fi
-            $tmux_cmd
-            ec=$?
-            echo ec=$ec
         fi
+
+        echo "Running: $tmux_cmd # v$tmux_version"
+        eval "$tmux_cmd"
     elif command -v screen > /dev/null; then
-        #
-        # check if we have a screen session running, if not,
-        # start a new one and attach to it
+        # check if we have a screen session running, if not, start a new one and attach to it
 
         screen -l -a -t "${USER}@${HOSTNAME}${_GIT_BRANCH}" -xRR -S BashSession
     else

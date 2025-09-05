@@ -947,7 +947,7 @@ sub _do_submodules
         if ($? != 0)
         {
             print STDERR ("Failed to update git submodules. Please run:\n");
-            print STDERR ("cd $ENV{'HOME'}/Applications && git submodule update --remote --merge\n");
+            print STDERR ("cd $ENV{'HOME'}/Applications && git submodule update --init --remote --merge\n");
             _exit_safe(1);
         }
     }

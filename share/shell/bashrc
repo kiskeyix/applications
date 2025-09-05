@@ -262,7 +262,7 @@ alias vcl='git logline'
 alias vcf='git fsck'
 alias vcg='git gc'              # --prune is wrong as default
 alias vct='git tag'
-alias vcy='git submodule update --remote --merge' # download/fetch submodule changes, merge those changes into my repository
+alias vcy='git submodule update --init --remote --merge' # download/fetch submodule changes, merge those changes into my repository
 
 alias diff='diff -burN'
 

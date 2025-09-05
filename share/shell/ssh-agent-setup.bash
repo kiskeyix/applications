@@ -40,7 +40,7 @@ load_agent() {
         if [[ $DEBUG ]]; then
             echo "# loading ssh-agent from $ENV_FILE"
         fi
-        source "$ENV_FILE"
+        source "$ENV_FILE" >/dev/null
         if ! ssh-add -l > /dev/null 2>&1; then
             if [[ $DEBUG ]]; then
                 echo "# agent not responding, launching new one"

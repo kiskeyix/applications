@@ -1,4 +1,7 @@
+*.app
 *.bak
+*.desktop
+*.exe
 *.log
 .*.swp
 .DS_Store
@@ -12,8 +15,5 @@ man
 opt
 pino
 share/mutt/mail*
-think*
-*.desktop
-*.app
-*.exe
 share/vim/systags
+think*

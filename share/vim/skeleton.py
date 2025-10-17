@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 """
-$Revision: 1.1.0 $
-$Date: 2025-10-08 22:35 EDT $
 my_name < email@example.com >
 
 DESCRIPTION:
@@ -10,6 +8,8 @@ DESCRIPTION:
 
 USAGE:
   skeleton.py 1 2 --required foo --sum --move paper --workers 8 --fail-prob 0.3
+
+LICENSE: ____
 """
 
 import argparse
@@ -34,6 +34,7 @@ def parse_args(argv=None):
                    help='probability a task raises (0.0–1.0)')
     p.add_argument('--seed', type=int, default=None, help='random seed for reproducibility')
     p.add_argument('-v', '--verbose', action='store_true', help='verbose output')
+    p.add_argument('-d', '--debug', action='store_true', help='debug output')
     return p.parse_args(argv)
 
 # --- workload ---------------------------------------------------------------

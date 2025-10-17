@@ -707,23 +707,72 @@ sub debug
 }
 
 # @desc creates tarball in $HOME/Share/settings/Applications.tar.bz2
-sub create_applications_tarball
-{
+sub create_applications_tarball {
     my $tarball = "Applications.tar.bz2";
-    my $EXCLUDE_ARGS="";
-    open(EXCLUDE,"< $ENV{'HOME'}/Applications/.gitignore");
-    while(<EXCLUDE>)
-    {
-        my $str = $_;
-        chomp($str);
-        $EXCLUDE_ARGS .= "--exclude=$str ";
+    my $home    = $ENV{HOME} // die "HOME not set";
+    my $tar     = $ENV{TAR}  || 'tar';   # allow override via $TAR
+    my $outpath = "$LOCAL_PATH/$tarball"; # assumes $LOCAL_PATH is set elsewhere
+
+    # Detect tar flavor
+    my $tar_version = qx{$tar --version 2>&1};
+    my $is_gnu   = ($tar_version =~ /GNU tar/i) ? 1 : 0;
+    my $is_bsdtar= ($tar_version =~ /bsdtar|libarchive/i) ? 1 : 0;
+
+    # Build --exclude args from ~/.gitignore (skip blanks/comments)
+    my @exclude_args;
+    my $gitignore = "$home/Applications/.gitignore";
+    if (open my $fh, '<', $gitignore) {
+        while (my $line = <$fh>) {
+            chomp($line);
+            $line =~ s/^\s+|\s+$//g;      # trim
+            next if $line eq '' || $line =~ /^\s*#/;
+            push @exclude_args, "--exclude=$line";
+        }
+        close $fh;
     }
-    close(EXCLUDE);
-    system(
-        "cd $ENV{'HOME'} && tar $EXCLUDE_ARGS --exclude='.git' --exclude='.gitignore' --exclude='.github' -cjf $LOCAL_PATH/$tarball --no-mac-metadata --no-acls --no-xattrs --no-fflags Applications"
+
+    # Always exclude these
+    push @exclude_args, "--exclude=.git", "--exclude=.gitignore", "--exclude=.github";
+
+    # macOS/bsdtar-only flags (safe to omit on GNU tar)
+    my @bsd_only = $is_bsdtar
+        ? ("--no-mac-metadata", "--no-acls", "--no-xattrs", "--no-fflags")
+        : ();
+
+    # Change to $HOME to match original behavior
+    chdir $home or die "Cannot chdir to $home: $!";
+
+    # Assemble command; use list form to avoid shell quoting issues
+    my @cmd = (
+        $tar,
+        @exclude_args,
+        @bsd_only,
+        "-cjf", $outpath,
+        "Applications",
     );
-    print "# Created $LOCAL_PATH/$tarball\n" if $? == 0;
+
+    system(@cmd) == 0
+        ? print "# Created $outpath\n"
+        : die "tar failed (exit $?): @cmd\n";
 }
+
+# sub create_applications_tarball
+# {
+#     my $tarball = "Applications.tar.bz2";
+#     my $EXCLUDE_ARGS="";
+#     open(EXCLUDE,"< $ENV{'HOME'}/Applications/.gitignore");
+#     while(<EXCLUDE>)
+#     {
+#         my $str = $_;
+#         chomp($str);
+#         $EXCLUDE_ARGS .= "--exclude=$str ";
+#     }
+#     close(EXCLUDE);
+#     system(
+#         "cd $ENV{'HOME'} && tar $EXCLUDE_ARGS --exclude='.git' --exclude='.gitignore' --exclude='.github' -cjf $LOCAL_PATH/$tarball --no-mac-metadata --no-acls --no-xattrs --no-fflags Applications"
+#     );
+#     print "# Created $LOCAL_PATH/$tarball\n" if $? == 0;
+# }
 
 # @desc do all needed steps to update a given host
 # @return error string if any errors were found

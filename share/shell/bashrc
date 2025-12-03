@@ -133,6 +133,33 @@ if [[ 1 == $USE_BASH_COMPLETION ]]; then
     for cmd in gitbranchdelete gitbranchrename gitcheckout vco; do
         complete -F __my_git_complete_heads $cmd
     done
+
+    __tsh_alias_complete() {
+        local cur aliases_file aliases
+        aliases_file="$HOME/.tsh/config/config.yaml"
+        cur="${COMP_WORDS[COMP_CWORD]}"
+
+        if [[ -r "$aliases_file" ]]; then
+            # Prefer yq if installed
+            if command -v yq >/dev/null 2>&1; then
+                # yq v4 syntax
+                aliases="$(yq e '.aliases | keys | .[]' "$aliases_file" 2>/dev/null)"
+            else
+                # Portable awk fallback: lines like  "alias": "..."
+                aliases="$(
+                    awk -F'"' '
+                        # match lines that start with optional spaces then "name":
+                        /^[[:space:]]*"[A-Za-z0-9_.-]+":[[:space:]]*/ { print $2 }
+                    ' "$aliases_file"
+                )"
+            fi
+        fi
+
+        COMPREPLY=( $(compgen -W "$aliases" -- "$cur") )
+    }
+
+    # Complete the first argument to `tsh` using the aliases above
+    complete -F __tsh_alias_complete tsh
 fi
 
 # at this point is a good time to cleanup our PATH from dups

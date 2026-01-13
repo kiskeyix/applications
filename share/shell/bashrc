@@ -297,6 +297,12 @@ alias vcl='git logline'
 alias vcf='git fsck'
 alias vcg='git gc'              # --prune is wrong as default
 alias vct='git tag'
+# you might need to do:
+#   cd path/to/submodule/folder
+#   git checkout --detach
+#   git reset --hard
+# to make sure the submodule is always pointing to the latest upstream commit
+#   git ls-tree HEAD share/vim/pack/vendor/start/copilot
 alias vcy='git submodule update --init --remote --merge' # download/fetch submodule changes, merge those changes into my repository
 
 alias diff='diff -burN'

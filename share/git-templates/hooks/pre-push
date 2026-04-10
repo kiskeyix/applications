@@ -152,7 +152,9 @@ run_codespell()
 run_rubocop()
 {
     CMD='rubocop'
-    if command -v chef > /dev/null && ! [[ -f config.ru ]]; then
+    if [[ -f Gemfile ]] && command -v bundle > /dev/null; then
+        CMD="bundle exec rubocop"
+    elif command -v chef > /dev/null && ! [[ -f config.ru ]]; then
         CMD="chef exec $CMD"
     elif command -v rubocop > /dev/null; then
         CMD="rubocop"
@@ -172,8 +174,8 @@ run_rubocop()
             DIRS="$_dir $DIRS"
         fi
     done
-    if command -v rubocop > /dev/null; then
-        echo using rubocop $(rubocop --version)
+    if $CMD --version > /dev/null 2>&1; then
+        echo using rubocop $($CMD --version 2>/dev/null)
         if $CMD --fail-fast -l --format simple $DIRS 2> /dev/null | egrep -q 'offense detected'; then
             echo
             echo "Offenses detected by rubocop. Fix them with:"
@@ -197,7 +199,7 @@ run_mypy()
     CMD='mypy'
     if command -v mypy > /dev/null; then
         CMD="mypy"
-        echo using mypy $(mypy --version)
+        echo using $(mypy --version)
     else
         if [[ `uname -s` == "Darwin" ]]; then
             echo "Do: brew install python3 mypy"

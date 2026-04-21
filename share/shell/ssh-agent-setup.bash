@@ -58,7 +58,7 @@ load_agent() {
 
 add_keys() {
     find ~/.ssh -type f \
-        \( -name 'id_rsa*' -o -name 'id_dsa*' \) \
+        \( -name 'id_rsa*' -o -name 'id_dsa*' -o -name 'id_ed25519*' \) \
         ! -name '*.pub' | while read -r key; do
 
         if ssh-add -l 2>/dev/null | grep -q "$key"; then

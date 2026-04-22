@@ -8,6 +8,7 @@
 #
 # License: GPL
 # CHANGES:
+#   2026-08-21 - use keys fingerprint when comparing
 #   2025-09-05 - make it quieter. Use DEBUG env var for debug output
 #   2025-05-22 - add support for ssh-agent
 #   2022-10-20 - simplify loading keys
@@ -60,8 +61,8 @@ add_keys() {
     find ~/.ssh -type f \
         \( -name 'id_rsa*' -o -name 'id_dsa*' -o -name 'id_ed25519*' \) \
         ! -name '*.pub' | while read -r key; do
-
-        if ssh-add -l 2>/dev/null | grep -q "$key"; then
+        # compare sha256 fingerprint of keys (private and public)
+        if ssh-add -l -E sha256 2>/dev/null | grep -q "$(ssh-keygen -l -E sha256 -f $key.pub)"; then
             if [[ $DEBUG ]]; then
                 echo "# Key $key already loaded"
             fi

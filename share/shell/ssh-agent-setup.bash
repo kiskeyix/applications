@@ -62,7 +62,10 @@ add_keys() {
         \( -name 'id_rsa*' -o -name 'id_dsa*' -o -name 'id_ed25519*' \) \
         ! -name '*.pub' | while read -r key; do
         # compare sha256 fingerprint of keys (private and public)
-        if ssh-add -l -E sha256 2>/dev/null | grep -q "$(ssh-keygen -l -E sha256 -f $key.pub)"; then
+        if [[ ! -f $key.pub ]]; then
+            ssh-keygen -y -f $key > $key.pub
+        fi
+        if ssh-add -l -E sha256 2>/dev/null | grep -q "$(ssh-keygen -l -E sha256 -f $key.pub|awk '{print $2}')"; then
             if [[ $DEBUG ]]; then
                 echo "# Key $key already loaded"
             fi

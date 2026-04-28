@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# open-terminals — Open terminal windows arranged in a grid.
+# macOS: iTerm2 (AppleScript)    Linux: gnome-terminal (X11 --geometry)
+#
+# Usage: open-terminals [COLS ROWS]    (default: 3 2 → 6 windows)
+
+set -euo pipefail
+
+COLS=${1:-3}
+ROWS=${2:-2}
+TOTAL=$((COLS * ROWS))
+
+die() { echo "error: $*" >&2; exit 1; }
+
+# ---------------------------------------------------------------------------
+# macOS / iTerm2
+# ---------------------------------------------------------------------------
+open_iterm2() {
+    [[ -d "/Applications/iTerm.app" ]] || die "iTerm2 not found in /Applications"
+
+    local screen_w screen_h
+    # JXA gives logical points — correct for Retina and window positioning.
+    if ! read -r screen_w screen_h < <(
+        osascript -l JavaScript -e '
+            ObjC.import("AppKit");
+            var f = $.NSScreen.mainScreen.frame;
+            Math.round(f.size.width) + " " + Math.round(f.size.height);' 2>/dev/null
+    ) || [[ -z "${screen_w:-}" ]]; then
+        screen_w=1920; screen_h=1080
+    fi
+
+    local menu_bar=25
+    local usable_h=$((screen_h - menu_bar))
+    local win_w=$((screen_w / COLS))
+    local win_h=$((usable_h / ROWS))
+
+    # Build one AppleScript that creates and positions all windows.
+    local script='tell application "iTerm2"
+    activate
+'
+    local i c r x y
+    for ((i = 0; i < TOTAL; i++)); do
+        c=$((i % COLS)); r=$((i / COLS))
+        x=$((c * win_w)); y=$((r * win_h + menu_bar))
+        script+="    create window with default profile
+    tell current window
+        set bounds to {${x}, ${y}, $((x + win_w)), $((y + win_h))}
+    end tell
+"
+    done
+    script+='end tell'
+
+    osascript -e "$script"
+    echo "Opened ${TOTAL} iTerm2 windows in a ${COLS}x${ROWS} grid (${screen_w}x${screen_h} screen)."
+}
+
+# ---------------------------------------------------------------------------
+# Linux / gnome-terminal
+# ---------------------------------------------------------------------------
+open_gnome_terminal() {
+    command -v gnome-terminal &>/dev/null || die "gnome-terminal not found"
+
+    if [[ "${XDG_SESSION_TYPE:-}" == "wayland" ]]; then
+        echo "warning: --geometry positioning may be ignored under Wayland." >&2
+    fi
+
+    local screen_w screen_h
+    if command -v xdpyinfo &>/dev/null; then
+        local dims
+        dims=$(xdpyinfo | awk '/dimensions:/{print $2}')
+        screen_w=${dims%x*}; screen_h=${dims#*x}
+    elif command -v xrandr &>/dev/null; then
+        read -r screen_w screen_h < <(
+            xrandr --current | awk '/\*/{split($1,a,"x"); print a[1], a[2]; exit}'
+        )
+    else
+        screen_w=1920; screen_h=1080
+    fi
+
+    local panel=48  # GNOME top-bar
+    local usable_h=$((screen_h - panel))
+    local win_w=$((screen_w / COLS))
+    local win_h=$((usable_h / ROWS))
+
+    # --geometry uses character columns x rows; approximate glyph size in pixels
+    local char_w=8 char_h=18
+    local term_cols=$((win_w / char_w))
+    local term_rows=$((win_h / char_h))
+
+    local i c r x y
+    for ((i = 0; i < TOTAL; i++)); do
+        c=$((i % COLS)); r=$((i / COLS))
+        x=$((c * win_w)); y=$((r * win_h + panel))
+        gnome-terminal --geometry="${term_cols}x${term_rows}+${x}+${y}" &
+    done
+    wait
+
+    echo "Opened ${TOTAL} gnome-terminal windows in a ${COLS}x${ROWS} grid (${screen_w}x${screen_h} screen)."
+}
+
+# ---------------------------------------------------------------------------
+# Dispatch
+# ---------------------------------------------------------------------------
+case "$(uname -s)" in
+    Darwin) open_iterm2         ;;
+    Linux)  open_gnome_terminal ;;
+    *)      die "unsupported OS: $(uname -s)" ;;
+esac

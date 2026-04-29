@@ -23,11 +23,12 @@ if &t_Co > 2 || has("gui_running")
   :hi FoldColumn term=standout ctermfg=4 ctermbg=7 guifg=#ff8060 guibg=PeachPuff
   " :colorscheme default
   " Set a reasonable font
-  "set guifont=6x10
+  " set guifont=6x10
   " in MacVim select a font with:
   "set guifont=*
+  "set guifont? # shows the font being used
   " Example:
-  set guifont=Menlo:h18,DejaVu\ Sans\ Mono:h13
+  set guifont=DejaVu\ Sans\ Mono\ 14,Menlo\ 14
 endif
 
 " open a big window please

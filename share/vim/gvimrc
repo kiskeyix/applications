@@ -28,7 +28,7 @@ if &t_Co > 2 || has("gui_running")
   "set guifont=*
   "set guifont? # shows the font being used
   " Example:
-  set guifont=DejaVu\ Sans\ Mono\ 14,Menlo\ 14
+  set guifont=DejaVu\ Sans\ Mono\ 14,Menlo:h18
 endif
 
 " open a big window please

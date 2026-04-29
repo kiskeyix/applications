@@ -124,6 +124,9 @@ if [[ -f "$HOME/.path.setup" ]]; then
     . "$HOME/.path.setup"
 fi
 
+## Start ssh-agent before .bashrc so keys are loaded before tmux launches
+test -e "${HOME}/.ssh-agent-setup.bash" && source "${HOME}/.ssh-agent-setup.bash"
+
 ## Finally, get the aliases and functions from .bashrc. This will in turn
 ## read host-specific .bashrc-`hostname` file and .alias.setup, .path.setup, and
 ## .signaturerc and possibly others... See the .bashrc provided with this file
@@ -133,5 +136,4 @@ fi
 ## EOF ##
 
 test -e "${HOME}/.iterm2_shell_integration.bash" && source "${HOME}/.iterm2_shell_integration.bash"
-test -e "${HOME}/.ssh-agent-setup.bash" && source "${HOME}/.ssh-agent-setup.bash"
 

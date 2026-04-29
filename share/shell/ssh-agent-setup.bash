@@ -42,12 +42,16 @@ load_agent() {
             echo "# loading ssh-agent from $ENV_FILE"
         fi
         source "$ENV_FILE" >/dev/null
-        if ! ssh-add -l > /dev/null 2>&1; then
+        ssh-add -l > /dev/null 2>&1
+        local rc=$?
+        if [[ $rc -eq 2 ]]; then
             if [[ $DEBUG ]]; then
                 echo "# agent not responding, launching new one"
             fi
             clean_old_sock
             launch_agent
+        elif [[ $DEBUG ]]; then
+            echo "# agent is running (rc=$rc)"
         fi
     else
         if [[ $DEBUG ]]; then

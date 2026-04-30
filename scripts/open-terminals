@@ -18,30 +18,47 @@ die() { echo "error: $*" >&2; exit 1; }
 open_iterm2() {
     [[ -d "/Applications/iTerm.app" ]] || die "iTerm2 not found in /Applications"
 
-    local screen_w screen_h
-    # JXA gives logical points — correct for Retina and window positioning.
-    if ! read -r screen_w screen_h < <(
+    # Detect the screen containing the mouse cursor; fall back to the largest
+    # screen. Uses visibleFrame (excludes menu bar / Dock automatically).
+    # Returns top-left-origin coordinates: offset_x offset_y width height.
+    local screen_x screen_y screen_w screen_h
+    if ! read -r screen_x screen_y screen_w screen_h < <(
         osascript -l JavaScript -e '
             ObjC.import("AppKit");
-            var f = $.NSScreen.mainScreen.frame;
-            Math.round(f.size.width) + " " + Math.round(f.size.height);' 2>/dev/null
-    ) || [[ -z "${screen_w:-}" ]]; then
-        screen_w=1920; screen_h=1080
+            var mouse  = $.NSEvent.mouseLocation;
+            var screens = $.NSScreen.screens;
+            var target = null, largest = null, largestArea = 0;
+            for (var i = 0; i < screens.count; i++) {
+                var s = screens.objectAtIndex(i);
+                var f = s.frame;
+                var area = f.size.width * f.size.height;
+                if (area > largestArea) { largestArea = area; largest = s; }
+                if (mouse.x >= f.origin.x && mouse.x < f.origin.x + f.size.width &&
+                    mouse.y >= f.origin.y && mouse.y < f.origin.y + f.size.height)
+                    target = s;
+            }
+            if (!target) target = largest || $.NSScreen.mainScreen;
+            var primaryH = $.NSScreen.screens.objectAtIndex(0).frame.size.height;
+            var vf = target.visibleFrame;
+            var x = Math.round(vf.origin.x);
+            var y = Math.round(primaryH - vf.origin.y - vf.size.height);
+            var w = Math.round(vf.size.width);
+            var h = Math.round(vf.size.height);
+            x + " " + y + " " + w + " " + h;' 2>/dev/null
+    ) || [[ -z "${screen_x:-}" ]]; then
+        screen_x=0; screen_y=25; screen_w=1920; screen_h=1055
     fi
 
-    local menu_bar=25
-    local usable_h=$((screen_h - menu_bar))
     local win_w=$((screen_w / COLS))
-    local win_h=$((usable_h / ROWS))
+    local win_h=$((screen_h / ROWS))
 
-    # Build one AppleScript that creates and positions all windows.
     local script='tell application "iTerm2"
     activate
 '
     local i c r x y
     for ((i = 0; i < TOTAL; i++)); do
         c=$((i % COLS)); r=$((i / COLS))
-        x=$((c * win_w)); y=$((r * win_h + menu_bar))
+        x=$((screen_x + c * win_w)); y=$((screen_y + r * win_h))
         script+="    create window with default profile
     tell current window
         set bounds to {${x}, ${y}, $((x + win_w)), $((y + win_h))}
@@ -51,7 +68,7 @@ open_iterm2() {
     script+='end tell'
 
     osascript -e "$script"
-    echo "Opened ${TOTAL} iTerm2 windows in a ${COLS}x${ROWS} grid (${screen_w}x${screen_h} screen)."
+    echo "Opened ${TOTAL} iTerm2 windows in a ${COLS}x${ROWS} grid on ${screen_w}x${screen_h} screen."
 }
 
 # ---------------------------------------------------------------------------

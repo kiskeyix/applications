@@ -303,7 +303,7 @@ alias vct='git tag'
 #   git reset --hard
 # to make sure the submodule is always pointing to the latest upstream commit
 #   git ls-tree HEAD share/vim/pack/vendor/start/copilot
-alias vcy='git submodule update --init --remote --merge' # download/fetch submodule changes, merge those changes into my repository
+alias vcy='git submodule update --init --remote --merge && git submodule foreach "cd \$toplevel && git add \$sm_path"' # download/fetch submodule changes and stage updated pointers
 
 alias diff='diff -burN'
 

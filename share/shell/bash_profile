@@ -119,17 +119,14 @@ elif [[ -f /usr/local/etc/bashrc ]]; then
         . /usr/local/etc/bashrc
 fi
 
-## read host-specific path:
-if [[ -f "$HOME/.path.setup" ]]; then
-    . "$HOME/.path.setup"
-fi
+## Modular config — loaded before .bashrc so aliases are available in interactive shells
+if [[ -r "$HOME/.path.setup" ]]; then . "$HOME/.path.setup"; fi
+if [[ -r "$HOME/.alias.setup" ]]; then . "$HOME/.alias.setup"; fi
 
 ## Start ssh-agent before .bashrc so keys are loaded before tmux launches
 test -e "${HOME}/.ssh-agent-setup.bash" && source "${HOME}/.ssh-agent-setup.bash"
 
-## Finally, get the aliases and functions from .bashrc. This will in turn
-## read host-specific .bashrc-`hostname` file and .alias.setup, .path.setup, and
-## .signaturerc and possibly others... See the .bashrc provided with this file
+## Get the functions and interactive shell setup from .bashrc
 if [[ -f "$HOME/.bashrc" ]]; then
 	. "$HOME/.bashrc"
 fi

@@ -1,18 +1,149 @@
-# sample ~/.alias.setup file:
-alias distccd_server="/usr/bin/distccd --verbose --daemon --nice=10 --listen=10.10.10.3 --no-detach --log-stderr --allow=10.10.10.10"
+# .alias.setup — personal aliases and small functions
+# Sourced from .bash_profile; override per-host via .alias.setup in $HOME
 
-alias file_check='sudo nice /usr/sbin/fcheck -casxlf /etc/fcheck/fcheck.cfg'
-alias muttrc='tar -cjvf ~/muttrc-`date -I`.tar.bz2 .mutt'
+alias bye='exit'
+alias abul='exit'
 
-alias vimrc='tar -cjvf ~/vimrc-`date -I`.tar.bz2 .vim'
+alias gitpull='git fetch origin; git rebase origin;'
+alias gitpush='git push; git fetch origin; git rebase origin;'
 
-alias bashrc='tar -h -cjvf ~/bashrc-`date -I`.tar.bz2 .bashrc .bash_profile .dir_colors .inputrc'
-	
-alias tarscripts='tar --exclude="CVS" -cjvf ~/Applications-`date -I`.tar.bz2 Applications'
+# version control (muscle memory)
+alias vca='git add .'
+alias vcb='git branch'
+alias vcc='git commit'
+alias vcd='git diff'
+alias vcf='git fsck'
+alias vcg='git gc'
+alias vcl='git logline'
+alias vcm='git merge'
+alias vco='git checkout'
+alias vcp='git pull'
+alias vcr='git pull --rebase'
+alias vcu='git push'
+alias vcs='git status'
+alias vct='git tag'
+alias vcy='git submodule update --init --remote --merge && git submodule foreach "cd \$toplevel && git add \$sm_path"'
 
-alias ta='tail -f /var/log/apache2/access_log'
-alias te='tail -f /var/log/apache2/error.log'
+alias diff='diff -burN'
 
-alias procmailrc='vi ~/.procmailrc'
+# package manager
+if command -v apt > /dev/null 2>&1; then
+    alias swinstall="sudo apt install"
+    alias swremove="sudo apt remove"
+    alias swupgrade="sudo apt update; sudo apt upgrade -y"
+elif command -v apt-get > /dev/null 2>&1; then
+    alias swinstall="sudo apt-get install"
+    alias swremove="sudo apt-get remove"
+    alias swupgrade="sudo apt-get update; sudo apt-get upgrade -y"
+elif command -v yum > /dev/null 2>&1; then
+    alias swinstall="sudo yum install"
+    alias swremove="sudo yum remove"
+    alias swupgrade="sudo yum -y update"
+fi
 
-alias cpiptables='sudo cp /var/lib/iptables/active ~/firewall/iptables-rules-`date +%Y-%m-%d` && sudo chown -R ${USER} ~/firewall'
+alias ww=printusers
+
+alias lowercase="rename 'y/A-Z/a-z/' *"
+alias nospace="rename 's/ /_/g' *"
+
+alias psed='perl -pe'
+
+if command -v less > /dev/null 2>&1; then
+    alias more='less'
+fi
+
+# safe file ops (prefer GNU coreutils on macOS)
+if command -v grm > /dev/null 2>&1; then
+    alias rm='grm -i'
+else
+    alias rm='rm -i'
+fi
+
+_UNAME=$(uname -s)
+if [[ "Linux" == $_UNAME || "Cygwin" == $_UNAME ]]; then
+    alias ls='ls -hF --color'
+elif [[ "Darwin" == $_UNAME ]]; then
+    alias ls='ls -GF'
+elif command -v gls > /dev/null 2>&1; then
+    alias ls='gls -hF --color'
+fi
+unset _UNAME
+
+if command -v gcp > /dev/null 2>&1; then
+    alias cp='gcp -i'
+else
+    alias cp='cp -i'
+fi
+
+if command -v gmv > /dev/null 2>&1; then
+    alias mv='gmv -i'
+else
+    alias mv='mv -i'
+fi
+
+# shortcuts
+alias h='history'
+alias j='jobs -l'
+alias which='type -a'
+alias ..='cd ..'
+alias du='du -h'
+alias df='df -h'
+
+# ls variants
+alias lx='ls -lXB'
+alias lk='ls -lSr'
+alias la='ls -lA'
+alias lr='ls -lR'
+alias lt='ls -ltr'
+alias lm='ls -Al | more'
+alias ll='ls -Al | less'
+
+alias background='xv -root -quit -max -rmode 5'
+alias ts='tail -f /var/log/syslog'
+alias tm='tail -f /var/log/messages'
+
+# cd with directory stack
+function cd_pushd()
+{
+    if [[ -n "$1" ]]; then
+        pushd "$1" > /dev/null 2>&1
+    else
+        cd ~
+    fi
+}
+alias cd='cd_pushd'
+
+alias cdclose="eject -t"
+
+# vim detection
+if command -v vim > /dev/null 2>&1; then
+    if [[ -f "$HOME/.config/vim/vimrc" ]]; then
+        alias vi='vim -u "$HOME/.config/vim/vimrc"'
+    else
+        alias vi='vim'
+    fi
+fi
+if [[ -z "$SSH_TTY" && -x "$(command -v gvim 2> /dev/null)" ]]; then
+    alias vim="gvim"
+    if command -v gvimdiff > /dev/null 2>&1; then
+        alias vimdiff="gvimdiff"
+    fi
+elif [[ -z "$SSH_TTY" && -x "$(command -v mvim 2> /dev/null)" ]]; then
+    alias vim="mvim"
+    if command -v mvimdiff > /dev/null 2>&1; then
+        alias vimdiff="mvimdiff"
+    fi
+fi
+
+alias dpkg-buildpackage='dpkg-buildpackage -rfakeroot'
+alias connect='cu -l /dev/ttyS0 -s 9600'
+alias Iostat='iostat -xnczpm 3'
+alias Prstat='prstat -mL'
+
+# spelling typos
+alias xs='cd'
+alias vf='cd'
+alias moer='more'
+alias moew='more'
+alias kk='ll'
+alias suod='sudo'

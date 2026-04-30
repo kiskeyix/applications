@@ -18,9 +18,8 @@
 #   * Create a file named "$HOME/.path.setup" to modify         #
 #       your PATH variable. The file contains something like    #
 #       export PATH=$PATH:/other/path                           #
-#   * Create a file named "$HOME/.alias.setup" to modify        #
-#       your aliases. The file should contain lines like        #
-#       alias vi='vim -c "set ft=dosini" '                      #
+#   * Edit "$HOME/.alias.setup" to add or override aliases.     #
+#       Default aliases are in share/shell/alias.setup.         #
 #   * Create a file named "$HOME/.bashrc-`hostname` to add host #
 #       specific functions and other bashrc related things.     #
 #   * Create a file named "$HOME/.profile-`hostname` to add     #
@@ -192,15 +191,6 @@ function _exit()  # function to run upon exit of shell
 }
 #trap _exit 0
 
-function cd_pushd()
-{
-    if [[ -n "$1" ]]; then
-        pushd "$1" > /dev/null 2>&1 
-    else
-        cd ~
-    fi
-}
-
 #---------------#
 #  Shell prompt #
 #---------------#
@@ -269,191 +259,7 @@ function gitprompt()
 powerprompt  # this is the default prompt - might be slow
 # If too slow, use fastprompt instead....
 
-#-------------------#
-# Personal Aliases  #
-#-------------------#
-
-alias bye='exit'
-alias abul='exit'
-
-# git-pull does not cut it for you?
-alias gitpull='git fetch origin; git rebase origin;'
-# how about git-push?
-alias gitpush='git push; git fetch origin; git rebase origin;'
-# aliases so whenever you switch SCM you don't need to relearn the commands:
-alias vca='git add .'           # think 'commit all'
-alias vcb='git branch'
-alias vcc='git commit'
-alias vcd='git diff'
-alias vcm='git merge'
-alias vco='git checkout'        # think 'rcs/cvs/svn co'
-alias vcp='git pull'            # think 'checkout from remote host'
-alias vcr='git pull --rebase'   # think 'checkout from remote host with clean history'
-alias vcu='git push'            # think 'update'
-alias vcs='git status'          # think 'info'
-# This requires ~/.gitconfig to define logline. Example:
-# git config --global alias.logline "log --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit"
-alias vcl='git logline'
-alias vcf='git fsck'
-alias vcg='git gc'              # --prune is wrong as default
-alias vct='git tag'
-# you might need to do:
-#   cd path/to/submodule/folder
-#   git checkout --detach
-#   git reset --hard
-# to make sure the submodule is always pointing to the latest upstream commit
-#   git ls-tree HEAD share/vim/pack/vendor/start/copilot
-alias vcy='git submodule update --init --remote --merge && git submodule foreach "cd \$toplevel && git add \$sm_path"' # download/fetch submodule changes and stage updated pointers
-
-alias diff='diff -burN'
-
-if command -v apt > /dev/null 2>&1; then
-    alias swinstall="sudo apt install"
-    alias swremove="sudo apt remove"
-    alias swupgrade="sudo apt update; sudo apt upgrade -y"
-elif command -v apt-get > /dev/null 2>&1; then
-    alias swinstall="sudo apt-get install"
-    alias swremove="sudo apt-get remove"
-    alias swupgrade="sudo apt-get update; sudo apt-get upgrade -y"
-elif command -v yum > /dev/null 2>&1; then
-    # assume Fedora
-    alias swinstall="sudo yum install"
-    alias swremove="sudo yum remove"
-    alias swupgrade="sudo yum -y update"
-fi
-
-alias ww=printusers
-
-# nifty way to rename files quickly ~/Applications/scripts/rename perl script
-# in debian this is /usr/bin/rename
-alias lowercase="rename 'y/A-Z/a-z/' *"
-alias nospace="rename 's/ /_/g' *"
-
-# I like using 'perl -pe' instead of stupid 'sed' and psed command is a clone of sed. So, we re-define it
-alias psed='perl -pe'
-
-if command -v less > /dev/null 2>&1; then
-    # less is just better than more
-    # no pun intended
-    alias more='less'
-fi
-
-if command -v grm > /dev/null 2>&1; then
-    alias rm='grm -i'
-else
-    alias rm='rm -i'
-fi
-
-_UNAME=`uname -s`
-if [[ "Linux" == $_UNAME || "Cygwin" == $_UNAME ]]; then
-    alias ls='ls -hF --color' 
-elif [[ "Darwin" == $_UNAME ]]; then
-    alias ls='ls -GF'
-elif command -v gls > /dev/null 2>&1; then
-    alias ls='gls -hF --color'
-fi
-unset _UNAME
-
-if command -v gcp > /dev/null 2>&1; then
-    alias cp='gcp -i'
-else
-    alias cp='cp -i'
-fi
-
-if command -v gmv > /dev/null 2>&1; then
-    alias mv='gmv -i'
-else
-    alias mv='mv -i'
-fi
-
-# Ruby 'rake' command can be problematic sometimes, use bundle exec
-# if command -v bundle > /dev/null 2>&1; then
-#     alias rake='test -f Gemfile && bundle exec rake || rake'
-# fi
-
-alias h='history'
-alias j='jobs -l'
-
-#alias r='rlogin' # who uses rlogin anymore?
-
-alias which='type -a'
-
-alias ..='cd ..'
-#alias path='printf ${PATH//:/\\n}'
-
-#alias print='/usr/bin/lp -o nobanner -d $LPDEST'
-#alias pjet='enscript -h -G -fCourier9 -d $LPDEST '
-
-alias du='du -h'
-alias df='df -h'
-
-alias lx='ls -lXB'          # B doesn't show files ending with ~
-alias lk='ls -lSr'
-alias la='ls -lA'           # A doesn't show implied . and .. files
-alias lr='ls -lR'
-alias lt='ls -ltr'  
-alias lm='ls -Al | more'
-alias ll='ls -Al | less'
-
-alias background='xv -root -quit -max -rmode 5'
-
-alias ts='tail -f /var/log/syslog'
-
-alias tm='tail -f /var/log/messages'
-
-alias cd='cd_pushd' # keep a stack of all directories visited
-                    # use 'popd' to go back in the stack
-
-alias cdclose="eject -t" # close CDROM tray ;-)
-
-# TODO we need to see if vim exists in our PATH first
-## Vim baby!
-if command -v vim > /dev/null 2>&1; then
-    if [[ -f "$HOME/.config/vim/vimrc" ]]; then
-        alias vi='vim -u "$HOME/.config/vim/vimrc"'
-    else
-        alias vi='vim'
-    fi
-fi
-## use gvim if exists instead of vim
-## and if we are not connected remotely to a system 
-## (via ssh)
-if [[ -z "$SSH_TTY" && -x "`command -v gvim 2> /dev/null`" ]]; then
-    alias vim="gvim"
-    if command -v gvimdiff > /dev/null 2>&1; then
-        alias vimdiff="gvimdiff"
-    fi
-elif [[ -z "$SSH_TTY" && -x "`command -v mvim 2> /dev/null`" ]]; then
-    alias vim="mvim"
-    if command -v mvimdiff > /dev/null 2>&1; then
-        alias vimdiff="mvimdiff"
-    fi
-fi
-
-alias dpkg-buildpackage='dpkg-buildpackage -rfakeroot'
-
-# connect (callup) to a system using a serial cable:
-alias connect='cu -l /dev/ttyS0 -s 9600'
-
-# sysadmin tasks:
-alias Iostat='iostat -xnczpm 3'
-alias Prstat='prstat -mL'
-
-## spelling typos
-
-alias xs='cd'
-alias vf='cd'
-alias moer='more'
-alias moew='more'
-alias kk='ll'
-alias suod='sudo'
-
-## get aliases for localhost
-## format is:
-## alias NAME='command'
-if [[ -r "$HOME/.alias.setup" ]]; then
-    . "$HOME/.alias.setup"
-fi
+# Aliases and cd_pushd are in share/shell/alias.setup (sourced from bash_profile)
 
 #----------------------#
 #       Signature      #

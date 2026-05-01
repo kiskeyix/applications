@@ -25,6 +25,7 @@ alias vct='git tag'
 alias vcy='git submodule update --init --remote --merge && git submodule foreach "cd \$toplevel && git add \$sm_path"'
 
 alias diff='diff -burN'
+alias grep='grep --color'
 
 # package manager
 if command -v apt > /dev/null 2>&1; then

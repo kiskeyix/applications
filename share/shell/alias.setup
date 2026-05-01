@@ -124,16 +124,20 @@ if command -v vim > /dev/null 2>&1; then
         alias vi='vim'
     fi
 fi
-if [[ -z "$SSH_TTY" && -x "$(command -v gvim 2> /dev/null)" ]]; then
-    alias vim="gvim"
-    if command -v gvimdiff > /dev/null 2>&1; then
-        alias vimdiff="gvimdiff"
-    fi
-elif [[ -z "$SSH_TTY" && -x "$(command -v mvim 2> /dev/null)" ]]; then
+
+# graphical vim when not on SSH
+if [[ -z "$SSH_TTY" ]]; then
+  if [[ -x "$(command -v mvim 2> /dev/null)" ]]; then
     alias vim="mvim"
     if command -v mvimdiff > /dev/null 2>&1; then
-        alias vimdiff="mvimdiff"
+      alias vimdiff="mvimdiff"
     fi
+  elif [[  -x "$(command -v gvim 2> /dev/null)" ]]; then
+    alias vim="gvim"
+    if command -v gvimdiff > /dev/null 2>&1; then
+      alias vimdiff="gvimdiff"
+    fi
+  fi
 fi
 
 alias dpkg-buildpackage='dpkg-buildpackage -rfakeroot'

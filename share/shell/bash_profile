@@ -121,6 +121,7 @@ elif [[ -f /usr/local/etc/bashrc ]]; then
         . /usr/local/etc/bashrc
 fi
 
+# TODO: having aliases only here means that it only loads on login shells. We need to do this for interactive shells too
 ## Modular config — loaded before .bashrc so aliases are available in interactive shells
 if [[ -r "$HOME/.path.setup" ]]; then . "$HOME/.path.setup"; fi
 if [[ -r "$HOME/.alias.setup" ]]; then . "$HOME/.alias.setup"; fi

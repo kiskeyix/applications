@@ -95,7 +95,7 @@ config = {
   },
   length: {
     min: 1,
-    max: 52,
+    max: 72,
   },
   types: [
     "build",
@@ -118,7 +118,7 @@ begin
   config_file = File.join(ENV['HOME'],'.git-templates','commit-msg.config.json')
   if File.exist?(config_file)
     require 'json'
-    config = JSON.parse(IO.read(config_file))
+    config = JSON.parse(IO.read(config_file), symbolize_names: true)
   end
 
   # convenience variables

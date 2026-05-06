@@ -139,12 +139,12 @@ run_codespell()
         fi
     done
     if command -v codespell > /dev/null; then
-        echo "using codespell $(codespell --version)"
+        echo "using codespell $(run_cmd codespell --version)"
         if [[ -f $HOME/.codespell.ignore.$baseworkdir ]]; then
             codespellargs=" --ignore-words $HOME/.codespell.ignore.$baseworkdir $codespellargs"
         fi
         #echo "$CMD $codespellargs $DIRS"
-        if ! $CMD $codespellargs $DIRS; then
+        if ! run_cmd $CMD $codespellargs $DIRS; then
             echo "Spelling errors detected. Fix them before proceeding"
             echo "Or add them to the ignore file(s): $codespellargs"
             exit 1
@@ -211,7 +211,7 @@ run_mypy()
     CMD='mypy'
     if command -v mypy > /dev/null; then
         CMD="mypy"
-        echo using $(mypy --version)
+        echo using $(run_cmd mypy --version)
     else
         if [[ `uname -s` == "Darwin" ]]; then
             echo "Do: brew install python3 mypy"
@@ -227,7 +227,7 @@ run_mypy()
     else
         CMD="$CMD --show-error-codes $(find . -name '*.py')"
     fi
-    if $CMD; then
+    if run_cmd $CMD; then
         echo "  * mypy done"
     else
         exit 1

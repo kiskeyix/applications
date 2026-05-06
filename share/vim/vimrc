@@ -24,7 +24,7 @@
 
 set nocompatible        " we want vim's features, not stupid vi compatiblity
 set ruler               " shows ruler at the bottom of the screen
-set bs=2                " allow backspacing over everything in insert mode
+set backspace=indent,eol,start  " allow backspacing over everything in insert mode
 set modeline            " reads modelines like '# vi: ft=foo :' lines
 
 " force utf-8
@@ -40,17 +40,10 @@ set showcmd    " Show (partial) command in status line
 set hlsearch    " Switch on syntax highlighting.
 set incsearch    " show matches on the fly
 
-" Newer vims let you paste without holding shift, so let's make this a default
-if version>=508
-    set mouse=v    " Use mouse to select and point in visual mode
-                        " for all use mouse=a
-      " (use shift+click to get old cut/paste behavior)
-    set nomousehide     " Do not hide the mouse cursor in gVim when typing
-endif
-
-"if version>=703
-"    set relativenumber
-"endif
+set mouse=v    " Use mouse to select and point in visual mode
+                    " for all use mouse=a
+  " (use shift+click to get old cut/paste behavior)
+set nomousehide     " Do not hide the mouse cursor in gVim when typing
 
 set fileformats=unix  " I want to see those ^M if I'm editing a dos file. See below (Key Mappings) for ^M removal!
 
@@ -407,15 +400,7 @@ if isdirectory('.git')
   " current line whenever the user tries to enter a command (:)
   " TODO we would like this to be display in the status line?
   " :set verbose=9
-  if v:version >= 800
-    au CmdLineEnter * call gitblame#echo()
-  else
-    " this kludge allows us to use gitblame in vim 7.x
-    " you will need to go into insert mode and then use :messages to see the
-    " message
-    set runtimepath=~/.config/vim,$VIMRUNTIME
-    au InsertEnter * call gitblame#echo()
-  endif
+  au CmdLineEnter * call gitblame#echo()
 endif
 
 endif " end if has(autocmd)
@@ -521,7 +506,7 @@ endif
 
 set dictionary+=/usr/share/dict/words
 
-set ai      " always set autoindenting on
+set autoindent
 
                         " skip making backups for these files
 set backupskip=/tmp/*,~/tmp/*,$TMPDIR/*,$TMP/*,$TEMP/*
@@ -562,12 +547,8 @@ if has("autocmd")
   " Also load indent files, to automatically do language-dependent indenting.
   " filetype plugin indent on
 
-  if v:version >= 600
-    filetype plugin on
-    filetype indent on
-  else
-      filetype on
-  endif
+  filetype plugin on
+  filetype indent on
 
 
   " For all text files set 'textwidth' to 78 characters.

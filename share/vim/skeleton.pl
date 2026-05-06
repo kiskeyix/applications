@@ -1,6 +1,4 @@
-#!/usr/bin/perl -w
-# $Revision: 1.0 $
-# $Date: 2007-05-03 20:37:08 $
+#!/usr/bin/perl
 # my_name < email@example.com >
 #
 # DESCRIPTION:
@@ -20,9 +18,7 @@ skeleton.pl - skeleton script for Perl
 =cut
 
 use strict;
-
-my $revision = '$Revision: 1.0 $';    # version
-$revision =~ s/(\\|Revision:|\s|\$)//g;
+use warnings;
 
 # standard Perl modules
 use IO::Handle;
@@ -36,7 +32,6 @@ use File::Spec::Functions;    # abs2rel() and other dir/filename specific
 use File::Copy;
 use File::Find;               # find();
 use File::Basename;           # basename() && dirname()
-use FileHandle;               # for progressbar
 
 #eval "use My::Module";
 #if ($@)
@@ -124,7 +119,7 @@ if ($USAGE)
     exit 0;    # never reaches here
 }
 
-if ($PVERSION) { print STDOUT ($revision, "\n"); exit 0; }
+if ($PVERSION) { print STDOUT ("0.1\n"); exit 0; }
 
 print "Hello\n";
 

@@ -2,8 +2,8 @@ require 'yaml'
 
 config = {}
 config_file = "#{File.dirname(__FILE__)}/config.yml"
-if File.exists? config_file
-    config = YAML::load_file config_file
+if File.exist? config_file
+    config = YAML.safe_load_file config_file
 end
 
 # sanity default:

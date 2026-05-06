@@ -1,6 +1,5 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 # vi: ft=perl :
-# $Revision: 1.3 $
 # my_name < email@example.com >
 #
 # DESCRIPTION: A simple test script
@@ -8,8 +7,9 @@
 # USAGE: ./skeleton.t
 # LICENSE: GPL
 use strict;
+use warnings;
 #use lib '.';
-use Test::More qw(no_plan);
+use Test::More;
 
 use skeleton qw(:all);
 
@@ -31,3 +31,5 @@ is($obj->skeleton_option('skeleton', 3), 3, 'setter/getter worked');
 
 is($obj->foo(), undef, 'foo() returns undef');
 ok($obj->foo("Hello World!\n"), 'foo() prints "Hello World!"');
+
+done_testing();

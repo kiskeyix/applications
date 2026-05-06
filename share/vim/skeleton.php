@@ -1,16 +1,23 @@
 <?php
-/*
- * $Revision: 1.1 $
+/**
  * my_name < email@example.com >
  *
+ * DESCRIPTION:
+ * USAGE:
+ * LICENSE: ___
  */
 
+declare(strict_types=1);
+
 ?>
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
-<HTML>
-<HEAD>
-<TITLE></TITLE>
-</HEAD>
-<BODY>
-</BODY>
-</HTML>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title></title>
+</head>
+<body>
+
+</body>
+</html>

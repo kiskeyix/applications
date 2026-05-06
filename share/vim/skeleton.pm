@@ -1,5 +1,4 @@
-#!/usr/bin/perl -w
-# $Revision: 1.12 $
+#!/usr/bin/perl
 # my_name < email@example.com >
 #
 # DESCRIPTION: A simple package that exports ...
@@ -48,15 +47,12 @@ This module ...
 
 package skeleton;
 
-use 5.008000;
+use 5.010;
 use strict;
 use warnings;
 use Carp qw(carp croak);    # croak dies nicely. carp warns nicely
 
-require Exporter;
-
-# inherit functions from these packages:
-our @ISA = qw( Exporter );
+use parent 'Exporter';
 
 # This allows declaration       use Foo::Bar ':all';
 # If you do not need this, moving things directly into @EXPORT or @EXPORT_OK

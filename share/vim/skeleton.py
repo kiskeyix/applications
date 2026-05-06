@@ -19,7 +19,7 @@ import random
 import traceback
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-def parse_args(argv=None):
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description='description for skeleton program to ...')
     p.add_argument('integers', metavar='N', type=int, nargs='+',
                    help='an integer for the accumulator')
@@ -39,7 +39,7 @@ def parse_args(argv=None):
 
 # --- workload ---------------------------------------------------------------
 
-def handle(item, fail_prob=0.3):
+def handle(item: int, fail_prob: float = 0.3) -> str:
     """Simulate work; sometimes fail."""
     time.sleep(random.uniform(0.05, 0.25))
     if random.random() < fail_prob:
@@ -48,7 +48,7 @@ def handle(item, fail_prob=0.3):
 
 # --- orchestration with ensure-style cleanup --------------------------------
 
-def process_all(items, max_workers=None, fail_prob=0.3, verbose=False):
+def process_all(items: list[int], max_workers: int | None = None, fail_prob: float = 0.3, verbose: bool = False) -> tuple[list[str], list[tuple]]:
     results, errors = [], []
     executor = ThreadPoolExecutor(max_workers=max_workers)
     futures = {executor.submit(handle, it, fail_prob): it for it in items}
@@ -74,7 +74,7 @@ def process_all(items, max_workers=None, fail_prob=0.3, verbose=False):
 
 # --- main -------------------------------------------------------------------
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     if args.seed is not None:
         random.seed(args.seed)

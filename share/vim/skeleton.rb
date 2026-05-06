@@ -162,7 +162,7 @@ def process_all(items, max_workers: nil, fail_prob: 0.3, verbose: false)
   errors  = []
 
   # Choose worker count: user-specified, else number of processors, else 4.
-  worker_count = (max_workers && max_workers > 0) ? max_workers : (Etc.respond_to?(:nprocessors) ? Etc.nprocessors : 4)
+  worker_count = (max_workers && max_workers > 0) ? max_workers : Etc.nprocessors
   worker_count = 1 if worker_count < 1
 
   job_queue = Queue.new

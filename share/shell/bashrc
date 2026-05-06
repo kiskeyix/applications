@@ -113,8 +113,9 @@ if [[ 1 == $USE_BASH_COMPLETION ]]; then
     elif [[ -r /opt/local/etc/bash_completion ]]; then
         . /opt/local/etc/bash_completion
     elif command -v brew > /dev/null; then
-        if [ -f $(brew --prefix)/etc/bash_completion ]; then
-            . $(brew --prefix)/etc/bash_completion
+        _BREW_PREFIX=$(brew --prefix)
+        if [ -f "$_BREW_PREFIX/etc/bash_completion" ]; then
+            . "$_BREW_PREFIX/etc/bash_completion"
         fi
     fi
 
@@ -163,7 +164,7 @@ fi
 
 # at this point is a good time to cleanup our PATH from dups
 # does not work well on Solaris
-if [[ `uname` == "Linux" ]]; then
+if [[ "$OSTYPE" == linux* ]]; then
 PATH=`awk -F: '{for(i=1;i<=NF;i++){if(!($i in a)){a[$i];printf s$i;s=":"}}}'<<<$PATH`
 export PATH
 fi
@@ -209,22 +210,25 @@ function fastprompt()
 
 function powerprompt()
 {
-    _powerprompt() 
+    local _has_git_ps1=0
+    command -v __git_ps1 > /dev/null && _has_git_ps1=1
+
+    _powerprompt()
     {
-        ## trick: first put command in command history, then find it in
-        ## the list. TODO find a better way of doing this:
-        _LOAD=$(command uptime 2> /dev/null | sed -e "s/.*: \([^,\ ]*\).*/\1/" -e "s/ //g")
+        if [[ -r /proc/loadavg ]]; then
+            read _LOAD _ < /proc/loadavg
+        elif [[ -z "$_LOAD" || $(( SECONDS - ${_LOAD_TS:-0} )) -ge 30 ]]; then
+            _LOAD=$(sysctl -n vm.loadavg 2>/dev/null | awk '{print $2}') || _LOAD=$(command uptime 2>/dev/null | sed -e "s/.*: \([^,\ ]*\).*/\1/" -e "s/ //g")
+            _LOAD_TS=$SECONDS
+        fi
         if [[ -z "${_LOAD:-}" ]]; then
             _LOAD="NOLOAD_CMD"
         fi
-        if command -v __git_ps1 > /dev/null; then
+        if (( _has_git_ps1 )); then
             _GIT_BRANCH=$(__git_ps1 " (%s)")
         fi
         case $TERM in
             *term* | rxvt* | ansi | tmux* )
-                # changes xterm title and icon to this string.
-                # the sequence is ESC]0+string+BELL
-                # where ESC is \033 and BELL is \007
                 echo -ne "\033]0;${USER}@${HOSTNAME}${_GIT_BRANCH}: ${PWD/$HOME/~}\007" ;;
         esac
     }
@@ -249,9 +253,11 @@ function powerprompt()
 
 function gitprompt()
 {
-    if [ -f "$(brew --prefix)/opt/bash-git-prompt/share/gitprompt.sh" ]; then
-        __GIT_PROMPT_DIR=$(brew --prefix)/opt/bash-git-prompt/share
-        source "$(brew --prefix)/opt/bash-git-prompt/share/gitprompt.sh"
+    local _prefix
+    _prefix=$(brew --prefix 2>/dev/null) || return
+    if [ -f "$_prefix/opt/bash-git-prompt/share/gitprompt.sh" ]; then
+        __GIT_PROMPT_DIR="$_prefix/opt/bash-git-prompt/share"
+        source "$_prefix/opt/bash-git-prompt/share/gitprompt.sh"
     fi
 }
 

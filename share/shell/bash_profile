@@ -45,7 +45,7 @@ elif [[ -d "/dev/shm/" ]]; then
     fi
 fi
 
-if [[ -x "`command -v less 2> /dev/null`" ]]; then
+if command -v less > /dev/null 2>&1; then
     PAGER="less"
 else
     PAGER="more"
@@ -84,18 +84,18 @@ if [[ -z "$CONCURRENCY_LEVEL" ]]; then
     CONCURRENCY_LEVEL=8
 fi
 ## setup ccache in a shared cache dir:
-if [[ -z "$CCACHE_DIR" && -x "`command -v ccache 2> /dev/null`" ]]; then
+if [[ -z "$CCACHE_DIR" ]] && command -v ccache > /dev/null 2>&1; then
     CCACHE_DIR="/tmp/ccache"
 fi
-if [[ -x "`command -v distcc 2> /dev/null`" ]]; then
+if command -v distcc > /dev/null 2>&1; then
     CCACHE_PREFIX="distcc"
-    if [[ -x "`command -v ccache 2> /dev/null`" ]]; then
+    if [[ -n "$CCACHE_DIR" ]]; then
         MAKEFLAGS="$MAKEFLAGS CCACHE_PREFIX=distcc -j$CONCURRENCY_LEVEL"
     fi
 fi
 ## attempt to read hosts for distcc:
 if [[ -f "$HOME/.distcc/hosts" ]]; then
-    DISTCC_HOSTS="$DISTCC_HOSTS `cat \"$HOME/.distcc/hosts\"`"
+    DISTCC_HOSTS="$DISTCC_HOSTS $(<"$HOME/.distcc/hosts")"
 fi
 ## end compiling
 

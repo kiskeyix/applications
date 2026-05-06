@@ -78,6 +78,18 @@ if (( FORCE == 1 )); then
     exit 0
 fi
 
+# chef exec fails with exit 1 when there is no TTY; wrap with script(1)
+run_cmd()
+{
+    if tty -s; then
+        eval "$@"
+    elif [ "$(uname -s)" = "Darwin" ]; then
+        script -q /dev/null sh -c "$*"
+    else
+        script -qc "$*" /dev/null
+    fi
+}
+
 # cookbooks
 codespellargs=""
 workdir=$(pwd)
@@ -108,8 +120,8 @@ run_cookstyle()
         echo "You can also download it directly from: https://docs.chef.io/workstation/install_workstation/"
         exit 1
     fi
-    echo "using '$CMD' ($($CMD --version | awk '/Cookstyle/ {print $NF}'))"
-    if ! $CMD $DIRS 2>&1; then
+    echo "using '$CMD' ($(run_cmd $CMD --version | awk '/Cookstyle/ {print $NF}'))"
+    if ! run_cmd $CMD $DIRS; then
         echo "Offenses detected by cookstyle. Fix them with:"
         echo "  $(echo $CMD | sed 's/cookstyle/cookstyle -A/') $DIRS"
         exit 1
@@ -174,9 +186,9 @@ run_rubocop()
             DIRS="$_dir $DIRS"
         fi
     done
-    if $CMD --version > /dev/null 2>&1; then
-        echo using rubocop $($CMD --version 2>/dev/null)
-        if $CMD --fail-fast -l --format simple $DIRS 2> /dev/null | egrep -q 'offense detected'; then
+    if run_cmd $CMD --version > /dev/null 2>&1; then
+        echo using rubocop $(run_cmd $CMD --version 2>/dev/null)
+        if run_cmd $CMD --fail-fast -l --format simple $DIRS 2> /dev/null | egrep -q 'offense detected'; then
             echo
             echo "Offenses detected by rubocop. Fix them with:"
             echo "  $(echo $CMD | sed 's/rubocop/rubocop -a/') $DIRS"

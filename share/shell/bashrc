@@ -89,7 +89,7 @@ NC='\e[0m'    # No Color
 LS_COLORS="no=00:fi=00:di=01;34:ln=01;36:pi=40;33:so=01;35:bd=40;33;01:cd=40;33;01:or=01;05;37;41:mi=01;05;37;41:ex=01;32:*.cmd=01;32:*.exe=01;32:*.bin=01;32:*.com=01;32:*.btm=01;32:*.bat=01;32:*.sh=01;32:*.csh=01;32:*.tar=01;31:*.tgz=01;31:*.tbz2=01;31:*.arc=01;31:*.lha=01;31:*.arj=01;31:*.taz=01;31:*.lzh=01;31:*.zip=01;31:*.z=01;31:*.Z=01;31:*.gz=01;31:*.bz2=01;31:*.bz=01;31:*.tz=01;31:*.rpm=01;31:*.cpio=01;31:*.jpg=01;35:*.jpeg=01;35:*.gif=01;35:*.bmp=01;35:*.xbm=01;35:*.xpm=01;35:*.png=01;35:*.tif=01;35:*.tiff=01;35:*.html=00;31:*.tpl=00;31:*.cpp=04;31:*.cc=04;31:*.c++=04;31:*.c=04;31:*.php=04;31:*.php3=04;31:*.js=04;31:*.pl=04;31:*.h=04;35:*.inc=04;35:*.class=04;35:"
 
 ## see 'help command' from within an interactive bash session
-eval `command dircolors --sh ~/.dir_colors 2> /dev/null`
+command -v dircolors > /dev/null && eval "$(dircolors --sh ~/.dir_colors 2>/dev/null)"
 
 if [[ "x$TERM" == "xcygwin" ]]; then
     ## switch TERM variable so that Vim and others don't complaint
@@ -162,12 +162,22 @@ if [[ 1 == $USE_BASH_COMPLETION ]]; then
     complete -F __tsh_alias_complete tsh
 fi
 
-# at this point is a good time to cleanup our PATH from dups
-# does not work well on Solaris
-if [[ "$OSTYPE" == linux* ]]; then
-PATH=`awk -F: '{for(i=1;i<=NF;i++){if(!($i in a)){a[$i];printf s$i;s=":"}}}'<<<$PATH`
+# deduplicate PATH entries (pure bash, works on all platforms)
+_dedup_path() {
+    local _new="" _p
+    local IFS=:
+    for _p in $PATH; do
+        [[ -z "$_p" ]] && continue
+        case ":$_new:" in
+            *:"$_p":*) ;;
+            *) _new="${_new:+$_new:}$_p" ;;
+        esac
+    done
+    PATH="$_new"
+}
+_dedup_path
+unset -f _dedup_path
 export PATH
-fi
 
 #---------------------------#
 #          FUNCTIONS        #
@@ -221,8 +231,13 @@ function powerprompt()
         if [[ -z "${_LOAD:-}" ]]; then
             _LOAD="NOLOAD_CMD"
         fi
-        if command -v __git_ps1 > /dev/null; then
-            _GIT_BRANCH=$(__git_ps1 " (%s)")
+        if [[ $(( SECONDS - ${_GIT_TS:-0} )) -ge 5 ]]; then
+            if command -v __git_ps1 > /dev/null; then
+                _GIT_BRANCH=$(__git_ps1 " (%s)")
+            else
+                _GIT_BRANCH=""
+            fi
+            _GIT_TS=$SECONDS
         fi
         case $TERM in
             *term* | rxvt* | ansi | tmux* )
@@ -251,11 +266,13 @@ function powerprompt()
 function gitprompt()
 {
     local _prefix
-    _prefix=$(brew --prefix 2>/dev/null) || return
-    if [ -f "$_prefix/opt/bash-git-prompt/share/gitprompt.sh" ]; then
-        __GIT_PROMPT_DIR="$_prefix/opt/bash-git-prompt/share"
-        source "$_prefix/opt/bash-git-prompt/share/gitprompt.sh"
-    fi
+    for _prefix in /opt/homebrew /usr/local; do
+        if [ -f "$_prefix/opt/bash-git-prompt/share/gitprompt.sh" ]; then
+            __GIT_PROMPT_DIR="$_prefix/opt/bash-git-prompt/share"
+            source "$_prefix/opt/bash-git-prompt/share/gitprompt.sh"
+            return
+        fi
+    done
 }
 
 #fastprompt

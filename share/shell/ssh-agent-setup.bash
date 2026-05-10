@@ -77,6 +77,10 @@ add_keys() {
         _add_flags="--apple-use-keychain"
     fi
 
+    # prevent ssh-add from hanging on a missing askpass program
+    local SSH_ASKPASS=""
+    local SSH_ASKPASS_REQUIRE="never"
+
     find ~/.ssh -type f \
         \( -name 'id_rsa*' -o -name 'id_dsa*' -o -name 'id_ed25519*' \) \
         ! -name '*.pub' | while read -r key; do

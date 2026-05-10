@@ -210,9 +210,6 @@ function fastprompt()
 
 function powerprompt()
 {
-    local _has_git_ps1=0
-    command -v __git_ps1 > /dev/null && _has_git_ps1=1
-
     _powerprompt()
     {
         if [[ -r /proc/loadavg ]]; then
@@ -224,7 +221,7 @@ function powerprompt()
         if [[ -z "${_LOAD:-}" ]]; then
             _LOAD="NOLOAD_CMD"
         fi
-        if (( _has_git_ps1 )); then
+        if command -v __git_ps1 > /dev/null; then
             _GIT_BRANCH=$(__git_ps1 " (%s)")
         fi
         case $TERM in

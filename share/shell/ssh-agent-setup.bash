@@ -62,14 +62,33 @@ load_agent() {
 }
 
 add_keys() {
+    if ! tty -s; then
+        if [[ $DEBUG ]]; then
+            echo "# no TTY, skipping key loading"
+        fi
+        return
+    fi
+
+    local _loaded
+    _loaded=$(ssh-add -l -E sha256 2>/dev/null)
+
+    local _add_flags=""
+    if [[ "$OSTYPE" == darwin* ]]; then
+        _add_flags="--apple-use-keychain"
+    fi
+
     find ~/.ssh -type f \
         \( -name 'id_rsa*' -o -name 'id_dsa*' -o -name 'id_ed25519*' \) \
         ! -name '*.pub' | while read -r key; do
-        # compare sha256 fingerprint of keys (private and public)
         if [[ ! -f $key.pub ]]; then
-            ssh-keygen -y -f $key > $key.pub
+            if [[ $DEBUG ]]; then
+                echo "# Skipping $key (no .pub file)"
+            fi
+            continue
         fi
-        if ssh-add -l -E sha256 2>/dev/null | grep -q "$(ssh-keygen -l -E sha256 -f $key.pub|awk '{print $2}')"; then
+        local _fp
+        _fp=$(ssh-keygen -l -E sha256 -f "$key.pub" 2>/dev/null | awk '{print $2}')
+        if [[ -n "$_fp" ]] && echo "$_loaded" | grep -q "$_fp"; then
             if [[ $DEBUG ]]; then
                 echo "# Key $key already loaded"
             fi
@@ -79,13 +98,13 @@ add_keys() {
         if [[ $DEBUG ]]; then
             echo "# Loading key $key"
         fi
-        ssh-add "$key"
+        ssh-add $_add_flags "$key"
         rc=$?
         if [[ "$rc" == 2 ]]; then
             echo "# Repairing ssh-agent ($rc)"
             clean_old_sock
             launch_agent
-            ssh-add "$key"
+            ssh-add $_add_flags "$key"
         elif [[ "$rc" == 1 ]]; then
             echo "# Your key $key could not be loaded"
         fi

@@ -230,13 +230,8 @@ function powerprompt()
         if [[ -z "${_LOAD:-}" ]]; then
             _LOAD="NOLOAD_CMD"
         fi
-        if [[ $(( SECONDS - ${_GIT_TS:-0} )) -ge 5 ]]; then
-            if command -v __git_ps1 > /dev/null; then
-                _GIT_BRANCH=$(__git_ps1 " (%s)")
-            else
-                _GIT_BRANCH=""
-            fi
-            _GIT_TS=$SECONDS
+        if command -v __git_ps1 > /dev/null; then
+            _GIT_BRANCH=$(__git_ps1 " (%s)")
         fi
         case $TERM in
             *term* | rxvt* | ansi | tmux* )
@@ -278,7 +273,7 @@ function gitprompt()
 powerprompt  # this is the default prompt - might be slow
 # If too slow, use fastprompt instead....
 
-# Aliases and cd_pushd are in share/shell/alias.setup (sourced from bash_profile)
+if [[ -r "$HOME/.alias.setup" ]]; then . "$HOME/.alias.setup"; fi
 
 #----------------------#
 #       Signature      #

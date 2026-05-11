@@ -34,9 +34,8 @@
 #       for defaults (and examples)                             #
 #                                                               #
 # Luis Mondesi   lemsx1 $AT$ gmail ! com                        #
-# http://lems.kiskeyix.org/bashrc.tar.bz2                       #
-# 2003-04-25 13:46                                              #
-# updaed: 2008-02-08 11:24 EST                                  #
+# origin:  2003-04-25 13:46 EDT                                 #
+# updated: 2026-05-11 10:02 EDT                                 #
 #===============================================================#
 
 # if we are not in an interactive shell, that we do nothing

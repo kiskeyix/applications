@@ -235,7 +235,7 @@ function powerprompt()
         fi
         case $TERM in
             *term* | rxvt* | ansi | tmux* )
-                echo -ne "\033]0;${USER}@${HOSTNAME}${_GIT_BRANCH}: ${PWD/$HOME/~}\007" ;;
+                echo -ne "\033]0;${USER}@${HOSTNAME}${_GIT_BRANCH}: ${PWD/$HOME/~}\033\\" ;;
         esac
     }
 

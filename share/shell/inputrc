@@ -10,7 +10,7 @@ set convert-meta Off
 
 # lems 2003-01-05 13:00 
 set editing-mode vi
-set keymap vi
+set keymap vi-insert
 #set history-preserve-point On
 set horizontal-scroll-mode Off
 set expand-tilde On

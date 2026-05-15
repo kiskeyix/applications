@@ -1,0 +1,16 @@
+#!/bin/bash
+#
+# Script to make a local user admin by adding the user to the local admin group
+#
+user=$1
+
+if [[ -z $user ]]; then
+    echo "Usage: $0 <USER>"
+fi
+
+if [[ $(uname) == "Darwin" ]]; then
+    sudo dscl . -append /Groups/admin GroupMembership $user
+else
+    echo "WARN: operating system not supported"
+    exit 1
+fi

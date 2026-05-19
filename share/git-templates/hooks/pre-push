@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # Luis Mondesi <lemsx1@gmail.com>
 # License: GPLv3
@@ -196,8 +196,14 @@ run_rubocop()
         fi
         echo "  * rubocop done"
     else
-        if [[ `uname -s` == "Darwin" ]]; then
-            echo "Do: brew install --cask chef-workstation"
+        if [[ -f Gemfile ]]; then
+            echo "Do: bundle"
+        elif command -v chef > /dev/null && ! [[ -f config.ru ]]; then
+            if [[ `uname -s` == "Darwin" ]]; then
+                echo "Do: brew install --cask chef-workstation"
+            else
+                echo "Install Chef Workstation: https://docs.chef.io/workstation/install_workstation/"
+            fi
         else
             echo "Do: gem install rubocop"
         fi

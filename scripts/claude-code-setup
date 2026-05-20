@@ -95,8 +95,20 @@ class Runner
     Process.uid == 0
   end
 
+  # True when the script is running as a normal user (not root).
+  # Use as the sudo: argument for commands that should only escalate when needed.
+  def self.user_sudo?
+    !running_as_root?
+  end
+
   def self.command?(name)
     !`which #{name} 2>/dev/null`.strip.empty?
+  end
+
+  # Returns :skip if `cmd` is already on PATH; otherwise yields.
+  # Removes the boilerplate `if command?(...) then :skip else ... end` in every install method.
+  def self.unless_command(name)
+    command?(name) ? :skip : yield
   end
 
   def self.installed_pkg_debian?(pkg)
@@ -548,6 +560,17 @@ TMUX_CONF = <<~'TMUX'
   set -ga terminal-overrides ",*:RGB"
   set -ga terminal-overrides ",*:Smulx=\E[4::%p1%dm"
   set -ga terminal-overrides ",*:Setulc=\E[58::2::%p1%{65536}%/%d::%p1%{256}%/%{255}%&%d::%p1%{255}%&%dm"
+  set -g update-environment "COLORTERM"
+  set-environment -g COLORTERM truecolor
+  set-option -g set-titles on
+  set-option -g set-titles-string '#T'
+
+  # ── EXTENDED KEYS & IMAGE SUPPORT ────────────────────────────────────────────
+  # Extended key encoding (CSI u) — required for Claude Code Alt-key shortcuts
+  set -s extended-keys on
+  set -as terminal-features 'xterm*:extkeys'
+  # Sixel inline images (tmux 3.4+, requires tmux built with --enable-sixel)
+  set -as terminal-features 'xterm*:sixel'
 
   # ── OSC PASSTHROUGH ───────────────────────────────────────────────────────────
   # Critical for Claude Code: OSC notifications, progress bar, /copy, hyperlinks
@@ -735,31 +758,25 @@ end
 
 LOCAL_BIN = File.join(Dir.home, '.local', 'bin').freeze
 
-class Updater
-  def initialize(platform)
-    @platform = platform
+# Shared logic for PATH setup and Claude install/update used by both
+# Updater and Installer.
+module ClaudeInstaller
+  def setup_local_bin
+    Runner.step('Ensure ~/.local/bin exists') { FileUtils.mkdir_p(LOCAL_BIN) }
+    Runner.step('Add ~/.local/bin to PATH in shell profile') { ensure_local_bin_in_path }
   end
 
-  def run
-    Runner.section('Claude Code update')
-
-    Runner.step('Ensure ~/.local/bin exists') do
-      FileUtils.mkdir_p(LOCAL_BIN)
-    end
-
-    Runner.step('Add ~/.local/bin to PATH in shell profile') do
-      ensure_local_bin_in_path
-    end
-
-    Runner.step('Install / upgrade Claude Code → ~/.local/bin') do
-      unless Runner.command?('npm')
+  def install_or_update_claude
+    Runner.step('Install / update Claude Code → ~/.local/bin') do
+      if Runner.command?('claude')
+        Runner.run('claude update')
+      elsif Runner.command?('npm')
+        Runner.run("npm install -g --prefix #{Dir.home}/.local @anthropic-ai/claude-code")
+      else
         raise StepError, 'npm not found — run claude-code-setup install first'
       end
-      Runner.run("npm install -g --prefix #{Dir.home}/.local @anthropic-ai/claude-code")
     end
   end
-
-  private
 
   def ensure_local_bin_in_path
     # Prefer ~/.bash_profile; fall back to ~/.profile (POSIX sh).
@@ -783,7 +800,23 @@ class Updater
   end
 end
 
+class Updater
+  include ClaudeInstaller
+
+  def initialize(platform)
+    @platform = platform
+  end
+
+  def run
+    Runner.section('Claude Code update')
+    setup_local_bin
+    install_or_update_claude
+  end
+end
+
 class Installer
+  include ClaudeInstaller
+
   def initialize(platform)
     @platform = platform
   end
@@ -871,24 +904,25 @@ class Installer
 
   def install_gh
     Runner.step('GitHub CLI (gh)') do
-      if Runner.command?('gh')
-        :skip
-      elsif @platform.debian?
-        Runner.run(
-          'curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg ' \
-          '| tee /usr/share/keyrings/githubcli-archive-keyring.gpg > /dev/null',
-          sudo: true
-        )
-        Runner.run(
-          "bash -c \"echo 'deb [arch=$(dpkg --print-architecture) " \
-          "signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] " \
-          "https://cli.github.com/packages stable main' " \
-          "> /etc/apt/sources.list.d/github-cli.list\"",
-          sudo: true
-        )
-        Runner.run('apt-get update -qq && apt-get install -y gh', sudo: true)
-      else
-        Runner.run('dnf install -y gh', sudo: true)
+      Runner.unless_command('gh') do
+        if @platform.debian?
+          Runner.run(
+            'curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg ' \
+            '| tee /usr/share/keyrings/githubcli-archive-keyring.gpg > /dev/null',
+            sudo: true
+          )
+          Runner.run(
+            "bash -c \"echo 'deb [arch=$(dpkg --print-architecture) " \
+            "signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] " \
+            "https://cli.github.com/packages stable main' " \
+            "> /etc/apt/sources.list.d/github-cli.list\"",
+            sudo: true
+          )
+          Runner.run(@platform.pkg_update_cmd, sudo: true)
+          Runner.run(@platform.pkg_install_cmd(%w[gh]), sudo: true)
+        else
+          Runner.run(@platform.pkg_install_cmd(%w[gh]), sudo: true)
+        end
       end
     end
   end
@@ -913,42 +947,40 @@ class Installer
 
   def install_kubectl
     Runner.step('kubectl') do
-      if Runner.command?('kubectl')
-        :skip
-      elsif @platform.debian?
-        Runner.run(
-          'curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key ' \
-          '| gpg --batch --yes --dearmor -o /usr/share/keyrings/kubernetes-apt-keyring.gpg',
-          sudo: true
-        )
-        Runner.run(
-          'bash -c "echo \'deb [signed-by=/usr/share/keyrings/kubernetes-apt-keyring.gpg] ' \
-          'https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /\' ' \
-          '> /etc/apt/sources.list.d/kubernetes.list"',
-          sudo: true
-        )
-        Runner.run('apt-get update -qq && apt-get install -y kubectl', sudo: true)
-      else
-        # RHEL: use kubernetes repo
-        Runner.run(
-          'bash -c "cat > /etc/yum.repos.d/kubernetes.repo << \'EOF\'\n' \
-          "[kubernetes]\nname=Kubernetes\n" \
-          "baseurl=https://pkgs.k8s.io/core:/stable:/v1.30/rpm/\n" \
-          "enabled=1\ngpgcheck=1\n" \
-          "gpgkey=https://pkgs.k8s.io/core:/stable:/v1.30/rpm/repodata/repomd.xml.key\n" \
-          "EOF\n\"",
-          sudo: true
-        )
-        Runner.run('dnf install -y kubectl', sudo: true)
+      Runner.unless_command('kubectl') do
+        if @platform.debian?
+          Runner.run(
+            'curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key ' \
+            '| gpg --batch --yes --dearmor -o /usr/share/keyrings/kubernetes-apt-keyring.gpg',
+            sudo: true
+          )
+          Runner.run(
+            'bash -c "echo \'deb [signed-by=/usr/share/keyrings/kubernetes-apt-keyring.gpg] ' \
+            'https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /\' ' \
+            '> /etc/apt/sources.list.d/kubernetes.list"',
+            sudo: true
+          )
+          Runner.run(@platform.pkg_update_cmd, sudo: true)
+          Runner.run(@platform.pkg_install_cmd(%w[kubectl]), sudo: true)
+        else
+          Runner.run(
+            'bash -c "cat > /etc/yum.repos.d/kubernetes.repo << \'EOF\'\n' \
+            "[kubernetes]\nname=Kubernetes\n" \
+            "baseurl=https://pkgs.k8s.io/core:/stable:/v1.30/rpm/\n" \
+            "enabled=1\ngpgcheck=1\n" \
+            "gpgkey=https://pkgs.k8s.io/core:/stable:/v1.30/rpm/repodata/repomd.xml.key\n" \
+            "EOF\n\"",
+            sudo: true
+          )
+          Runner.run(@platform.pkg_install_cmd(%w[kubectl]), sudo: true)
+        end
       end
     end
   end
 
   def install_helm
     Runner.step('helm') do
-      if Runner.command?('helm')
-        :skip
-      else
+      Runner.unless_command('helm') do
         Runner.run(
           'bash -c "curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash"',
           sudo: true
@@ -959,9 +991,7 @@ class Installer
 
   def install_rbenv
     Runner.step('rbenv') do
-      if Runner.command?('rbenv')
-        :skip
-      else
+      Runner.unless_command('rbenv') do
         Runner.run('git clone https://github.com/rbenv/rbenv.git /usr/local/rbenv', sudo: true)
         Runner.run(
           'git clone https://github.com/rbenv/ruby-build.git /usr/local/rbenv/plugins/ruby-build',
@@ -984,7 +1014,7 @@ class Installer
   def install_gems
     gems = %w[rubocop pry rake solargraph amazing_print tmuxinator]
     Runner.step("Ruby gems: #{gems.join(', ')}") do
-      Runner.run("gem install --no-document #{gems.join(' ')}", sudo: !Runner.running_as_root?)
+      Runner.run("gem install --no-document #{gems.join(' ')}", sudo: Runner.user_sudo?)
     end
   end
 
@@ -993,7 +1023,7 @@ class Installer
 
     pkgs = %w[typescript ts-node prettier eslint pnpm yarn nodemon serve tldr]
     Runner.step("npm globals: #{pkgs.join(', ')}") do
-      Runner.run("npm install -g --quiet #{pkgs.join(' ')}", sudo: !Runner.running_as_root?)
+      Runner.run("npm install -g --quiet #{pkgs.join(' ')}", sudo: Runner.user_sudo?)
     end
   end
 
@@ -1024,13 +1054,8 @@ class Installer
   end
 
   def install_claude
-    Runner.step('Ensure ~/.local/bin exists') { FileUtils.mkdir_p(LOCAL_BIN) }
-    Runner.step('Add ~/.local/bin to PATH in shell profile') do
-      Updater.new(@platform).send(:ensure_local_bin_in_path)
-    end
-    Runner.step('Install Claude Code → ~/.local/bin') do
-      Runner.run("npm install -g --prefix #{Dir.home}/.local @anthropic-ai/claude-code")
-    end
+    setup_local_bin
+    install_or_update_claude
   end
 end
 

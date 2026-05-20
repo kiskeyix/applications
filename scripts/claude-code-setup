@@ -1050,17 +1050,27 @@ class Installer
 
   def install_mise_ruby
     mise = File.join(LOCAL_BIN, 'mise')
-    Runner.step('mise: ruby@latest') do
+    env  = { 'MISE_YES' => '1' }
+
+    Runner.step('mise: install ruby@latest (may take a minute)') do
       unless File.exist?(mise)
         :skip
       else
-        current = Runner.try("#{mise} latest ruby 2>/dev/null")&.strip
+        current   = Runner.try("#{mise} latest ruby 2>/dev/null")&.strip
         installed = Runner.try("#{mise} list ruby 2>/dev/null")&.include?(current.to_s)
         if installed
           :skip
         else
-          Runner.run("#{mise} use --global ruby@latest")
+          Runner.run("#{mise} install --quiet ruby@latest", env: env)
         end
+      end
+    end
+
+    Runner.step('mise: set ruby@latest as global default') do
+      unless File.exist?(mise)
+        :skip
+      else
+        Runner.run("#{mise} use --global ruby@latest", env: env)
       end
     end
   end

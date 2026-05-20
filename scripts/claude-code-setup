@@ -1,0 +1,1133 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# claude-code-setup — Bootstrap Claude Code environments
+# Supports Ubuntu/Debian and RedHat 8.10+
+#
+# Usage:
+#   claude-code-setup install       Install dev tools and configure tmux
+#   claude-code-setup remove        Remove bloat packages
+#   claude-code-setup setup-claude  Configure ~/.claude (settings, statusline, hooks)
+#   claude-code-setup update        Update Claude Code to latest version
+#   claude-code-setup all           update + setup-claude + install (full bootstrap)
+#   claude-code-setup --help
+
+require 'fileutils'
+require 'json'
+require 'open3'
+require 'optparse'
+require 'shellwords'
+
+# ── ANSI color helpers ────────────────────────────────────────────────────────
+
+module C
+  def self.ok(s)   = "\e[32m#{s}\e[0m"
+  def self.fail(s) = "\e[31m#{s}\e[0m"
+  def self.warn(s) = "\e[33m#{s}\e[0m"
+  def self.dim(s)  = "\e[2m#{s}\e[0m"
+  def self.bold(s) = "\e[1m#{s}\e[0m"
+  def self.cyan(s) = "\e[36m#{s}\e[0m"
+  def self.tty?    = $stdout.tty?
+  def self.strip(s)= s.gsub(/\e\[[0-9;]*m/, '')
+end
+
+# ── Step result tracking ──────────────────────────────────────────────────────
+
+class StepError < StandardError; end
+
+class Runner
+  COL = 58
+
+  def self.section(title)
+    puts "\n#{C.bold(C.cyan("── #{title} ─" + '─' * [0, COL - title.length].max))}"
+  end
+
+  # Prints label, runs block, prints Ok/Skip/Fail.
+  # Block may return :skip to print "skip" in dim.
+  # Raises StepError or any exception to mark Fail.
+  # Always returns true/false; never raises.
+  def self.step(label, continue_on_fail: true)
+    print "  #{label.ljust(COL)}"
+    $stdout.flush
+    result = yield
+    if result == :skip
+      puts C.dim('skip')
+    else
+      puts C.ok('Ok  ')
+    end
+    true
+  rescue StepError => e
+    puts C.fail('Fail')
+    puts C.dim("    #{e.message}") unless e.message.to_s.empty?
+    raise unless continue_on_fail
+    false
+  rescue => e
+    puts C.fail('Fail')
+    puts C.dim("    #{e.class}: #{e.message}")
+    raise unless continue_on_fail
+    false
+  end
+
+  # Run a shell command; raises StepError on non-zero exit.
+  # When sudo is needed the command is wrapped as `sudo sh -c '...'` so that
+  # any VAR=value prefixes (e.g. DEBIAN_FRONTEND=noninteractive) are evaluated
+  # by the shell after privilege elevation rather than passed to sudo itself,
+  # which rejects env-var assignments in most default sudoers configurations.
+  def self.run(cmd, sudo: false, env: {}, input: nil)
+    full = if sudo && !running_as_root?
+             "sudo sh -c #{cmd.shellescape}"
+           else
+             cmd
+           end
+    stdout, stderr, status = Open3.capture3(env, full, stdin_data: input || '')
+    raise StepError, (stderr.strip.lines.first(3).join(' | ').strip) unless status.success?
+    stdout
+  end
+
+  # Non-raising version — returns output or nil on failure.
+  def self.try(cmd, sudo: false, env: {})
+    run(cmd, sudo: sudo, env: env)
+  rescue StepError
+    nil
+  end
+
+  def self.running_as_root?
+    Process.uid == 0
+  end
+
+  def self.command?(name)
+    !`which #{name} 2>/dev/null`.strip.empty?
+  end
+
+  def self.installed_pkg_debian?(pkg)
+    system("dpkg -s #{pkg} >/dev/null 2>&1")
+  end
+
+  def self.installed_pkg_rhel?(pkg)
+    system("rpm -q #{pkg} >/dev/null 2>&1")
+  end
+end
+
+# ── OS / distro detection ─────────────────────────────────────────────────────
+
+class Platform
+  attr_reader :family, :id, :version
+
+  def initialize
+    @id, @family, @version = detect
+  end
+
+  def debian? = @family == :debian
+  def rhel?   = @family == :rhel
+
+  def to_s
+    "#{@id} #{@version} (#{@family})"
+  end
+
+  def pkg_update_cmd
+    if debian?
+      'DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=120 update -qq'
+    else
+      'dnf check-update -q; true'
+    end
+  end
+
+  def pkg_install_cmd(pkgs, no_recommends: false)
+    if debian?
+      nr = no_recommends ? '--no-install-recommends ' : ''
+      "DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=120 install -y #{nr}#{pkgs.join(' ')}"
+    else
+      "dnf install -y #{pkgs.join(' ')}"
+    end
+  end
+
+  def pkg_remove_cmd(pkgs)
+    debian? ? "apt-get remove -y --purge #{pkgs.join(' ')}" \
+            : "dnf remove -y #{pkgs.join(' ')}"
+  end
+
+  def pkg_autoremove_cmd
+    debian? ? 'apt-get autoremove -y --purge' : 'dnf autoremove -y'
+  end
+
+  def pkg_installed?(pkg)
+    debian? ? Runner.installed_pkg_debian?(pkg) : Runner.installed_pkg_rhel?(pkg)
+  end
+
+  def arch
+    @arch ||= `uname -m`.strip
+  end
+
+  def epel_needed? = rhel?
+
+  private
+
+  def detect
+    return [:unknown, :unknown, ''] unless File.exist?('/etc/os-release')
+
+    info = File.read('/etc/os-release').scan(/^(\w+)=(.+)$/).to_h do |k, v|
+      [k.downcase, v.delete('"\'')]
+    end
+
+    id      = (info['id'] || 'unknown').downcase
+    like    = (info['id_like'] || '').downcase
+    version = info['version_id'] || ''
+
+    family = if %w[ubuntu debian].include?(id) || like.include?('debian')
+               :debian
+             elsif %w[rhel centos fedora rocky almalinux].include?(id) || like.match?(/rhel|centos|fedora/)
+               :rhel
+             else
+               :unknown
+             end
+
+    [id, family, version]
+  end
+end
+
+# ── Package catalog ───────────────────────────────────────────────────────────
+
+# Each entry: { desc:, debian: [...], rhel: [...] }
+# RHEL packages require EPEL unless marked (base)
+
+INSTALL_GROUPS = {
+  terminal: {
+    desc: 'Terminal & shell',
+    debian: %w[zsh fish bash-completion ncurses-term wl-clipboard xclip xdotool tmux],
+    rhel:   %w[zsh fish bash-completion xclip xdotool tmux]
+  },
+  file_tools: {
+    desc: 'File & search tools',
+    debian: %w[ripgrep fd-find fzf bat eza ncdu tree duf p7zip-full zstd pv moreutils rename],
+    rhel:   %w[ripgrep fzf bat ncdu tree zstd pv moreutils p7zip p7zip-plugins]
+  },
+  monitoring: {
+    desc: 'System monitoring',
+    debian: %w[htop iotop nethogs nload iftop bmon inxi lshw smartmontools powertop],
+    rhel:   %w[htop iotop nethogs nload iftop bmon inxi lshw smartmontools powertop]
+  },
+  network: {
+    desc: 'Network tools',
+    debian: %w[nmap socat mtr whois dnsutils net-tools iproute2 iperf3 aria2],
+    rhel:   %w[nmap socat mtr whois bind-utils net-tools iproute iperf3 aria2]
+  },
+  build: {
+    desc: 'Build & compiler tools',
+    debian: %w[cmake ninja-build meson pkg-config clang clang-format clang-tidy llvm
+               valgrind ltrace binutils nasm ccache],
+    rhel:   %w[cmake ninja-build meson pkgconfig clang clang-tools-extra llvm
+               valgrind ltrace binutils nasm ccache]
+  },
+  ruby: {
+    desc: 'Ruby',
+    debian: %w[ruby-full ruby-dev ruby-bundler],
+    rhel:   %w[ruby ruby-devel rubygem-bundler]
+  },
+  python: {
+    desc: 'Python',
+    debian: %w[python3-pip python3-venv python3-dev python3-ipython pipx pylint mypy
+               python3-pytest python3-requests python3-rich python3-click
+               python3-yaml python3-toml python3-dotenv],
+    rhel:   %w[python3-pip python3 python3-devel python3-ipython
+               python3-pylint python3-mypy python3-pytest python3-requests
+               python3-click python3-pyyaml python3-toml]
+  },
+  nodejs: {
+    desc: 'Node.js / npm',
+    debian: %w[npm],
+    rhel:   %w[nodejs npm]
+  },
+  golang: {
+    desc: 'Go',
+    debian: %w[golang-go],
+    rhel:   %w[golang]
+  },
+  rust: {
+    desc: 'Rust',
+    debian: %w[cargo rustc rustfmt],
+    rhel:   %w[cargo rust rustfmt]
+  },
+  databases: {
+    desc: 'Database clients',
+    debian: %w[sqlite3 postgresql-client default-mysql-client],
+    rhel:   %w[sqlite postgresql mariadb]
+  },
+  containers: {
+    desc: 'Containers',
+    debian: %w[podman buildah],
+    rhel:   %w[podman buildah]
+  },
+  vcs: {
+    desc: 'Version control extras',
+    debian: %w[git-lfs tig meld],
+    rhel:   %w[git-lfs tig]
+  },
+  editors: {
+    desc: 'Editors & viewers',
+    debian: %w[neovim emacs less most],
+    rhel:   %w[neovim emacs less]
+  },
+  text: {
+    desc: 'Text processing',
+    debian: %w[xmlstarlet pandoc poppler-utils entr parallel shellcheck],
+    rhel:   %w[xmlstarlet poppler-utils entr parallel ShellCheck]
+  },
+  security: {
+    desc: 'Security tools',
+    debian: %w[openssh-server fail2ban ncat wireshark tshark],
+    rhel:   %w[openssh-server fail2ban nmap-ncat wireshark wireshark-cli]
+  },
+  docs: {
+    desc: 'Documentation',
+    debian: %w[man-db manpages-dev info],
+    rhel:   %w[man-db info]
+  },
+  fonts: {
+    desc: 'Developer fonts',
+    debian: %w[fonts-firacode fonts-jetbrains-mono fonts-hack fonts-cascadia-code],
+    rhel:   []
+  }
+}.freeze
+
+REMOVE_GROUPS = {
+  games: {
+    desc: 'Games',
+    debian: %w[gnome-mahjongg gamemode gamemode-daemon],
+    rhel:   []
+  },
+  gnome_apps: {
+    desc: 'Unused GNOME apps',
+    debian: %w[totem totem-common totem-video-thumbnailer
+               shotwell shotwell-common gnome-calendar],
+    rhel:   []
+  },
+  libreoffice: {
+    desc: 'LibreOffice suite',
+    debian: %w[libreoffice-base-core libreoffice-calc libreoffice-common
+               libreoffice-core libreoffice-draw libreoffice-gnome libreoffice-gtk3
+               libreoffice-impress libreoffice-math libreoffice-writer],
+    rhel:   %w[libreoffice]
+  },
+  cloud: {
+    desc: 'Cloud/VM guest tools',
+    debian: %w[cloud-init cloud-init-base cloud-guest-utils],
+    rhel:   %w[cloud-init]
+  },
+  accessibility: {
+    desc: 'Screen reader / braille stack',
+    debian: %w[brltty orca speech-dispatcher espeak-ng-data],
+    rhel:   %w[brltty orca speech-dispatcher]
+  },
+  printer_drivers: {
+    desc: 'Obscure printer drivers',
+    debian: %w[printer-driver-brlaser printer-driver-c2esp printer-driver-foo2zjs
+               printer-driver-m2300w printer-driver-pnm2ppa printer-driver-ptouch
+               printer-driver-splix foomatic-db-compressed-ppds cups-ppdc],
+    rhel:   []
+  },
+  indic_fonts: {
+    desc: 'Indic / regional fonts',
+    debian: %w[fonts-beng fonts-deva fonts-gargi fonts-gubbi fonts-gujr fonts-guru
+               fonts-indic fonts-kalapi fonts-knda fonts-lohit-beng-assamese
+               fonts-lohit-deva fonts-mlym fonts-nakula fonts-orya fonts-taml
+               fonts-telu fonts-freefont-ttf fonts-urw-base35],
+    rhel:   []
+  }
+}.freeze
+
+# ── ~/.claude configuration files ────────────────────────────────────────────
+
+CLAUDE_DIR = File.join(Dir.home, '.claude').freeze
+
+CLAUDE_SETTINGS = {
+  '$schema' => 'https://json.schemastore.org/claude-code-settings.json',
+  'permissions' => {
+    'allow' => [
+      'Bash(exe/*)',
+      'Bash(bundle exec *)',
+      'Bash(npm test*)',
+      'Bash(npm run test*)',
+      'Bash(yarn test*)',
+      'Bash(pytest*)',
+      'Bash(go test*)',
+      'Bash(cargo test*)',
+      'Bash(grep *)',
+      'Bash(tail *)',
+      'Bash(head *)',
+      'Bash(ls *)',
+      'Bash(find . *)',
+      'Bash(cat *)',
+      'Bash(mkdir -p *)',
+      'Bash(git add *)',
+      'Bash(git commit *)',
+      'Bash(git status*)',
+      'Bash(git diff*)',
+      'Bash(git log*)',
+      'Bash(git show*)',
+      'Bash(git branch*)',
+      'Edit(*)'
+    ],
+    'defaultMode' => 'acceptEdits'
+  },
+  'feedbackSurveyRate' => 0,
+  'tui' => 'fullscreen',
+  'statusLine' => {
+    'type' => 'command',
+    'command' => "#{CLAUDE_DIR}/statusline.rb",
+    'refreshInterval' => 60
+  },
+  'hooks' => {
+    'SessionStart' => [
+      {
+        'hooks' => [
+          { 'type' => 'command', 'command' => "#{CLAUDE_DIR}/hooks/session-start.sh" }
+        ]
+      }
+    ],
+    'Stop' => [
+      {
+        'hooks' => [
+          { 'type' => 'command', 'command' => "#{CLAUDE_DIR}/hooks/notify-stop.sh" }
+        ]
+      }
+    ]
+  }
+}.freeze
+
+# ── Hook scripts ──────────────────────────────────────────────────────────────
+
+# SessionStart hook: prints date, git context, and memory reminder into the
+# conversation as a <system-reminder> block so Claude sees it immediately.
+SESSION_START_HOOK = <<~'SH'
+  #!/usr/bin/env bash
+  # ~/.claude/hooks/session-start.sh
+  # Runs at the start of every Claude Code session.
+  # Output is injected into the conversation as a system-reminder.
+
+  set -euo pipefail
+
+  DATE=$(date '+%A %Y-%m-%d %H:%M %Z')
+  HOST=$(hostname -s 2>/dev/null || echo "$HOSTNAME")
+  USER_NAME=${USER:-$(id -un)}
+
+  echo "=== SESSION START ==="
+  echo "Time : $DATE"
+  echo "Host : $HOST  User: $USER_NAME"
+
+  # Git context if inside a repo
+  if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    BRANCH=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD)
+    STATUS=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+    REMOTE=$(git remote get-url origin 2>/dev/null | sed 's|.*[:/]\([^/]*/[^/]*\)$|\1|' || echo "")
+    echo "Git  : branch=$BRANCH  dirty=$STATUS files${REMOTE:+  remote=$REMOTE}"
+  fi
+
+  # Memory reminder (if .remember/ exists in home)
+  REMEMBER_DIR="$HOME/.remember"
+  if [[ -d "$REMEMBER_DIR" ]]; then
+    NOW_FILE="$REMEMBER_DIR/now.md"
+    if [[ -f "$NOW_FILE" ]]; then
+      echo ""
+      echo "--- now.md (recent context) ---"
+      tail -20 "$NOW_FILE"
+    fi
+    TODAY=$(date '+%Y-%m-%d')
+    TODAY_FILE="$REMEMBER_DIR/today-${TODAY}.md"
+    if [[ -f "$TODAY_FILE" ]]; then
+      echo ""
+      echo "--- today's log ---"
+      tail -30 "$TODAY_FILE"
+    fi
+  fi
+
+  echo "=== END SESSION START ==="
+SH
+
+# Stop hook: desktop notification when Claude finishes a response.
+# Works on Linux (notify-send), macOS (osascript), and silently skips
+# if neither is available (e.g. headless servers).
+NOTIFY_STOP_HOOK = <<~'SH'
+  #!/usr/bin/env bash
+  # ~/.claude/hooks/notify-stop.sh
+  # Fires on every Claude "Stop" event (when Claude finishes responding).
+  # Sends a desktop notification so you know it's done without watching the terminal.
+
+  # Parse optional JSON input for context (Claude may pass stop reason, etc.)
+  REASON=""
+  if command -v jq >/dev/null 2>&1 && [[ -p /dev/stdin ]]; then
+    INPUT=$(cat)
+    REASON=$(echo "$INPUT" | jq -r '.stop_reason // empty' 2>/dev/null || true)
+  fi
+
+  TITLE="Claude Code"
+  BODY="${REASON:-Claude finished}"
+
+  if command -v notify-send >/dev/null 2>&1; then
+    # Linux / GNOME / libnotify
+    notify-send --app-name "Claude Code" \
+                --icon utilities-terminal \
+                --expire-time 4000 \
+                "$TITLE" "$BODY" 2>/dev/null || true
+
+  elif command -v osascript >/dev/null 2>&1; then
+    # macOS fallback
+    osascript -e "display notification \"$BODY\" with title \"$TITLE\"" 2>/dev/null || true
+
+  elif command -v terminal-notifier >/dev/null 2>&1; then
+    terminal-notifier -title "$TITLE" -message "$BODY" 2>/dev/null || true
+  fi
+
+  # Also ring the terminal bell so tmux can surface it in the status bar
+  printf '\a'
+
+  exit 0
+SH
+
+STATUSLINE_RB = <<~'RUBY'
+  #!/usr/bin/env ruby
+  # ~/.claude/statusline.rb — Claude Code status bar
+  # Shows rate-limit usage (5h / 7d) and context window consumption.
+  # Input: JSON on stdin from Claude Code. Output: one line to stdout.
+
+  require 'json'
+  require 'time'
+
+  input = JSON.parse($stdin.read) rescue {}
+
+  def bar(pct, width: 8)
+    pct   = pct.to_f.clamp(0, 100)
+    filled = (pct / 100.0 * width).round
+    '█' * filled + '░' * (width - filled)
+  end
+
+  def resets_in(iso)
+    t = Time.parse(iso) rescue nil
+    return nil unless t
+    secs = (t - Time.now).to_i
+    return '0m' if secs <= 0
+    secs < 3600 ? "#{secs / 60}m" : "#{secs / 3600}h#{(secs % 3600) / 60}m"
+  end
+
+  def pct_str(pct) = format('%5.1f%%', pct.to_f)
+
+  parts = []
+
+  if (rl = input['rate_limits'])
+    fh = rl['five_hour']
+    sd = rl['seven_day']
+    if fh && (pct = fh['used_percentage'])
+      reset = fh['resets_at'] ? " ↺#{resets_in(fh['resets_at'])}" : ''
+      parts << "5h #{bar(pct)} #{pct_str(pct)}#{reset}"
+    end
+    if sd && (pct = sd['used_percentage'])
+      reset = sd['resets_at'] ? " ↺#{resets_in(sd['resets_at'])}" : ''
+      parts << "7d #{bar(pct)} #{pct_str(pct)}#{reset}"
+    end
+  end
+
+  ctx_pct = input.dig('context_window', 'used_percentage') ||
+            input.dig('current_usage',  'used_percentage')
+  parts << "ctx #{bar(ctx_pct)} #{pct_str(ctx_pct)}" if ctx_pct
+
+  effort  = input.dig('effort', 'level')
+  thinking = input.dig('thinking', 'enabled')
+  meta = [effort, (thinking ? 'think' : nil)].compact
+  parts << meta.join(' ') unless meta.empty?
+
+  puts parts.join('  │  ')
+RUBY
+
+TMUX_CONF = <<~'TMUX'
+  # ═══════════════════════════════════════════════════════════════════════════
+  # TMUX CONFIG — Optimised for Claude Code
+  # ═══════════════════════════════════════════════════════════════════════════
+
+  # ── TERMINAL & COLOR ─────────────────────────────────────────────────────────
+  set -g default-terminal "tmux-256color"
+  set -ga terminal-overrides ",*:Tc"
+  set -ga terminal-overrides ",*:RGB"
+  set -ga terminal-overrides ",*:Smulx=\E[4::%p1%dm"
+  set -ga terminal-overrides ",*:Setulc=\E[58::2::%p1%{65536}%/%d::%p1%{256}%/%{255}%&%d::%p1%{255}%&%dm"
+
+  # ── OSC PASSTHROUGH ───────────────────────────────────────────────────────────
+  # Critical for Claude Code: OSC notifications, progress bar, /copy, hyperlinks
+  set -g allow-passthrough on
+  set -g set-clipboard on
+
+  # ── FOCUS & ESCAPE ────────────────────────────────────────────────────────────
+  set -g focus-events on
+  set -sg escape-time 10
+
+  # ── MOUSE & HISTORY ──────────────────────────────────────────────────────────
+  # Mouse off — mouse events confuse tmux -CC / iTerm2 integration
+  # set -g mouse on
+  set -g history-limit 50000
+
+  # ── WINDOW / PANE NUMBERING ──────────────────────────────────────────────────
+  set -g base-index 1
+  setw -g pane-base-index 1
+  set -g renumber-windows on
+
+  # ── BELL — surfaces Claude's completion bell in the status bar ────────────────
+  set -g bell-action any
+  set -g visual-bell on
+  set -g activity-action other
+
+  # ── KEY BINDINGS ─────────────────────────────────────────────────────────────
+  # Ctrl-a prefix (leaves Ctrl-b free for Claude's "background task" shortcut)
+  unbind C-b
+  set -g prefix C-a
+  bind C-a send-prefix
+
+  bind r source-file ~/.tmux.conf \; display "Config reloaded"
+
+  bind | split-window -h -c "#{pane_current_path}"
+  bind - split-window -v -c "#{pane_current_path}"
+  bind c new-window -c "#{pane_current_path}"
+
+  bind h select-pane -L
+  bind j select-pane -D
+  bind k select-pane -U
+  bind l select-pane -R
+
+  bind -r H resize-pane -L 5
+  bind -r J resize-pane -D 5
+  bind -r K resize-pane -U 5
+  bind -r L resize-pane -R 5
+
+  # Claude layout: main pane + narrow log pane on the right
+  bind C-c split-window -h -p 30 -c "#{pane_current_path}" \; select-pane -L
+
+  # ── STATUS BAR ───────────────────────────────────────────────────────────────
+  set -g status on
+  set -g status-interval 5
+  set -g status-position bottom
+  set -g status-style "bg=#1e1e2e,fg=#cdd6f4"
+  set -g window-status-style "bg=#313244,fg=#cdd6f4"
+  set -g window-status-current-style "bg=#89b4fa,fg=#1e1e2e,bold"
+  set -g pane-border-style "fg=#313244"
+  set -g pane-active-border-style "fg=#89b4fa"
+  set -g message-style "bg=#f38ba8,fg=#1e1e2e,bold"
+  set -g status-left-length 30
+  set -g status-left "#[bg=#89b4fa,fg=#1e1e2e,bold] #S #[default] "
+  set -g status-right-length 60
+  set -g status-right "#[fg=#a6adc8]#H  #[fg=#cdd6f4]%Y-%m-%d  %H:%M"
+  set -g window-status-format " #I:#W#{?window_bell_flag,!,} "
+  set -g window-status-current-format " #I:#W#{?window_bell_flag,!,} "
+
+  # ── COPY MODE ────────────────────────────────────────────────────────────────
+  setw -g mode-keys vi
+  bind Enter copy-mode
+  bind -T copy-mode-vi v send -X begin-selection
+  bind -T copy-mode-vi y send -X copy-pipe-and-cancel "xclip -sel clip 2>/dev/null || wl-copy 2>/dev/null || true"
+  bind -T copy-mode-vi MouseDragEnd1Pane send -X copy-pipe-and-cancel "xclip -sel clip 2>/dev/null || wl-copy 2>/dev/null || true"
+TMUX
+
+# ── Action classes ────────────────────────────────────────────────────────────
+
+class ClaudeSetup
+  def initialize(platform)
+    @platform = platform
+  end
+
+  def run
+    Runner.section('~/.claude configuration')
+
+    Runner.step('Create ~/.claude and hooks/ directories') do
+      FileUtils.mkdir_p(CLAUDE_DIR)
+      FileUtils.mkdir_p(File.join(CLAUDE_DIR, 'hooks'))
+    end
+
+    Runner.step('Write ~/.claude/settings.json') do
+      path = File.join(CLAUDE_DIR, 'settings.json')
+      if File.exist?(path)
+        existing = JSON.parse(File.read(path)) rescue {}
+        # Deep-merge: existing user keys win; we only fill in missing ones
+        merged = deep_merge(CLAUDE_SETTINGS, existing)
+        File.write(path, JSON.pretty_generate(merged))
+      else
+        File.write(path, JSON.pretty_generate(CLAUDE_SETTINGS))
+      end
+    end
+
+    Runner.step('Write ~/.claude/statusline.rb') do
+      path = File.join(CLAUDE_DIR, 'statusline.rb')
+      File.write(path, STATUSLINE_RB)
+      File.chmod(0o755, path)
+    end
+
+    Runner.section('~/.claude/hooks')
+
+    Runner.step('Write session-start.sh (date / git / memory reminder)') do
+      write_hook('session-start.sh', SESSION_START_HOOK)
+    end
+
+    Runner.step('Write notify-stop.sh (desktop notification on Stop)') do
+      write_hook('notify-stop.sh', NOTIFY_STOP_HOOK)
+    end
+
+    setup_tmux
+  end
+
+  private
+
+  def write_hook(filename, content)
+    path = File.join(CLAUDE_DIR, 'hooks', filename)
+    File.write(path, content)
+    File.chmod(0o755, path)
+  end
+
+  def deep_merge(base, override)
+    base.merge(override) do |_key, base_val, override_val|
+      if base_val.is_a?(Hash) && override_val.is_a?(Hash)
+        deep_merge(base_val, override_val)
+      else
+        override_val
+      end
+    end
+  end
+
+  def setup_tmux
+    Runner.section('tmux configuration')
+
+    conf = File.join(Dir.home, '.tmux.conf')
+
+    Runner.step('Back up existing ~/.tmux.conf') do
+      if File.exist?(conf)
+        backup = "#{conf}.bak.#{Time.now.strftime('%Y%m%d%H%M%S')}"
+        FileUtils.cp(conf, backup)
+      else
+        :skip
+      end
+    end
+
+    Runner.step('Write Claude-optimised ~/.tmux.conf') do
+      File.write(conf, TMUX_CONF)
+    end
+
+    Runner.step('Install tpm (tmux plugin manager)') do
+      tpm = File.join(Dir.home, '.tmux/plugins/tpm')
+      if Dir.exist?(tpm)
+        Runner.try("git -C #{tpm} pull --ff-only 2>/dev/null")
+        :skip
+      else
+        Runner.run("git clone https://github.com/tmux-plugins/tpm #{tpm}")
+      end
+    end
+
+    Runner.step('Install tmux plugins via tpm') do
+      tpm_install = File.join(Dir.home, '.tmux/plugins/tpm/bin/install_plugins')
+      if File.exist?(tpm_install)
+        Runner.try(tpm_install)
+      end
+      :skip
+    end
+
+    Runner.step('Reload live tmux server') do
+      if system('tmux info >/dev/null 2>&1')
+        Runner.run("tmux source-file #{conf}")
+      else
+        :skip
+      end
+    end
+  end
+end
+
+LOCAL_BIN = File.join(Dir.home, '.local', 'bin').freeze
+
+class Updater
+  def initialize(platform)
+    @platform = platform
+  end
+
+  def run
+    Runner.section('Claude Code update')
+
+    Runner.step('Ensure ~/.local/bin exists') do
+      FileUtils.mkdir_p(LOCAL_BIN)
+    end
+
+    Runner.step('Add ~/.local/bin to PATH in shell profile') do
+      ensure_local_bin_in_path
+    end
+
+    Runner.step('Install / upgrade Claude Code → ~/.local/bin') do
+      unless Runner.command?('npm')
+        raise StepError, 'npm not found — run claude-code-setup install first'
+      end
+      Runner.run("npm install -g --prefix #{Dir.home}/.local @anthropic-ai/claude-code")
+    end
+  end
+
+  private
+
+  def ensure_local_bin_in_path
+    # Prefer ~/.bash_profile; fall back to ~/.profile (POSIX sh).
+    profile = [
+      File.join(Dir.home, '.bash_profile'),
+      File.join(Dir.home, '.profile')
+    ].find { |f| File.exist?(f) } || File.join(Dir.home, '.bash_profile')
+
+    snippet = <<~SH
+      # Added by claude-code-setup — keep ~/.local/bin first on PATH
+      export PATH="$HOME/.local/bin:$PATH"
+    SH
+
+    content = File.exist?(profile) ? File.read(profile) : ''
+    if content.include?('/.local/bin')
+      return :skip
+    end
+
+    File.write(profile, content.end_with?("\n") ? content + "\n" + snippet : content + "\n\n" + snippet)
+    profile  # return value just for logging; truthy = Ok
+  end
+end
+
+class Installer
+  def initialize(platform)
+    @platform = platform
+  end
+
+  def run
+    Runner.section('Package index update')
+    Runner.step('apt-get / dnf update') do
+      Runner.run(@platform.pkg_update_cmd, sudo: true)
+    end
+
+    if @platform.epel_needed?
+      Runner.section('EPEL repository')
+      install_epel
+    end
+
+    INSTALL_GROUPS.each do |key, group|
+      pkgs = group[@platform.family] || []
+      next if pkgs.empty?
+
+      Runner.section("#{group[:desc]}")
+
+      to_install = pkgs.reject { |p| @platform.pkg_installed?(p) }
+      if to_install.empty?
+        Runner.step("All #{group[:desc].downcase} packages present") { :skip }
+      else
+        Runner.step("Install #{to_install.length} package(s)") do
+          cmd = @platform.pkg_install_cmd(to_install, no_recommends: @platform.debian?)
+          Runner.run(cmd, sudo: true)
+        end
+      end
+    end
+
+    Runner.section('Post-install: GitHub CLI')
+    install_gh
+
+    Runner.section('Post-install: Docker Compose v2 plugin')
+    install_docker_compose
+
+    Runner.section('Post-install: kubectl')
+    install_kubectl
+
+    Runner.section('Post-install: helm')
+    install_helm
+
+    Runner.section('Post-install: rbenv (Ruby version manager)')
+    install_rbenv
+
+    Runner.section('Post-install: Ruby gems')
+    install_gems
+
+    Runner.section('Post-install: npm globals')
+    install_npm_globals
+
+    Runner.section('Post-install: pipx tools')
+    install_pipx_tools
+
+    Runner.section('Post-install: fd symlink')
+    install_fd_symlink
+
+    Runner.section('Post-install: Claude Code')
+    install_claude
+
+    Runner.section('Cleanup')
+    Runner.step('autoremove / clean') do
+      Runner.run(@platform.pkg_autoremove_cmd, sudo: true)
+      Runner.run('apt-get clean', sudo: true) if @platform.debian?
+    end
+  end
+
+  private
+
+  def install_epel
+    Runner.step('Enable EPEL and PowerTools/CRB') do
+      if Runner.try('rpm -q epel-release', sudo: false)
+        :skip
+      else
+        Runner.run('dnf install -y epel-release', sudo: true)
+        # Try enabling CodeReady Builder (RHEL 8) or CRB (Rocky/Alma)
+        Runner.try('subscription-manager repos --enable codeready-builder-for-rhel-8-x86_64-rpms', sudo: true)
+        Runner.try('dnf config-manager --set-enabled powertools', sudo: true)
+        Runner.try('dnf config-manager --set-enabled crb', sudo: true)
+      end
+    end
+  end
+
+  def install_gh
+    Runner.step('GitHub CLI (gh)') do
+      if Runner.command?('gh')
+        :skip
+      elsif @platform.debian?
+        Runner.run(
+          'curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg ' \
+          '| tee /usr/share/keyrings/githubcli-archive-keyring.gpg > /dev/null',
+          sudo: true
+        )
+        Runner.run(
+          "bash -c \"echo 'deb [arch=$(dpkg --print-architecture) " \
+          "signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] " \
+          "https://cli.github.com/packages stable main' " \
+          "> /etc/apt/sources.list.d/github-cli.list\"",
+          sudo: true
+        )
+        Runner.run('apt-get update -qq && apt-get install -y gh', sudo: true)
+      else
+        Runner.run('dnf install -y gh', sudo: true)
+      end
+    end
+  end
+
+  def install_docker_compose
+    Runner.step('Docker Compose v2 plugin') do
+      if system('docker compose version >/dev/null 2>&1')
+        :skip
+      else
+        arch = @platform.arch
+        Runner.run('mkdir -p /usr/local/lib/docker/cli-plugins', sudo: true)
+        Runner.run(
+          "curl -fsSL https://github.com/docker/compose/releases/latest/download/" \
+          "docker-compose-linux-#{arch} " \
+          "-o /usr/local/lib/docker/cli-plugins/docker-compose",
+          sudo: true
+        )
+        Runner.run('chmod +x /usr/local/lib/docker/cli-plugins/docker-compose', sudo: true)
+      end
+    end
+  end
+
+  def install_kubectl
+    Runner.step('kubectl') do
+      if Runner.command?('kubectl')
+        :skip
+      elsif @platform.debian?
+        Runner.run(
+          'curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key ' \
+          '| gpg --batch --yes --dearmor -o /usr/share/keyrings/kubernetes-apt-keyring.gpg',
+          sudo: true
+        )
+        Runner.run(
+          'bash -c "echo \'deb [signed-by=/usr/share/keyrings/kubernetes-apt-keyring.gpg] ' \
+          'https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /\' ' \
+          '> /etc/apt/sources.list.d/kubernetes.list"',
+          sudo: true
+        )
+        Runner.run('apt-get update -qq && apt-get install -y kubectl', sudo: true)
+      else
+        # RHEL: use kubernetes repo
+        Runner.run(
+          'bash -c "cat > /etc/yum.repos.d/kubernetes.repo << \'EOF\'\n' \
+          "[kubernetes]\nname=Kubernetes\n" \
+          "baseurl=https://pkgs.k8s.io/core:/stable:/v1.30/rpm/\n" \
+          "enabled=1\ngpgcheck=1\n" \
+          "gpgkey=https://pkgs.k8s.io/core:/stable:/v1.30/rpm/repodata/repomd.xml.key\n" \
+          "EOF\n\"",
+          sudo: true
+        )
+        Runner.run('dnf install -y kubectl', sudo: true)
+      end
+    end
+  end
+
+  def install_helm
+    Runner.step('helm') do
+      if Runner.command?('helm')
+        :skip
+      else
+        Runner.run(
+          'bash -c "curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash"',
+          sudo: true
+        )
+      end
+    end
+  end
+
+  def install_rbenv
+    Runner.step('rbenv') do
+      if Runner.command?('rbenv')
+        :skip
+      else
+        Runner.run('git clone https://github.com/rbenv/rbenv.git /usr/local/rbenv', sudo: true)
+        Runner.run(
+          'git clone https://github.com/rbenv/ruby-build.git /usr/local/rbenv/plugins/ruby-build',
+          sudo: true
+        )
+        Runner.run('ln -sf /usr/local/rbenv/bin/rbenv /usr/local/bin/rbenv', sudo: true)
+        Runner.run('ln -sf /usr/local/rbenv/plugins/ruby-build/bin/ruby-build /usr/local/bin/ruby-build', sudo: true)
+        profile = '/etc/profile.d/rbenv.sh'
+        content = <<~SH
+          export RBENV_ROOT=/usr/local/rbenv
+          export PATH="/usr/local/rbenv/bin:$PATH"
+          eval "$(rbenv init -)"
+        SH
+        Runner.run("bash -c \"cat > #{profile}\"", sudo: true, input: content)
+        Runner.run("chmod +x #{profile}", sudo: true)
+      end
+    end
+  end
+
+  def install_gems
+    gems = %w[rubocop pry rake solargraph amazing_print tmuxinator]
+    Runner.step("Ruby gems: #{gems.join(', ')}") do
+      Runner.run("gem install --no-document #{gems.join(' ')}", sudo: !Runner.running_as_root?)
+    end
+  end
+
+  def install_npm_globals
+    return unless Runner.command?('npm')
+
+    pkgs = %w[typescript ts-node prettier eslint pnpm yarn nodemon serve tldr]
+    Runner.step("npm globals: #{pkgs.join(', ')}") do
+      Runner.run("npm install -g --quiet #{pkgs.join(' ')}", sudo: !Runner.running_as_root?)
+    end
+  end
+
+  def install_pipx_tools
+    return unless Runner.command?('pipx')
+
+    tools = %w[httpie glances yt-dlp poetry ruff]
+    tools.each do |tool|
+      Runner.step("pipx: #{tool}") do
+        if Runner.try("pipx list 2>/dev/null | grep #{tool}")
+          :skip
+        else
+          Runner.try("pipx install #{tool} 2>/dev/null")
+          :skip  # non-fatal
+        end
+      end
+    end
+  end
+
+  def install_fd_symlink
+    Runner.step("'fd' symlink for fd-find") do
+      if @platform.debian? && Runner.command?('fdfind') && !Runner.command?('fd')
+        Runner.run("ln -sf $(which fdfind) /usr/local/bin/fd", sudo: true)
+      else
+        :skip
+      end
+    end
+  end
+
+  def install_claude
+    Runner.step('Ensure ~/.local/bin exists') { FileUtils.mkdir_p(LOCAL_BIN) }
+    Runner.step('Add ~/.local/bin to PATH in shell profile') do
+      Updater.new(@platform).send(:ensure_local_bin_in_path)
+    end
+    Runner.step('Install Claude Code → ~/.local/bin') do
+      Runner.run("npm install -g --prefix #{Dir.home}/.local @anthropic-ai/claude-code")
+    end
+  end
+end
+
+class Remover
+  def initialize(platform)
+    @platform = platform
+  end
+
+  def run
+    REMOVE_GROUPS.each do |_key, group|
+      pkgs = group[@platform.family] || []
+      next if pkgs.empty?
+
+      Runner.section("Remove: #{group[:desc]}")
+
+      installed = pkgs.select { |p| @platform.pkg_installed?(p) }
+      if installed.empty?
+        Runner.step("No #{group[:desc].downcase} packages found") { :skip }
+      else
+        Runner.step("Remove #{installed.length} package(s): #{installed.join(', ')}") do
+          Runner.run(@platform.pkg_remove_cmd(installed), sudo: true)
+        end
+      end
+    end
+
+    Runner.section('Autoremove orphaned dependencies')
+    Runner.step('autoremove') do
+      Runner.run(@platform.pkg_autoremove_cmd, sudo: true)
+    end
+  end
+end
+
+# ── CLI entry point ───────────────────────────────────────────────────────────
+
+def usage
+  puts <<~USAGE
+    #{C.bold('claude-code-setup')} — Bootstrap Claude Code environments
+
+    #{C.bold('Usage:')}
+      claude-code-setup <command> [options]
+
+    #{C.bold('Commands:')}
+      #{C.cyan('install')}        Install dev tools and Claude Code
+      #{C.cyan('remove')}         Remove bloat packages
+      #{C.cyan('setup-claude')}   Configure ~/.claude (settings, statusline, tmux)
+      #{C.cyan('update')}         Update Claude Code (requires npm from install)
+      #{C.cyan('all')}            Full bootstrap: setup-claude + install
+
+    #{C.bold('Options:')}
+      --help, -h      Show this help
+      --version, -v   Show version
+
+    #{C.bold('Supported platforms:')}
+      Ubuntu / Debian (apt)
+      Red Hat 8.10 / Rocky / AlmaLinux (dnf + EPEL)
+  USAGE
+end
+
+VERSION = '1.0.0'
+
+ARGV.push('--help') if ARGV.empty?
+
+command = nil
+OptionParser.new do |opts|
+  opts.on('-h', '--help')    { usage; exit 0 }
+  opts.on('-v', '--version') { puts VERSION; exit 0 }
+end.order!(ARGV)
+
+command = ARGV.shift&.downcase
+
+unless %w[install remove setup-claude update all].include?(command)
+  usage
+  exit 1
+end
+
+platform = Platform.new
+
+puts C.bold("\nClaude Code Setup #{VERSION}")
+puts C.dim("Platform: #{platform}")
+puts C.dim("Running as: #{Runner.running_as_root? ? 'root' : ENV['USER']} (uid=#{Process.uid})")
+
+case command
+when 'update'
+  Updater.new(platform).run
+
+when 'setup-claude'
+  ClaudeSetup.new(platform).run
+
+when 'install'
+  Installer.new(platform).run
+
+when 'remove'
+  Remover.new(platform).run
+
+when 'all'
+  ClaudeSetup.new(platform).run
+  Installer.new(platform).run
+end
+
+puts "\n#{C.bold('Done.')}\n"

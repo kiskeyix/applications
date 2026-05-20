@@ -2,14 +2,91 @@
 # frozen_string_literal: true
 
 # claude-code-setup — Bootstrap Claude Code environments
-# Supports Ubuntu/Debian and RedHat 8.10+
+# Copyright (C) 2026  Luis Mondesi <lemsx1@gmail.com>
 #
-# Usage:
-#   claude-code-setup install       Install dev tools and configure tmux
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# OVERVIEW
+#
+#   Single-file Ruby script that bootstraps a Claude Code development
+#   environment on Ubuntu/Debian and Red Hat 8.10+ (Rocky, AlmaLinux).
+#   Safe to run multiple times — every step is idempotent.
+#
+# HOW IT WORKS
+#
+#   Each action is wrapped in a Runner.step block that prints a labelled
+#   line ending in Ok (green), skip (dim), or Fail (red).  Steps that find
+#   their target already in the desired state return :skip rather than
+#   re-running.  Failures are logged and execution continues by default so
+#   a single broken package never aborts the whole run.
+#
+#   No step writes to a system path unless it has to (package manager
+#   operations go through sudo; everything else lands under the calling
+#   user's home directory):
+#
+#     ~/.local/bin          binaries: mise, helm, kubectl, gh, docker-compose,
+#                           Claude Code, fd symlink, gem executables, npm bins
+#     ~/.local/share/gem    Ruby gems installed via `gem install`
+#     ~/.local/share/npm    npm global packages (--prefix ~/.local)
+#     ~/.docker/cli-plugins Docker Compose v2 plugin
+#     ~/.mise               mise data dir (versions, shims, plugins)
+#     ~/.claude             settings.json, statusline.rb, hooks/
+#     ~/.tmux.conf          Claude-optimised tmux configuration
+#     ~/.bashrc             mise activation line appended if absent
+#     ~/.bash_profile /
+#       ~/.profile          ~/.local/bin PATH export appended if absent
+#
+#   System package installation (apt-get / dnf) always runs under sudo.
+#   npm, gem, curl-based binary downloads, and mise all run as the
+#   current user with no privilege escalation.
+#
+# COMMANDS
+#
+#   install       Update package index, install all tool groups (terminal,
+#                 build, languages, containers, editors, …), post-install
+#                 binaries (mise, Ruby via mise, gems, npm globals, gh,
+#                 helm, kubectl, docker-compose), and Claude Code.
+#   remove        Purge bloat packages (LibreOffice, games, printer drivers,
+#                 indic fonts, cloud-init, screen-reader stack).
+#   setup-claude  Write ~/.claude/settings.json, statusline.rb, session-
+#                 start and notify-stop hooks, and ~/.tmux.conf.
+#   update        Ensure ~/.local/bin exists, then install or update
+#                 Claude Code via `claude update` (or npm if not yet present).
+#   all           setup-claude + install (full first-time bootstrap).
+#
+# IDEMPOTENCY GUARANTEES
+#
+#   • Packages: skipped if already installed (dpkg -s / rpm -q).
+#   • Binaries: skipped if the command is already on PATH (`which`).
+#   • mise Ruby: skipped if the latest version is already the global default.
+#   • npm globals: re-running is a no-op (npm skips already-current pkgs).
+#   • ~/.claude files: settings.json is deep-merged so existing user keys
+#     are preserved; hook scripts and statusline are overwritten to stay
+#     current.
+#   • ~/.tmux.conf: backed up with a timestamp before every write.
+#   • ~/.bashrc / profile snippets: checked for a marker string before
+#     appending; never duplicated.
+#
+# USAGE
+#
+#   claude-code-setup install       Install dev tools and Claude Code
 #   claude-code-setup remove        Remove bloat packages
 #   claude-code-setup setup-claude  Configure ~/.claude (settings, statusline, hooks)
 #   claude-code-setup update        Update Claude Code to latest version
-#   claude-code-setup all           update + setup-claude + install (full bootstrap)
+#   claude-code-setup all           Full bootstrap: setup-claude + install
 #   claude-code-setup --help
 
 require 'fileutils'
@@ -229,11 +306,6 @@ INSTALL_GROUPS = {
                valgrind ltrace binutils nasm ccache],
     rhel:   %w[cmake ninja-build meson pkgconfig clang clang-tools-extra llvm
                valgrind ltrace binutils nasm ccache]
-  },
-  ruby: {
-    desc: 'Ruby',
-    debian: %w[ruby-full ruby-dev ruby-bundler],
-    rhel:   %w[ruby ruby-devel rubygem-bundler]
   },
   python: {
     desc: 'Python',
@@ -861,8 +933,9 @@ class Installer
     Runner.section('Post-install: helm')
     install_helm
 
-    Runner.section('Post-install: rbenv (Ruby version manager)')
-    install_rbenv
+    Runner.section('Post-install: mise (version manager)')
+    install_mise
+    install_mise_ruby
 
     Runner.section('Post-install: Ruby gems')
     install_gems
@@ -903,118 +976,107 @@ class Installer
   end
 
   def install_gh
-    Runner.step('GitHub CLI (gh)') do
+    Runner.step('gh → ~/.local/bin') do
       Runner.unless_command('gh') do
-        if @platform.debian?
-          Runner.run(
-            'curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg ' \
-            '| tee /usr/share/keyrings/githubcli-archive-keyring.gpg > /dev/null',
-            sudo: true
-          )
-          Runner.run(
-            "bash -c \"echo 'deb [arch=$(dpkg --print-architecture) " \
-            "signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] " \
-            "https://cli.github.com/packages stable main' " \
-            "> /etc/apt/sources.list.d/github-cli.list\"",
-            sudo: true
-          )
-          Runner.run(@platform.pkg_update_cmd, sudo: true)
-          Runner.run(@platform.pkg_install_cmd(%w[gh]), sudo: true)
-        else
-          Runner.run(@platform.pkg_install_cmd(%w[gh]), sudo: true)
-        end
+        arch = @platform.arch == 'aarch64' ? 'arm64' : 'amd64'
+        Runner.run(
+          "bash -c \"" \
+          "VER=\\$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest " \
+          "| grep '\"tag_name\"' | cut -d'\"' -f4 | sed 's/^v//') && " \
+          "curl -fsSL https://github.com/cli/cli/releases/download/v\\${VER}/" \
+          "gh_\\${VER}_linux_#{arch}.tar.gz " \
+          "| tar -xzf - --strip-components=2 -C #{LOCAL_BIN} " \
+          "gh_\\${VER}_linux_#{arch}/bin/gh\""
+        )
       end
     end
   end
 
   def install_docker_compose
-    Runner.step('Docker Compose v2 plugin') do
+    Runner.step('Docker Compose v2 → ~/.docker/cli-plugins') do
       if system('docker compose version >/dev/null 2>&1')
         :skip
       else
-        arch = @platform.arch
-        Runner.run('mkdir -p /usr/local/lib/docker/cli-plugins', sudo: true)
+        docker_plugins = File.join(Dir.home, '.docker', 'cli-plugins')
+        FileUtils.mkdir_p(docker_plugins)
+        dest = File.join(docker_plugins, 'docker-compose')
         Runner.run(
           "curl -fsSL https://github.com/docker/compose/releases/latest/download/" \
-          "docker-compose-linux-#{arch} " \
-          "-o /usr/local/lib/docker/cli-plugins/docker-compose",
-          sudo: true
+          "docker-compose-linux-#{@platform.arch} -o #{dest}"
         )
-        Runner.run('chmod +x /usr/local/lib/docker/cli-plugins/docker-compose', sudo: true)
+        File.chmod(0o755, dest)
       end
     end
   end
 
   def install_kubectl
-    Runner.step('kubectl') do
+    Runner.step('kubectl → ~/.local/bin') do
       Runner.unless_command('kubectl') do
-        if @platform.debian?
-          Runner.run(
-            'curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.30/deb/Release.key ' \
-            '| gpg --batch --yes --dearmor -o /usr/share/keyrings/kubernetes-apt-keyring.gpg',
-            sudo: true
-          )
-          Runner.run(
-            'bash -c "echo \'deb [signed-by=/usr/share/keyrings/kubernetes-apt-keyring.gpg] ' \
-            'https://pkgs.k8s.io/core:/stable:/v1.30/deb/ /\' ' \
-            '> /etc/apt/sources.list.d/kubernetes.list"',
-            sudo: true
-          )
-          Runner.run(@platform.pkg_update_cmd, sudo: true)
-          Runner.run(@platform.pkg_install_cmd(%w[kubectl]), sudo: true)
-        else
-          Runner.run(
-            'bash -c "cat > /etc/yum.repos.d/kubernetes.repo << \'EOF\'\n' \
-            "[kubernetes]\nname=Kubernetes\n" \
-            "baseurl=https://pkgs.k8s.io/core:/stable:/v1.30/rpm/\n" \
-            "enabled=1\ngpgcheck=1\n" \
-            "gpgkey=https://pkgs.k8s.io/core:/stable:/v1.30/rpm/repodata/repomd.xml.key\n" \
-            "EOF\n\"",
-            sudo: true
-          )
-          Runner.run(@platform.pkg_install_cmd(%w[kubectl]), sudo: true)
-        end
+        arch = @platform.arch == 'aarch64' ? 'arm64' : 'amd64'
+        Runner.run(
+          "bash -c \"" \
+          "VER=\\$(curl -fsSL https://dl.k8s.io/release/stable.txt) && " \
+          "curl -fsSLo #{LOCAL_BIN}/kubectl " \
+          "https://dl.k8s.io/release/\\${VER}/bin/linux/#{arch}/kubectl && " \
+          "chmod +x #{LOCAL_BIN}/kubectl\""
+        )
       end
     end
   end
 
   def install_helm
-    Runner.step('helm') do
+    Runner.step('helm → ~/.local/bin') do
       Runner.unless_command('helm') do
+        arch = @platform.arch == 'aarch64' ? 'arm64' : 'amd64'
         Runner.run(
-          'bash -c "curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash"',
-          sudo: true
+          "bash -c \"curl -fsSL https://get.helm.sh/helm-latest-linux-#{arch}.tar.gz " \
+          "| tar -xzf - --strip-components=1 -C #{LOCAL_BIN} linux-#{arch}/helm\""
         )
       end
     end
   end
 
-  def install_rbenv
-    Runner.step('rbenv') do
-      Runner.unless_command('rbenv') do
-        Runner.run('git clone https://github.com/rbenv/rbenv.git /usr/local/rbenv', sudo: true)
-        Runner.run(
-          'git clone https://github.com/rbenv/ruby-build.git /usr/local/rbenv/plugins/ruby-build',
-          sudo: true
-        )
-        Runner.run('ln -sf /usr/local/rbenv/bin/rbenv /usr/local/bin/rbenv', sudo: true)
-        Runner.run('ln -sf /usr/local/rbenv/plugins/ruby-build/bin/ruby-build /usr/local/bin/ruby-build', sudo: true)
-        profile = '/etc/profile.d/rbenv.sh'
-        content = <<~SH
-          export RBENV_ROOT=/usr/local/rbenv
-          export PATH="/usr/local/rbenv/bin:$PATH"
-          eval "$(rbenv init -)"
-        SH
-        Runner.run("bash -c \"cat > #{profile}\"", sudo: true, input: content)
-        Runner.run("chmod +x #{profile}", sudo: true)
+  def install_mise
+    Runner.step('mise → ~/.local/bin') do
+      if Runner.command?('mise')
+        Runner.run("#{LOCAL_BIN}/mise self-update 2>/dev/null || true")
+        :skip
+      else
+        Runner.run('curl -fsSL https://mise.run | sh')
+        ensure_mise_in_bashrc
+      end
+    end
+  end
+
+  def install_mise_ruby
+    mise = File.join(LOCAL_BIN, 'mise')
+    Runner.step('mise: ruby@latest') do
+      unless File.exist?(mise)
+        :skip
+      else
+        current = Runner.try("#{mise} latest ruby 2>/dev/null")&.strip
+        installed = Runner.try("#{mise} list ruby 2>/dev/null")&.include?(current.to_s)
+        if installed
+          :skip
+        else
+          Runner.run("#{mise} use --global ruby@latest")
+        end
       end
     end
   end
 
   def install_gems
     gems = %w[rubocop pry rake solargraph amazing_print tmuxinator]
-    Runner.step("Ruby gems: #{gems.join(', ')}") do
-      Runner.run("gem install --no-document #{gems.join(' ')}", sudo: Runner.user_sudo?)
+    gem_home = File.join(Dir.home, '.local', 'share', 'gem')
+    mise = File.join(LOCAL_BIN, 'mise')
+    gem_cmd = File.exist?(mise) ? "#{mise} exec ruby -- gem" : 'gem'
+    Runner.step("Ruby gems → ~/.local/share/gem: #{gems.join(', ')}") do
+      Runner.run(
+        "#{gem_cmd} install --no-document " \
+        "--install-dir #{gem_home} " \
+        "--bindir #{LOCAL_BIN} " \
+        "#{gems.join(' ')}"
+      )
     end
   end
 
@@ -1022,8 +1084,8 @@ class Installer
     return unless Runner.command?('npm')
 
     pkgs = %w[typescript ts-node prettier eslint pnpm yarn nodemon serve tldr]
-    Runner.step("npm globals: #{pkgs.join(', ')}") do
-      Runner.run("npm install -g --quiet #{pkgs.join(' ')}", sudo: Runner.user_sudo?)
+    Runner.step("npm globals → ~/.local: #{pkgs.join(', ')}") do
+      Runner.run("npm install -g --prefix #{Dir.home}/.local --quiet #{pkgs.join(' ')}")
     end
   end
 
@@ -1044,9 +1106,9 @@ class Installer
   end
 
   def install_fd_symlink
-    Runner.step("'fd' symlink for fd-find") do
+    Runner.step("'fd' symlink → ~/.local/bin") do
       if @platform.debian? && Runner.command?('fdfind') && !Runner.command?('fd')
-        Runner.run("ln -sf $(which fdfind) /usr/local/bin/fd", sudo: true)
+        FileUtils.ln_sf(`which fdfind`.strip, File.join(LOCAL_BIN, 'fd'))
       else
         :skip
       end
@@ -1056,6 +1118,19 @@ class Installer
   def install_claude
     setup_local_bin
     install_or_update_claude
+  end
+
+  def ensure_mise_in_bashrc
+    rc = File.join(Dir.home, '.bashrc')
+    content = File.exist?(rc) ? File.read(rc) : ''
+    return :skip if content.include?('mise activate')
+
+    snippet = <<~SH
+
+      # mise — polyglot version manager (added by claude-code-setup)
+      [[ -x "$HOME/.local/bin/mise" ]] && eval "$($HOME/.local/bin/mise activate bash)"
+    SH
+    File.write(rc, content + snippet)
   end
 end
 

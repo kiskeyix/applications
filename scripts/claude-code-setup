@@ -22,7 +22,8 @@
 # OVERVIEW
 #
 #   Single-file Ruby script that bootstraps a Claude Code development
-#   environment on Ubuntu/Debian and Red Hat 8.10+ (Rocky, AlmaLinux).
+#   environment on macOS (Homebrew), Ubuntu/Debian (apt), and Red Hat
+#   8.10+ / Rocky / AlmaLinux (dnf + EPEL).
 #   Safe to run multiple times — every step is idempotent.
 #
 # HOW IT WORKS
@@ -33,15 +34,15 @@
 #   re-running.  Failures are logged and execution continues by default so
 #   a single broken package never aborts the whole run.
 #
-#   No step writes to a system path unless it has to (package manager
-#   operations go through sudo; everything else lands under the calling
-#   user's home directory):
+#   No step writes to a system path unless it has to (Linux package manager
+#   operations go through sudo; Homebrew and everything else lands under the
+#   calling user's home directory):
 #
 #     ~/.local/bin          binaries: mise, helm, kubectl, gh, docker-compose,
 #                           Claude Code, fd symlink, gem executables, npm bins
 #     ~/.local/share/gem    Ruby gems installed via `gem install`
 #     ~/.local/share/npm    npm global packages (--prefix ~/.local)
-#     ~/.docker/cli-plugins Docker Compose v2 plugin
+#     ~/.docker/cli-plugins Docker Compose v2 plugin (Linux)
 #     ~/.mise               mise data dir (versions, shims, plugins)
 #     ~/.claude             settings.json, statusline.rb, hooks/
 #     ~/.tmux.conf          Claude-optimised tmux configuration
@@ -49,9 +50,10 @@
 #     ~/.bash_profile /
 #       ~/.profile          ~/.local/bin PATH export appended if absent
 #
-#   System package installation (apt-get / dnf) always runs under sudo.
+#   macOS: all package operations use `brew` (never sudo).
+#   Linux: system package installation (apt-get / dnf) always runs under sudo.
 #   npm, gem, curl-based binary downloads, and mise all run as the
-#   current user with no privilege escalation.
+#   current user with no privilege escalation on all platforms.
 #
 # COMMANDS
 #
@@ -61,6 +63,7 @@
 #                 helm, kubectl, docker-compose), and Claude Code.
 #   remove        Purge bloat packages (LibreOffice, games, printer drivers,
 #                 indic fonts, cloud-init, screen-reader stack).
+#                 No-op on macOS (use `brew uninstall` manually).
 #   setup-claude  Write ~/.claude/settings.json, statusline.rb, session-
 #                 start and notify-stop hooks, and ~/.tmux.conf.
 #   update        Ensure ~/.local/bin exists, then install or update
@@ -69,7 +72,7 @@
 #
 # IDEMPOTENCY GUARANTEES
 #
-#   • Packages: skipped if already installed (dpkg -s / rpm -q).
+#   • Packages: skipped if already installed (dpkg -s / rpm -q / brew list).
 #   • Binaries: skipped if the command is already on PATH (`which`).
 #   • mise Ruby: skipped if the latest version is already the global default.
 #   • npm globals: re-running is a no-op (npm skips already-current pkgs).
@@ -83,7 +86,7 @@
 # USAGE
 #
 #   claude-code-setup install       Install dev tools and Claude Code
-#   claude-code-setup remove        Remove bloat packages
+#   claude-code-setup remove        Remove bloat packages (Linux only)
 #   claude-code-setup setup-claude  Configure ~/.claude (settings, statusline, hooks)
 #   claude-code-setup update        Update Claude Code to latest version
 #   claude-code-setup all           Full bootstrap: setup-claude + install
@@ -195,6 +198,11 @@ class Runner
   def self.installed_pkg_rhel?(pkg)
     system("rpm -q #{pkg} >/dev/null 2>&1")
   end
+
+  def self.installed_pkg_brew?(pkg)
+    system("brew list --formula #{pkg} >/dev/null 2>&1") ||
+      system("brew list --cask #{pkg} >/dev/null 2>&1")
+  end
 end
 
 # ── OS / distro detection ─────────────────────────────────────────────────────
@@ -206,23 +214,33 @@ class Platform
     @id, @family, @version = detect
   end
 
-  def debian? = @family == :debian
-  def rhel?   = @family == :rhel
+  def macos?   = @family == :macos
+  def debian?  = @family == :debian
+  def rhel?    = @family == :rhel
+  def unknown? = @family == :unknown
+  def linux?   = debian? || rhel?
+
+  # Homebrew must never run under sudo; Linux package managers require it.
+  def pkg_sudo?
+    !macos? && !Runner.running_as_root?
+  end
 
   def to_s
     "#{@id} #{@version} (#{@family})"
   end
 
   def pkg_update_cmd
-    if debian?
-      'DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=120 update -qq'
-    else
-      'dnf check-update -q; true'
+    case @family
+    when :macos  then 'brew update'
+    when :debian then 'DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=120 update -qq'
+    else              'dnf check-update -q; true'
     end
   end
 
   def pkg_install_cmd(pkgs, no_recommends: false)
-    if debian?
+    case @family
+    when :macos  then "brew install #{pkgs.join(' ')}"
+    when :debian
       nr = no_recommends ? '--no-install-recommends ' : ''
       "DEBIAN_FRONTEND=noninteractive apt-get -o DPkg::Lock::Timeout=120 install -y #{nr}#{pkgs.join(' ')}"
     else
@@ -231,20 +249,40 @@ class Platform
   end
 
   def pkg_remove_cmd(pkgs)
-    debian? ? "apt-get remove -y --purge #{pkgs.join(' ')}" \
-            : "dnf remove -y #{pkgs.join(' ')}"
+    case @family
+    when :macos  then "brew uninstall #{pkgs.join(' ')}"
+    when :debian then "apt-get remove -y --purge #{pkgs.join(' ')}"
+    else              "dnf remove -y #{pkgs.join(' ')}"
+    end
   end
 
   def pkg_autoremove_cmd
-    debian? ? 'apt-get autoremove -y --purge' : 'dnf autoremove -y'
+    case @family
+    when :macos  then 'brew autoremove'
+    when :debian then 'apt-get autoremove -y --purge'
+    else              'dnf autoremove -y'
+    end
   end
 
   def pkg_installed?(pkg)
-    debian? ? Runner.installed_pkg_debian?(pkg) : Runner.installed_pkg_rhel?(pkg)
+    case @family
+    when :macos  then Runner.installed_pkg_brew?(pkg)
+    when :debian then Runner.installed_pkg_debian?(pkg)
+    else              Runner.installed_pkg_rhel?(pkg)
+    end
   end
 
   def arch
     @arch ||= `uname -m`.strip
+  end
+
+  # Normalised arch token used for binary download URLs.
+  # Returns 'arm64' or 'amd64' on all platforms.
+  def dl_arch
+    case arch
+    when 'aarch64', 'arm64' then 'arm64'
+    else                         'amd64'
+    end
   end
 
   def epel_needed? = rhel?
@@ -252,6 +290,12 @@ class Platform
   private
 
   def detect
+    # macOS — check before /etc/os-release (which doesn't exist on Darwin)
+    if RUBY_PLATFORM.include?('darwin')
+      version = `sw_vers -productVersion 2>/dev/null`.strip
+      return [:macos, :macos, version]
+    end
+
     return [:unknown, :unknown, ''] unless File.exist?('/etc/os-release')
 
     info = File.read('/etc/os-release').scan(/^(\w+)=(.+)$/).to_h do |k, v|
@@ -276,36 +320,42 @@ end
 
 # ── Package catalog ───────────────────────────────────────────────────────────
 
-# Each entry: { desc:, debian: [...], rhel: [...] }
-# RHEL packages require EPEL unless marked (base)
+# Each entry: { desc:, debian: [...], rhel: [...], macos: [...] }
+# RHEL packages require EPEL unless marked (base).
+# macOS packages are Homebrew formulae (brew install).
 
 INSTALL_GROUPS = {
   terminal: {
     desc: 'Terminal & shell',
     debian: %w[zsh fish bash-completion ncurses-term wl-clipboard xclip xdotool tmux],
-    rhel:   %w[zsh fish bash-completion xclip xdotool tmux]
+    rhel:   %w[zsh fish bash-completion xclip xdotool tmux],
+    macos:  %w[fish bash-completion tmux]
   },
   file_tools: {
     desc: 'File & search tools',
     debian: %w[ripgrep fd-find fzf bat eza ncdu tree duf p7zip-full zstd pv moreutils rename],
-    rhel:   %w[ripgrep fzf bat ncdu tree zstd pv moreutils p7zip p7zip-plugins]
+    rhel:   %w[ripgrep fzf bat ncdu tree zstd pv moreutils p7zip p7zip-plugins],
+    macos:  %w[ripgrep fd fzf bat eza ncdu tree duf p7zip zstd pv moreutils rename]
   },
   monitoring: {
     desc: 'System monitoring',
     debian: %w[htop iotop nethogs nload iftop bmon inxi lshw smartmontools powertop],
-    rhel:   %w[htop iotop nethogs nload iftop bmon inxi lshw smartmontools powertop]
+    rhel:   %w[htop iotop nethogs nload iftop bmon inxi lshw smartmontools powertop],
+    macos:  %w[htop iftop smartmontools]
   },
   network: {
     desc: 'Network tools',
     debian: %w[nmap socat mtr whois dnsutils net-tools iproute2 iperf3 aria2],
-    rhel:   %w[nmap socat mtr whois bind-utils net-tools iproute iperf3 aria2]
+    rhel:   %w[nmap socat mtr whois bind-utils net-tools iproute iperf3 aria2],
+    macos:  %w[nmap socat mtr iperf3 aria2]
   },
   build: {
     desc: 'Build & compiler tools',
     debian: %w[cmake ninja-build meson pkg-config clang clang-format clang-tidy llvm
                valgrind ltrace binutils nasm ccache],
     rhel:   %w[cmake ninja-build meson pkgconfig clang clang-tools-extra llvm
-               valgrind ltrace binutils nasm ccache]
+               valgrind ltrace binutils nasm ccache],
+    macos:  %w[cmake ninja meson pkg-config llvm nasm ccache]
   },
   python: {
     desc: 'Python',
@@ -314,62 +364,74 @@ INSTALL_GROUPS = {
                python3-yaml python3-toml python3-dotenv],
     rhel:   %w[python3-pip python3 python3-devel python3-ipython
                python3-pylint python3-mypy python3-pytest python3-requests
-               python3-click python3-pyyaml python3-toml]
+               python3-click python3-pyyaml python3-toml],
+    macos:  %w[python pipx]
   },
   nodejs: {
     desc: 'Node.js / npm',
     debian: %w[npm],
-    rhel:   %w[nodejs npm]
+    rhel:   %w[nodejs npm],
+    macos:  %w[node]
   },
   golang: {
     desc: 'Go',
     debian: %w[golang-go],
-    rhel:   %w[golang]
+    rhel:   %w[golang],
+    macos:  %w[go]
   },
   rust: {
     desc: 'Rust',
     debian: %w[cargo rustc rustfmt],
-    rhel:   %w[cargo rust rustfmt]
+    rhel:   %w[cargo rust rustfmt],
+    macos:  %w[rust]
   },
   databases: {
     desc: 'Database clients',
     debian: %w[sqlite3 postgresql-client default-mysql-client],
-    rhel:   %w[sqlite postgresql mariadb]
+    rhel:   %w[sqlite postgresql mariadb],
+    macos:  %w[sqlite postgresql]
   },
   containers: {
     desc: 'Containers',
     debian: %w[podman buildah],
-    rhel:   %w[podman buildah]
+    rhel:   %w[podman buildah],
+    macos:  %w[podman]
   },
   vcs: {
     desc: 'Version control extras',
     debian: %w[git-lfs tig meld],
-    rhel:   %w[git-lfs tig]
+    rhel:   %w[git-lfs tig],
+    macos:  %w[git-lfs tig]
   },
   editors: {
     desc: 'Editors & viewers',
     debian: %w[neovim emacs less most],
-    rhel:   %w[neovim emacs less]
+    rhel:   %w[neovim emacs less],
+    macos:  %w[neovim]
   },
   text: {
     desc: 'Text processing',
     debian: %w[xmlstarlet pandoc poppler-utils entr parallel shellcheck],
-    rhel:   %w[xmlstarlet poppler-utils entr parallel ShellCheck]
+    rhel:   %w[xmlstarlet poppler-utils entr parallel ShellCheck],
+    macos:  %w[xmlstarlet pandoc poppler entr parallel shellcheck]
   },
   security: {
     desc: 'Security tools',
     debian: %w[openssh-server fail2ban ncat wireshark tshark],
-    rhel:   %w[openssh-server fail2ban nmap-ncat wireshark wireshark-cli]
+    rhel:   %w[openssh-server fail2ban nmap-ncat wireshark wireshark-cli],
+    macos:  %w[nmap wireshark]
   },
   docs: {
     desc: 'Documentation',
     debian: %w[man-db manpages-dev info],
-    rhel:   %w[man-db info]
+    rhel:   %w[man-db info],
+    macos:  []
   },
   fonts: {
     desc: 'Developer fonts',
     debian: %w[fonts-firacode fonts-jetbrains-mono fonts-hack fonts-cascadia-code],
-    rhel:   []
+    rhel:   [],
+    macos:  []
   }
 }.freeze
 
@@ -716,8 +778,8 @@ TMUX_CONF = <<~'TMUX'
   setw -g mode-keys vi
   bind Enter copy-mode
   bind -T copy-mode-vi v send -X begin-selection
-  bind -T copy-mode-vi y send -X copy-pipe-and-cancel "xclip -sel clip 2>/dev/null || wl-copy 2>/dev/null || true"
-  bind -T copy-mode-vi MouseDragEnd1Pane send -X copy-pipe-and-cancel "xclip -sel clip 2>/dev/null || wl-copy 2>/dev/null || true"
+  bind -T copy-mode-vi y send -X copy-pipe-and-cancel "pbcopy 2>/dev/null || xclip -sel clip 2>/dev/null || wl-copy 2>/dev/null || true"
+  bind -T copy-mode-vi MouseDragEnd1Pane send -X copy-pipe-and-cancel "pbcopy 2>/dev/null || xclip -sel clip 2>/dev/null || wl-copy 2>/dev/null || true"
 TMUX
 
 # ── Action classes ────────────────────────────────────────────────────────────
@@ -896,9 +958,15 @@ class Installer
   end
 
   def run
+    if @platform.unknown?
+      puts C.warn("\n  Unsupported platform — skipping package manager steps.")
+      puts C.dim("  mise, gems, npm, and Claude Code installs will still be attempted.\n")
+    end
+
     Runner.section('Package index update')
-    Runner.step('apt-get / dnf update') do
-      Runner.run(@platform.pkg_update_cmd, sudo: true)
+    Runner.step("#{@platform.macos? ? 'brew' : 'apt-get / dnf'} update") do
+      next :skip if @platform.unknown?
+      Runner.run(@platform.pkg_update_cmd, sudo: @platform.pkg_sudo?)
     end
 
     if @platform.epel_needed?
@@ -918,7 +986,7 @@ class Installer
       else
         Runner.step("Install #{to_install.length} package(s)") do
           cmd = @platform.pkg_install_cmd(to_install, no_recommends: @platform.debian?)
-          Runner.run(cmd, sudo: true)
+          Runner.run(cmd, sudo: @platform.pkg_sudo?)
         end
       end
     end
@@ -956,7 +1024,8 @@ class Installer
 
     Runner.section('Cleanup')
     Runner.step('autoremove / clean') do
-      Runner.run(@platform.pkg_autoremove_cmd, sudo: true)
+      next :skip if @platform.unknown?
+      Runner.run(@platform.pkg_autoremove_cmd, sudo: @platform.pkg_sudo?)
       Runner.run('apt-get clean', sudo: true) if @platform.debian?
     end
   end
@@ -978,27 +1047,35 @@ class Installer
   end
 
   def install_gh
-    Runner.step('gh → ~/.local/bin') do
+    Runner.step('gh → ~/.local/bin (or Homebrew)') do
       Runner.unless_command('gh') do
-        arch = @platform.arch == 'aarch64' ? 'arm64' : 'amd64'
-        Runner.run(
-          "bash -c \"" \
-          "VER=\\$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest " \
-          "| grep '\"tag_name\"' | cut -d'\"' -f4 | sed 's/^v//') && " \
-          "curl -fsSL https://github.com/cli/cli/releases/download/v\\${VER}/" \
-          "gh_\\${VER}_linux_#{arch}.tar.gz " \
-          "| tar -xzf - --strip-components=2 -C #{LOCAL_BIN} " \
-          "gh_\\${VER}_linux_#{arch}/bin/gh\""
-        )
+        if @platform.macos?
+          Runner.run('brew install gh')
+        elsif @platform.linux?
+          arch = @platform.dl_arch
+          Runner.run(
+            "bash -c \"" \
+            "VER=\\$(curl -fsSL https://api.github.com/repos/cli/cli/releases/latest " \
+            "| grep '\"tag_name\"' | cut -d'\"' -f4 | sed 's/^v//') && " \
+            "curl -fsSL https://github.com/cli/cli/releases/download/v\\${VER}/" \
+            "gh_\\${VER}_linux_#{arch}.tar.gz " \
+            "| tar -xzf - --strip-components=2 -C #{LOCAL_BIN} " \
+            "gh_\\${VER}_linux_#{arch}/bin/gh\""
+          )
+        else
+          :skip
+        end
       end
     end
   end
 
   def install_docker_compose
-    Runner.step('Docker Compose v2 → ~/.docker/cli-plugins') do
+    Runner.step('Docker Compose v2 → ~/.docker/cli-plugins (or Homebrew)') do
       if system('docker compose version >/dev/null 2>&1')
         :skip
-      else
+      elsif @platform.macos?
+        Runner.run('brew install docker-compose')
+      elsif @platform.linux?
         docker_plugins = File.join(Dir.home, '.docker', 'cli-plugins')
         FileUtils.mkdir_p(docker_plugins)
         dest = File.join(docker_plugins, 'docker-compose')
@@ -1007,42 +1084,59 @@ class Installer
           "docker-compose-linux-#{@platform.arch} -o #{dest}"
         )
         File.chmod(0o755, dest)
+      else
+        :skip
       end
     end
   end
 
   def install_kubectl
-    Runner.step('kubectl → ~/.local/bin') do
+    Runner.step('kubectl → ~/.local/bin (or Homebrew)') do
       Runner.unless_command('kubectl') do
-        arch = @platform.arch == 'aarch64' ? 'arm64' : 'amd64'
-        Runner.run(
-          "bash -c \"" \
-          "VER=\\$(curl -fsSL https://dl.k8s.io/release/stable.txt) && " \
-          "curl -fsSLo #{LOCAL_BIN}/kubectl " \
-          "https://dl.k8s.io/release/\\${VER}/bin/linux/#{arch}/kubectl && " \
-          "chmod +x #{LOCAL_BIN}/kubectl\""
-        )
+        if @platform.macos?
+          Runner.run('brew install kubectl')
+        elsif @platform.linux?
+          arch = @platform.dl_arch
+          Runner.run(
+            "bash -c \"" \
+            "VER=\\$(curl -fsSL https://dl.k8s.io/release/stable.txt) && " \
+            "curl -fsSLo #{LOCAL_BIN}/kubectl " \
+            "https://dl.k8s.io/release/\\${VER}/bin/linux/#{arch}/kubectl && " \
+            "chmod +x #{LOCAL_BIN}/kubectl\""
+          )
+        else
+          :skip
+        end
       end
     end
   end
 
   def install_helm
-    Runner.step('helm → ~/.local/bin') do
+    Runner.step('helm → ~/.local/bin (or Homebrew)') do
       Runner.unless_command('helm') do
-        arch = @platform.arch == 'aarch64' ? 'arm64' : 'amd64'
-        Runner.run(
-          "bash -c \"curl -fsSL https://get.helm.sh/helm-latest-linux-#{arch}.tar.gz " \
-          "| tar -xzf - --strip-components=1 -C #{LOCAL_BIN} linux-#{arch}/helm\""
-        )
+        if @platform.macos?
+          Runner.run('brew install helm')
+        elsif @platform.linux?
+          arch = @platform.dl_arch
+          Runner.run(
+            "bash -c \"curl -fsSL https://get.helm.sh/helm-latest-linux-#{arch}.tar.gz " \
+            "| tar -xzf - --strip-components=1 -C #{LOCAL_BIN} linux-#{arch}/helm\""
+          )
+        else
+          :skip
+        end
       end
     end
   end
 
   def install_mise
-    Runner.step('mise → ~/.local/bin') do
+    Runner.step('mise → ~/.local/bin (or Homebrew)') do
       if Runner.command?('mise')
-        Runner.run("#{LOCAL_BIN}/mise self-update 2>/dev/null || true")
+        Runner.try("mise self-update 2>/dev/null || true")
         :skip
+      elsif @platform.macos?
+        Runner.run('brew install mise')
+        ensure_mise_in_bashrc
       else
         Runner.run('curl -fsSL https://mise.run | sh')
         ensure_mise_in_bashrc
@@ -1051,11 +1145,13 @@ class Installer
   end
 
   def install_mise_ruby
-    mise = File.join(LOCAL_BIN, 'mise')
+    # Resolve actual mise binary regardless of install method
+    mise = `which mise 2>/dev/null`.strip
+    mise = File.join(LOCAL_BIN, 'mise') if mise.empty?
     env  = { 'MISE_YES' => '1' }
 
     Runner.step('mise: install ruby@latest (may take a minute)') do
-      unless File.exist?(mise)
+      unless File.exist?(mise) || Runner.command?('mise')
         :skip
       else
         current   = Runner.try("#{mise} latest ruby 2>/dev/null")&.strip
@@ -1069,7 +1165,7 @@ class Installer
     end
 
     Runner.step('mise: set ruby@latest as global default') do
-      unless File.exist?(mise)
+      unless File.exist?(mise) || Runner.command?('mise')
         :skip
       else
         Runner.run("#{mise} use --global ruby@latest", env: env)
@@ -1080,8 +1176,9 @@ class Installer
   def install_gems
     gems = %w[rubocop pry rake solargraph amazing_print tmuxinator]
     gem_home = File.join(Dir.home, '.local', 'share', 'gem')
-    mise = File.join(LOCAL_BIN, 'mise')
-    gem_cmd = File.exist?(mise) ? "#{mise} exec ruby -- gem" : 'gem'
+    # Use mise-managed ruby if available, otherwise fall through to system gem
+    mise = `which mise 2>/dev/null`.strip
+    gem_cmd = mise.empty? ? 'gem' : "#{mise} exec ruby -- gem"
     Runner.step("Ruby gems → ~/.local/share/gem: #{gems.join(', ')}") do
       Runner.run(
         "#{gem_cmd} install --no-document " \
@@ -1119,6 +1216,7 @@ class Installer
 
   def install_fd_symlink
     Runner.step("'fd' symlink → ~/.local/bin") do
+      # Debian installs fd as fdfind; macOS and RHEL use fd directly
       if @platform.debian? && Runner.command?('fdfind') && !Runner.command?('fd')
         FileUtils.ln_sf(`which fdfind`.strip, File.join(LOCAL_BIN, 'fd'))
       else
@@ -1152,6 +1250,16 @@ class Remover
   end
 
   def run
+    if @platform.macos?
+      puts C.warn("\n  remove is a no-op on macOS — use `brew uninstall` manually.")
+      return
+    end
+
+    if @platform.unknown?
+      puts C.warn("\n  Unsupported platform — remove is not available.")
+      return
+    end
+
     REMOVE_GROUPS.each do |_key, group|
       pkgs = group[@platform.family] || []
       next if pkgs.empty?
@@ -1163,14 +1271,14 @@ class Remover
         Runner.step("No #{group[:desc].downcase} packages found") { :skip }
       else
         Runner.step("Remove #{installed.length} package(s): #{installed.join(', ')}") do
-          Runner.run(@platform.pkg_remove_cmd(installed), sudo: true)
+          Runner.run(@platform.pkg_remove_cmd(installed), sudo: @platform.pkg_sudo?)
         end
       end
     end
 
     Runner.section('Autoremove orphaned dependencies')
     Runner.step('autoremove') do
-      Runner.run(@platform.pkg_autoremove_cmd, sudo: true)
+      Runner.run(@platform.pkg_autoremove_cmd, sudo: @platform.pkg_sudo?)
     end
   end
 end
@@ -1186,7 +1294,7 @@ def usage
 
     #{C.bold('Commands:')}
       #{C.cyan('install')}        Install dev tools and Claude Code
-      #{C.cyan('remove')}         Remove bloat packages
+      #{C.cyan('remove')}         Remove bloat packages (Linux only)
       #{C.cyan('setup-claude')}   Configure ~/.claude (settings, statusline, tmux)
       #{C.cyan('update')}         Update Claude Code (requires npm from install)
       #{C.cyan('all')}            Full bootstrap: setup-claude + install
@@ -1196,12 +1304,13 @@ def usage
       --version, -v   Show version
 
     #{C.bold('Supported platforms:')}
+      macOS 13+ (Homebrew — no sudo required)
       Ubuntu / Debian (apt)
       Red Hat 8.10 / Rocky / AlmaLinux (dnf + EPEL)
   USAGE
 end
 
-VERSION = '1.0.0'
+VERSION = '1.1.0'
 
 ARGV.push('--help') if ARGV.empty?
 

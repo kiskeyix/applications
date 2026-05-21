@@ -361,3 +361,6 @@ if [[ -n $SSH_TTY ]] && [[ -z $STY ]]; then
     fi 
 fi
 ## EOF ##
+
+# mise — polyglot version manager (added by claude-code-setup)
+[[ -x "$HOME/.local/bin/mise" ]] && eval "$($HOME/.local/bin/mise activate bash)"

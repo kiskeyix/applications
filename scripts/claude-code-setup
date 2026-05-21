@@ -650,7 +650,9 @@ TMUX_CONF = <<~'TMUX'
   set -g set-clipboard on
 
   # ── FOCUS & ESCAPE ────────────────────────────────────────────────────────────
-  set -g focus-events on
+  # focus-events off: prevents ^[[I/^[[O sequences leaking into interactive prompts
+  # when switching iTerm2 tabs/windows while a pane is waiting for input (read, etc.)
+  set -g focus-events off
   set -sg escape-time 10
 
   # ── MOUSE & HISTORY ──────────────────────────────────────────────────────────

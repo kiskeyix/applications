@@ -516,6 +516,7 @@ CLAUDE_SETTINGS = {
     'defaultMode' => 'acceptEdits'
   },
   'feedbackSurveyRate' => 0,
+  'customInstructions' => 'Prioritize substance, clarity, and depth. Challenge all my proposals, designs, and conclusions as hypotheses to be tested.',
   'tui' => 'fullscreen',
   'statusLine' => {
     'type' => 'command',

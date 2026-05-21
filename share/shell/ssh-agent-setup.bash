@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Luis Mondesi <lmondesi@bloomberg.net>
+# Luis Mondesi <lemsx1@gmail.com>
 # 2012-07-30
 #
 # Source this script to start an ssh-agent and load your keys, typically at login

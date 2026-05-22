@@ -633,55 +633,76 @@ SH
 STATUSLINE_RB = <<~'RUBY'
   #!/usr/bin/env ruby
   # ~/.claude/statusline.rb — Claude Code status bar
-  # Shows rate-limit usage (5h / 7d) and context window consumption.
+  # Format: folder | ⎇ branch sha | model | quota | Ctx: x% | Ctx: n
   # Input: JSON on stdin from Claude Code. Output: one line to stdout.
 
   require 'json'
-  require 'time'
+  require 'open3'
 
   input = JSON.parse($stdin.read) rescue {}
 
-  def bar(pct, width: 8)
-    pct   = pct.to_f.clamp(0, 100)
-    filled = (pct / 100.0 * width).round
-    '█' * filled + '░' * (width - filled)
+  # ANSI helpers
+  RESET = "\e[0m"
+  def c(code, text) = "\e[#{code}m#{text}#{RESET}"
+  def dim(t)         = c(2,  t)
+  def bold(t)        = c(1,  t)
+  def col(n, t)      = c("38;5;#{n}", t)
+
+  SEP = dim(' | ')
+
+  def git(cmd)
+    out, st = Open3.capture2("git #{cmd} 2>/dev/null")
+    st.success? ? out.strip : ''
+  rescue
+    ''
   end
 
-  def resets_in(iso)
-    t = Time.parse(iso) rescue nil
-    return nil unless t
-    secs = (t - Time.now).to_i
-    return '0m' if secs <= 0
-    secs < 3600 ? "#{secs / 60}m" : "#{secs / 3600}h#{(secs % 3600) / 60}m"
+  folder = File.basename(git('rev-parse --show-toplevel'))
+  branch = git('rev-parse --abbrev-ref HEAD').then { |b| b.empty? ? b : b[0, 10] }
+  sha    = git('rev-parse --short HEAD')
+
+  model_raw = input['model']
+  model = case model_raw
+          when String then model_raw
+          when Hash   then model_raw['display_name'] || model_raw['id'] || ''
+          else ''
+          end.sub(/^claude-/i, '').gsub(/\[.*?\]/, '').strip
+
+  # Quota: prefer bb-claude-quota (Bloomberg weighted %), else fall back to session cost
+  quota = nil
+  bb = `which bb-claude-quota 2>/dev/null`.strip
+  unless bb.empty?
+    raw  = `timeout 3 bb-claude-quota --output json 2>/dev/null`
+    data = JSON.parse(raw) rescue {}
+    pct  = data.dig('models')&.values&.map { |m| m['percentage'] }&.compact&.max
+    quota = col(pct.to_i >= 80 ? 196 : pct.to_i >= 50 ? 214 : 71, "#{pct}%") if pct
+  end
+  if quota.nil? && (cost = input.dig('cost', 'total_cost_usd'))
+    quota = dim(format('$%.2f', cost))
   end
 
-  def pct_str(pct) = format('%5.1f%%', pct.to_f)
+  ctx_pct = input.dig('context_window', 'used_percentage').to_f
+  ctx_n   = input.dig('context_window', 'total_input_tokens') || 0
+
+  thinking = input.dig('thinking', 'enabled')
+  effort   = input.dig('effort', 'level')
+
+  ctx_color = ctx_pct >= 80 ? 196 : ctx_pct >= 50 ? 214 : 71
 
   parts = []
+  parts << bold(col(255, folder))                             unless folder.empty?
+  parts << "#{col(105, '⎇')} #{col(69, branch)} #{dim(sha)}" unless branch.empty? && sha.empty?
+  parts << col(87, model)                                     unless model.empty?
+  parts << quota                                              if quota
+  parts << "Ctx #{col(ctx_color, format('%.1f%%', ctx_pct))}" if ctx_pct > 0
+  parts << dim("Ctx: #{ctx_n}")
 
-  if (rl = input['rate_limits'])
-    fh = rl['five_hour']
-    sd = rl['seven_day']
-    if fh && (pct = fh['used_percentage'])
-      reset = fh['resets_at'] ? " ↺#{resets_in(fh['resets_at'])}" : ''
-      parts << "5h #{bar(pct)} #{pct_str(pct)}#{reset}"
-    end
-    if sd && (pct = sd['used_percentage'])
-      reset = sd['resets_at'] ? " ↺#{resets_in(sd['resets_at'])}" : ''
-      parts << "7d #{bar(pct)} #{pct_str(pct)}#{reset}"
-    end
-  end
+  indicators = []
+  indicators << col(220, '⚡') if thinking
+  indicators << col(208, effort[0].upcase) if effort && effort != 'normal'
+  parts << indicators.join if indicators.any?
 
-  ctx_pct = input.dig('context_window', 'used_percentage') ||
-            input.dig('current_usage',  'used_percentage')
-  parts << "ctx #{bar(ctx_pct)} #{pct_str(ctx_pct)}" if ctx_pct
-
-  effort  = input.dig('effort', 'level')
-  thinking = input.dig('thinking', 'enabled')
-  meta = [effort, (thinking ? 'think' : nil)].compact
-  parts << meta.join(' ') unless meta.empty?
-
-  puts parts.join('  │  ')
+  $stdout.print parts.join(SEP) + RESET + "\n"
 RUBY
 
 TMUX_CONF = <<~'TMUX'
@@ -709,6 +730,16 @@ TMUX_CONF = <<~'TMUX'
 
   # ── OSC PASSTHROUGH ───────────────────────────────────────────────────────────
   # Critical for Claude Code: OSC notifications, progress bar, /copy, hyperlinks
+  # Also required for clipboard to reach Mac when using tmux -CC (iTerm2 native integration)
+  #
+  # iTerm2 settings required (Preferences → General → Selection):
+  #   ✓ "Applications in terminal may access clipboard"
+  #
+  # iTerm2 settings required (Preferences → Advanced → tmux):
+  #   ✓ "When attaching, restore windows as:" → Native windows or tabs
+  #
+  # With tmux -CC, iTerm2 owns copy/paste: Cmd+C/Cmd+V work natively.
+  # The copy-pipe bindings below are fallback for non-CC sessions only.
   set -g allow-passthrough on
   set -g set-clipboard on
 
@@ -719,7 +750,8 @@ TMUX_CONF = <<~'TMUX'
   set -sg escape-time 10
 
   # ── MOUSE & HISTORY ──────────────────────────────────────────────────────────
-  # Mouse off — mouse events confuse tmux -CC / iTerm2 integration
+  # Mouse must stay OFF with tmux -CC: enabling it intercepts events that iTerm2
+  # needs to handle natively (drag-to-select, Cmd+click, etc.), breaking copy/paste.
   # set -g mouse on
   set -g history-limit 50000
 
@@ -779,8 +811,8 @@ TMUX_CONF = <<~'TMUX'
   setw -g mode-keys vi
   bind Enter copy-mode
   bind -T copy-mode-vi v send -X begin-selection
-  bind -T copy-mode-vi y send -X copy-pipe-and-cancel "pbcopy 2>/dev/null || xclip -sel clip 2>/dev/null || wl-copy 2>/dev/null || true"
-  bind -T copy-mode-vi MouseDragEnd1Pane send -X copy-pipe-and-cancel "pbcopy 2>/dev/null || xclip -sel clip 2>/dev/null || wl-copy 2>/dev/null || true"
+  bind -T copy-mode-vi y send -X copy-pipe-and-cancel "xclip -sel clip 2>/dev/null || wl-copy 2>/dev/null || true"
+  bind -T copy-mode-vi MouseDragEnd1Pane send -X copy-pipe-and-cancel "xclip -sel clip 2>/dev/null || wl-copy 2>/dev/null || true"
 TMUX
 
 # ── Action classes ────────────────────────────────────────────────────────────

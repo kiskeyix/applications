@@ -17,6 +17,8 @@ augroup filetypedetect
 
     au BufRead,BufNewFile *.c,*.h let Comment="/*" | let EndComment="*/"
 
+    au BufRead,BufNewFile *.rs let Comment="//" | let EndComment=""
+
     " set fold type to syntax for these known filetypes
     au BufRead,BufNewFile *.pl,*.pm,*.pod,*.t  let perl_fold=1 
     " these are set automatically | set ft=perl | set foldmethod=syntax 

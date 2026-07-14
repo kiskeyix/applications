@@ -133,7 +133,7 @@ run_codespell()
 {
     CMD="codespell --config ~/.codespellrc"
     DIRS=''
-    for _dir in recipes app lib; do
+    for _dir in recipes app lib src */src; do
         if [[ -d $_dir ]]; then
             DIRS="$_dir/* $DIRS"
         fi
@@ -240,8 +240,53 @@ run_mypy()
     fi
 }
 
+# rustfmt checks formatting on Cargo projects (mirrors `cargo fmt` convention)
+run_rustfmt()
+{
+    if command -v cargo > /dev/null && run_cmd cargo fmt --version > /dev/null 2>&1; then
+        echo "using cargo fmt ($(run_cmd cargo fmt --version))"
+        if ! run_cmd cargo fmt --all -- --check; then
+            echo "Formatting issues detected. Fix them with:"
+            echo "  cargo fmt --all"
+            exit 1
+        fi
+        echo "  * cargo fmt done"
+    else
+        if [[ "$(uname -s)" == "Darwin" ]]; then
+            echo "Do: brew install rustup && rustup-init && rustup component add rustfmt"
+        else
+            echo "Do: curl https://sh.rustup.rs -sSf | sh && rustup component add rustfmt"
+        fi
+        exit 1
+    fi
+}
+
+# clippy is the Rust linter (mirrors veyro's `cargo clippy --all-targets -- -D warnings`)
+run_clippy()
+{
+    if command -v cargo > /dev/null && run_cmd cargo clippy --version > /dev/null 2>&1; then
+        echo "using $(run_cmd cargo clippy --version)"
+        if ! run_cmd cargo clippy --all-targets -- -D warnings; then
+            echo "Offenses detected by clippy. Fix them with:"
+            echo "  cargo clippy --all-targets --fix"
+            exit 1
+        fi
+        echo "  * clippy done"
+    else
+        echo "Do: rustup component add clippy"
+        exit 1
+    fi
+}
+
 if [[ -f 'metadata.rb' ]]; then
     run_cookstyle
+    run_codespell
+fi
+
+# Rust (Cargo project or workspace)
+if [[ -f Cargo.toml ]]; then
+    run_rustfmt
+    run_clippy
     run_codespell
 fi
 

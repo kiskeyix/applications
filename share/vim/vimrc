@@ -162,6 +162,8 @@ fun BenIndent()
                 " :!rubocop -a %
                 " help us format syntax only
                 :!rubocop -x %
+            elseif b:current_syntax == "rust"
+                :%!rustfmt --edition 2021
             else
                 "b:current_syntax == "C"
                 :%!indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments
@@ -363,6 +365,19 @@ augroup python
         au BufNewFile *.py 0r ~/.config/vim/skeleton.py
         " automatically remove spaces at the end of the line
         autocmd BufWritePre *.py :%s/\s\+$//e
+    endif
+augroup END
+
+augroup rust
+    if !exists("autocommands_rust_loaded")
+        let autocommands_rust_loaded = 1
+        " rustfmt defaults to 4-space indentation
+        au BufReadPre *.rs set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu
+        au FileType   rust set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu " files without extension
+        " A simple std-only Rust starter (builds with a bare `rustc`)
+        au BufNewFile *.rs 0r ~/.config/vim/skeleton.rs
+        " automatically remove spaces at the end of the line
+        autocmd BufWritePre *.rs :%s/\s\+$//e
     endif
 augroup END
 

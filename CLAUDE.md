@@ -28,7 +28,7 @@ Tests use Ruby's Minitest framework. CI runs on Ruby 3.0 and 3.1 via GitHub Acti
 
 ### Config Layout
 - `share/shell/` — `bashrc`, `bash_profile`, `inputrc`, SSH agent setup; `bashrc` supports per-host overrides via `.bashrc-$HOSTNAME` pattern
-- `share/vim/` — Vim/GVim config (`vimrc`, `gvimrc`), skeleton templates, and custom plugins/syntax under `autoload/`, `plugin/`, `syntax/`, `after/`
+- `share/vim/` — Vim/GVim config (`vimrc`, `gvimrc`), skeleton templates, and custom plugins/syntax under `autoload/`, `plugin/`, `syntax/`, `after/`; nerdtree lives under `pack/vendor/start/` as a Git submodule
 - `share/mutt/` — Mutt email client config
 - `share/git-templates/` — Git hook templates
 
@@ -54,3 +54,4 @@ Code examples and educational snippets organized by language (C, C++, Perl, Pyth
 | `share/shell/bash_profile` | Login shell / PATH setup |
 | `Rakefile` | Test and tar tasks |
 | `Gemfile` | Ruby deps (minitest only) |
+| `.gitmodules` | Vim plugin submodule (nerdtree) |

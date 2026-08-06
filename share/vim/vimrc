@@ -102,14 +102,6 @@ nmap ,S :%s/^\s\+//<CR>
 " Convert file format to unix
 nmap ,ux :se ff=unix<CR>
 
-" ctags
-let Tlist_Ctags_Cmd = 'ctags'
-let Tlist_Auto_Open = 0
-"nnoremap <silent> <C-F8> :Tlist<CR>
-"nnoremap <silent> <C-F9> :TlistSync<CR>
-nmap    ,t  :Tlist<CR>  " another method just in case...
-nmap    ,r  :TlistSync<CR>
-
 " rot-13
 map ,13 mzggVGg?'z
 
@@ -163,7 +155,8 @@ fun BenIndent()
                 " help us format syntax only
                 :!rubocop -x %
             elseif b:current_syntax == "rust"
-                :%!rustfmt --edition 2021
+                " edition matches veyro (see rust augroup / g:rustfmt_command)
+                :%!rustfmt --edition 2024
             else
                 "b:current_syntax == "C"
                 :%!indent --gnu-style --no-tabs --indent-level 8 --case-indentation 0 --brace-indent 0 --comment-delimiters-on-blank-lines --start-left-side-of-comments --format-all-comments --format-first-column-comments
@@ -318,25 +311,6 @@ augroup perl
 augroup END
 
 augroup ruby
-    " borrowed code from rails.vim
-    function! MyRailsDetect(...) abort
-      if exists('b:rails_root')
-        return 1
-      endif
-      let fn = fnamemodify(a:0 ? a:1 : expand('%'), ':p')
-      if fn =~# ':[\/]\{2\}'
-        return 0
-      endif
-      if !isdirectory(fn)
-        let fn = fnamemodify(fn, ':h')
-      endif
-      let file = findfile('config/environment.rb', escape(fn, ', ').';')
-      if !empty(file) && isdirectory(fnamemodify(file, ':p:h:h') . '/app')
-        let b:rails_root = fnamemodify(file, ':p:h:h')
-        return 1
-      endif
-    endfunction
-
     if !exists("autocommands_ruby_loaded")
         let autocommands_ruby_loaded = 1
         let ruby_fold = 1
@@ -348,8 +322,7 @@ augroup ruby
         "au BufReadPre    *.rb,*.erb,*.rake set sw=2 sts=2 nu
         au FileType   eruby,ruby set sw=2 sts=2 nu path=.,lib,, fdn=2 fdo=all fcl=all
 
-        " this is cool when we are not in a Rails app
-        au BufNewFile *.rb if !MyRailsDetect() | 0r ~/.config/vim/skeleton.rb | echo "# Turned off skeleton.rb" | endif
+        au BufNewFile *.rb 0r ~/.config/vim/skeleton.rb
         au BufNewFile *.rake,Rakefile 0r ~/.config/vim/skeleton.rake
         " automatically remove spaces at the end of the line
         autocmd BufWritePre *.rb,*.rake,Rakefile :%s/\s\+$//e
@@ -371,15 +344,22 @@ augroup END
 augroup rust
     if !exists("autocommands_rust_loaded")
         let autocommands_rust_loaded = 1
-        " rustfmt defaults to 4-space indentation
-        au BufReadPre *.rs set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu
-        au FileType   rust set formatoptions=croq sm sw=4 sts=4 cindent cinkeys='0{,0},!^F,o,O,e' nu " files without extension
+        " Let vim's bundled rust ftplugin own indentation: cindent is C-brace
+        " logic and mis-indents match arms, closures and .method() chains. Keep
+        " 4-space + rust-friendly formatoptions (no 't' so code isn't auto-wrapped);
+        " tw=100 matches rustfmt's default max_width for `gq` on comments.
+        au FileType rust setlocal expandtab sw=4 sts=4 formatoptions=croql textwidth=100 nu
+        " :make parses `cargo build/test` output into the quickfix list
+        au FileType rust compiler cargo
         " A simple std-only Rust starter (builds with a bare `rustc`)
         au BufNewFile *.rs 0r ~/.config/vim/skeleton.rs
         " automatically remove spaces at the end of the line
         autocmd BufWritePre *.rs :%s/\s\+$//e
     endif
 augroup END
+" rustfmt-on-save via vim's bundled rust.vim; edition matches veyro (2024)
+let g:rustfmt_autosave = 1
+let g:rustfmt_command = 'rustfmt --edition 2024'
 
 augroup shell
     if !exists("autocommands_shell_loaded")
@@ -577,7 +557,6 @@ if has("autocmd")
   " Ruby
   autocmd FileType ruby,eruby set omnifunc=rubycomplete#Complete
   autocmd FileType ruby,eruby let g:rubycomplete_buffer_loading = 1
-  autocmd FileType ruby,eruby let g:rubycomplete_rails = 1
   autocmd FileType ruby,eruby let g:rubycomplete_classes_in_global = 1
 
 endif " has("autocmd")
@@ -604,13 +583,6 @@ set completefunc=syntaxcomplete#Complete
 "improve autocomplete menu color
 highlight Pmenu ctermbg=238 gui=bold
 
-" Rails
-" Minibuffer Explorer Settings
-let g:miniBufExplMapWindowNavVim = 1
-let g:miniBufExplMapWindowNavArrows = 1
-let g:miniBufExplMapCTabSwitchBufs = 1
-let g:miniBufExplModSelTarget = 1
-
 " IndentGuides plugin settings
 let g:indent_guides_enable_on_vim_startup = 1
 "let g:indent_guides_auto_colors=0
@@ -622,9 +594,6 @@ let g:indent_guides_guide_size=1
 " alt+n or alt+p to navigate between entries in QuickFix
 map <silent> <m-p> :cp <cr>
 map <silent> <m-n> :cn <cr>
-
-" Change which file opens after executing :Rails command
-let g:rails_default_file='config/database.yml'
 
 set clipboard+=unnamed  " Yanks go on clipboard instead.
 set nowrap " wrapping lines off
@@ -644,22 +613,6 @@ function HexMe()
     let $in_hex=1
   endif
 endfunction
-
-" NERDtree support
-
-autocmd StdinReadPre * let s:std_in=1
-
-" Start NERDTree when Vim starts with a directory argument.
-autocmd VimEnter * if argc() == 1 && isdirectory(argv()[0]) && !exists('s:std_in') |
-    \ execute 'NERDTree' argv()[0] | wincmd p | enew | execute 'cd '.argv()[0] | endif
-
-" Exit Vim if NERDTree is the only window remaining in the only tab.
-autocmd BufEnter * if tabpagenr('$') == 1 && winnr('$') == 1 && exists('b:NERDTree') && b:NERDTree.isTabTree() | call feedkeys(":quit\<CR>:\<BS>") | endif
-
-" Start NERDTree when Vim starts under a Rails application or Chef cookbook
-autocmd VimEnter * if exists('b:rails_root') || filereadable("metadata.rb") |
-    \ execute 'NERDTree' | wincmd p | endif
-" end NERDtree support
 
 " Open terminal with bash
 set shell=/bin/bash

@@ -1,37 +1,23 @@
 "
-" /etc/gvimrc
+" gvimrc — GUI-only overrides for gVim / MacVim.
 "
-" edited by Luis Mondesi <lemsx1@gmail.com> 
-" Version: 2005-04-25 11:42 EDT 
+" Keep this file light: the GUI sources ~/.config/vim/vimrc first, then this
+" file, so everything that is not strictly GUI-specific lives in vimrc.
+"
+" edited by Luis Mondesi <lemsx1@gmail.com>
 
-set guipty
-
-" full mouse mode here :-)
+" Full mouse support in the GUI. The terminal keeps mouse=v (set in vimrc) so
+" the terminal emulator's own copy/paste keeps working.
 set mouse=a
 
-" Hide the mouse pointer while typing
-set mousehide
-" windows focus follows mouse pointer
-"set mousefocus
+" GUI colours: peachpuff is a light scheme that reads well in gVim/MacVim.
+" (The terminal keeps its own scheme from vimrc.)
+colorscheme peachpuff
+" Readable folding column in the GUI.
+hi FoldColumn term=standout ctermfg=4 ctermbg=7 guifg=#ff8060 guibg=PeachPuff
 
-" Switch syntax highlighting on, when the terminal has colors
-" (this is probably already done by vimrc, but just in case...)
-if &t_Co > 2 || has("gui_running")
-  syntax on
-  :colorscheme peachpuff
-  " let's set better colors for the folding characters
-  :hi FoldColumn term=standout ctermfg=4 ctermbg=7 guifg=#ff8060 guibg=PeachPuff
-  " :colorscheme default
-  " Set a reasonable font
-  " set guifont=6x10
-  " in MacVim select a font with:
-  "set guifont=*
-  "set guifont? # shows the font being used
-  " Example:
-  set guifont=DejaVu\ Sans\ Mono\ 14,Menlo:h18
-endif
+" Font — first available wins (Linux gVim uses "Name Size", MacVim "Name:hSIZE").
+set guifont=DejaVu\ Sans\ Mono\ 14,Menlo:h18
 
-" open a big window please
-set lines=50
-set columns=180
-
+" Open a large window by default.
+set lines=50 columns=180

@@ -528,8 +528,10 @@ vnoremap <c-f> y<ESC>/<c-r>"<CR>
 " then do: :%s//replace text/gc
 " it will use last search text (highlighted above) to replace with new text
 
-" Switch syntax highlighting on, when the terminal has colors
-if &t_Co > 2 || has("gui_running")
+" Switch syntax highlighting on for both terminal and GUI. All modern vim
+" builds support it, so gvimrc relies on this instead of repeating it (the
+" old `&t_Co > 2` guard skipped highlighting in MacVim launched from Finder).
+if has("syntax")
   syntax on
 endif
 

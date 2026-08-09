@@ -33,11 +33,10 @@ Tests use Ruby's Minitest framework. CI runs on Ruby 3.0 and 3.1 via GitHub Acti
 - `share/git-templates/` — Git hook templates
 
 ### Scripts (`scripts/`)
-74 standalone scripts in Perl, Bash, and Ruby. Notable clusters:
-- `git*` — Git workflow helpers (gitamend, gitbranchdelete, gitcheckout, etc.)
-- Audio/media processing utilities
-- Network/system administration tools
-- CSV/data conversion scripts
+10 standalone scripts, pruned down from a much larger set of unused legacy utilities (2026-08-09):
+- `git*` — Git workflow helpers (gitamend, gitbranchdelete, gitbranchrename, gitcheckout)
+- `update-host` — main deploy/sync utility
+- `claude-code-setup`, `signature`, `sync-upstream`, `open-terminals`, `make-admin` (Darwin-only)
 
 ### Tests (`test/`)
 `test/scripts/skeleton_test.rb` — Minitest tests for the Vim skeleton module (skeleton file instantiation).

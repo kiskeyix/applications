@@ -1,2 +1,0 @@
-#!/bin/sh
-ls -lArt {,~}/Library/{Launch,Start}* 2> /dev/null

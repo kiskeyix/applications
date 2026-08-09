@@ -5,7 +5,7 @@
 #
 # Usage: gitbranchdelete BRANCH_NAME
 #
-# Luis Mondesi <lemsx1@gmail.com>
+# Luis Mondesi <luis.e.mondesi@gmail.com>
 # License: GPL
 
 # We remove the branch from a remote repository

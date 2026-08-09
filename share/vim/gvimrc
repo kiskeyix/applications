@@ -4,7 +4,7 @@
 " Keep this file light: the GUI sources ~/.config/vim/vimrc first, then this
 " file, so everything that is not strictly GUI-specific lives in vimrc.
 "
-" edited by Luis Mondesi <lemsx1@gmail.com>
+" edited by Luis Mondesi <luis.e.mondesi@gmail.com>
 
 " Full mouse support in the GUI. The terminal keeps mouse=v (set in vimrc) so
 " the terminal emulator's own copy/paste keeps working.

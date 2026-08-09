@@ -5,7 +5,7 @@
 #
 # Example: gitbranchrename master main
 #
-# Luis Mondesi <lemsx1@gmail.com>
+# Luis Mondesi <luis.e.mondesi@gmail.com>
 # License: GPL
 
 if [[ -x `command -v git` ]]; then

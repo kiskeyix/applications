@@ -1,3 +1,5 @@
+.claude/
+.remember/
 *.app
 *.bak
 *.desktop

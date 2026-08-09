@@ -24,7 +24,7 @@ Tests use Ruby's Minitest framework. CI runs on Ruby 3.0 and 3.1 via GitHub Acti
 ## Architecture
 
 ### Core Utility
-`scripts/update-host` is a 1056-line Perl script — the main entry point. It reads from `share/` and creates symlinks in the user's home directory. Supports `--tar` for tarball packaging and SSH-based remote sync.
+`scripts/update-host` is a Ruby script — the main entry point. `update-host --local` symlinks `share/` configs into the user's home directory; `update-host [HOST...]` (or no args, reading `~/.remote-hosts`) builds a tarball, ships it to each host in parallel over SSH/SCP with a live progress bar, and relinks configs there too. `--tar` builds the tarball only; `--send-key` pushes your SSH pubkey to hosts.
 
 ### Config Layout
 - `share/shell/` — `bashrc`, `bash_profile`, `inputrc`, SSH agent setup; `bashrc` supports per-host overrides via `.bashrc-$HOSTNAME` pattern
@@ -48,7 +48,7 @@ Code examples and educational snippets organized by language (C, C++, Perl, Pyth
 
 | File | Purpose |
 |------|---------|
-| `scripts/update-host` | Main deploy/sync script (Perl) |
+| `scripts/update-host` | Main deploy/sync script (Ruby) |
 | `share/shell/bashrc` | Primary shell config (543 lines) |
 | `share/shell/bash_profile` | Login shell / PATH setup |
 | `Rakefile` | Test and tar tasks |

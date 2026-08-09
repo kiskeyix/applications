@@ -1,971 +1,388 @@
-#!/usr/bin/perl -w
-# Luis Mondesi < lemsx1@gmail.com >
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# update-host - Luis Mondesi <luis.e.mondesi@gmail.com>
 #
-# DESCRIPTION: A simple script to update my settings in $HOME @see --help.
-# You can get the latest copy from: 
-# cd ~/
-# git clone git://github.com/kiskeyix/applications.git Applications
-# ./Applications/scripts/update-host --local # optional setup
+# Deploys shell/vim/mutt/git configs from this repo (share/) as symlinks
+# into $HOME, and can push a tarball of the repo out to remote hosts over
+# SSH to do the same there.
 #
-# USAGE: update-host [OPTIONS] [host1 host2 host3 ...]
-#
-# TODO:
-#  - tests host file and print their new IP to STDOUT. hint slurp_hosts() and do host lookups on the names. Allow a --reconcile-hosts option so the new IP for the hostnames can be save to the file passed from the command line.
-# LICENSE: GPL
-# CHANGES:
-# * 2008-09-10 14:14 EDT --links (DOLINKS) is now the default. Everything is kept under Applications tarball
-#
-my $VERSION="1.10";
-
-use strict;
-$|++;
-use sigtrap qw(handler _exit_safe normal-signals error-signals);
-
-use Getopt::Long;
-Getopt::Long::Configure('bundling');
-use File::Spec::Functions qw/ splitdir catdir catfile /;
-use File::Basename qw/ basename /;
-use File::Temp;
-
-############## NO NEED TO MODIFY THESE #################
-
-=pod
-
-=head1 update-host
-
-update-host - by Luis Mondesi L<<lemsx1@gmail.com>>
-
-=head1 SYNOPSIS
-
-B<update-host>  
-[-C,--tarball]
-[-D,--debug]
-[-d,--delete-obsolete]
-[--host <hostname>] 
-[-h,--help]
-[--hosts-file <path/to/file>]
-[-k,--key]
-[-l,--local]
-[--local-path]
-[-L,--links,--symlinks]
-[-j,--jobs N]
-[--exclude PATTERN]
-[-r,--remove]
-[-s,--send-key]
-[--ssh-port PORT]
-[-u,--username USER]
-[-U,--usage]
-[-V,--verbose]
-[-v,--version]
-[HOSTNAME1 [HOSTNAME2 ...]]
-
-=head1 DESCRIPTION 
-
-This script updates my user configurations (bash,vim,mutt,cvs) on this computer from a remote host, or distributes them from this host to others as defined in ~/.remote-hosts.
-
-A tarball is created into the local shared directory $LOCAL_PATH. This file is then copied via SSH to all hosts defined in `~/.remote-hosts`. The format of the remote-hosts file is the same as /etc/hosts.
-
-The script tries to find if a given host is alive first by using ping.
-
-=head1 EXAMPLES
-
-B<update-host>  --tarball
-
-Creates applications tarball in $LOCAL_PATH
-
-B<update-host>  --links --local
-
-updates localhost using files from the default local settings folder ($LOCAL_PATH. See --local-path) and creates symlinks from Applications/share/* to the respective locations.
-
-B<update-host>
-
-updates localhost using files from local git repository
-
-B<update-host> --hosts-file ~/.hosts
-
-updates all hosts found in ~/.hosts. If --hosts-file is omitted, it will upgrade all hosts found in ~/.remote-hosts
-
-B<update-host> --delete-obsolete HOST HOST2 ...
-
-Removes obsolete files from hosts passed as arguments
-
-B<update-host> --local --links HOST 
-
-Creates tarball files for ~/Applications and sends these to the remote host HOST
-
-=head1 BUGS
-
-* there is no way to pass $EXCEPTIONS from the command line.
-
-=head1 OPTIONS
-
-=cut
-
-my $PVERSION          = 0;
-my $HELP              = 0;
-my $LOCAL_PATH        = "$ENV{'HOME'}/Shared/Software/settings";
-my $REMOTE_HOSTS_FILE = "$ENV{'HOME'}/.remote-hosts";
-my $PG_KEY = "";    # when empty adds all for us... $ENV{'HOME'}."/.ssh/id_rsa";
-
-# path to temporary directory
-my $TMP = "tmp";
-
-# ary of systems to be excluded from updating
-# separate by |. i.e.: 127.0.0.1|192.168.1.2|10.1.1.1
-my $EXCLUDE = "172.16.1.250|as400";
-my $MAX_JOBS = 10;
-
-# files we will be updating
-my $_tar_file = "Applications.tar.bz2";
-
-# links to $ENV{HOME} if DOLINKS is true
-my @_CONFIG_FILES = (
-                     "Applications/share/shell/bash_profile",
-                     "Applications/share/shell/bashrc",
-                     "Applications/share/shell/inputrc",
-                     "Applications/share/shell/cvsrc",
-                     "../Applications/share/vim",
-                     "Applications/share/mutt",
-                     "Applications/share/shell/screenrc",
-                     "Applications/share/shell/tmux.conf",
-                     "Applications/share/git-templates",
-                     "Applications/share/shell/iterm2_shell_integration.bash",
-                     "Applications/share/shell/ssh-agent-setup.bash",
-                     "Applications/share/shell/alias.setup",
-                     "Applications/share/shell/path.setup",
-                     "Applications/share/shell/dir_colors",
-                    );
-
-# files that should be tidied!
-my @_OBSOLETE = (
-                 "Application/scripts/cvsdelete.sh",
-                 "Application/scripts/cvsadd.sh",
-                 "Application/scripts/backup.sh",
-                 "Applications/scripts/isoMount.sh",
-                 "Applications/scripts/mount_image.sh",
-                 "Applications/scripts/mvall.sh",
-                 "Applications/scripts/myestablished.sh",
-                 "Applications/scripts/mylisten.sh",
-                 "Applications/scripts/myproc.sh",
-                 "Applications/scripts/mywait.sh",
-                 "Applications/scripts/rcmd.sh",
-                 "Applications/scripts/rundig.sh",
-                 "Applications/scripts/service.sh",
-                 "Applications/scripts/ssh-tunnel.sh",
-                 "Applications/scripts/tar-all.sh",            # now compress
-                 "Applications/scripts/untar-all.sh",          # now uncompress
-                 "Applications/scripts/utar-all.sh",
-                 "Applications/scripts/vnctunnel.sh",
-                 "Applications/scripts/regex-test.pl",
-                 "Applications/scripts/profile-computer.pl",
-                 "Applications/scripts/leet.pl",
-                 "Applications/scripts/ntpdate",
-                 "Applications/scripts/motion.sh",
-                 "Applications/3ddesk.desktop",
-                 "Applications/Gnome*ScreenSaver*Lock.desktop", # spaces might break this
-                 "Applications/TkSETI.desktop",
-                 "Applications/firefox.desktop",
-                 "Applications/nvu.desktop",
-                 "Applications/qtopiadesktop.desktop",
-                 "Applications/ut2003.desktop",
-                 "Applications/ut2004demo.desktop",
-                 "Applications/virus_removal.desktop",
-                );
-my %hosts;    # global multi-dimensional hash to store hosts' information
-my $VERBOSE      = 0;
-my $DEBUG        = 0;
-my $USAGE        = 0;
-my $REMOVE_FILES = 0;
-my $DOLINKS      = 1;   # now default. 2008-09-10 14:09 EDT 
-my $DOOBSOLETE   = 0;
-my $LOCAL        = 0;   # do not get any new copies, use the local files instead
-my $PKEY         = 0;   # should we push our id_rsa.pub key to the remote host?
-my $_ssh_agent   = 0;   # should we kill ssh-agent when done?
-my $_ssh_id      = 0;   # should we remove id when done?
-my $ssh_port     = 22;
-my $RED          = "\033[1;31m";
-my $NORM         = "\033[0;39m";
-my $GREEN        = "\033[0;32m";
-my $VERBOSE_ARGS = "";
-my $HOST         = undef;
-my $USERNAME     = undef;
-
-my $CONF_FILES = undef;    # comma separated list
-my $CREATE_APPLICATIONS_TARBALL = undef;
-
-## GET OPTIONS ##
-
-=pod
-
-=over 8
-
-=item -C,--tarball
-
-Creates tarball in $LOCAL_PATH
-
-=item -D,--debug
-
-Enables debug mode
-
-=item -d,--delete-obsolete
-
-Deletes the obsolete scripts from the @_OBSOLETE array (hard coded)
-
-=item -h,--help
-
-Prints this help and exits
-
-=item --hosts-file FILE
-
-Uses FILE instead of ~/.remote-hosts as our hosts file. This file is in the same format as /etc/hosts.
-
-=item -k,--key KEY
-
-Uses private key KEY instead of ~/.ssh/id_rsa for ssh-agent
-
-=item -l,--local
-
-Use copies in $LOCAL_PATH. @see --local-path.
-Otherwise, it will create local versions of the files using ~/Applications and these new files will be used instead on the remote hosts. 
-
-Example: 
-update-host --local --links REMOTE_HOST
-
-This will create the Applications.tar.bz2, bashrc.tar.bz2, vimrc.tar.bz2 and muttrc.tar.bz2 files from ~/Applications and send those files over to the remote host.
-
-=item --local-path PATH
-
-Sets $LOCAL_PATH to PATH instead of the default $HOME/Shared/Software/settings
-
-=item -L,--symlinks,--links
-
-Do symlinks
-
-.bashrc -> Applications/share/shell/bashrc
-
-.bash_profile -> Applications/share/shell/bash_profile
-
-.inputrc -> Applications/share/shell/inputrc
-
-.cvsrc -> Applications/share/shell/cvsrc
-
-.config/vim -> Applications/share/vim
-
-.mutt -> Applications/share/mutt
-
-.iterm2_shell_integration.bash -> Applications/share/shell/iterm2_shell_integration.bash
-
-See @_CONFIG_FILES
-
-=item -j,--jobs N
-
-Maximum number of parallel host updates (default: 10). Use -j1 for sequential.
-
-=item --exclude PATTERN
-
-Regex pattern of hosts to exclude (default: 172.16.1.250|as400). Separate multiple patterns with |.
-
-=item -r,--remove
-
-Remove all temporary files after updating
-
-=item -s,--send-key
-
-Pushes local ~/.ssh/id_rsa.pub key to remote host ~/.ssh/authorized_keys file and exits
-
-=item --ssh-port PORT
-
-Uses PORT number for SSH instead of $ssh_port/tcp.
-
-=item -u,--username USER
-
-Use USER as the name to use when connecting via ssh to HOST
-
-=item -U,--usage
-
-Prints usage information
-
-=item -V,--verbose
-
-be verbose
-
-=item -v,--version
-
-Prints version and exits
-
-=back
-
-=cut
-
-GetOptions(
-
-    # flags
-    'v|version'          => \$PVERSION,
-    'h|help'             => \$HELP,
-    'U|usage'            => \$USAGE,
-    'D|debug'            => \$DEBUG,
-    'd|delete-obsolete'  => \$DOOBSOLETE,
-    'r|remove'           => \$REMOVE_FILES,
-    'V|verbose'          => \$VERBOSE,
-    'l|local'            => \$LOCAL,
-    'L|symlinks|links'   => \$DOLINKS,
-    's|send-key'         => \$PKEY,
-    'C|tarball'          => \$CREATE_APPLICATIONS_TARBALL,
-
-    # strings
-    'k|key=s'      => \$PG_KEY,
-    'local-path=s' => \$LOCAL_PATH,
-    'hosts-file=s' => \$REMOTE_HOSTS_FILE,
-    'u|username=s' => \$USERNAME,
-    'ssh-port=s'   => \$ssh_port,
-    'j|jobs=i'     => \$MAX_JOBS,
-    'exclude=s'    => \$EXCLUDE,
-) and $HOST = shift;
-
-## START SCRIPT ##
-
-if ($HELP)
-{
-    use Pod::Text;
-    my $parser = Pod::Text->new(sentence => 0, width => 78);
-    $parser->parse_from_file(File::Spec->catfile("$0"), \*STDOUT);
-    _exit_safe(0);
-}
-
-if ($USAGE)
-{
-    use Pod::Usage;
-    pod2usage(1);
-    _exit_safe(0);
-}
-
-if ($PVERSION)
-{
-    print ("update-host v$VERSION\n");
-    _exit_safe(0);
-}
-
-# username will be passed to e/a ssh call
-if (defined($USERNAME) and $USERNAME !~ /^\s*$/)
-{
-    $USERNAME .= "\@";
-}
-else
-{
-    $USERNAME = "";
-}
-
-if ($VERBOSE)
-{
-    $VERBOSE_ARGS = "v";
-}
-
-## main ##
-
-if ($CREATE_APPLICATIONS_TARBALL)
-{
-    create_applications_tarball();
-    _exit_safe(0);
-}
-
-my $total_steps = 3; # 1. prepare, 2. copy files, 3. unpack
-my $silent  = (!$VERBOSE) ? " > /dev/null 2>&1" : "";
-
-# update localhost and exit. This assumes ~/Applications is a git repository
-if ($LOCAL)
-{
-    debug('local mode');
-    die(
-        "We do not have a copy of Applications yet! Get one using: cd ~/ && git clone https://github.com/kiskeyix/applications\n"
-    ) if (!-d "$ENV{'HOME'}/Applications/.git");
-
-    my @failed      = ();    # array of files that failed
-    my $FAIL_FLAG   = 0;
-    my $SUCESS_FLAG = 0;
-    my $progress_chars = "";
-
-    debug('local mode: make local dirs');
-
-    _mkdir("$ENV{'HOME'}/.backup");
-    _mkdir("$ENV{'HOME'}/tmp");
-    system("touch $ENV{'HOME'}/.signaturerc")
-      if (!-e "$ENV{'HOME'}/.signaturerc");
-
-    _mkdir($LOCAL_PATH);
-
-    print STDERR ("\nlocalhost: These files failed: " . join(" ", @failed))
-      if ($FAIL_FLAG);
-
-    # do special operations:
-    _do_links("localhost") if ($DOLINKS);
-    unlink(@_OBSOLETE)     if ($DOOBSOLETE);
-
-    _do_submodules('localhost');
-
-    print STDOUT ("\n");
-    _exit_safe(0);
-}
-
-# setup SSH
-if (exists($ENV{'SSH_AUTH_SOCK'}) and !-S $ENV{'SSH_AUTH_SOCK'})
-{
-    $ENV{'SSH_AUTH_SOCK'} = "";
-    my $_ssh_agent_env = qx/ssh-agent -s/;
-    debug($_ssh_agent_env);
-    $_ssh_agent_env =~ m/SSH_AUTH_SOCK=(.*); /gmi;
-    debug("SSH_AUTH_SOCK before: ", $ENV{'SSH_AUTH_SOCK'});
-    $ENV{'SSH_AUTH_SOCK'} = $1;
-    debug("SSH_AUTH_SOCK after: ", $ENV{'SSH_AUTH_SOCK'});
-    $_ssh_agent_env =~ m/SSH_AGENT_PID=(.*); /gmi;
-    $ENV{'SSH_AGENT_PID'} = $1;
-
-    if (-S $ENV{'SSH_AUTH_SOCK'})
-    {
-        $_ssh_agent = 1;    # we should kill the agent when done
-    }
+# Usage:
+#   update-host                 update all hosts listed in ~/.remote-hosts
+#   update-host HOST1 HOST2     update just these hosts
+#   update-host --local         relink this machine from the local checkout
+#   update-host --tar           build the distribution tarball and exit
+#   update-host --send-key HOST push your SSH public key to HOST and exit
+
+require "optparse"
+require "socket"
+require "fileutils"
+require "open3"
+
+module UpdateHost
+  VERSION = "2.0.0"
+
+  REPO_ROOT = File.expand_path("..", __dir__)
+  HOME = ENV.fetch("HOME")
+  TAR_NAME = "Applications.tar.bz2"
+
+  # source path (relative to share/) => dotfile it becomes under $HOME
+  CONFIG_FILES = %w[
+    shell/bash_profile
+    shell/bashrc
+    shell/inputrc
+    shell/cvsrc
+    vim
+    mutt
+    shell/screenrc
+    shell/tmux.conf
+    git-templates
+    shell/iterm2_shell_integration.bash
+    shell/ssh-agent-setup.bash
+    shell/alias.setup
+    shell/path.setup
+    shell/dir_colors
+  ].freeze
+
+  Options = Struct.new(
+    :local, :tar_only, :send_key, :hosts_file, :local_path,
+    :username, :ssh_port, :key, :jobs, :remove, :exclude, :verbose,
+    keyword_init: true
+  )
+
+  # A small multi-line progress bar, one row per host, redrawn in place.
+  # Falls back to plain log lines when stdout isn't a TTY (e.g. piped/CI).
+  class MultiProgress
+    BAR_WIDTH = 24
+
+    def initialize(hosts, io: $stdout)
+      @order = hosts
+      @state = hosts.each_with_object({}) { |h, s| s[h] = [0, "queued"] }
+      @mutex = Mutex.new
+      @io = io
+      @tty = io.tty?
+      @drawn = false
+    end
+
+    def update(host, pct, label)
+      @mutex.synchronize do
+        @state[host] = [pct.clamp(0, 100), label]
+        @tty ? redraw : @io.puts("#{host}: #{label} (#{pct}%)")
+      end
+    end
+
+    def finish
+      @io.print("\n") if @tty
+    end
+
+    private
+
+    def redraw
+      @io.print("\e[#{@order.size}A") if @drawn
+      @order.each do |h|
+        pct, label = @state[h]
+        filled = (BAR_WIDTH * pct / 100.0).round
+        bar = ("#" * filled) + ("-" * (BAR_WIDTH - filled))
+        @io.printf("\e[2K%-22.22s [%s] %3d%%  %s\n", h, bar, pct, label)
+      end
+      @drawn = true
+    end
+  end
+
+  module_function
+
+  def main(argv)
+    opts = parse_options(argv)
+    extra_hosts = argv
+
+    if opts.tar_only
+      create_tarball(opts)
+    elsif opts.local
+      relink_local
+    elsif opts.send_key
+      send_key(extra_hosts, opts)
     else
-    {
-        warn("Could not launch our ssh-agent\n");
-    }
-}
-$_ssh_id = system("ssh-add -l > /dev/null");
-if ($_ssh_id != 0)
-{
-    system("ssh-add $PG_KEY")
-      ;                     # if $PG_KEY is blank ssh-add adds all private keys
-    if ($? != 0)
-    {
-        warn(
-            "Failed to authenticate. ssh-agent is not running? There is no valid private key? Hint: create a key with \`ssh-keygen -t rsa -b 1024\`. And then pass the key to us with: $0 --key $ENV{HOME}/.ssh/id_rsa\n"
-        );
-        if (
-            prompt(
-                "Do you want to continue? You will be prompted for each password needed [y/N] "
-            ) !~ /^y/i
-           )
-        {
-            _exit_safe(0);
-        }
-    }
-    $_ssh_id = 1;    # we need to know that this agent should be killed later
-}
-# end setup SSH
+      hosts = extra_hosts.empty? ? hosts_from_file(opts.hosts_file) : extra_hosts
+      hosts = filter_excluded(hosts, opts.exclude)
+      update_remote(hosts, opts)
+    end
+  end
 
-if ($PKEY)
-{
-    print STDERR (
-        "host argument missing.\nUsage: update-host --send-key HOST1 [HOST2 ...]\n"
-      )
-      and _exit_safe(1)
-      if (!defined($HOST) or $HOST =~ /^\s*$/);
+  def parse_options(argv)
+    opts = Options.new(
+      local: false, tar_only: false, send_key: false,
+      hosts_file: File.join(HOME, ".remote-hosts"),
+      local_path: File.join(HOME, "Shared", "Software", "settings"),
+      username: nil, ssh_port: 22, key: nil, jobs: 10, remove: false,
+      exclude: nil, verbose: false
+    )
+    show_version = false
 
-    system("ssh-keygen -t ed25519") if (!-f "$ENV{'HOME'}/.ssh/id_ed25519.pub"
-                                     && !-f "$ENV{'HOME'}/.ssh/id_rsa.pub");
+    parser = OptionParser.new do |o|
+      o.banner = "Usage: update-host [options] [HOST1 HOST2 ...]"
+      o.on("-l", "--local", "Relink localhost from this checkout and exit") { opts.local = true }
+      o.on("-C", "--tar", "--tarball", "Build the tarball only and exit") { opts.tar_only = true }
+      o.on("--local-path PATH", "Tarball staging directory") { |v| opts.local_path = v }
+      o.on("--hosts-file FILE", "Hosts file (default: ~/.remote-hosts)") { |v| opts.hosts_file = v }
+      o.on("-u", "--username USER", "SSH username") { |v| opts.username = v }
+      o.on("--ssh-port PORT", Integer, "SSH port (default: 22)") { |v| opts.ssh_port = v }
+      o.on("-k", "--key FILE", "SSH identity file") { |v| opts.key = v }
+      o.on("-j", "--jobs N", Integer, "Max parallel host updates (default: 10)") { |v| opts.jobs = v }
+      o.on("-r", "--remove", "Remove the remote tarball after unpacking") { opts.remove = true }
+      o.on("--exclude PATTERN", "Regex of hostnames to skip") { |v| opts.exclude = v }
+      o.on("-s", "--send-key", "Push local SSH public key to targets and exit") { opts.send_key = true }
+      o.on("-V", "--verbose", "Verbose output") { opts.verbose = true }
+      o.on("-v", "--version", "Print version and exit") { show_version = true }
+      o.on("-h", "--help", "Show this help") { puts o; exit }
+    end
+    parser.parse!(argv)
 
-    foreach my $host ($HOST, @ARGV)
-    {
-        my $target = $USERNAME . $host;
-        $target .= " -p $ssh_port" if ($ssh_port != 22);
-        system("ssh-copy-id $target");
-        if ($? != 0) {
-            print STDERR ("failed to send key to $host\n");
-        }
-    }
-    _exit_safe(0);
-}
+    if show_version
+      puts "update-host #{VERSION}"
+      exit
+    end
 
-# Collect all hosts to update
-my @hosts_to_update;
+    opts
+  end
 
-if ($HOST)
-{
-    push @hosts_to_update, $HOST, @ARGV;
-}
-else
-{
-    slurp_hosts($REMOTE_HOSTS_FILE);
-    push @hosts_to_update, keys %hosts;
-}
+  def filter_excluded(hosts, pattern)
+    return hosts if pattern.nil? || pattern.empty?
 
-# Filter excluded hosts
-@hosts_to_update = grep { !/$EXCLUDE/ } @hosts_to_update;
+    re = Regexp.new(pattern)
+    hosts.reject { |h| h =~ re }
+  end
 
-if (!@hosts_to_update)
-{
-    print STDERR ("No hosts to update. Check ~/.remote-hosts or pass hosts as arguments.\n");
-    _exit_safe(0);
-}
+  def hosts_from_file(path)
+    return [] unless File.readable?(path)
 
-# Pre-create tarball once before forking (shared by all children)
-if (!-r "$LOCAL_PATH/$_tar_file")
-{
-    die(
-        "We do not have a copy of Applications yet! Get one using: cd ~/ && git clone https://github.com/kiskeyix/applications\n"
-    ) if (!-d "$ENV{'HOME'}/Applications/.git");
-    chdir($ENV{'HOME'}) or die("Cannot change to \$HOME. $!.\n");
-    system("mkdir -p $LOCAL_PATH");
-    die("Could not create directory $LOCAL_PATH. $!\n") if ($? != 0);
-    _do_submodules('localhost');
-    create_applications_tarball();
-}
+    File.readlines(path).filter_map do |line|
+      line = line.strip
+      next nil if line.empty? || line.start_with?("#")
 
-if ($DEBUG)
-{
-    foreach my $h (@hosts_to_update)
-    {
-        debug("*** DOING: $h");
-        debug(is_alive($h) ? "$h, it's alive!" : "$h, is kaboom!");
-        debug("*** SKIPPED $h (debug mode)");
-    }
-    _exit_safe(0);
-}
+      if line =~ /^\d+\.\d+\.\d+\.\d+\s+(\S+)/
+        Regexp.last_match(1)
+      elsif line =~ /^(\S+)/
+        Regexp.last_match(1)
+      end
+    end.uniq
+  end
 
-# Parallel update with thread pool
-my %children;
-while (@hosts_to_update || keys %children)
-{
-    # Fill pool up to $MAX_JOBS
-    while (@hosts_to_update && ($MAX_JOBS == 0 || keys(%children) < $MAX_JOBS))
-    {
-        my $h = shift @hosts_to_update;
-        my $outfile = File::Temp->new(UNLINK => 1, SUFFIX => '.log');
-        my $pid = fork();
-        die "Cannot fork: $!\n" if (!defined $pid);
-        if ($pid == 0)
-        {
-            open(STDOUT, '>&', $outfile) or die "Cannot redirect STDOUT: $!\n";
-            open(STDERR, '>&', $outfile) or die "Cannot redirect STDERR: $!\n";
-            update_host($h);
-            exit(0);
-        }
-        $children{$pid} = { host => $h, outfile => $outfile };
-        debug("Forked PID $pid for $h");
-    }
-    # Reap one finished child — frees a slot so the next host starts immediately
-    my $pid = waitpid(-1, 0);
-    if ($pid > 0)
-    {
-        my $info = delete $children{$pid};
-        my $status = $? >> 8;
-        # Print collected output for this host
-        seek($info->{outfile}, 0, 0);
-        while (my $line = readline($info->{outfile})) { print $line; }
-        printf "%s: %s\n", $info->{host}, $status ? "FAILED" : "OK";
-    }
-}
+  def alive?(host, port, timeout = 3)
+    Socket.tcp(host, port, connect_timeout: timeout) { true }
+  rescue StandardError
+    false
+  end
 
-# @desc slurps fields of a hosts file to a global hash: %hosts
-# Supports /etc/hosts format (IP HOSTNAME) and bare hostnames (one per line)
-sub slurp_hosts
-{
-    my $file = shift;
-    return if (! -r $file);
-    open(my $fh, '<', $file) || die("Could not open $file: $!\n");
-    while (my $line = <$fh>)
-    {
-        chomp($line);
-        $line =~ s/^\s+|\s+$//g;
-        next if ($line eq '' || $line =~ /^\s*#/);
-        if ($line =~ /^(\d+\.\d+\.\d+\.\d+)\s+(\S+)/)
-        {
-            $hosts{$2}{ip} = $1;
-        }
-        elsif ($line =~ /^(\S+)/)
-        {
-            $hosts{$1}{ip} = $1;
-        }
-    }
-    close($fh);
-}
+  def ssh_target(host, opts)
+    opts.username && !opts.username.empty? ? "#{opts.username}@#{host}" : host
+  end
 
-# @desc checks whether a given host is alive by
-#  connecting to TCP port 22. Response will be cached
-# @arg 1 $host string or ip representing a given host
-# @return 1 if true 0 if false
-sub is_alive
-{
-    my $host = shift;
-    return undef if (not defined($host));
-    if (not exists($hosts{$host}) 
-            or not exists($hosts{$host}{'alive'}) 
-            or $hosts{$host}{'alive'} == 0)
-    {
-        $hosts{$host}{'alive'} = 0; # be safe
-        # test to see if host is listening on SSH port
-        use IO::Socket;
-        my $socket =
-        IO::Socket::INET->new(
-            PeerAddr => $host,
-            PeerPort => $ssh_port,
-            Proto    => "tcp",
-            Type     => SOCK_STREAM,
-            Timeout => 3
-        );
-        if ($socket)
-        {
-            debug("*** ssh to $host on port $ssh_port is possible");
-            $hosts{$host}{'alive'} = 1;
-            close($socket);
-        }
-        else
-        {
-            debug(
-                "*** couldn't connect to remove host ssh port $ssh_port. $@\n"
-            );
-            $hosts{$host}{'alive'} = 0;
-        }
-    }
-    debug("is_alive returning " . $hosts{$host}{'alive'} . " for $host");
-    return $hosts{$host}{'alive'};
-}
+  def ssh_base(opts)
+    cmd = ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-p", opts.ssh_port.to_s]
+    cmd += ["-i", opts.key] if opts.key
+    cmd
+  end
 
-# @desc finds binaries in your $PATH
-sub which
-{
+  def scp_base(opts)
+    cmd = ["scp", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", "-P", opts.ssh_port.to_s]
+    cmd += ["-i", opts.key] if opts.key
+    cmd
+  end
 
-    # @param 0 string := binary to find in $ENV{PATH}
-    # returns binary path or -1 if not found
-    my $binary = shift;
-    my $path   = undef;    # holds string to return when found.
-    foreach my $binary_path (split(/:/, $ENV{"PATH"}))
-    {
-
-        # first binary in $ENV{PATH}
-        if (-x "$binary_path" . "/$binary")
-        {
-            $path = "$binary_path" . "/$binary";
-            last;
-        }
-    }
-    return $path;          # -1 means not found
-}
-
-# @desc prints colored messages
-sub debug
-{
-    my $msg = "@_";
-    print STDERR ("$RED $msg $NORM\n") if ($DEBUG);
-}
-
-# @desc creates tarball in $HOME/Share/settings/Applications.tar.bz2
-sub create_applications_tarball {
-    my $tarball = "Applications.tar.bz2";
-    my $home    = $ENV{HOME} // die "HOME not set";
-    my $tar     = $ENV{TAR}  || 'tar';   # allow override via $TAR
-    my $outpath = "$LOCAL_PATH/$tarball"; # assumes $LOCAL_PATH is set elsewhere
-
-    # Detect tar flavor
-    my $tar_version = qx{$tar --version 2>&1};
-    my $is_gnu   = ($tar_version =~ /GNU tar/i) ? 1 : 0;
-    my $is_bsdtar= ($tar_version =~ /bsdtar|libarchive/i) ? 1 : 0;
-
-    # Build --exclude args from ~/.gitignore (skip blanks/comments)
-    my @exclude_args;
-    my $gitignore = "$home/Applications/.gitignore";
-    if (open my $fh, '<', $gitignore) {
-        while (my $line = <$fh>) {
-            chomp($line);
-            $line =~ s/^\s+|\s+$//g;      # trim
-            next if $line eq '' || $line =~ /^\s*#/;
-            push @exclude_args, "--exclude=$line";
-        }
-        close $fh;
-    }
-
-    # Always exclude these
-    push @exclude_args, "--exclude=.git", "--exclude=.gitignore", "--exclude=.github";
-
-    # macOS/bsdtar-only flags (safe to omit on GNU tar)
-    my @bsd_only = $is_bsdtar
-        ? ("--no-mac-metadata", "--no-acls", "--no-xattrs", "--no-fflags")
-        : ();
-
-    # Change to $HOME to match original behavior
-    chdir $home or die "Cannot chdir to $home: $!";
-
-    # Assemble command; use list form to avoid shell quoting issues
-    my @cmd = (
-        $tar,
-        @exclude_args,
-        @bsd_only,
-        "-cjf", $outpath,
-        "Applications",
-    );
-
-    system(@cmd) == 0
-        ? print "# Created $outpath\n"
-        : die "tar failed (exit $?): @cmd\n";
-}
-
-# @desc do all needed steps to update a given host
-# @return error string if any errors were found
-sub update_host
-{
-    my $h           = shift;
-    my @failed      = ();      # array of failes that failed
-    my $tar         = "tar";
-    my $SUCESS_FLAG = 0;
-    my $FAIL_FLAG   = 0;
-
-    my $progress_chars = "";
-
-    # sanity check. make sure host is alive:
-    return "$RED ERROR: host $h is dead or no ssh server on port $ssh_port $NORM\n" if (!is_alive($h));
-
-    my $SSH = "ssh -o BatchMode=yes -o ConnectTimeout=5 ";
-
-    # make sure the .backup and $TMP dir exists
-    # and make sure this signature file exists:
-    system($SSH . $USERNAME . $h
-           . " 'mkdir -p $TMP ~/.backup; chmod 0700 ~/.backup; touch ~/.signaturerc' "
-           . $silent);
-
-    # create a local tarball if it does not exist
-    if (!-r "$LOCAL_PATH/$_tar_file" or $LOCAL)
-    {
-        die(
-            "We do not have a copy of Applications yet! Get one using: cd ~/ && git clone https://github.com/kiskeyix/applications\n"
-        ) if (!-d "$ENV{'HOME'}/Applications/.git");
-        chdir($ENV{'HOME'}) or die("Cannot change to \$HOME. $!.\n");
-        system("mkdir -p $LOCAL_PATH");
-        die("Could not create directory $LOCAL_PATH. $!\n") if ($? != 0);
-        # before we create the tarball, we need to update our git submodules
-        _do_submodules('localhost');
-        # update our local copy of Applications.tar.bz2
-        create_applications_tarball();
-    }
-    my $scp_cmd = "scp -o BatchMode=yes -o ConnectTimeout=5 $LOCAL_PATH/$_tar_file " . $USERNAME . "$h:$TMP/ ";
-    print $scp_cmd."\n\n" if $VERBOSE;
-    system($scp_cmd . $silent);
-    if ($? == 0)
-    {
-        $progress_chars .= "#";
-    } else {
-        $progress_chars .= "!";
-    }
-    update_progress($h, $progress_chars);
-
-    my $_zcat    = ($_tar_file =~ /\.bz2$/i) ? "bzcat" : "zcat";
-    my $cmd = $SSH . $USERNAME . $h
-    . " '$_zcat $TMP/$_tar_file | $tar x"
-    . $VERBOSE_ARGS . "f -' ";
-
-    print $cmd."\n\n" if $VERBOSE;
-    my $err = system($cmd. $silent);
-
-    if (!$err)
-    {
-        $SUCESS_FLAG++;
-        $progress_chars .= "#";
-    }
+  def run_cmd(cmd, verbose)
+    if verbose
+      warn("+ #{cmd.join(' ')}")
+      system(*cmd)
     else
-    {
-        $FAIL_FLAG++;
-        push(@failed, $_tar_file);
+      out, status = Open3.capture2e(*cmd)
+      warn(out) unless status.success?
+      status.success?
+    end
+  end
 
-        # last tar command failed?
-        if (!$SUCESS_FLAG)
-        {
-            $progress_chars .= "!";
-        }
-    }
-    update_progress($h, $progress_chars);
+  # ----- tarball -----
 
-    if ($REMOVE_FILES)
-    {
-        system($SSH . $USERNAME . $h
-            . " 'rm -f $TMP/$_tar_file' "
-            . $silent);
-        if ($? == 0)
-        {
-            $progress_chars .= "#";
-        }
-        else
-        {
-            $progress_chars .= "!";
-        }
-        update_progress($h, $progress_chars);
-    }
-    else
-    {
-        # fake since we do not have a 3rd step
-        $progress_chars .= "#";
-        update_progress($h, $progress_chars);
-    }
+  def create_tarball(opts)
+    abort "No git checkout at #{REPO_ROOT} (expected #{REPO_ROOT}/.git)" unless Dir.exist?(File.join(REPO_ROOT, ".git"))
 
-    if ($DOOBSOLETE)
-    {
-        my $joined_files = "'" . join("' '", @_OBSOLETE) . "'";
-        debug("deleting obsolete: ", $joined_files, "\n");
-        system($SSH . $USERNAME . $h
-               . " 'rm -f $joined_files' "
-               . $silent);
-    }
+    FileUtils.mkdir_p(opts.local_path)
+    out_path = File.join(opts.local_path, TAR_NAME)
 
-    print STDOUT ("\n$h These files failed: " . join(" ", @failed) . "\n")
-      if ($FAIL_FLAG);
+    tar_version = `tar --version 2>&1`
+    bsdtar = tar_version =~ /bsdtar|libarchive/i
 
-    if ($DOLINKS)
-    {
-        _do_links($h);    # remote links
-    }
+    excludes = ["--exclude=.git", "--exclude=.gitignore", "--exclude=.github"]
+    gitignore = File.join(REPO_ROOT, ".gitignore")
+    if File.readable?(gitignore)
+      File.readlines(gitignore).each do |line|
+        line = line.strip
+        next if line.empty? || line.start_with?("#")
 
-    # no errors:
-    return "\n";
-}
+        # tar's --exclude does a literal fnmatch per path component; a
+        # gitignore-style trailing "/" (directory marker) never matches.
+        excludes << "--exclude=#{line.delete_suffix('/')}"
+      end
+    end
 
-# @desc implements `mkdir -p`
-sub _mkdir
-{
-    my $path = shift;
-    my $mode = shift;
-    $mode = (defined $mode) ? $mode : 0700;
-    my $root = ($path =~ m,^([/|\\|:]),) ? $1 : "";    # relative or full path?
-    my @dirs = splitdir($path);
-    my $last = "";
-    my $flag = 1;
-    foreach (@dirs)
-    {
-        next if ($_ =~ m/^\s*$/);
-        $last = ($flag > 1) ? catdir($last, $_) : "$root" . "$_";
-        mkdir($last) if (!-d $last);
-        $flag++;
-    }
-    chmod($mode,$last) if ($flag > 1); # we created at least one dir, and we need to change its mode
-    return $flag;    # number of directories created
-}
+    bsd_only = bsdtar ? %w[--no-mac-metadata --no-acls --no-xattrs --no-fflags] : []
+    repo_dirname = File.basename(REPO_ROOT)
 
-# http://www.perlmonks.org/?node_id=103364
-sub _is_broken_symlink
-{
-    my $file = shift;
-    return 1 if (!-l $file);
-    my $link = readlink($file);
-    return 0 if (-e $link);
-    return 1;
-}
+    Dir.chdir(File.dirname(REPO_ROOT)) do
+      cmd = ["tar", *excludes, *bsd_only, "-cjf", out_path, repo_dirname]
+      system(*cmd) or abort "tar failed: #{cmd.join(' ')}"
+    end
 
-sub _do_links
-{
-    debug('_do_links called');
-    my $host = shift;
-    return undef if (!defined($host));
-    foreach my $_config_file (@_CONFIG_FILES)
-    {
-        my $_conf = "." . basename($_config_file);    # dot file
-        # xdg-base-dir support
-        # TODO: some Vim packges are not compiled with xdg-base-dir support, we need a work around
-        if ($_config_file =~ /vim/i)
-        {
-            debug('_do_links vim config');
-            $_conf = ".config/" . basename($_config_file); # .config/DIR
-        }
-        if ($host eq "localhost")
-        {
-            chdir($ENV{'HOME'});
+    puts "# Created #{out_path}"
+    out_path
+  end
 
-            if (_is_broken_symlink($_conf))
-            {
-                # backup
-                rename($ENV{'HOME'}."/$_conf", "$_conf.bak");
-            }
-            else
-            {
+  # ----- local relink -----
 
-                # we already have a symlink here,
-                # we need to make sure that the link points to the
-                # correct path:
-                # TODO test that symlink is valid and move on
-                # for now, we simply remove the link
-                next if (!unlink($ENV{'HOME'}."/$_conf"));
-            }
-            debug('_do_links creating symlink', $ENV{'HOME'}."/$_conf");
-            symlink($_config_file, $ENV{'HOME'}."/$_conf");
-        }
-        else
-        {
+  def relink_local
+    abort "No git checkout at #{REPO_ROOT} (expected #{REPO_ROOT}/.git)" unless Dir.exist?(File.join(REPO_ROOT, ".git"))
 
-            # dealing with a remote hosts
-            
-            debug('_do_links creating remote symlink', $_conf);
-            system("ssh -o BatchMode=yes -o ConnectTimeout=5 "
-                   . $USERNAME
-                   . $host
-                   . " 'rm -fr $_conf; mkdir -p ~/.config; "
-                   . "ln -sf $_config_file $_conf' $silent");
-        }
-    }
-    debug('_do_links done');
-}
+    FileUtils.mkdir_p(File.join(HOME, ".backup"), mode: 0o700)
+    FileUtils.mkdir_p(File.join(HOME, "tmp"))
+    sig = File.join(HOME, ".signaturerc")
+    FileUtils.touch(sig) unless File.exist?(sig)
 
-sub _do_submodules
-{
-    debug('_do_submodules called');
-    my $host = shift;
-    return undef if (!defined($host));
+    update_submodules_local
 
-    if ($host eq "localhost")
-    {
-        chdir("$ENV{'HOME'}/Applications") or die("Cannot change to Applications dir: $!\n");
-        system("git submodule init");
-        system("git submodule update");
-        if ($? != 0)
-        {
-            print STDERR ("Failed to update git submodules. Please run:\n");
-            print STDERR ("cd $ENV{'HOME'}/Applications && git submodule update --init --remote --merge\n");
-            _exit_safe(1);
-        }
-    }
-    else
-    {
-        system("ssh -o BatchMode=yes -o ConnectTimeout=5 "
-            . $USERNAME
-            . $host
-            . " 'cd ~/Applications && "
-            . "git submodule init && git submodule update --remote --merge' $silent");
-    }
-    debug('_do_submodules done');
-}
+    CONFIG_FILES.each do |rel|
+      dotfile = rel == "vim" ? File.join(HOME, ".config", "vim") : File.join(HOME, ".#{File.basename(rel)}")
+      target = File.join(REPO_ROOT, "share", rel)
+      relink(dotfile, target)
+    end
 
-sub prompt
-{
+    puts "localhost: relinked #{CONFIG_FILES.size} configs"
+  end
 
-    #@param 0 string := question to prompt
-    #returns answer
-    print STDOUT (@_);
-    my $rep = <STDIN>;
-    chomp($rep);
-    return $rep;
-}
+  def relink(link_path, target_path)
+    FileUtils.mkdir_p(File.dirname(link_path))
+    if File.symlink?(link_path)
+      return if File.readlink(link_path) == target_path
 
-sub _exit_safe
-{
-    my $status = shift;
-    $status = 0 if (not defined($status));
-    debug('_exit_safe status=', $status);
+      File.unlink(link_path)
+    elsif File.exist?(link_path)
+      FileUtils.mv(link_path, "#{link_path}.bak", force: true)
+    end
+    File.symlink(target_path, link_path)
+  end
 
-    # TODO handle more signals
-    my %exit = (INT => '9');
-    if ($_ssh_id == 1)
-    {
-        system("ssh-add -D");    # delete identities
-    }
+  def update_submodules_local
+    Dir.chdir(REPO_ROOT) do
+      unless system("git", "submodule", "init") && system("git", "submodule", "update")
+        warn "Failed to update git submodules. Try:\n  cd #{REPO_ROOT} && git submodule update --init --remote --merge"
+      end
+    end
+  end
 
-    if ($_ssh_agent == 1)
-    {
-        kill(15, $ENV{'SSH_AGENT_PID'});
-    }
-    if ($status =~ /^[0-9]+$/)
-    {
-        exit $status;
-    }
-    exit $exit{$status};
-}
+  # ----- remote update -----
 
-sub update_progress
-{
-    my $number_of_steps = $total_steps;
-    my $host = shift;
-    my $chars = shift;
-    printf STDOUT ("\r%20s|%-" . $number_of_steps . "s|", $host, $chars);
-}
+  def remote_link_script
+    CONFIG_FILES.map do |rel|
+      dotfile = rel == "vim" ? ".config/vim" : ".#{File.basename(rel)}"
+      src = "Applications/share/#{rel}"
+      "mkdir -p $(dirname #{dotfile}) && rm -rf #{dotfile} && ln -sf #{src} #{dotfile}"
+    end.join(" && ")
+  end
+
+  def update_remote(hosts, opts)
+    if hosts.empty?
+      warn "No hosts to update. Check #{opts.hosts_file} or pass hosts as arguments."
+      return
+    end
+
+    tar_path = File.join(opts.local_path, TAR_NAME)
+    create_tarball(opts) unless File.readable?(tar_path)
+
+    progress = MultiProgress.new(hosts)
+    queue = Queue.new
+    hosts.each { |h| queue << h }
+    results = {}
+    mutex = Mutex.new
+
+    workers = [[opts.jobs, hosts.size].min, 1].max
+    threads = Array.new(workers) do
+      Thread.new do
+        loop do
+          host = begin
+            queue.pop(true)
+          rescue ThreadError
+            nil
+          end
+          break unless host
+
+          ok = update_one_host(host, opts, tar_path, progress)
+          mutex.synchronize { results[host] = ok }
+        end
+      end
+    end
+    threads.each(&:join)
+    progress.finish
+
+    failed = results.reject { |_, ok| ok }.keys
+    unless failed.empty?
+      warn "Failed hosts: #{failed.join(', ')}"
+      exit 1
+    end
+  end
+
+  def update_one_host(host, opts, tar_path, progress)
+    progress.update(host, 5, "checking")
+    unless alive?(host, opts.ssh_port)
+      progress.update(host, 100, "unreachable")
+      return false
+    end
+
+    target = ssh_target(host, opts)
+    ssh = ssh_base(opts)
+    scp = scp_base(opts)
+
+    progress.update(host, 15, "prep")
+    run_cmd(ssh + [target, "mkdir -p tmp ~/.backup && chmod 700 ~/.backup && touch ~/.signaturerc"], opts.verbose)
+
+    progress.update(host, 35, "uploading")
+    unless run_cmd(scp + [tar_path, "#{target}:tmp/"], opts.verbose)
+      progress.update(host, 100, "upload failed")
+      return false
+    end
+
+    progress.update(host, 60, "unpacking")
+    unless run_cmd(ssh + [target, "bzcat tmp/#{TAR_NAME} | tar xf -"], opts.verbose)
+      progress.update(host, 100, "unpack failed")
+      return false
+    end
+
+    run_cmd(ssh + [target, "rm -f tmp/#{TAR_NAME}"], opts.verbose) if opts.remove
+
+    progress.update(host, 90, "linking")
+    unless run_cmd(ssh + [target, remote_link_script], opts.verbose)
+      progress.update(host, 100, "link failed")
+      return false
+    end
+
+    progress.update(host, 100, "done")
+    true
+  end
+
+  # ----- send-key -----
+
+  def send_key(hosts, opts)
+    if hosts.empty?
+      warn "usage: update-host --send-key HOST1 [HOST2 ...]"
+      exit 1
+    end
+
+    pub_keys = %w[id_ed25519.pub id_rsa.pub].map { |f| File.join(HOME, ".ssh", f) }
+    system("ssh-keygen", "-t", "ed25519") unless pub_keys.any? { |f| File.exist?(f) }
+
+    hosts.each do |host|
+      target = ssh_target(host, opts)
+      cmd = ["ssh-copy-id", "-p", opts.ssh_port.to_s, target]
+      warn "failed to send key to #{host}" unless system(*cmd)
+    end
+  end
+end
+
+UpdateHost.main(ARGV) if $PROGRAM_NAME == __FILE__

@@ -1,7 +1,7 @@
 #!/bin/sh
 # $Revision: 1.1 $
 # $Date: 2005-09-25 22:22:03 $
-# Luis Mondesi < lemsx1@gmail.com >
+# Luis Mondesi < luis.e.mondesi@gmail.com >
 #
 # DESCRIPTION: takes files passed by mutt and
 #               copies from default location to

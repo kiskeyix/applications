@@ -52,13 +52,16 @@ These are sourced automatically by the corresponding main config file.
 ## Syncing to remote hosts
 
 ```sh
-update-host --send-key   # one-time: push your SSH pubkey to hosts in ~/.remote-hosts
-update-host --local server1 server2 ... serverN
+update-host --send-key server1 server2   # one-time: push your SSH pubkey to each host
+update-host                              # updates every host in ~/.remote-hosts
+update-host server1 server2 ... serverN  # or update just these hosts
 ```
 
 `--send-key` copies your public key to each remote host's
-`~/.ssh/authorized_keys`. Subsequent runs use `ssh-agent` so you aren't
-re-prompted for passwords/passphrases.
+`~/.ssh/authorized_keys`. `update-host` (no `--local`) builds a tarball of
+this repo, ships it to each host over SSH/SCP in parallel (with a live
+per-host progress bar), unpacks it under `~/Applications`, and relinks
+configs there too.
 
 ## Testing
 

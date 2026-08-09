@@ -1,99 +1,77 @@
-# Generic Applications (Home) Folder #
+# Applications
 
-## Introduction ##
+Personal dotfiles and configuration management for shell, vim, mutt, and
+other tools — deployable to any Unix-like system (Linux, macOS, BSD,
+Cygwin) and syncable to remote hosts over SSH.
 
-This is a generic set of tools and configuration files
-for all accounts on all UNIX systems.
+## Install
 
-It was written from the ground up to work well with all 
-shells on all UNIX OSes known, including but not limited to:
+```sh
+cd ~/
+git clone https://github.com/kiskeyix/applications.git Applications
+./Applications/scripts/update-host --local
+```
 
-  * Linux
-  * MacOS X
-  * FreeBSD/BSD
-  * CygWin
+`update-host` symlinks the configs into your home directory, e.g.:
 
-## How to use ##
+```
+~/.bashrc        -> Applications/share/shell/bashrc
+~/.bash_profile  -> Applications/share/shell/bash_profile
+~/.dir_colors    -> Applications/share/shell/dir_colors
+~/.inputrc       -> Applications/share/shell/inputrc
+```
 
-To use this scripts, just copy this folder to ~/Applications 
-and make some simple setup steps.
+Any pre-existing files are preserved with a `.bak` extension.
 
-  - cd ~/
-  - git clone https://github.com/kiskeyix/applications.git Applications
-  - ./Applications/scripts/update-host --local
+## Disabling a feature
 
-`update-host` will then execute the following actions for you:
-  - ln -s Applications/share/shell/bashrc .bashrc
-  - ln -s Applications/share/shell/bash\_profile .bash\_profile
-  - ln -s Applications/share/shell/dir\_colors .dir\_colors
-  - ln -s Applications/share/shell/inputrc .inputrc
+Remove the corresponding symlink:
 
-  * original files are saved with .bak extensions.
+```sh
+cd ~/
+rm .vim   # don't use ~/Applications/share/vim
+rm .mutt  # don't use ~/Applications/share/mutt
+```
 
-## How to turn off features ##
+## Local overrides
 
-If you do not want a functionality, simply remove the symlink like:
+Make host-specific changes in a separate file rather than editing the
+shared configs directly:
 
-    cd ~/
-    rm .vim # do not use .vim dir from ~/Applications/share/vim
-    rm .mutt # do not use .mutt from ~/Applications/share/mutt
+```sh
+touch ~/.bashrc-`hostname`
+touch ~/.vimrc-`hostname`
+touch ~/.muttrc-`hostname`
+touch ~/.profile-`hostname`
+touch ~/.alias.setup
+touch ~/.path.setup
+```
 
-# Local modifications #
+These are sourced automatically by the corresponding main config file.
 
-All changes needed to modify your environment should be done 
-on local files. For instance, to modify your bashrc settings:
+## Syncing to remote hosts
 
-    touch ~/.bashrc-`hostname`
-    touch ~/.vimrc-`hostname`
-    touch ~/.muttrc-`hostname`
-    touch ~/.profile-`hostname`
+```sh
+update-host --send-key   # one-time: push your SSH pubkey to hosts in ~/.remote-hosts
+update-host --local server1 server2 ... serverN
+```
 
-You can also create files for aliases and path with these names:
+`--send-key` copies your public key to each remote host's
+`~/.ssh/authorized_keys`. Subsequent runs use `ssh-agent` so you aren't
+re-prompted for passwords/passphrases.
 
-    touch ~/.alias.setup
-    tocuh ~/.path.setup
+## Testing
 
-And add your changes to this new .bashrc-`hostname` file.
+```sh
+bundle exec rake test
+```
 
-The same applies to vimrc, muttrc and other main configuration files.
+## Contributing
 
-## Git ##
+1. Fork the repository on GitHub
+2. Create a feature branch
+3. Make your changes
+4. Open a Pull Request
 
-You might want to clone the public git repository from **github.com**:
-
-    git clone https://github.com/kiskeyix/applications.git
-
-# Pushing your changes to local servers #
-
-That means that you can now use update-host to push your changes 
-to local computers with:
-
-    update-host --send-key # uses hosts from ~/.remote-hosts computers
-    update-host --local system1.example.com system{2..N}.example.com
-
-NOTE: --send-key is optional and it should be used only once.
-It sends your public key to the ~/.ssh/authorized\_keys file on 
-the remote host.
-
-And you will see as the script attempts to send the local files to 
-each system via SSH (using ssh-agent to keep the session open so you 
-are not prompted for passwords/passphrases).
-
-If you make changes to Applications and you want these to be sent to 
-remote systems:
-
-    update-host --local server1 server2 ... serverN
-
-# Testing
-
-    bundle exec rake test
-
-# Contributing #
-
-- Fork the repository on Github
-- Create a named feature branch (like `add_component_x`)
-- Write you change
-- Submit a Pull Request using Github
-
-Created: 2007-06-07 11:59 EDT
-Updated: 2018-05-18 15:41 EDT
+---
+Created: 2007-06-07

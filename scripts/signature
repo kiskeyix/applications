@@ -13,10 +13,10 @@
 # -- copy to .signaturerc from here -- #
 NAME="Luis M"
 POSITION="System Administrator/Web Developer"
-COMPANY="kiskeyix.org"
+COMPANY=""
 PHONE=""
 EMAIL="luis.e.mondesi@gmail.com"
-URL="http://www.kiskeyix.org/"
+URL=""
 DEFAULT_SIGNATURE="'We think basically you watch television to turn your brain off, and you work on your computer when you want to turn your brain on' -- Steve Jobs in an interview for MacWorld Magazine 2004-Feb"
 
 SIGNATURE=1 # whether to generate a signature using fortunes

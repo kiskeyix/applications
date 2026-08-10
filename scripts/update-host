@@ -39,8 +39,6 @@ module UpdateHost
     git-templates
     shell/iterm2_shell_integration.bash
     shell/ssh-agent-setup.bash
-    shell/alias.setup
-    shell/path.setup
     shell/dir_colors
   ].freeze
 

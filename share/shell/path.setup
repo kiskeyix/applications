@@ -1,4 +1,0 @@
-# sample path.setup file
-PATH=$PATH:/sbin:/usr/sbin:/usr/local/sbin
-PATH=~/.local/bin:$PATH
-export PATH

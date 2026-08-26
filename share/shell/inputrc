@@ -8,6 +8,15 @@ set output-meta On
 # allow iso-latin1 characters set convert-meta to off
 set convert-meta Off
 
+# Wrap pasted text so a trailing newline does not run the command outright -
+# multi-line pastes wait for an explicit Enter. Readline 8.1+ does this by
+# default, so this line is redundant on newer hosts, but 7.0-8.0 ship the
+# variable defaulting to off and that is what older RHEL boxes carry. Readline
+# ignores variables it does not know, so it is harmless where it predates them.
+# Unlike vim (see .vimrc), readline both requests bracketed paste and parses
+# the markers, so enabling it here cannot corrupt a paste.
+set enable-bracketed-paste on
+
 # lems 2003-01-05 13:00 
 set editing-mode vi
 set keymap vi-insert

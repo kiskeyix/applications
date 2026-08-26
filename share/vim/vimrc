@@ -597,7 +597,42 @@ let g:indent_guides_guide_size=1
 map <silent> <m-p> :cp <cr>
 map <silent> <m-n> :cn <cr>
 
-set clipboard+=unnamed  " Yanks go on clipboard instead.
+" set clipboard+=unnamed  " Yanks go on clipboard instead.
+" Yanks -> system clipboard. This vim is built without +clipboard (confirm with
+" :echo has('clipboard')), so the "* and "+ registers do not exist and a bare
+" 'clipboard=unnamed' silently does nothing -- which is what it used to do here.
+" There is no X server in these containers either: DISPLAY is unset and
+" xclip/xsel/wl-copy are all absent, so the only route to the Mac is OSC 52 over
+" the SSH connection. tmux carries it: `load-buffer -w` stores the text and
+" forwards it to the outer terminal, which iTerm2 turns into a real clipboard
+" set. Outside tmux, aim the escape at the tty directly.
+if has('clipboard')
+  set clipboard+=unnamed        " gvim, or any build that has the registers
+elseif exists('##TextYankPost')
+  function! s:YankToClipboard() abort
+    " Mirror only plain yanks into the unnamed register. Deletes, and yanks
+    " aimed at a named register, stay local -- otherwise every dd/x would
+    " clobber the Mac clipboard, which 'unnamed' would not do either.
+    if v:event.operator !=# 'y' || !empty(v:event.regname)
+      return
+    endif
+    let l:text = join(v:event.regcontents, "\n")
+    if v:event.regtype ==# 'V'
+      let l:text .= "\n"
+    endif
+    if !empty($TMUX)
+      call system('tmux load-buffer -w -', l:text)
+    else
+      let l:b64 = substitute(system('base64', l:text), '\n', '', 'g')
+      call writefile(["\e]52;c;" . l:b64 . "\x07"], '/dev/tty', 'b')
+    endif
+  endfunction
+  augroup YankToClipboard
+    autocmd!
+    autocmd TextYankPost * call s:YankToClipboard()
+  augroup END
+endif
+
 set nowrap " wrapping lines off
 
 " map -F8- ',hex' to Hex editor mode ;)

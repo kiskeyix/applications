@@ -161,6 +161,22 @@ if [[ 1 == $USE_BASH_COMPLETION ]]; then
 
     # Complete the first argument to `tsh` using the aliases above
     complete -F __tsh_alias_complete tsh
+
+    # ssh to spaces via teleport
+    # sssh is a command that runs: tsh dev ssh $*
+    # Create it under ~/.local/bin/sssh
+    __my_spaces_complete()
+    {
+        local cur cache="${TMPDIR:-/tmp}/.spaces_nodes.$UID"
+        cur="${COMP_WORDS[COMP_CWORD]}"
+
+        if [[ ! -s "$cache" ]] || (( $(date +%s) - $(stat -f %m "$cache" 2>/dev/null || echo 0) > 60 )); then
+            tsh dev ls --search spaces 2>/dev/null | awk 'NR>2 {print $1}' > "$cache"
+        fi
+
+        COMPREPLY=($(compgen -W "$(<"$cache")" -- "$cur"))
+    }
+    complete -F __my_spaces_complete sssh
 fi
 
 # deduplicate PATH entries (pure bash, works on all platforms)

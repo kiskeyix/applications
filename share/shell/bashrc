@@ -135,48 +135,97 @@ if [[ 1 == $USE_BASH_COMPLETION ]]; then
         complete -F __my_git_complete_heads $cmd
     done
 
-    __tsh_alias_complete() {
-        local cur aliases_file aliases
-        aliases_file="$HOME/.tsh/config/config.yaml"
-        cur="${COMP_WORDS[COMP_CWORD]}"
+    # --- teleport (tsh) completion -------------------------------------
+    #   tsh <TAB>           -> proxy aliases + tsh subcommands
+    #   tsh ssh <TAB>       -> nodes from `tsh ls`
+    #   tsh dev ssh <TAB>   -> nodes from `tsh dev ls`
+    # Node lists are cached per alias for TSH_COMPLETION_TTL seconds.
+    TSH_COMPLETION_TTL=${TSH_COMPLETION_TTL:-60}
 
-        if [[ -r "$aliases_file" ]]; then
-            # Prefer yq if installed
-            if command -v yq >/dev/null 2>&1; then
-                # yq v4 syntax
-                aliases="$(yq e '.aliases | keys | .[]' "$aliases_file" 2>/dev/null)"
+    # Alias names defined in the tsh config
+    __tsh_aliases() {
+        local aliases_file="${TSH_CONFIG:-$HOME/.tsh/config/config.yaml}"
+        [[ -r "$aliases_file" ]] || return 0
+
+        if command -v yq >/dev/null 2>&1; then
+            # yq v4 syntax
+            yq e '.aliases | keys | .[]' "$aliases_file" 2>/dev/null
+        else
+            # Portable awk fallback: lines like  "alias": "..."
+            awk -F'"' '
+                # match lines that start with optional spaces then "name":
+                /^[[:space:]]*"[A-Za-z0-9_.-]+":[[:space:]]*/ { print $2 }
+            ' "$aliases_file"
+        fi
+    }
+
+    # __tsh_nodes [ALIAS] -- node names from `tsh [ALIAS] ls`
+    __tsh_nodes() {
+        local alias="$1" cache tmp now mtime
+        cache="${TMPDIR:-/tmp}/.tsh_nodes.$UID.${alias:-_}"
+        now=$(date +%s)
+        mtime=$(stat -f %m "$cache" 2>/dev/null || stat -c %Y "$cache" 2>/dev/null || echo 0)
+
+        if [[ ! -s "$cache" ]] || (( now - mtime > TSH_COMPLETION_TTL )); then
+            tmp="$cache.$$"
+            { tsh ${alias:+$alias} ls 2>/dev/null | awk 'NR>2 {print $1}' > "$tmp"; } 2>/dev/null
+            # keep the previous list if tsh failed or returned nothing
+            if [[ -s "$tmp" ]]; then mv -f "$tmp" "$cache"; else rm -f "$tmp"; fi
+        fi
+
+        [[ -s "$cache" ]] && cat "$cache"
+    }
+
+    # Complete a node name, honouring an optional login@ prefix
+    __tsh_complete_nodes() {
+        local cur="$1" alias="$2" prefix="" host var
+        host="$cur"
+        if [[ "$cur" == *@* ]]; then
+            prefix="${cur%@*}@"
+            host="${cur##*@}"
+        fi
+
+        # expand a leading $VAR / ${VAR} so `tsh dev ssh $USER<TAB>` matches
+        if [[ "$host" =~ ^\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?(.*)$ ]]; then
+            var="${BASH_REMATCH[1]}"
+            host="${!var}${BASH_REMATCH[2]}"
+        fi
+        COMPREPLY=( $(compgen -P "$prefix" -W "$(__tsh_nodes "$alias")" -- "$host") )
+    }
+
+    __tsh_complete() {
+        local cur word i aliases subcmds alias="" subcmd="" args=0
+        cur="${COMP_WORDS[COMP_CWORD]}"
+        aliases="$(__tsh_aliases)"
+        subcmds="ssh scp ls login logout status clusters apps db kube proxy play join config request mfa version"
+
+        # Walk the words before the cursor: optional alias, then the subcommand
+        for (( i = 1; i < COMP_CWORD; i++ )); do
+            word="${COMP_WORDS[i]}"
+            [[ "$word" == -* ]] && continue
+            if [[ -z "$subcmd" && -z "$alias" ]] &&
+               [[ $'\n'"$aliases"$'\n' == *$'\n'"$word"$'\n'* ]]; then
+                alias="$word"
+            elif [[ -z "$subcmd" ]]; then
+                subcmd="$word"
             else
-                # Portable awk fallback: lines like  "alias": "..."
-                aliases="$(
-                    awk -F'"' '
-                        # match lines that start with optional spaces then "name":
-                        /^[[:space:]]*"[A-Za-z0-9_.-]+":[[:space:]]*/ { print $2 }
-                    ' "$aliases_file"
-                )"
+                (( args++ ))
             fi
+        done
+
+        # Still on the alias / subcommand word
+        if [[ -z "$subcmd" ]]; then
+            COMPREPLY=( $(compgen -W "$aliases $subcmds" -- "$cur") )
+            return
         fi
 
-        COMPREPLY=( $(compgen -W "$aliases" -- "$cur") )
+        COMPREPLY=()
+        case "$subcmd" in
+            # only the first argument is a node; the rest is the remote command
+            ssh|scp) (( args == 0 )) && __tsh_complete_nodes "$cur" "$alias" ;;
+        esac
     }
-
-    # Complete the first argument to `tsh` using the aliases above
-    complete -F __tsh_alias_complete tsh
-
-    # ssh to spaces via teleport
-    # sssh is a command that runs: tsh dev ssh $*
-    # Create it under ~/.local/bin/sssh
-    __my_spaces_complete()
-    {
-        local cur cache="${TMPDIR:-/tmp}/.spaces_nodes.$UID"
-        cur="${COMP_WORDS[COMP_CWORD]}"
-
-        if [[ ! -s "$cache" ]] || (( $(date +%s) - $(stat -f %m "$cache" 2>/dev/null || echo 0) > 60 )); then
-            tsh dev ls --search spaces 2>/dev/null | awk 'NR>2 {print $1}' > "$cache"
-        fi
-
-        COMPREPLY=($(compgen -W "$(<"$cache")" -- "$cur"))
-    }
-    complete -F __my_spaces_complete sssh
+    complete -F __tsh_complete tsh
 fi
 
 # deduplicate PATH entries (pure bash, works on all platforms)

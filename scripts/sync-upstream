@@ -7,9 +7,13 @@
 if [[ -x $(command -v git) ]]; then
     for remote in $(git remote); do
         git pull $remote $(git branch|grep '^*'|head -1|awk '{print $NF}')
+        # bring in tags from this remote; a tag that already exists locally
+        # with a different target is left alone (git reports it as rejected)
+        git fetch --tags $remote
         git remote prune $remote
     done
     git push
+    git push --tags
 else
     echo "git command not found"
     exit 1

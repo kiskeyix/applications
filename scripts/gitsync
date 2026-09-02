@@ -1,5 +1,5 @@
 #!/bin/bash
-# Syncs all upstream repositories to this branch
+# Syncs this branch and all tags against every remote, then publishes
 # Luis Mondesi <luis.e.mondesi@gmail.com>
 #
 # License: GPL

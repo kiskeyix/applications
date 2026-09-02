@@ -34,9 +34,9 @@ Tests use Ruby's Minitest framework. CI runs on Ruby 3.0 and 3.1 via GitHub Acti
 
 ### Scripts (`scripts/`)
 10 standalone scripts, pruned down from a much larger set of unused legacy utilities (2026-08-09):
-- `git*` — Git workflow helpers (gitamend, gitbranchdelete, gitbranchrename, gitcheckout)
+- `git*` — Git workflow helpers (gitamend, gitbranchdelete, gitbranchrename, gitcheckout, gitsync)
 - `update-host` — main deploy/sync utility
-- `claude-code-setup`, `signature`, `sync-upstream`, `open-terminals`, `make-admin` (Darwin-only)
+- `claude-code-setup`, `signature`, `open-terminals`, `make-admin` (Darwin-only)
 
 ### Tests (`test/`)
 `test/scripts/skeleton_test.rb` — Minitest tests for the Vim skeleton module (skeleton file instantiation).

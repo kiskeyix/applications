@@ -297,8 +297,10 @@ module UpdateHost
   # Materializes ~/.claude/settings.json (or $CLAUDE_CONFIG_DIR/settings.json)
   # from share/claude/settings.json.example. Never symlinked: Claude Code and
   # `claude plugin install` write into this file at runtime, so the live file
-  # always wins over the template on any key it already sets. Permission
-  # arrays are unioned so template entries still accumulate.
+  # always wins over the template on any key it already sets (deep_merge).
+  # Arrays are unioned so template entries still accumulate; elements are
+  # compared after $HOME→~ canonicalisation so a hook Claude Code rewrote to an
+  # absolute path is not re-added by the template's ~-relative form on every run.
   def merge_claude_settings
     example = File.join(REPO_ROOT, "share", "claude", "settings.json.example")
     return unless File.readable?(example)
@@ -317,16 +319,45 @@ module UpdateHost
     end
 
     current = JSON.parse(File.read(target))
-    merged = template.merge(current) do |_key, tpl_val, cur_val|
-      next cur_val unless tpl_val.is_a?(Hash) && cur_val.is_a?(Hash)
-
-      tpl_val.merge(cur_val) do |_k, t, c|
-        t.is_a?(Array) && c.is_a?(Array) ? (t | c) : c
-      end
-    end
+    merged  = deep_merge(template, current)
     File.write(target, JSON.pretty_generate(merged)) if merged != current
   rescue JSON::ParserError => e
     warn "update-host: skipping Claude settings merge (#{e.message})"
+  end
+
+  # Recursively merge `override` onto `base`:
+  #   Hash  + Hash  -> merged key by key, recursing on shared keys
+  #   Array + Array -> union; elements are de-duplicated by their canonical form
+  #                    (keeping the `override` copy on a collision), so template
+  #                    entries accumulate without re-adding ones the live file
+  #                    already has in a different-but-equivalent shape
+  #   otherwise     -> `override` wins (the live file is authoritative)
+  def deep_merge(base, override)
+    if base.is_a?(Hash) && override.is_a?(Hash)
+      base.merge(override) { |_k, b, o| deep_merge(b, o) }
+    elsif base.is_a?(Array) && override.is_a?(Array)
+      seen = {}
+      (override + base).each_with_object([]) do |el, acc|
+        key = canonicalize(el)
+        next if seen[key]
+
+        seen[key] = true
+        acc << el
+      end
+    else
+      override
+    end
+  end
+
+  # Deep copy of `val` with every string under $HOME rewritten to a ~-relative
+  # path, so entries that differ only by ~ vs. an expanded $HOME compare equal.
+  def canonicalize(val)
+    case val
+    when Hash   then val.transform_values { |v| canonicalize(v) }
+    when Array  then val.map { |v| canonicalize(v) }
+    when String then val.sub(%r{\A#{Regexp.escape(HOME)}/}, "~/")
+    else val
+    end
   end
 
   # ----- remote update -----

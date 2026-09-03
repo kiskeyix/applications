@@ -49,6 +49,56 @@ describe :update_host do
         end
       end
     end
+
+    it "does not duplicate a hook the live file rewrote to an absolute path" do
+      Dir.mktmpdir do |config_dir|
+        with_env("CLAUDE_CONFIG_DIR" => config_dir) do
+          UpdateHost.merge_claude_settings
+          target = File.join(config_dir, "settings.json")
+
+          # Claude Code expands ~ to an absolute path when it rewrites the file.
+          data = JSON.parse(File.read(target))
+          %w[SessionStart Stop].each do |ev|
+            cmd = data["hooks"][ev][0]["hooks"][0]["command"]
+            data["hooks"][ev][0]["hooks"][0]["command"] = cmd.sub(%r{\A~/}, "#{ENV["HOME"]}/")
+          end
+          File.write(target, JSON.generate(data))
+
+          UpdateHost.merge_claude_settings
+          UpdateHost.merge_claude_settings # must stay stable across runs
+
+          after = JSON.parse(File.read(target))
+          _(after.dig("hooks", "SessionStart").size).must_equal 1
+          _(after.dig("hooks", "Stop").size).must_equal 1
+          _(after.dig("hooks", "SessionStart", 0, "hooks").size).must_equal 1
+          # the live (absolute) form is the one kept
+          _(after.dig("hooks", "SessionStart", 0, "hooks", 0, "command"))
+            .must_equal "#{ENV["HOME"]}/.claude/hooks/session-start.sh"
+        end
+      end
+    end
+
+    it "unions new permission-allow entries from the template" do
+      Dir.mktmpdir do |config_dir|
+        with_env("CLAUDE_CONFIG_DIR" => config_dir) do
+          UpdateHost.merge_claude_settings
+          target = File.join(config_dir, "settings.json")
+
+          data = JSON.parse(File.read(target))
+          data["permissions"] = { "allow" => ["Bash(ls)"] }
+          File.write(target, JSON.generate(data))
+
+          # a template that adds a permission
+          tmpl = JSON.parse(File.read(File.join(UpdateHost::REPO_ROOT, "share", "claude", "settings.json.example")))
+          merged = UpdateHost.deep_merge(
+            tmpl.merge("permissions" => { "allow" => ["Bash(pwd)"] }),
+            data
+          )
+
+          _(merged.dig("permissions", "allow")).must_equal ["Bash(ls)", "Bash(pwd)"]
+        end
+      end
+    end
   end
 
   def with_env(vars)

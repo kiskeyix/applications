@@ -3,9 +3,13 @@
 
 # update-host - Luis Mondesi <luis.e.mondesi@gmail.com>
 #
-# Deploys shell/vim/mutt/git configs from this repo (share/) as symlinks
-# into $HOME, and can push a tarball of the repo out to remote hosts over
-# SSH to do the same there.
+# Deploys shell/vim/mutt/git/claude configs from this repo (share/) as
+# symlinks into $HOME, and can push a tarball of the repo out to remote
+# hosts over SSH to do the same there.
+#
+# ~/.claude/settings.json is the one exception: it's a real file merged
+# from share/claude/settings.json.example (see merge_claude_settings),
+# not a symlink, since Claude Code writes into it at runtime.
 #
 # Usage:
 #   update-host                 update all hosts listed in ~/.remote-hosts
@@ -18,6 +22,7 @@ require "optparse"
 require "socket"
 require "fileutils"
 require "open3"
+require "json"
 
 module UpdateHost
   VERSION = "2.0.0"
@@ -40,7 +45,15 @@ module UpdateHost
     shell/iterm2_shell_integration.bash
     shell/ssh-agent-setup.bash
     shell/dir_colors
+    claude/hooks
   ].freeze
+
+  # source path (relative to share/) => dotfile it becomes under $HOME,
+  # for entries that don't follow the default ".#{basename}" rule.
+  DEST_OVERRIDES = {
+    "vim" => File.join(".config", "vim"),
+    "claude/hooks" => File.join(".claude", "hooks")
+  }.freeze
 
   Options = Struct.new(
     :local, :tar_only, :send_key, :hosts_file, :local_path,
@@ -247,12 +260,18 @@ module UpdateHost
     update_submodules_local
 
     CONFIG_FILES.each do |rel|
-      dotfile = rel == "vim" ? File.join(HOME, ".config", "vim") : File.join(HOME, ".#{File.basename(rel)}")
+      dotfile = File.join(HOME, dest_rel(rel))
       target = File.join(REPO_ROOT, "share", rel)
       relink(dotfile, target)
     end
 
+    merge_claude_settings
+
     puts "localhost: relinked #{CONFIG_FILES.size} configs"
+  end
+
+  def dest_rel(rel)
+    DEST_OVERRIDES[rel] || ".#{File.basename(rel)}"
   end
 
   def relink(link_path, target_path)
@@ -275,11 +294,46 @@ module UpdateHost
     end
   end
 
+  # Materializes ~/.claude/settings.json (or $CLAUDE_CONFIG_DIR/settings.json)
+  # from share/claude/settings.json.example. Never symlinked: Claude Code and
+  # `claude plugin install` write into this file at runtime, so the live file
+  # always wins over the template on any key it already sets. Permission
+  # arrays are unioned so template entries still accumulate.
+  def merge_claude_settings
+    example = File.join(REPO_ROOT, "share", "claude", "settings.json.example")
+    return unless File.readable?(example)
+
+    config_dir = ENV["CLAUDE_CONFIG_DIR"]
+    config_dir = File.join(HOME, ".claude") if config_dir.nil? || config_dir.empty?
+    FileUtils.mkdir_p(config_dir)
+    target = File.join(config_dir, "settings.json")
+
+    template = JSON.parse(File.read(example))
+
+    unless File.exist?(target)
+      File.write(target, JSON.pretty_generate(template))
+      puts "# created #{target} from template"
+      return
+    end
+
+    current = JSON.parse(File.read(target))
+    merged = template.merge(current) do |_key, tpl_val, cur_val|
+      next cur_val unless tpl_val.is_a?(Hash) && cur_val.is_a?(Hash)
+
+      tpl_val.merge(cur_val) do |_k, t, c|
+        t.is_a?(Array) && c.is_a?(Array) ? (t | c) : c
+      end
+    end
+    File.write(target, JSON.pretty_generate(merged)) if merged != current
+  rescue JSON::ParserError => e
+    warn "update-host: skipping Claude settings merge (#{e.message})"
+  end
+
   # ----- remote update -----
 
   def remote_link_script
     CONFIG_FILES.map do |rel|
-      dotfile = rel == "vim" ? ".config/vim" : ".#{File.basename(rel)}"
+      dotfile = dest_rel(rel)
       src = "Applications/share/#{rel}"
       "mkdir -p $(dirname #{dotfile}) && rm -rf #{dotfile} && ln -sf #{src} #{dotfile}"
     end.join(" && ")

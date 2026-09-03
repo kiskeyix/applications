@@ -1,4 +1,5 @@
-.claude/
+.claude/settings.json
+.claude/settings.local.json
 .remember/
 *.app
 *.bak

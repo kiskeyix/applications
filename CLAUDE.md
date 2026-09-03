@@ -31,6 +31,7 @@ Tests use Ruby's Minitest framework. CI runs on Ruby 3.0 and 3.1 via GitHub Acti
 - `share/vim/` — Vim/GVim config (`vimrc`, `gvimrc`), skeleton templates, and custom plugins/syntax under `autoload/`, `plugin/`, `syntax/`, `after/`; nerdtree lives under `pack/vendor/start/` as a Git submodule
 - `share/mutt/` — Mutt email client config
 - `share/git-templates/` — Git hook templates
+- `share/claude/hooks/` — Claude Code hooks (`session-start.sh`, `notify-stop.sh`), symlinked to `~/.claude/hooks` by `update-host`; `share/claude/settings.json.example` is merged (not symlinked) into `~/.claude/settings.json` (or `$CLAUDE_CONFIG_DIR/settings.json`) since Claude Code writes into that file at runtime. The repo's own `.claude/hooks` and `.claude/settings.json.example` are symlinks back into `share/claude/`, so this repo picks up the same hooks when Claude Code works on itself.
 
 ### Scripts (`scripts/`)
 10 standalone scripts, pruned down from a much larger set of unused legacy utilities (2026-08-09):

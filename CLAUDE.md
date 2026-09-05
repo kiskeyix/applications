@@ -19,7 +19,7 @@ rake
 rake tar
 ```
 
-Tests use Ruby's Minitest framework. CI runs on Ruby 3.0 and 3.1 via GitHub Actions (`rake test` on push/PR).
+Tests use Ruby's Minitest framework. CI runs on Ruby 4.0 and 3.4 via GitHub Actions (`rake test` on push/PR).
 
 ## Architecture
 

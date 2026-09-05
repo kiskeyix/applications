@@ -1345,6 +1345,8 @@ end
 
 VERSION = '1.1.0'
 
+return unless $PROGRAM_NAME == __FILE__
+
 ARGV.push('--help') if ARGV.empty?
 
 command = nil

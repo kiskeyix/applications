@@ -40,7 +40,9 @@ Tests use Ruby's Minitest framework. CI runs on Ruby 4.0 and 3.4 via GitHub Acti
 - `claude-code-setup`, `signature`, `open-terminals`, `make-admin` (Darwin-only)
 
 ### Tests (`test/`)
-`test/scripts/skeleton_test.rb` — Minitest tests for the Vim skeleton module (skeleton file instantiation).
+- `test/scripts/skeleton_test.rb` — Vim skeleton module (skeleton file instantiation)
+- `test/scripts/update_host_test.rb` — `update-host`'s dotfile path mapping and Claude settings deep-merge
+- `test/scripts/claude_code_setup_test.rb` — `claude-code-setup`'s platform detection, package-manager command builders, and settings deep-merge
 
 ### Doc (`doc/`)
 Code examples and educational snippets organized by language (C, C++, Perl, Python, Java, PHP, shell). These are reference material, not deployed code.

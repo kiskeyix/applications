@@ -46,13 +46,15 @@ module UpdateHost
     shell/ssh-agent-setup.bash
     shell/dir_colors
     claude/hooks
+    claude/CLAUDE.md
   ].freeze
 
   # source path (relative to share/) => dotfile it becomes under $HOME,
   # for entries that don't follow the default ".#{basename}" rule.
   DEST_OVERRIDES = {
     "vim" => File.join(".config", "vim"),
-    "claude/hooks" => File.join(".claude", "hooks")
+    "claude/hooks" => File.join(".claude", "hooks"),
+    "claude/CLAUDE.md" => File.join(".claude", "CLAUDE.md")
   }.freeze
 
   Options = Struct.new(

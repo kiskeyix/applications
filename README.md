@@ -23,6 +23,13 @@ git clone https://github.com/kiskeyix/applications.git Applications
 
 Any pre-existing files are preserved with a `.bak` extension.
 
+Check whether a machine still matches what `--local` would produce, without
+changing anything:
+
+```sh
+update-host --verify
+```
+
 ## Disabling a feature
 
 Remove the corresponding symlink:

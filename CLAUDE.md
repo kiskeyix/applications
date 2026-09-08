@@ -24,7 +24,7 @@ Tests use Ruby's Minitest framework. CI runs on Ruby 4.0 and 3.4 via GitHub Acti
 ## Architecture
 
 ### Core Utility
-`scripts/update-host` is a Ruby script — the main entry point. `update-host --local` symlinks `share/` configs into the user's home directory; `update-host [HOST...]` (or no args, reading `~/.remote-hosts`) builds a tarball, ships it to each host in parallel over SSH/SCP with a live progress bar, and relinks configs there too. `--tar` builds the tarball only; `--send-key` pushes your SSH pubkey to hosts.
+`scripts/update-host` is a Ruby script — the main entry point. `update-host --local` symlinks `share/` configs into the user's home directory; `update-host [HOST...]` (or no args, reading `~/.remote-hosts`) builds a tarball, ships it to each host in parallel over SSH/SCP with a live progress bar, and relinks configs there too. `--tar` builds the tarball only; `--send-key` pushes your SSH pubkey to hosts; `--verify` is the read-only counterpart to `--local` — it reports whether a machine already matches what `--local` would produce (symlinks, merged Claude settings, hook executability, git-templates wiring, the vim submodule, supporting paths) without changing anything, exiting non-zero only when a check reports a concrete fix (warnings are advisory and don't fail the run).
 
 ### Config Layout
 - `share/shell/` — `bashrc`, `bash_profile`, `inputrc`, SSH agent setup; `bashrc` supports per-host overrides via `.bashrc-$HOSTNAME` pattern

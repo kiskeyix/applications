@@ -15,6 +15,7 @@
 #   update-host                 update all hosts listed in ~/.remote-hosts
 #   update-host HOST1 HOST2     update just these hosts
 #   update-host --local         relink this machine from the local checkout
+#   update-host --verify        check this machine against the repo, no fixes
 #   update-host --tar           build the distribution tarball and exit
 #   update-host --send-key HOST push your SSH public key to HOST and exit
 
@@ -60,7 +61,7 @@ module UpdateHost
   }.freeze
 
   Options = Struct.new(
-    :local, :tar_only, :send_key, :hosts_file, :local_path,
+    :local, :verify, :tar_only, :send_key, :hosts_file, :local_path,
     :username, :ssh_port, :key, :jobs, :remove, :exclude, :verbose,
     keyword_init: true
   )
@@ -104,6 +105,53 @@ module UpdateHost
     end
   end
 
+  # Accumulates --verify results, one line per check. `fail_check` means
+  # there's a concrete fix (shown in the message); `warn` is advisory —
+  # either the problem can't be acted on automatically, or the underlying
+  # script (e.g. merge_claude_settings) already treats it as a no-op.
+  class Verifier
+    def initialize(io: $stdout)
+      @io = io
+      @counts = { ok: 0, warn: 0, fail: 0 }
+    end
+
+    def section(title)
+      @io.puts "\n--- #{title} ---"
+    end
+
+    def ok(msg)
+      record(:ok, "  ok    #{msg}")
+    end
+
+    def warn(msg)
+      record(:warn, "  warn  #{msg}")
+    end
+
+    # Named fail_check, not fail: Kernel#fail (alias for raise) is a private
+    # method on every object, and a plain `def fail` here would shadow it for
+    # this class.
+    def fail_check(msg)
+      record(:fail, "  FAIL  #{msg}")
+    end
+
+    def failed?
+      @counts[:fail].positive?
+    end
+
+    def summary
+      @io.puts "\n--- Summary ---"
+      @io.puts "  #{@counts[:ok]} ok, #{@counts[:warn]} warn, #{@counts[:fail]} fail"
+      @io.puts "  See the FAIL lines above for how to fix each one." if failed?
+    end
+
+    private
+
+    def record(kind, line)
+      @counts[kind] += 1
+      @io.puts line
+    end
+  end
+
   module_function
 
   def main(argv)
@@ -112,6 +160,8 @@ module UpdateHost
 
     if opts.tar_only
       create_tarball(opts)
+    elsif opts.verify
+      verify_local
     elsif opts.local
       relink_local
     elsif opts.send_key
@@ -125,7 +175,7 @@ module UpdateHost
 
   def parse_options(argv)
     opts = Options.new(
-      local: false, tar_only: false, send_key: false,
+      local: false, verify: false, tar_only: false, send_key: false,
       hosts_file: File.join(HOME, ".remote-hosts"),
       local_path: File.join(HOME, "Shared", "Software", "settings"),
       username: nil, ssh_port: 22, key: nil, jobs: 10, remove: false,
@@ -136,6 +186,7 @@ module UpdateHost
     parser = OptionParser.new do |o|
       o.banner = "Usage: update-host [options] [HOST1 HOST2 ...]"
       o.on("-l", "--local", "Relink localhost from this checkout and exit") { opts.local = true }
+      o.on("--verify", "Check this machine against the repo and exit (no fixes)") { opts.verify = true }
       o.on("-C", "--tar", "--tarball", "Build the tarball only and exit") { opts.tar_only = true }
       o.on("--local-path PATH", "Tarball staging directory") { |v| opts.local_path = v }
       o.on("--hosts-file FILE", "Hosts file (default: ~/.remote-hosts)") { |v| opts.hosts_file = v }
@@ -298,6 +349,221 @@ module UpdateHost
     end
   end
 
+  # ----- verify -----
+  #
+  # Read-only counterpart to relink_local: checks whether this machine
+  # already matches what --local would produce, without changing anything.
+  # `home:`/`repo_root:` default to the real constants but are overridable so
+  # tests can point every check at a scratch directory (see the note at
+  # HOME/REPO_ROOT's definition on why those constants themselves aren't).
+  def verify_local(home: HOME, repo_root: REPO_ROOT, io: $stdout)
+    v = Verifier.new(io: io)
+    verify_symlinks(v, home: home, repo_root: repo_root)
+    verify_claude_settings(v, home: home, repo_root: repo_root)
+    verify_hook_executability(v, repo_root: repo_root)
+    verify_git_templates(v, home: home)
+    verify_submodule(v, repo_root: repo_root)
+    verify_supporting_paths(v, home: home)
+    verify_claude_version(v)
+    v.summary
+    exit 1 if v.failed?
+  end
+
+  def verify_symlinks(v, home: HOME, repo_root: REPO_ROOT)
+    v.section("Dotfile symlinks")
+
+    CONFIG_FILES.each do |rel|
+      target = File.join(repo_root, "share", rel)
+      dotfile = File.join(home, dest_rel(rel))
+      label = "~/#{dest_rel(rel)}"
+
+      unless File.exist?(target)
+        v.fail_check("#{label}: source #{target} is missing — check your checkout (git status)")
+        next
+      end
+
+      if File.symlink?(dotfile)
+        if File.readlink(dotfile) == target
+          v.ok("#{label} -> #{target}")
+        else
+          v.fail_check("#{label} points to #{File.readlink(dotfile)} (expected #{target}) — run: update-host --local")
+        end
+      elsif File.exist?(dotfile)
+        v.warn("#{label} is a real file/dir, not our symlink (--local would move it to .bak)")
+      else
+        v.fail_check("#{label} missing — run: update-host --local")
+      end
+    end
+  end
+
+  # Resolves the same directory merge_claude_settings writes into, so verify
+  # and deploy can never disagree about where settings.json lives.
+  def claude_config_dir(home: HOME)
+    dir = ENV["CLAUDE_CONFIG_DIR"]
+    dir.nil? || dir.empty? ? File.join(home, ".claude") : dir
+  end
+
+  def verify_claude_settings(v, home: HOME, repo_root: REPO_ROOT)
+    v.section("Claude settings")
+
+    example = File.join(repo_root, "share", "claude", "settings.json.example")
+    unless File.readable?(example)
+      v.fail_check("template missing: #{example}")
+      return
+    end
+
+    target = File.join(claude_config_dir(home: home), "settings.json")
+
+    v.warn("#{target} is a symlink (should be a real file Claude Code can write into)") if File.symlink?(target)
+
+    unless File.exist?(target)
+      v.fail_check("#{target} missing — run: update-host --local")
+      return
+    end
+
+    begin
+      template = JSON.parse(File.read(example))
+      current  = JSON.parse(File.read(target))
+    rescue JSON::ParserError => e
+      # Matches merge_claude_settings, which also rescues this and no-ops:
+      # --local would not fix a genuinely malformed live file either.
+      v.warn("#{target} (or the template) is not valid JSON (#{e.message})")
+      return
+    rescue SystemCallError => e
+      v.warn("could not read #{target} (#{e.message})")
+      return
+    end
+
+    if deep_merge(template, current) == current
+      v.ok("#{target} has all template keys merged")
+    else
+      v.fail_check("#{target} is missing keys from the template — run: update-host --local")
+    end
+  end
+
+  def verify_hook_executability(v, repo_root: REPO_ROOT)
+    v.section("Hook executability")
+
+    patterns = [
+      File.join(repo_root, "share", "claude", "hooks", "*.sh"),
+      File.join(repo_root, "share", "git-templates", "hooks", "*")
+    ]
+    patterns.each do |pattern|
+      matches = Dir.glob(pattern).select { |path| File.file?(path) }.sort
+      if matches.empty?
+        v.fail_check("no hook files found matching #{pattern} — is the checkout complete?")
+        next
+      end
+
+      matches.each do |path|
+        if File.executable?(path)
+          v.ok("#{path} is executable")
+        else
+          v.fail_check("#{path} is not executable — run: chmod +x #{path}")
+        end
+      end
+    end
+  end
+
+  def verify_git_templates(v, home: HOME)
+    v.section("Git template wiring")
+
+    check_git_config(v, "init.templatedir", File.join(home, ".git-templates"), home: home)
+    check_git_config(v, "core.hooksPath", File.join(home, ".git-templates", "hooks"), home: home)
+  end
+
+  # update-host never sets git config itself, so a mismatch here is advisory,
+  # not something --local would fix. `git config --global --get` exits 1 for
+  # the ordinary "key unset" case — that's only status.exitstatus == 1 with no
+  # stderr; anything else (missing git binary, unreadable ~/.gitconfig, a
+  # future git changing exit codes) is a distinct failure and must not be
+  # reported as if the key were simply unset.
+  def check_git_config(v, key, expected, home: HOME)
+    stdout, stderr, status = Open3.capture3("git", "config", "--global", "--get", key)
+
+    actual =
+      if status.success?
+        stdout.strip
+      elsif status.exitstatus == 1 && stderr.strip.empty?
+        ""
+      else
+        v.warn("could not read git #{key}: #{stderr.strip} (exit #{status.exitstatus})")
+        return
+      end
+
+    expand = ->(path) { path.sub(/\A~/, home) }
+
+    if expand.call(actual) == expand.call(expected)
+      v.ok("git #{key} = #{actual}")
+    else
+      v.warn("git #{key} = '#{actual.empty? ? 'unset' : actual}' (expected #{expected}) " \
+             "— run: git config --global #{key} '#{expected}'")
+    end
+  rescue Errno::ENOENT
+    v.warn("git not found on PATH; cannot check #{key}")
+  end
+
+  def verify_submodule(v, repo_root: REPO_ROOT)
+    v.section("Vim submodule")
+
+    nerdtree = File.join(repo_root, "share", "vim", "pack", "vendor", "start", "nerdtree")
+    if Dir.exist?(nerdtree) && !Dir.empty?(nerdtree)
+      v.ok("nerdtree submodule initialized")
+    else
+      v.fail_check("nerdtree submodule not initialized (#{nerdtree}) — run: update-host --local")
+    end
+  end
+
+  def verify_supporting_paths(v, home: HOME)
+    v.section("Supporting paths")
+
+    backup = File.join(home, ".backup")
+    if Dir.exist?(backup)
+      mode = format("%o", File.stat(backup).mode & 0o777)
+      mode == "700" ? v.ok("~/.backup exists (mode 700)") : v.warn("~/.backup exists but mode is #{mode} (expected 700)")
+    else
+      v.fail_check("~/.backup missing — run: update-host --local")
+    end
+
+    tmp = File.join(home, "tmp")
+    Dir.exist?(tmp) ? v.ok("~/tmp exists") : v.fail_check("~/tmp missing — run: update-host --local")
+
+    sig = File.join(home, ".signaturerc")
+    File.exist?(sig) ? v.ok("~/.signaturerc exists") : v.fail_check("~/.signaturerc missing — run: update-host --local")
+  end
+
+  # Advisory tie-in with the check-claude-version.sh SessionStart hook: skipped
+  # entirely when `claude` isn't installed or CLAUDE_CONFIG_DIR isn't set,
+  # since neither is something this repo controls.
+  def verify_claude_version(v)
+    return unless command_on_path?("claude")
+
+    config_dir = ENV["CLAUDE_CONFIG_DIR"]
+    return if config_dir.nil? || config_dir.empty?
+
+    v.section("Claude Code version")
+
+    installed, status = Open3.capture2("claude", "--version")
+    unless status.success?
+      v.warn("`claude --version` exited #{status.exitstatus}; cannot check version")
+      return
+    end
+    installed = installed.split.first
+    stamp = File.join(config_dir, ".claude-code-verified-version")
+    verified = File.readable?(stamp) ? File.read(stamp).strip : nil
+
+    if installed && installed == verified
+      v.ok("Claude Code #{installed} verified against changelog")
+    else
+      v.warn("Claude Code #{installed || 'version unknown'} not verified against changelog " \
+             "(last verified: #{verified || 'never'}) — run /claude-update-check")
+    end
+  end
+
+  def command_on_path?(cmd)
+    ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).any? { |dir| File.executable?(File.join(dir, cmd)) }
+  end
+
   # Materializes ~/.claude/settings.json (or $CLAUDE_CONFIG_DIR/settings.json)
   # from share/claude/settings.json.example. Never symlinked: Claude Code and
   # `claude plugin install` write into this file at runtime, so the live file
@@ -309,8 +575,7 @@ module UpdateHost
     example = File.join(REPO_ROOT, "share", "claude", "settings.json.example")
     return unless File.readable?(example)
 
-    config_dir = ENV["CLAUDE_CONFIG_DIR"]
-    config_dir = File.join(HOME, ".claude") if config_dir.nil? || config_dir.empty?
+    config_dir = claude_config_dir
     FileUtils.mkdir_p(config_dir)
     target = File.join(config_dir, "settings.json")
 

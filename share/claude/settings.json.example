@@ -9,6 +9,16 @@
             "command": "~/.claude/hooks/session-start.sh"
           }
         ]
+      },
+      {
+        "matcher": "startup",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "~/.claude/hooks/check-claude-version.sh",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "Stop": [

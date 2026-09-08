@@ -47,6 +47,7 @@ module UpdateHost
     shell/dir_colors
     claude/hooks
     claude/CLAUDE.md
+    claude/commands
   ].freeze
 
   # source path (relative to share/) => dotfile it becomes under $HOME,
@@ -54,7 +55,8 @@ module UpdateHost
   DEST_OVERRIDES = {
     "vim" => File.join(".config", "vim"),
     "claude/hooks" => File.join(".claude", "hooks"),
-    "claude/CLAUDE.md" => File.join(".claude", "CLAUDE.md")
+    "claude/CLAUDE.md" => File.join(".claude", "CLAUDE.md"),
+    "claude/commands" => File.join(".claude", "commands")
   }.freeze
 
   Options = Struct.new(

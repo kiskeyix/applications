@@ -19,6 +19,11 @@
 #
 branch="$(git branch --show-current 2> /dev/null || git rev-parse --abbrev-ref HEAD)"
 
+# touch .force to enable committing to main branches
+if [ -f .force ]; then
+    FORCE=1
+fi
+
 if [ "$branch" = "master" ] || [ "$branch" = "main" ]; then
     if (( FORCE == 1 )); then
         echo "WARNING: force settings in place. Remove with: unset FORCE"

@@ -8,6 +8,7 @@
 *.log
 .*.swp
 .DS_Store
+.force
 ChangeLog
 ICAClient
 JPL

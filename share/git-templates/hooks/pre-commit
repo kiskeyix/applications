@@ -25,7 +25,7 @@ if [ -f .force ]; then
 fi
 
 if [ "$branch" = "master" ] || [ "$branch" = "main" ]; then
-    if (( FORCE == 1 )); then
+    if [ "$FORCE" = "1" ]; then
         echo "WARNING: force settings in place. Remove with: unset FORCE"
     else
         echo "You can't commit directly to '$branch' branch"

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to coding agents working in this repository.
 
 ## What This Repo Is
 
@@ -34,14 +34,14 @@ Tests use Ruby's Minitest framework. CI runs on Ruby 4.0 and 3.4 via GitHub Acti
 - `share/claude/hooks/` — Claude Code hooks (`session-start.sh`, `notify-stop.sh`, `check-claude-version.sh`), symlinked to `~/.claude/hooks` by `update-host`; `share/claude/commands/` — custom slash commands (`claude-update-check.md`), symlinked to `~/.claude/commands`; `share/claude/AGENTS.md` is symlinked to `~/.claude/AGENTS.md` the same way — general, cross-project working principles, not project-specific facts (those stay in a repo's own `AGENTS.md`). `share/claude/settings.json.example` is merged (not symlinked) into `~/.claude/settings.json` (or `$CLAUDE_CONFIG_DIR/settings.json`) since Claude Code writes into that file at runtime. The repo's own `.claude/hooks` and `.claude/commands` are symlinks back into `share/claude/`, so this repo picks up the same hooks and commands when Claude Code works on itself; it has no `.claude/AGENTS.md` of its own since the root-level `AGENTS.md` above already covers this repo.
 
 ### Scripts (`scripts/`)
-10 standalone scripts, pruned down from a much larger set of unused legacy utilities (2026-08-09):
+Standalone scripts:
 - `git*` — Git workflow helpers (gitamend, gitbranchdelete, gitbranchrename, gitcheckout, gitsync)
 - `update-host` — main deploy/sync utility
 - `claude-code-setup`, `signature`, `open-terminals`, `make-admin` (Darwin-only)
 
 ### Tests (`test/`)
 - `test/scripts/skeleton_test.rb` — Vim skeleton module (skeleton file instantiation)
-- `test/scripts/update_host_test.rb` — `update-host`'s dotfile path mapping and Claude settings deep-merge
+- `test/scripts/update_host_test.rb` — `update-host`'s dotfile path mapping, Claude settings deep-merge, `--verify` checks, and stale `~/.claude/CLAUDE.md` cleanup
 - `test/scripts/claude_code_setup_test.rb` — `claude-code-setup`'s platform detection, package-manager command builders, and settings deep-merge
 
 ### Doc (`doc/`)
@@ -52,7 +52,7 @@ Code examples and educational snippets organized by language (C, C++, Perl, Pyth
 | File | Purpose |
 |------|---------|
 | `scripts/update-host` | Main deploy/sync script (Ruby) |
-| `share/shell/bashrc` | Primary shell config (543 lines) |
+| `share/shell/bashrc` | Primary shell config |
 | `share/shell/bash_profile` | Login shell / PATH setup |
 | `Rakefile` | Test and tar tasks |
 | `Gemfile` | Ruby deps (minitest only) |

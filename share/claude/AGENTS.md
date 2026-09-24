@@ -56,8 +56,6 @@ ceremony below.
   step, not just a list of actions.
 - Loop change → run → observe until the verification actually passes.
   Don't stack further changes on top of a step you haven't checked.
-- Commit often enough that any step can be reverted on its own — cheap
-  rollback is what makes looping like this safe.
 
 ## Working with AI-generated code
 

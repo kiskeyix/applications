@@ -18,6 +18,8 @@
 #   update-host --verify        check this machine against the repo, no fixes
 #   update-host --tar           build the distribution tarball and exit
 #   update-host --send-key HOST push your SSH public key to HOST and exit
+#
+# TODO: warn if ~/.claude/CLAUDE.md exists
 
 require "optparse"
 require "socket"
@@ -47,7 +49,7 @@ module UpdateHost
     shell/ssh-agent-setup.bash
     shell/dir_colors
     claude/hooks
-    claude/CLAUDE.md
+    claude/AGENTS.md
     claude/commands
   ].freeze
 
@@ -56,7 +58,7 @@ module UpdateHost
   DEST_OVERRIDES = {
     "vim" => File.join(".config", "vim"),
     "claude/hooks" => File.join(".claude", "hooks"),
-    "claude/CLAUDE.md" => File.join(".claude", "CLAUDE.md"),
+    "claude/AGENTS.md" => File.join(".claude", "AGENTS.md"),
     "claude/commands" => File.join(".claude", "commands")
   }.freeze
 

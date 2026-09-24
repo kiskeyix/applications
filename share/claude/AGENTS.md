@@ -1,7 +1,7 @@
 # Global principles
 
 Personal defaults for how I want to work with Claude Code, across every
-repo. Project-level `CLAUDE.md` files take precedence for project-specific
+repo. Project-level `AGENTS.md` (or `CLAUDE.md`) files take precedence for project-specific
 facts; this file is for standing preferences that don't belong in any one
 repo. Several sections below draw on Andrej Karpathy's public notes on
 where LLM coding tends to go wrong: quietly running with a wrong
@@ -85,7 +85,7 @@ ceremony below.
 
 ## Docs
 
-- A `CLAUDE.md` (this one included) should read like a map, not a diary:
+- An `AGENTS.md` (this one included) should read like a map, not a diary:
   architecture and how-to-run, not a change log. If it's derivable from
   `git log` or the code itself, it doesn't belong here.
 - Keep it short enough that adding one more fact should mean cutting one

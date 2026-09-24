@@ -134,73 +134,74 @@ describe :update_host do
       end
     end
 
-    it "warns about a stale ~/.claude/CLAUDE.md symlink once AGENTS.md exists" do
+    it "warns about a dead ~/.claude/AGENTS.md symlink once CLAUDE.md exists" do
       Dir.mktmpdir do |home|
         FileUtils.mkdir_p(File.join(home, ".claude"))
-        File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md"), File.join(home, ".claude", "CLAUDE.md"))
         File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md"), File.join(home, ".claude", "AGENTS.md"))
+        File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md"), File.join(home, ".claude", "CLAUDE.md"))
 
         out = StringIO.new
         v = UpdateHost::Verifier.new(io: out)
         UpdateHost.verify_symlinks(v, home: home, repo_root: UpdateHost::REPO_ROOT)
 
-        _(out.string).must_include "warn  ~/.claude/CLAUDE.md is a stale symlink"
+        _(out.string).must_include "warn  ~/.claude/AGENTS.md is a dead symlink"
       end
     end
 
-    it "does not warn about CLAUDE.md when AGENTS.md is missing or it isn't a symlink" do
+    it "does not warn about AGENTS.md when CLAUDE.md is missing or it isn't a symlink" do
       Dir.mktmpdir do |home|
         FileUtils.mkdir_p(File.join(home, ".claude"))
-        File.write(File.join(home, ".claude", "CLAUDE.md"), "a real file the user wrote")
+        File.write(File.join(home, ".claude", "AGENTS.md"), "a real file the user wrote")
 
         out = StringIO.new
         v = UpdateHost::Verifier.new(io: out)
         UpdateHost.verify_symlinks(v, home: home, repo_root: UpdateHost::REPO_ROOT)
 
-        _(out.string).wont_include "stale symlink"
+        _(out.string).wont_include "dead symlink"
       end
     end
   end
 
-  describe "retire_stale_claude_md" do
-    it "moves a stale CLAUDE.md symlink to .bak once AGENTS.md exists" do
+  describe "retire_stale_agents_md" do
+    it "removes a dead AGENTS.md symlink once CLAUDE.md exists" do
       Dir.mktmpdir do |home|
         FileUtils.mkdir_p(File.join(home, ".claude"))
-        claude_md = File.join(home, ".claude", "CLAUDE.md")
         agents_md = File.join(home, ".claude", "AGENTS.md")
+        claude_md = File.join(home, ".claude", "CLAUDE.md")
+        File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md"), agents_md)
         File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md"), claude_md)
+
+        UpdateHost.retire_stale_agents_md(home: home)
+
+        _(File.symlink?(agents_md)).must_equal false
+        _(File.exist?(agents_md)).must_equal false
+        _(File.symlink?(claude_md)).must_equal true
+      end
+    end
+
+    it "leaves a real (non-symlink) AGENTS.md alone" do
+      Dir.mktmpdir do |home|
+        FileUtils.mkdir_p(File.join(home, ".claude"))
+        agents_md = File.join(home, ".claude", "AGENTS.md")
+        File.write(agents_md, "a real file the user wrote")
+        File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md"), File.join(home, ".claude", "CLAUDE.md"))
+
+        UpdateHost.retire_stale_agents_md(home: home)
+
+        _(File.exist?(agents_md)).must_equal true
+        _(File.symlink?(agents_md)).must_equal false
+      end
+    end
+
+    it "does nothing when CLAUDE.md doesn't exist yet" do
+      Dir.mktmpdir do |home|
+        FileUtils.mkdir_p(File.join(home, ".claude"))
+        agents_md = File.join(home, ".claude", "AGENTS.md")
         File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md"), agents_md)
 
-        UpdateHost.retire_stale_claude_md(home: home)
+        UpdateHost.retire_stale_agents_md(home: home)
 
-        _(File.exist?(claude_md)).must_equal false
-        _(File.symlink?("#{claude_md}.bak")).must_equal true
-      end
-    end
-
-    it "leaves a real (non-symlink) CLAUDE.md alone" do
-      Dir.mktmpdir do |home|
-        FileUtils.mkdir_p(File.join(home, ".claude"))
-        claude_md = File.join(home, ".claude", "CLAUDE.md")
-        File.write(claude_md, "a real file the user wrote")
-        File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md"), File.join(home, ".claude", "AGENTS.md"))
-
-        UpdateHost.retire_stale_claude_md(home: home)
-
-        _(File.exist?(claude_md)).must_equal true
-        _(File.symlink?(claude_md)).must_equal false
-      end
-    end
-
-    it "does nothing when AGENTS.md doesn't exist yet" do
-      Dir.mktmpdir do |home|
-        FileUtils.mkdir_p(File.join(home, ".claude"))
-        claude_md = File.join(home, ".claude", "CLAUDE.md")
-        File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md"), claude_md)
-
-        UpdateHost.retire_stale_claude_md(home: home)
-
-        _(File.symlink?(claude_md)).must_equal true
+        _(File.symlink?(agents_md)).must_equal true
       end
     end
   end

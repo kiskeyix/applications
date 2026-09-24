@@ -18,8 +18,6 @@
 #   update-host --verify        check this machine against the repo, no fixes
 #   update-host --tar           build the distribution tarball and exit
 #   update-host --send-key HOST push your SSH public key to HOST and exit
-#
-# TODO: warn if ~/.claude/CLAUDE.md exists
 
 require "optparse"
 require "socket"
@@ -322,9 +320,24 @@ module UpdateHost
       relink(dotfile, target)
     end
 
+    retire_stale_claude_md
     merge_claude_settings
 
     puts "localhost: relinked #{CONFIG_FILES.size} configs"
+  end
+
+  # Claude Code moved from CLAUDE.md to AGENTS.md; ~/.claude/CLAUDE.md is our
+  # own old symlink left over from before that switch. Only touched once
+  # AGENTS.md is in place, and only when it's still our symlink (a real file
+  # a user wrote by hand is left alone).
+  def retire_stale_claude_md(home: HOME)
+    claude_md = File.join(home, ".claude", "CLAUDE.md")
+    agents_md = File.join(home, ".claude", "AGENTS.md")
+    return unless File.symlink?(claude_md) && File.exist?(agents_md)
+
+    backup = "#{claude_md}.bak"
+    warn "~/.claude/CLAUDE.md is a stale symlink now that ~/.claude/AGENTS.md exists; moving it to #{backup}"
+    FileUtils.mv(claude_md, backup, force: true)
   end
 
   def dest_rel(rel)
@@ -395,6 +408,12 @@ module UpdateHost
       else
         v.fail_check("#{label} missing — run: update-host --local")
       end
+    end
+
+    claude_md = File.join(home, ".claude", "CLAUDE.md")
+    agents_md = File.join(home, ".claude", "AGENTS.md")
+    if File.symlink?(claude_md) && File.exist?(agents_md)
+      v.warn("~/.claude/CLAUDE.md is a stale symlink now that ~/.claude/AGENTS.md exists — run: update-host --local")
     end
   end
 

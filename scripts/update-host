@@ -379,7 +379,7 @@ module UpdateHost
     verify_git_templates(v, home: home)
     verify_submodule(v, repo_root: repo_root)
     verify_supporting_paths(v, home: home)
-    verify_claude_version(v)
+    verify_claude_version(v, home: home)
     v.summary
     exit 1 if v.failed?
   end
@@ -554,13 +554,12 @@ module UpdateHost
   end
 
   # Advisory tie-in with the check-claude-version.sh SessionStart hook: skipped
-  # entirely when `claude` isn't installed or CLAUDE_CONFIG_DIR isn't set,
-  # since neither is something this repo controls.
-  def verify_claude_version(v)
+  # entirely when `claude` isn't installed, since that isn't something this
+  # repo controls.
+  def verify_claude_version(v, home: HOME)
     return unless command_on_path?("claude")
 
-    config_dir = ENV["CLAUDE_CONFIG_DIR"]
-    return if config_dir.nil? || config_dir.empty?
+    config_dir = claude_config_dir(home: home)
 
     v.section("Claude Code version")
 

@@ -373,6 +373,30 @@ describe :update_host do
         end
       end
     end
+
+    it "falls back to ~/.claude for the stamp when CLAUDE_CONFIG_DIR is unset" do
+      Dir.mktmpdir do |bin_dir|
+        fake_claude = File.join(bin_dir, "claude")
+        File.write(fake_claude, "#!/usr/bin/env bash\necho '9.9.9 (Claude Code)'\n")
+        FileUtils.chmod(0o755, fake_claude)
+
+        Dir.mktmpdir do |home|
+          FileUtils.mkdir_p(File.join(home, ".claude"))
+          File.write(File.join(home, ".claude", ".claude-code-verified-version"), "9.9.9\n")
+
+          with_env(
+            "PATH" => "#{bin_dir}#{File::PATH_SEPARATOR}#{ENV.fetch('PATH', '')}",
+            "CLAUDE_CONFIG_DIR" => nil
+          ) do
+            out = StringIO.new
+            v = UpdateHost::Verifier.new(io: out)
+            UpdateHost.verify_claude_version(v, home: home)
+
+            _(out.string).must_include "ok    Claude Code 9.9.9 verified against changelog"
+          end
+        end
+      end
+    end
   end
 
   describe "verify_submodule" do

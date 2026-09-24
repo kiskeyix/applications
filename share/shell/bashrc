@@ -139,8 +139,13 @@ if [[ 1 == $USE_BASH_COMPLETION ]]; then
     #   tsh <TAB>           -> proxy aliases + tsh subcommands
     #   tsh ssh <TAB>       -> nodes from `tsh ls`
     #   tsh dev ssh <TAB>   -> nodes from `tsh dev ls`
+    #   tsh scp <TAB>       -> nodes (as "node:") + local files
+    #   tsh scp node:<TAB>  -> remote paths via `tsh ssh node ls`
     # Node lists are cached per alias for TSH_COMPLETION_TTL seconds.
     TSH_COMPLETION_TTL=${TSH_COMPLETION_TTL:-60}
+    # Remote path completion costs one `tsh ssh` round trip per directory;
+    # set to 0 to complete only node names on the remote side of an scp.
+    TSH_COMPLETE_REMOTE_PATHS=${TSH_COMPLETE_REMOTE_PATHS:-1}
 
     # Alias names defined in the tsh config
     __tsh_aliases() {
@@ -193,15 +198,85 @@ if [[ 1 == $USE_BASH_COMPLETION ]]; then
         COMPREPLY=( $(compgen -P "$prefix" -W "$(__tsh_nodes "$alias")" -- "$host") )
     }
 
+    # __tsh_remote_paths ALIAS TARGET DIR -- entries of DIR on TARGET,
+    # each printed with DIR still prefixed and a '/' on directories.
+    __tsh_remote_paths() {
+        local alias="$1" target="$2" dir="$3" cache key tmp now mtime
+
+        key="${alias:-_}.${target}.${dir}"
+        key="${key//\//%}"
+        cache="${TMPDIR:-/tmp}/.tsh_paths.$UID.$key"
+        now=$(date +%s)
+        mtime=$(stat -f %m "$cache" 2>/dev/null || stat -c %Y "$cache" 2>/dev/null || echo 0)
+
+        if [[ ! -s "$cache" ]] || (( now - mtime > TSH_COMPLETION_TTL )); then
+            tmp="$cache.$$"
+            # dir is left unquoted on the remote so a leading ~ expands there
+            { tsh ${alias:+$alias} ssh "$target" \
+                "ls -1p -- ${dir:-.} 2>/dev/null" 2>/dev/null \
+                | sed "s|^|${dir}|" > "$tmp"; } 2>/dev/null
+            if [[ -s "$tmp" ]]; then mv -f "$tmp" "$cache"; else rm -f "$tmp"; fi
+        fi
+
+        [[ -s "$cache" ]] && cat "$cache"
+    }
+
+    # Complete one scp endpoint: either a local path or [login@]node:path
+    __tsh_complete_scp() {
+        local cur="$1" alias="$2" target path dir
+
+        if [[ "$cur" == *:* ]]; then
+            target="${cur%%:*}"
+            path="${cur#*:}"
+            (( TSH_COMPLETE_REMOTE_PATHS )) || return
+            dir="" ; [[ "$path" == */* ]] && dir="${path%/*}/"
+            COMPREPLY=( $(compgen -P "$target:" \
+                -W "$(__tsh_remote_paths "$alias" "$target" "$dir")" -- "$path") )
+            compopt -o nospace 2>/dev/null
+            return
+        fi
+
+        # node names get a ':' so the next TAB lands on the remote path
+        local file
+        COMPREPLY=( $(compgen -S : -W "$(__tsh_nodes "$alias")" -- "$cur") )
+        while IFS= read -r file; do
+            [[ -d "$file" ]] && file="$file/"
+            COMPREPLY+=( "$file" )
+        done < <(compgen -f -- "$cur")
+        compopt -o nospace -o filenames 2>/dev/null
+    }
+
+    # bash splits words on COMP_WORDBREAKS, which contains ':', so it only
+    # offers to replace the part after the colon in "node:path". Drop the
+    # prefix we completed against from every candidate.
+    __tsh_ltrim_colon() {
+        local cur="$1" prefix i
+        [[ "$COMP_WORDBREAKS" == *:* && "$cur" == *:* ]] || return
+        prefix="${cur%"${cur##*:}"}"
+        for i in "${!COMPREPLY[@]}"; do
+            COMPREPLY[i]="${COMPREPLY[i]#"$prefix"}"
+        done
+    }
+
     __tsh_complete() {
-        local cur word i aliases subcmds alias="" subcmd="" args=0
-        cur="${COMP_WORDS[COMP_CWORD]}"
+        local cur line words word i last aliases subcmds alias="" subcmd="" args=0
+
+        # Re-split the line on whitespace: COMP_WORDS would chop "node:path"
+        # apart at the colon and throw off both the arg count and the prefix.
+        line="${COMP_LINE:0:$COMP_POINT}"
+        read -ra words <<< "$line"
+        if [[ -z "$line" || "$line" == *[[:space:]] ]]; then
+            cur="" ; last=${#words[@]}
+        else
+            cur="${words[${#words[@]}-1]}" ; last=$(( ${#words[@]} - 1 ))
+        fi
+
         aliases="$(__tsh_aliases)"
         subcmds="ssh scp ls login logout status clusters apps db kube proxy play join config request mfa version"
 
         # Walk the words before the cursor: optional alias, then the subcommand
-        for (( i = 1; i < COMP_CWORD; i++ )); do
-            word="${COMP_WORDS[i]}"
+        for (( i = 1; i < last; i++ )); do
+            word="${words[i]}"
             [[ "$word" == -* ]] && continue
             if [[ -z "$subcmd" && -z "$alias" ]] &&
                [[ $'\n'"$aliases"$'\n' == *$'\n'"$word"$'\n'* ]]; then
@@ -222,8 +297,11 @@ if [[ 1 == $USE_BASH_COMPLETION ]]; then
         COMPREPLY=()
         case "$subcmd" in
             # only the first argument is a node; the rest is the remote command
-            ssh|scp) (( args == 0 )) && __tsh_complete_nodes "$cur" "$alias" ;;
+            ssh) (( args == 0 )) && __tsh_complete_nodes "$cur" "$alias" ;;
+            # every argument is a source/destination endpoint
+            scp) __tsh_complete_scp "$cur" "$alias" ;;
         esac
+        __tsh_ltrim_colon "$cur"
     }
     complete -F __tsh_complete tsh
 fi

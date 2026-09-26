@@ -56,10 +56,15 @@ module UpdateHost
   DEST_OVERRIDES = {
     "vim" => File.join(".config", "vim"),
     "claude/hooks" => File.join(".claude", "hooks"),
-    # Claude Code only reads CLAUDE.md at the user scope — ~/.claude/AGENTS.md
-    # is never loaded (its AGENTS.md support is project-scoped and off by
-    # default), so the source keeps its name and the link takes CLAUDE.md's.
-    "claude/AGENTS.md" => File.join(".claude", "CLAUDE.md"),
+    # Verified against the installed CLI (2.1.283): the built-in "agents-md"
+    # plugin is on by default in "claude-md-or-agents-md" mode — an
+    # AGENTS.md is loaded exactly where a CLAUDE.md would be, but ONLY when
+    # no CLAUDE.md-family file (CLAUDE.md, .claude/CLAUDE.md, CLAUDE.local.md)
+    # exists anywhere from cwd up to $HOME. So this only takes effect on
+    # hosts with no ~/.claude/CLAUDE.md and no project-level CLAUDE.md in
+    # play; retire_stale_claude_md below clears the old CLAUDE.md link so it
+    # doesn't shadow this one.
+    "claude/AGENTS.md" => File.join(".claude", "AGENTS.md"),
     "claude/commands" => File.join(".claude", "commands")
   }.freeze
 
@@ -323,22 +328,24 @@ module UpdateHost
       relink(dotfile, target)
     end
 
-    retire_stale_agents_md
+    retire_stale_claude_md
     merge_claude_settings
 
     puts "localhost: relinked #{CONFIG_FILES.size} configs"
   end
 
-  # We briefly linked ~/.claude/AGENTS.md, which Claude Code never reads.
-  # Drop that dead link once ~/.claude/CLAUDE.md is in place, and only when
-  # it's still our own symlink (a real file written by hand is left alone).
-  def retire_stale_agents_md(home: HOME)
-    agents_md = File.join(home, ".claude", "AGENTS.md")
+  # Claude Code moved from CLAUDE.md to AGENTS.md; ~/.claude/CLAUDE.md is our
+  # own old symlink left over from before that switch. Only touched once
+  # AGENTS.md is in place, and only when it's still our symlink (a real file
+  # a user wrote by hand is left alone).
+  def retire_stale_claude_md(home: HOME)
     claude_md = File.join(home, ".claude", "CLAUDE.md")
-    return unless File.symlink?(agents_md) && File.exist?(claude_md)
+    agents_md = File.join(home, ".claude", "AGENTS.md")
+    return unless File.symlink?(claude_md) && File.exist?(agents_md)
 
-    warn "~/.claude/AGENTS.md is never read by Claude Code; removing the dead symlink"
-    File.unlink(agents_md)
+    backup = "#{claude_md}.bak"
+    warn "~/.claude/CLAUDE.md is a stale symlink now that ~/.claude/AGENTS.md exists; moving it to #{backup}"
+    FileUtils.mv(claude_md, backup, force: true)
   end
 
   def dest_rel(rel)
@@ -411,10 +418,10 @@ module UpdateHost
       end
     end
 
-    agents_md = File.join(home, ".claude", "AGENTS.md")
     claude_md = File.join(home, ".claude", "CLAUDE.md")
-    if File.symlink?(agents_md) && File.exist?(claude_md)
-      v.warn("~/.claude/AGENTS.md is a dead symlink Claude Code never reads — run: update-host --local")
+    agents_md = File.join(home, ".claude", "AGENTS.md")
+    if File.symlink?(claude_md) && File.exist?(agents_md)
+      v.warn("~/.claude/CLAUDE.md is a stale symlink now that ~/.claude/AGENTS.md exists — run: update-host --local")
     end
   end
 

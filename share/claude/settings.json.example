@@ -37,5 +37,13 @@
       }
     ]
   },
-  "theme": "auto"
+  "theme": "auto",
+  "enabledPlugins": {
+    "agents-md@builtin": true
+  },
+  "pluginConfigs": {
+    "agents-md@builtin": {
+      "options": { "instructionFiles": "claude-md-and-agents-md" }
+    }
+  }
 }

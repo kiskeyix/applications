@@ -134,7 +134,7 @@ describe :update_host do
       end
     end
 
-    it "warns about a stale ~/.claude/CLAUDE.md symlink once AGENTS.md exists" do
+    it "is ok when ~/.claude/CLAUDE.md is aliased to the same source as AGENTS.md" do
       Dir.mktmpdir do |home|
         FileUtils.mkdir_p(File.join(home, ".claude"))
         File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md"), File.join(home, ".claude", "CLAUDE.md"))
@@ -144,11 +144,11 @@ describe :update_host do
         v = UpdateHost::Verifier.new(io: out)
         UpdateHost.verify_symlinks(v, home: home, repo_root: UpdateHost::REPO_ROOT)
 
-        _(out.string).must_include "warn  ~/.claude/CLAUDE.md is a stale symlink"
+        _(out.string).must_include "ok    ~/.claude/CLAUDE.md ->"
       end
     end
 
-    it "does not warn about CLAUDE.md when AGENTS.md is missing or it isn't a symlink" do
+    it "warns about a real (non-symlink) CLAUDE.md" do
       Dir.mktmpdir do |home|
         FileUtils.mkdir_p(File.join(home, ".claude"))
         File.write(File.join(home, ".claude", "CLAUDE.md"), "a real file the user wrote")
@@ -157,50 +157,47 @@ describe :update_host do
         v = UpdateHost::Verifier.new(io: out)
         UpdateHost.verify_symlinks(v, home: home, repo_root: UpdateHost::REPO_ROOT)
 
-        _(out.string).wont_include "stale symlink"
+        _(out.string).must_include "warn  ~/.claude/CLAUDE.md is a real file/dir"
+      end
+    end
+
+    it "fails when ~/.claude/CLAUDE.md is missing" do
+      Dir.mktmpdir do |home|
+        FileUtils.mkdir_p(File.join(home, ".claude"))
+
+        out = StringIO.new
+        v = UpdateHost::Verifier.new(io: out)
+        UpdateHost.verify_symlinks(v, home: home, repo_root: UpdateHost::REPO_ROOT)
+
+        _(out.string).must_include "FAIL  ~/.claude/CLAUDE.md missing"
+        _(v.failed?).must_equal true
       end
     end
   end
 
-  describe "retire_stale_claude_md" do
-    it "moves a stale CLAUDE.md symlink to .bak once AGENTS.md exists" do
+  describe "link_claude_md_alias" do
+    it "symlinks ~/.claude/CLAUDE.md to the AGENTS.md source file" do
       Dir.mktmpdir do |home|
         FileUtils.mkdir_p(File.join(home, ".claude"))
         claude_md = File.join(home, ".claude", "CLAUDE.md")
-        agents_md = File.join(home, ".claude", "AGENTS.md")
-        File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md"), claude_md)
-        File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md"), agents_md)
 
-        UpdateHost.retire_stale_claude_md(home: home)
+        UpdateHost.link_claude_md_alias(home: home, repo_root: UpdateHost::REPO_ROOT)
 
-        _(File.exist?(claude_md)).must_equal false
-        _(File.symlink?("#{claude_md}.bak")).must_equal true
+        _(File.symlink?(claude_md)).must_equal true
+        _(File.readlink(claude_md)).must_equal File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md")
       end
     end
 
-    it "leaves a real (non-symlink) CLAUDE.md alone" do
+    it "backs up a real (non-symlink) CLAUDE.md instead of overwriting it" do
       Dir.mktmpdir do |home|
         FileUtils.mkdir_p(File.join(home, ".claude"))
         claude_md = File.join(home, ".claude", "CLAUDE.md")
         File.write(claude_md, "a real file the user wrote")
-        File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md"), File.join(home, ".claude", "AGENTS.md"))
 
-        UpdateHost.retire_stale_claude_md(home: home)
-
-        _(File.exist?(claude_md)).must_equal true
-        _(File.symlink?(claude_md)).must_equal false
-      end
-    end
-
-    it "does nothing when AGENTS.md doesn't exist yet" do
-      Dir.mktmpdir do |home|
-        FileUtils.mkdir_p(File.join(home, ".claude"))
-        claude_md = File.join(home, ".claude", "CLAUDE.md")
-        File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md"), claude_md)
-
-        UpdateHost.retire_stale_claude_md(home: home)
+        UpdateHost.link_claude_md_alias(home: home, repo_root: UpdateHost::REPO_ROOT)
 
         _(File.symlink?(claude_md)).must_equal true
+        _(File.read("#{claude_md}.bak")).must_equal "a real file the user wrote"
       end
     end
   end
@@ -460,6 +457,7 @@ describe :update_host do
         File.symlink(target, dotfile)
       end
 
+      UpdateHost.link_claude_md_alias(home: home, repo_root: UpdateHost::REPO_ROOT)
       with_env("CLAUDE_CONFIG_DIR" => config_dir) { UpdateHost.merge_claude_settings }
     end
 

@@ -88,3 +88,5 @@ ceremony below.
   `git log` or the code itself, it doesn't belong here.
 - Keep it short enough that adding one more fact should mean cutting one
   that's stopped earning its place.
+
+@~/.claude/AGENTS.local.md

@@ -304,6 +304,37 @@ if [[ 1 == $USE_BASH_COMPLETION ]]; then
         __tsh_ltrim_colon "$cur"
     }
     complete -F __tsh_complete tsh
+
+    # --- ssh completion: stock hosts + ~/.remote-hosts -----------------
+    # known_hosts is often hashed (HashKnownHosts yes), so the stock _ssh
+    # finds no names; also offer the hosts listed in ~/.remote-hosts
+    # (same format update-host reads: "name" or "ip name" per line).
+    __ssh_complete()
+    {
+        # registering this function stops bash-completion's lazy loader,
+        # so load the stock _ssh ourselves and re-register afterwards
+        if ! declare -F _ssh > /dev/null; then
+            if declare -F _comp_load > /dev/null; then
+                _comp_load -- ssh 2> /dev/null
+            elif declare -F _completion_loader > /dev/null; then
+                _completion_loader ssh 2> /dev/null
+            fi
+            complete -F __ssh_complete ssh
+        fi
+        COMPREPLY=()
+        declare -F _ssh > /dev/null && _ssh "$@"
+
+        local cur=${COMP_WORDS[COMP_CWORD]} prev=${COMP_WORDS[COMP_CWORD-1]}
+        # no hosts where an option expects its own argument (-i, -p, ...)
+        [[ $cur == -* || $prev =~ ^-[bcDEeFIiJLlmOopQRSWw]$ ]] && return
+        [[ -r "$HOME/.remote-hosts" ]] || return
+        local hosts
+        hosts=$(awk '/^[[:space:]]*(#|$)/ { next }
+            $1 ~ /^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$/ && NF > 1 { print $2; next }
+            { print $1 }' "$HOME/.remote-hosts")
+        COMPREPLY+=( $(compgen -W "$hosts" -- "$cur") )
+    }
+    complete -F __ssh_complete ssh
 fi
 
 # deduplicate PATH entries (pure bash, works on all platforms)

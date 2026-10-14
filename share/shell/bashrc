@@ -445,8 +445,27 @@ function gitprompt()
     done
 }
 
+# One Dark 24-bit colors: https://github.com/r3tex/one-dark
+F_BLUE='38;2;97;175;239'
+F_GREEN='38;2;152;195;121'
+F_PURPLE='38;2;198;120;221'
+F_WHITE='38;2;171;178;191'
+
+function git_branch()
+{
+    git branch 2> /dev/null | sed -e '/^[^*]/d' -e 's/* \(.*\)/[\1]/'
+}
+
+# [10-14 10:20.33 user@host:~/dir[branch]]
+# $>
+function oneprompt()
+{
+    PS1='\[\e[${F_BLUE}m\][\D{%m-%d %H:%M.%S} \[\e[${F_PURPLE}m\]\u@\h\[\e[${F_WHITE}m\]:\[\e[${F_GREEN}m\]\w\[\e[${F_WHITE}m\]$(git_branch)\[\e[0m\e[${F_BLUE}m\]] \[\e[0m\]\n$> '
+}
+
 #fastprompt
-powerprompt  # this is the default prompt - might be slow
+#powerprompt
+oneprompt  # this is the default prompt - might be slow
 # If too slow, use fastprompt instead....
 
 #----------------------#

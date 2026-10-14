@@ -7,9 +7,12 @@
 # symlinks into $HOME, and can push a tarball of the repo out to remote
 # hosts over SSH to do the same there.
 #
-# ~/.claude/settings.json is the one exception: it's a real file merged
-# from share/claude/settings.json.example (see merge_claude_settings),
-# not a symlink, since Claude Code writes into it at runtime.
+# A dotfile that's already a symlink pointing somewhere else is left alone
+# (with a warning) rather than repointed.
+#
+# ~/.claude/settings.json is never written: Claude Code owns it at runtime.
+# --local/--verify only warn when it's missing keys from
+# share/claude/settings.json.example (see verify_claude_settings).
 #
 # Usage:
 #   update-host                 update all hosts listed in ~/.remote-hosts
@@ -47,7 +50,6 @@ module UpdateHost
     shell/ssh-agent-setup.bash
     shell/dir_colors
     claude/hooks
-    claude/AGENTS.md
     claude/commands
   ].freeze
 
@@ -56,12 +58,6 @@ module UpdateHost
   DEST_OVERRIDES = {
     "vim" => File.join(".config", "vim"),
     "claude/hooks" => File.join(".claude", "hooks"),
-    # AGENTS.md is our source of truth for these instructions, but some
-    # Claude Code workflows (e.g. non-interactive/SDK invocations) only ever
-    # load ~/.claude/CLAUDE.md and never fall back to AGENTS.md. So both
-    # filenames are linked to the same source file — see
-    # link_claude_md_alias below for the CLAUDE.md side of this.
-    "claude/AGENTS.md" => File.join(".claude", "AGENTS.md"),
     "claude/commands" => File.join(".claude", "commands")
   }.freeze
 
@@ -112,8 +108,8 @@ module UpdateHost
 
   # Accumulates --verify results, one line per check. `fail_check` means
   # there's a concrete fix (shown in the message); `warn` is advisory —
-  # either the problem can't be acted on automatically, or the underlying
-  # script (e.g. merge_claude_settings) already treats it as a no-op.
+  # either the problem can't be acted on automatically, or --local
+  # deliberately leaves it alone (e.g. a foreign symlink, settings.json).
   class Verifier
     def initialize(io: $stdout)
       @io = io
@@ -325,30 +321,36 @@ module UpdateHost
       relink(dotfile, target)
     end
 
-    link_claude_md_alias
-    merge_claude_settings
+    link_claude_md
+    verify_claude_settings(Verifier.new)
 
     puts "localhost: relinked #{CONFIG_FILES.size} configs"
   end
 
-  # Some Claude Code workflows (e.g. non-interactive/SDK invocations) only
-  # ever load ~/.claude/CLAUDE.md and never fall back to AGENTS.md, so both
-  # filenames are linked to the same source file. A real file a user wrote
-  # by hand is left alone (relink backs it up to .bak instead).
-  def link_claude_md_alias(home: HOME, repo_root: REPO_ROOT)
-    relink(File.join(home, ".claude", "CLAUDE.md"), File.join(repo_root, "share", "claude", "AGENTS.md"))
+  # share/claude/AGENTS.md is linked as ~/.claude/CLAUDE.md only: every Claude
+  # Code workflow loads that name, and the agents-md plugin would load a
+  # ~/.claude/AGENTS.md link too, i.e. the same instructions twice. Older
+  # versions created that second link, so drop it if it's still ours.
+  def link_claude_md(home: HOME, repo_root: REPO_ROOT)
+    source = File.join(repo_root, "share", "claude", "AGENTS.md")
+    relink(File.join(home, ".claude", "CLAUDE.md"), source)
+
+    agents_md = File.join(home, ".claude", "AGENTS.md")
+    File.unlink(agents_md) if File.symlink?(agents_md) && File.readlink(agents_md) == source
   end
 
   def dest_rel(rel)
     DEST_OVERRIDES[rel] || ".#{File.basename(rel)}"
   end
 
+  # A symlink that already points somewhere else (another tool's, or a hand
+  # edit) is left alone with a warning; a real file/dir is moved to .bak.
   def relink(link_path, target_path)
     FileUtils.mkdir_p(File.dirname(link_path))
     if File.symlink?(link_path)
-      return if File.readlink(link_path) == target_path
-
-      File.unlink(link_path)
+      current = File.readlink(link_path)
+      warn "update-host: leaving #{link_path} -> #{current} alone (not #{target_path})" unless current == target_path
+      return
     elsif File.exist?(link_path)
       FileUtils.mv(link_path, "#{link_path}.bak", force: true)
     end
@@ -400,7 +402,7 @@ module UpdateHost
         if File.readlink(dotfile) == target
           v.ok("#{label} -> #{target}")
         else
-          v.fail_check("#{label} points to #{File.readlink(dotfile)} (expected #{target}) — run: update-host --local")
+          v.warn("#{label} points to #{File.readlink(dotfile)} (expected #{target}; --local leaves it alone)")
         end
       elsif File.exist?(dotfile)
         v.warn("#{label} is a real file/dir, not our symlink (--local would move it to .bak)")
@@ -416,7 +418,7 @@ module UpdateHost
       if File.readlink(claude_md) == agents_target
         v.ok("#{label} -> #{agents_target}")
       else
-        v.fail_check("#{label} points to #{File.readlink(claude_md)} (expected #{agents_target}) — run: update-host --local")
+        v.warn("#{label} points to #{File.readlink(claude_md)} (expected #{agents_target}; --local leaves it alone)")
       end
     elsif File.exist?(claude_md)
       v.warn("#{label} is a real file/dir, not our symlink (--local would move it to .bak)")
@@ -425,13 +427,15 @@ module UpdateHost
     end
   end
 
-  # Resolves the same directory merge_claude_settings writes into, so verify
-  # and deploy can never disagree about where settings.json lives.
+  # Resolves the same directory Claude Code reads settings.json and the
+  # verified-version stamp from.
   def claude_config_dir(home: HOME)
     dir = ENV["CLAUDE_CONFIG_DIR"]
     dir.nil? || dir.empty? ? File.join(home, ".claude") : dir
   end
 
+  # Also run by --local. Everything past the template check is a warning:
+  # update-host never writes settings.json, so there's no fix to run.
   def verify_claude_settings(v, home: HOME, repo_root: REPO_ROOT)
     v.section("Claude settings")
 
@@ -446,7 +450,7 @@ module UpdateHost
     v.warn("#{target} is a symlink (should be a real file Claude Code can write into)") if File.symlink?(target)
 
     unless File.exist?(target)
-      v.fail_check("#{target} missing — run: update-host --local")
+      v.warn("#{target} missing (update-host won't create it; see #{example})")
       return
     end
 
@@ -454,8 +458,6 @@ module UpdateHost
       template = JSON.parse(File.read(example))
       current  = JSON.parse(File.read(target))
     rescue JSON::ParserError => e
-      # Matches merge_claude_settings, which also rescues this and no-ops:
-      # --local would not fix a genuinely malformed live file either.
       v.warn("#{target} (or the template) is not valid JSON (#{e.message})")
       return
     rescue SystemCallError => e
@@ -466,7 +468,7 @@ module UpdateHost
     if deep_merge(template, current) == current
       v.ok("#{target} has all template keys merged")
     else
-      v.fail_check("#{target} is missing keys from the template — run: update-host --local")
+      v.warn("#{target} is missing keys from #{example} (update-host won't merge them; do it by hand if you want them)")
     end
   end
 
@@ -592,36 +594,11 @@ module UpdateHost
     ENV.fetch("PATH", "").split(File::PATH_SEPARATOR).any? { |dir| File.executable?(File.join(dir, cmd)) }
   end
 
-  # Materializes ~/.claude/settings.json (or $CLAUDE_CONFIG_DIR/settings.json)
-  # from share/claude/settings.json.example. Never symlinked: Claude Code and
-  # `claude plugin install` write into this file at runtime, so the live file
-  # always wins over the template on any key it already sets (deep_merge).
-  # Arrays are unioned so template entries still accumulate; elements are
-  # compared after $HOME→~ canonicalisation so a hook Claude Code rewrote to an
-  # absolute path is not re-added by the template's ~-relative form on every run.
-  def merge_claude_settings
-    example = File.join(REPO_ROOT, "share", "claude", "settings.json.example")
-    return unless File.readable?(example)
-
-    config_dir = claude_config_dir
-    FileUtils.mkdir_p(config_dir)
-    target = File.join(config_dir, "settings.json")
-
-    template = JSON.parse(File.read(example))
-
-    unless File.exist?(target)
-      File.write(target, JSON.pretty_generate(template))
-      puts "# created #{target} from template"
-      return
-    end
-
-    current = JSON.parse(File.read(target))
-    merged  = deep_merge(template, current)
-    File.write(target, JSON.pretty_generate(merged)) if merged != current
-  rescue JSON::ParserError => e
-    warn "update-host: skipping Claude settings merge (#{e.message})"
-  end
-
+  # Used by verify_claude_settings: the live file has every template key when
+  # deep_merge(template, live) == live. Array elements are compared after
+  # $HOME→~ canonicalisation, so a hook Claude Code rewrote to an absolute path
+  # still counts as matching the template's ~-relative form.
+  #
   # Recursively merge `override` onto `base`:
   #   Hash  + Hash  -> merged key by key, recursing on shared keys
   #   Array + Array -> union; elements are de-duplicated by their canonical form

@@ -17,93 +17,54 @@ describe :update_host do
     _(UpdateHost.dest_rel("git-templates")).must_equal ".git-templates"
   end
 
-  describe "merge_claude_settings" do
-    # CLAUDE_CONFIG_DIR (read fresh via ENV on every call) is used instead of
-    # HOME, which UpdateHost caches as a frozen constant at load time and
-    # would otherwise point tests at this machine's real ~/.claude.
-    it "creates settings.json from the template when none exists" do
-      Dir.mktmpdir do |config_dir|
-        with_env("CLAUDE_CONFIG_DIR" => config_dir) do
-          UpdateHost.merge_claude_settings
-        end
+  describe "deep_merge" do
+    it "keeps live values and unions template array entries" do
+      merged = UpdateHost.deep_merge(
+        { "model" => "a", "permissions" => { "allow" => ["Bash(pwd)"] } },
+        { "model" => "b", "permissions" => { "allow" => ["Bash(ls)"] } }
+      )
 
-        target = File.join(config_dir, "settings.json")
-        data = JSON.parse(File.read(target))
-        _(data.dig("hooks", "Stop", 0, "hooks", 0, "command")).must_equal "~/.claude/hooks/notify-stop.sh"
+      _(merged).must_equal({ "model" => "b", "permissions" => { "allow" => ["Bash(ls)", "Bash(pwd)"] } })
+    end
+
+    it "treats a hook Claude Code rewrote to an absolute path as already present" do
+      template = JSON.parse(File.read(claude_template))
+      live = JSON.parse(File.read(claude_template))
+      # Claude Code expands ~ to an absolute path when it rewrites the file.
+      %w[SessionStart Stop].each do |ev|
+        cmd = live["hooks"][ev][0]["hooks"][0]["command"]
+        live["hooks"][ev][0]["hooks"][0]["command"] = cmd.sub(%r{\A~/}, "#{ENV["HOME"]}/")
+      end
+
+      _(UpdateHost.deep_merge(template, live)).must_equal live
+    end
+  end
+
+  describe "relink" do
+    it "leaves a symlink that points elsewhere alone and warns" do
+      Dir.mktmpdir do |dir|
+        link = File.join(dir, "link")
+        File.symlink("/somewhere/else", link)
+
+        _ { UpdateHost.relink(link, File.join(dir, "target")) }
+          .must_output "", /leaving #{Regexp.escape(link)} -> \/somewhere\/else alone/
+        _(File.readlink(link)).must_equal "/somewhere/else"
       end
     end
 
-    it "keeps machine-local keys and is idempotent on re-merge" do
-      Dir.mktmpdir do |config_dir|
-        with_env("CLAUDE_CONFIG_DIR" => config_dir) do
-          UpdateHost.merge_claude_settings
+    it "is silent when the symlink already points at the target" do
+      Dir.mktmpdir do |dir|
+        link = File.join(dir, "link")
+        target = File.join(dir, "target")
+        File.symlink(target, link)
 
-          target = File.join(config_dir, "settings.json")
-          data = JSON.parse(File.read(target))
-          data["permissions"] = { "allow" => ["Bash(ls)"] }
-          File.write(target, JSON.generate(data))
-
-          UpdateHost.merge_claude_settings
-          after = JSON.parse(File.read(target))
-
-          _(after.dig("permissions", "allow")).must_equal ["Bash(ls)"]
-          _(after.dig("hooks", "SessionStart", 0, "hooks", 0, "command")).must_equal "~/.claude/hooks/session-start.sh"
-        end
+        _ { UpdateHost.relink(link, target) }.must_output "", ""
       end
     end
+  end
 
-    it "does not duplicate a hook the live file rewrote to an absolute path" do
-      Dir.mktmpdir do |config_dir|
-        with_env("CLAUDE_CONFIG_DIR" => config_dir) do
-          UpdateHost.merge_claude_settings
-          target = File.join(config_dir, "settings.json")
-
-          # Claude Code expands ~ to an absolute path when it rewrites the file.
-          data = JSON.parse(File.read(target))
-          %w[SessionStart Stop].each do |ev|
-            cmd = data["hooks"][ev][0]["hooks"][0]["command"]
-            data["hooks"][ev][0]["hooks"][0]["command"] = cmd.sub(%r{\A~/}, "#{ENV["HOME"]}/")
-          end
-          File.write(target, JSON.generate(data))
-
-          UpdateHost.merge_claude_settings
-          UpdateHost.merge_claude_settings # must stay stable across runs
-
-          after = JSON.parse(File.read(target))
-          # SessionStart has 2 distinct template entries (session-start.sh,
-          # check-claude-version.sh); only the first was rewritten here, so
-          # dedup must keep both rather than collapsing them into one.
-          _(after.dig("hooks", "SessionStart").size).must_equal 2
-          _(after.dig("hooks", "Stop").size).must_equal 1
-          _(after.dig("hooks", "SessionStart", 0, "hooks").size).must_equal 1
-          # the live (absolute) form is the one kept
-          _(after.dig("hooks", "SessionStart", 0, "hooks", 0, "command"))
-            .must_equal "#{ENV["HOME"]}/.claude/hooks/session-start.sh"
-        end
-      end
-    end
-
-    it "unions new permission-allow entries from the template" do
-      Dir.mktmpdir do |config_dir|
-        with_env("CLAUDE_CONFIG_DIR" => config_dir) do
-          UpdateHost.merge_claude_settings
-          target = File.join(config_dir, "settings.json")
-
-          data = JSON.parse(File.read(target))
-          data["permissions"] = { "allow" => ["Bash(ls)"] }
-          File.write(target, JSON.generate(data))
-
-          # a template that adds a permission
-          tmpl = JSON.parse(File.read(File.join(UpdateHost::REPO_ROOT, "share", "claude", "settings.json.example")))
-          merged = UpdateHost.deep_merge(
-            tmpl.merge("permissions" => { "allow" => ["Bash(pwd)"] }),
-            data
-          )
-
-          _(merged.dig("permissions", "allow")).must_equal ["Bash(ls)", "Bash(pwd)"]
-        end
-      end
-    end
+  def claude_template
+    File.join(UpdateHost::REPO_ROOT, "share", "claude", "settings.json.example")
   end
 
   def with_env(vars)
@@ -115,7 +76,7 @@ describe :update_host do
   end
 
   describe "verify_symlinks" do
-    it "reports ok for a correct symlink, fail for wrong/missing, warn for a real file" do
+    it "reports ok for a correct symlink, fail for missing, warn for a foreign symlink or real file" do
       Dir.mktmpdir do |home|
         FileUtils.mkdir_p(File.join(home, ".config"))
         File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "vim"), File.join(home, ".config", "vim"))
@@ -127,24 +88,24 @@ describe :update_host do
         UpdateHost.verify_symlinks(v, home: home, repo_root: UpdateHost::REPO_ROOT)
 
         _(out.string).must_include "ok    ~/.config/vim"
-        _(out.string).must_include "FAIL  ~/.bashrc points to /nowhere"
+        _(out.string).must_include "warn  ~/.bashrc points to /nowhere"
         _(out.string).must_include "FAIL  ~/.inputrc missing"
         _(out.string).must_include "warn  ~/.mutt is a real file/dir"
         _(v.failed?).must_equal true
       end
     end
 
-    it "is ok when ~/.claude/CLAUDE.md is aliased to the same source as AGENTS.md" do
+    it "is ok when ~/.claude/CLAUDE.md links to the AGENTS.md source, with no ~/.claude/AGENTS.md" do
       Dir.mktmpdir do |home|
         FileUtils.mkdir_p(File.join(home, ".claude"))
         File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md"), File.join(home, ".claude", "CLAUDE.md"))
-        File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md"), File.join(home, ".claude", "AGENTS.md"))
 
         out = StringIO.new
         v = UpdateHost::Verifier.new(io: out)
         UpdateHost.verify_symlinks(v, home: home, repo_root: UpdateHost::REPO_ROOT)
 
         _(out.string).must_include "ok    ~/.claude/CLAUDE.md ->"
+        _(out.string).wont_include "~/.claude/AGENTS.md"
       end
     end
 
@@ -175,13 +136,13 @@ describe :update_host do
     end
   end
 
-  describe "link_claude_md_alias" do
+  describe "link_claude_md" do
     it "symlinks ~/.claude/CLAUDE.md to the AGENTS.md source file" do
       Dir.mktmpdir do |home|
         FileUtils.mkdir_p(File.join(home, ".claude"))
         claude_md = File.join(home, ".claude", "CLAUDE.md")
 
-        UpdateHost.link_claude_md_alias(home: home, repo_root: UpdateHost::REPO_ROOT)
+        UpdateHost.link_claude_md(home: home, repo_root: UpdateHost::REPO_ROOT)
 
         _(File.symlink?(claude_md)).must_equal true
         _(File.readlink(claude_md)).must_equal File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md")
@@ -194,19 +155,34 @@ describe :update_host do
         claude_md = File.join(home, ".claude", "CLAUDE.md")
         File.write(claude_md, "a real file the user wrote")
 
-        UpdateHost.link_claude_md_alias(home: home, repo_root: UpdateHost::REPO_ROOT)
+        UpdateHost.link_claude_md(home: home, repo_root: UpdateHost::REPO_ROOT)
 
         _(File.symlink?(claude_md)).must_equal true
         _(File.read("#{claude_md}.bak")).must_equal "a real file the user wrote"
       end
     end
+
+    it "removes an old ~/.claude/AGENTS.md link to our source, but not anyone else's" do
+      Dir.mktmpdir do |home|
+        FileUtils.mkdir_p(File.join(home, ".claude"))
+        agents_md = File.join(home, ".claude", "AGENTS.md")
+        File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md"), agents_md)
+
+        UpdateHost.link_claude_md(home: home, repo_root: UpdateHost::REPO_ROOT)
+        _(File.symlink?(agents_md)).must_equal false
+
+        File.symlink("/somewhere/else/AGENTS.md", agents_md)
+        UpdateHost.link_claude_md(home: home, repo_root: UpdateHost::REPO_ROOT)
+        _(File.readlink(agents_md)).must_equal "/somewhere/else/AGENTS.md"
+      end
+    end
   end
 
   describe "verify_claude_settings" do
-    it "is ok once merge_claude_settings has run" do
+    it "is ok when settings.json has every template key" do
       Dir.mktmpdir do |config_dir|
         with_env("CLAUDE_CONFIG_DIR" => config_dir) do
-          UpdateHost.merge_claude_settings
+          FileUtils.cp(claude_template, File.join(config_dir, "settings.json"))
 
           out = StringIO.new
           v = UpdateHost::Verifier.new(io: out)
@@ -218,22 +194,40 @@ describe :update_host do
       end
     end
 
-    it "fails when the live file is missing template keys" do
+    it "warns (does not fail or write) when the live file is missing template keys" do
       Dir.mktmpdir do |config_dir|
         with_env("CLAUDE_CONFIG_DIR" => config_dir) do
-          File.write(File.join(config_dir, "settings.json"), "{}")
+          target = File.join(config_dir, "settings.json")
+          File.write(target, "{}")
 
           out = StringIO.new
           v = UpdateHost::Verifier.new(io: out)
           UpdateHost.verify_claude_settings(v, home: config_dir, repo_root: UpdateHost::REPO_ROOT)
 
-          _(v.failed?).must_equal true
-          _(out.string).must_include "missing keys from the template"
+          _(v.failed?).must_equal false
+          _(out.string).must_include "warn  #{target} is missing keys from"
+          _(File.read(target)).must_equal "{}"
         end
       end
     end
 
-    it "warns (does not fail) on malformed JSON, matching merge_claude_settings's own no-op" do
+    it "warns (does not fail or create it) when settings.json is missing" do
+      Dir.mktmpdir do |config_dir|
+        with_env("CLAUDE_CONFIG_DIR" => config_dir) do
+          target = File.join(config_dir, "settings.json")
+
+          out = StringIO.new
+          v = UpdateHost::Verifier.new(io: out)
+          UpdateHost.verify_claude_settings(v, home: config_dir, repo_root: UpdateHost::REPO_ROOT)
+
+          _(v.failed?).must_equal false
+          _(out.string).must_include "warn  #{target} missing"
+          _(File.exist?(target)).must_equal false
+        end
+      end
+    end
+
+    it "warns (does not fail) on malformed JSON" do
       Dir.mktmpdir do |config_dir|
         with_env("CLAUDE_CONFIG_DIR" => config_dir) do
           File.write(File.join(config_dir, "settings.json"), "not json")
@@ -252,10 +246,9 @@ describe :update_host do
     it "warns about a symlinked settings.json but still checks the content underneath" do
       Dir.mktmpdir do |config_dir|
         with_env("CLAUDE_CONFIG_DIR" => config_dir) do
-          UpdateHost.merge_claude_settings
           real = File.join(config_dir, "settings.json")
           moved = File.join(config_dir, "settings.actual.json")
-          FileUtils.mv(real, moved)
+          FileUtils.cp(claude_template, moved)
           File.symlink(moved, real)
 
           out = StringIO.new
@@ -457,8 +450,8 @@ describe :update_host do
         File.symlink(target, dotfile)
       end
 
-      UpdateHost.link_claude_md_alias(home: home, repo_root: UpdateHost::REPO_ROOT)
-      with_env("CLAUDE_CONFIG_DIR" => config_dir) { UpdateHost.merge_claude_settings }
+      UpdateHost.link_claude_md(home: home, repo_root: UpdateHost::REPO_ROOT)
+      FileUtils.cp(claude_template, File.join(config_dir, "settings.json"))
     end
 
     def run_verify(home, config_dir)

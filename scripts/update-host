@@ -10,15 +10,19 @@
 # A dotfile that's already a symlink pointing somewhere else is left alone
 # (with a warning) rather than repointed.
 #
-# ~/.claude/settings.json is never written: Claude Code owns it at runtime.
-# --local/--verify only warn when it's missing keys from
-# share/claude/settings.json.example (see verify_claude_settings).
+# ~/.claude/settings.json is never written by --local: Claude Code owns it at
+# runtime. --local/--verify only warn when it's missing keys from
+# share/claude/settings.json.example (see verify_claude_settings). Only the
+# explicit --merge-claude-settings adds them (existing values always win).
 #
 # Usage:
 #   update-host                 update all hosts listed in ~/.remote-hosts
 #   update-host HOST1 HOST2     update just these hosts
 #   update-host --local         relink this machine from the local checkout
 #   update-host --verify        check this machine against the repo, no fixes
+#   update-host --merge-claude-settings [--local | HOST...]
+#                               also add keys missing from Claude's settings.json
+#                               (existing values win; old file kept as .bak)
 #   update-host --tar           build the distribution tarball and exit
 #   update-host --send-key HOST push your SSH public key to HOST and exit
 
@@ -62,7 +66,7 @@ module UpdateHost
   }.freeze
 
   Options = Struct.new(
-    :local, :verify, :tar_only, :send_key, :hosts_file, :local_path,
+    :local, :verify, :merge_claude_settings, :tar_only, :send_key, :hosts_file, :local_path,
     :username, :ssh_port, :key, :jobs, :remove, :exclude, :verbose,
     keyword_init: true
   )
@@ -159,12 +163,17 @@ module UpdateHost
     opts = parse_options(argv)
     extra_hosts = argv
 
+    if opts.merge_claude_settings && (opts.tar_only || opts.verify || opts.send_key)
+      abort "--merge-claude-settings goes with --local or a host update, not --tar/--verify/--send-key"
+    end
+
     if opts.tar_only
       create_tarball(opts)
     elsif opts.verify
       verify_local
     elsif opts.local
       relink_local
+      merge_claude_settings if opts.merge_claude_settings
     elsif opts.send_key
       send_key(extra_hosts, opts)
     else
@@ -176,7 +185,7 @@ module UpdateHost
 
   def parse_options(argv)
     opts = Options.new(
-      local: false, verify: false, tar_only: false, send_key: false,
+      local: false, verify: false, merge_claude_settings: false, tar_only: false, send_key: false,
       hosts_file: File.join(HOME, ".remote-hosts"),
       local_path: File.join(HOME, "Shared", "Software", "settings"),
       username: nil, ssh_port: 22, key: nil, jobs: 10, remove: false,
@@ -188,6 +197,7 @@ module UpdateHost
       o.banner = "Usage: update-host [options] [HOST1 HOST2 ...]"
       o.on("-l", "--local", "Relink localhost from this checkout and exit") { opts.local = true }
       o.on("--verify", "Check this machine against the repo and exit (no fixes)") { opts.verify = true }
+      o.on("--merge-claude-settings", "With --local or a host update, add keys missing from Claude's settings.json (keeps existing values)") { opts.merge_claude_settings = true }
       o.on("-C", "--tar", "--tarball", "Build the tarball only and exit") { opts.tar_only = true }
       o.on("--local-path PATH", "Tarball staging directory") { |v| opts.local_path = v }
       o.on("--hosts-file FILE", "Hosts file (default: ~/.remote-hosts)") { |v| opts.hosts_file = v }
@@ -468,8 +478,36 @@ module UpdateHost
     if deep_merge(template, current) == current
       v.ok("#{target} has all template keys merged")
     else
-      v.warn("#{target} is missing keys from #{example} (update-host won't merge them; do it by hand if you want them)")
+      v.warn("#{target} is missing keys from #{example} (run: update-host --merge-claude-settings)")
     end
+  end
+
+  # Opt-in counterpart to verify_claude_settings: fills in template keys the
+  # live file lacks. Existing values always win (deep_merge's live-file-
+  # authoritative rule), so it can't revert a setting; it also can't remove
+  # one. The previous file is kept as settings.json.bak.
+  def merge_claude_settings(home: HOME, repo_root: REPO_ROOT)
+    example = File.join(repo_root, "share", "claude", "settings.json.example")
+    target = File.join(claude_config_dir(home: home), "settings.json")
+    abort "#{target} missing; start Claude Code once to create it" unless File.file?(target)
+    abort "#{target} is a symlink; merge into the real file instead" if File.symlink?(target)
+
+    begin
+      template = JSON.parse(File.read(example))
+      current  = JSON.parse(File.read(target))
+    rescue JSON::ParserError, SystemCallError => e
+      abort "cannot merge: #{e.message}"
+    end
+
+    merged = deep_merge(template, current)
+    if merged == current
+      puts "#{target}: already has all template keys"
+      return
+    end
+
+    FileUtils.cp(target, "#{target}.bak")
+    File.write(target, "#{JSON.pretty_generate(merged)}\n")
+    puts "#{target}: merged template keys (previous file: #{target}.bak)"
   end
 
   def verify_hook_executability(v, repo_root: REPO_ROOT)
@@ -644,6 +682,12 @@ module UpdateHost
     end.join(" && ")
   end
 
+  # The unpacked repo has no .git, so --local can't run there; load the script
+  # (main is guarded by $PROGRAM_NAME) and call the merge directly.
+  def remote_merge_script
+    "ruby -e 'load \"Applications/scripts/update-host\"; UpdateHost.merge_claude_settings'"
+  end
+
   def update_remote(hosts, opts)
     if hosts.empty?
       warn "No hosts to update. Check #{opts.hosts_file} or pass hosts as arguments."
@@ -717,6 +761,14 @@ module UpdateHost
     unless run_cmd(ssh + [target, remote_link_script], opts.verbose)
       progress.update(host, 100, "link failed")
       return false
+    end
+
+    if opts.merge_claude_settings
+      progress.update(host, 95, "merging settings")
+      unless run_cmd(ssh + [target, remote_merge_script], opts.verbose)
+        progress.update(host, 100, "settings merge failed")
+        return false
+      end
     end
 
     progress.update(host, 100, "done")

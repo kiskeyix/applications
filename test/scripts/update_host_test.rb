@@ -263,6 +263,60 @@ describe :update_host do
     end
   end
 
+  describe "merge_claude_settings" do
+    it "adds missing template keys, keeps existing values, and backs up the old file" do
+      Dir.mktmpdir do |config_dir|
+        with_env("CLAUDE_CONFIG_DIR" => config_dir) do
+          target = File.join(config_dir, "settings.json")
+          File.write(target, JSON.generate("model" => "mine"))
+
+          out, = capture_io { UpdateHost.merge_claude_settings(home: config_dir, repo_root: UpdateHost::REPO_ROOT) }
+
+          merged = JSON.parse(File.read(target))
+          _(merged["model"]).must_equal "mine"
+          _(UpdateHost.deep_merge(JSON.parse(File.read(claude_template)), merged)).must_equal merged
+          _(File.read("#{target}.bak")).must_equal JSON.generate("model" => "mine")
+          _(out).must_include "merged template keys"
+        end
+      end
+    end
+
+    it "does nothing when every template key is already present" do
+      Dir.mktmpdir do |config_dir|
+        with_env("CLAUDE_CONFIG_DIR" => config_dir) do
+          target = File.join(config_dir, "settings.json")
+          FileUtils.cp(claude_template, target)
+
+          capture_io { UpdateHost.merge_claude_settings(home: config_dir, repo_root: UpdateHost::REPO_ROOT) }
+
+          _(File.exist?("#{target}.bak")).must_equal false
+        end
+      end
+    end
+
+    it "aborts when settings.json is missing" do
+      Dir.mktmpdir do |config_dir|
+        with_env("CLAUDE_CONFIG_DIR" => config_dir) do
+          # Minitest lets SystemExit pass through assert_raises, so rescue it by hand.
+          exited = false
+          capture_io do
+            UpdateHost.merge_claude_settings(home: config_dir, repo_root: UpdateHost::REPO_ROOT)
+          rescue SystemExit
+            exited = true
+        end
+        _(exited).must_equal true
+        end
+      end
+    end
+  end
+
+  describe "remote_merge_script" do
+    it "loads the unpacked script and calls the merge" do
+      _(UpdateHost.remote_merge_script).must_include "Applications/scripts/update-host"
+      _(UpdateHost.remote_merge_script).must_include "UpdateHost.merge_claude_settings"
+    end
+  end
+
   describe "verify_hook_executability" do
     it "reports ok for +x hooks and fail for non-executable ones" do
       Dir.mktmpdir do |repo_root|

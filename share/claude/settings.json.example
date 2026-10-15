@@ -35,10 +35,10 @@
   },
   "theme": "auto",
   "enabledPlugins": {
-    "agents-md@builtin": true
+    "cc-plugin-agents-md@builtin": true
   },
   "pluginConfigs": {
-    "agents-md@builtin": {
+    "cc-plugin-agents-md@builtin": {
       "options": { "instructionFiles": "claude-md-and-agents-md" }
     }
   }

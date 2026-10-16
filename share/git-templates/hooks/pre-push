@@ -86,7 +86,7 @@ run_cmd()
     elif [ "$(uname -s)" = "Darwin" ]; then
         script -q /dev/null sh -c "$*"
     else
-        script -qc "$*" /dev/null
+        script -qec "$*" /dev/null
     fi
 }
 

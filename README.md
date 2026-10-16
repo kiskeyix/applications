@@ -51,7 +51,27 @@ touch ~/.vimrc-`hostname`
 touch ~/.muttrc-`hostname`
 touch ~/.profile-`hostname`
 touch ~/.alias.setup
-touch ~/.path.setup
+
+# a special .path.setup :
+cat > ~/.path.setup <<EOF
+# _path_add [-a] DIR — add DIR once, only if it exists. Default prepends; -a
+# appends so it can never shadow a system command.
+_path_add() {
+  local append=0
+  [[ $1 == -a ]] && { append=1; shift; }
+  [[ -d $1 ]] || return 0
+  case ":$PATH:" in *":$1:"*) return 0 ;; esac
+  if (( append )); then PATH="$PATH:$1"; else PATH="$1:$PATH"; fi
+}
+
+_path_add "/opt/homebrew/bin"
+_path_add "/opt/homebrew/sbin"
+_path_add "$HOME/Applications/scripts"
+
+_path_add -a "/usr/local/bin"
+EOF
+
+
 ```
 
 These are sourced automatically by the corresponding main config file.

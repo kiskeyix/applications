@@ -8,14 +8,10 @@ set output-meta On
 # allow iso-latin1 characters set convert-meta to off
 set convert-meta Off
 
-# Wrap pasted text so a trailing newline does not run the command outright -
-# multi-line pastes wait for an explicit Enter. Readline 8.1+ does this by
-# default, so this line is redundant on newer hosts, but 7.0-8.0 ship the
-# variable defaulting to off and that is what older RHEL boxes carry. Readline
-# ignores variables it does not know, so it is harmless where it predates them.
-# Unlike vim (see .vimrc), readline both requests bracketed paste and parses
-# the markers, so enabling it here cannot corrupt a paste.
-set enable-bracketed-paste on
+# Leave enable-bracketed-paste at its default. Readline 8.1+ (bash 5.1+) turns
+# it on already. Readline 7.0 (bash 4.4, /bin/bash on older RHEL) in vi mode
+# requests bracketed paste but cannot parse the opening \e[200~ marker, so
+# every paste starts with "(arg: 200)" and the text goes in as keystrokes.
 
 # lems 2003-01-05 13:00 
 set editing-mode vi
@@ -27,26 +23,6 @@ set show-all-if-ambiguous On
 set completion-ignore-case On 
 
 $if mode=vi
-    #pressing up/down keys is equivalent to: up/down + end-of-line
-    # previous-history
-    # next-history
-    #previous-history: end-of-line
-    #reverse-search-history: end-of-line
-  
-    # hint: use CTRL-V + <UP> to get the real key value
-    #arrowup and PgUp searchs through last history
-    "[A":  "kA"
-    "[5~": reverse-search-history
-
-    #arrow down and PgDown searchs forward in history
-    "[B": "jA"
-    "[6~": forward-search-history
-    
-    # right arrow: space then append
-    "[C": "\ a"
-    # left arrow: go in insert mode
-    "[D": vi-insertion-mode
-
     # append to end of line A La Emacs
     Control-e: vi-append-eol
 

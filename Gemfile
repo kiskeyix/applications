@@ -4,3 +4,4 @@ source 'https://rubygems.org'
 
 ruby '>= 3.4'
 gem 'minitest'
+gem 'rake'

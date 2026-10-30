@@ -55,5 +55,5 @@ Code examples and educational snippets organized by language (C, C++, Perl, Pyth
 | `share/shell/bashrc` | Primary shell config |
 | `share/shell/bash_profile` | Login shell / PATH setup |
 | `Rakefile` | Test and tar tasks |
-| `Gemfile` | Ruby deps (minitest only) |
+| `Gemfile` | Ruby deps (minitest, rake) |
 | `.gitmodules` | Vim plugin submodule (nerdtree) |

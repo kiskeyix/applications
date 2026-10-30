@@ -7,9 +7,9 @@ require "fileutils"
 load File.expand_path("../../scripts/update-host", __dir__)
 
 describe :update_host do
-  it "maps vim and claude/hooks to their overridden dotfile paths" do
+  it "maps vim and agents-config/hooks to their overridden dotfile paths" do
     _(UpdateHost.dest_rel("vim")).must_equal File.join(".config", "vim")
-    _(UpdateHost.dest_rel("claude/hooks")).must_equal File.join(".claude", "hooks")
+    _(UpdateHost.dest_rel("agents-config/hooks")).must_equal File.join(".claude", "hooks")
   end
 
   it "falls back to a dotted basename for everything else" do
@@ -64,7 +64,7 @@ describe :update_host do
   end
 
   def claude_template
-    File.join(UpdateHost::REPO_ROOT, "share", "claude", "settings.json.example")
+    File.join(UpdateHost::REPO_ROOT, "share", "agents-config", "settings.json.example")
   end
 
   def with_env(vars)
@@ -98,7 +98,7 @@ describe :update_host do
     it "is ok when ~/.claude/CLAUDE.md links to the AGENTS.md source, with no ~/.claude/AGENTS.md" do
       Dir.mktmpdir do |home|
         FileUtils.mkdir_p(File.join(home, ".claude"))
-        File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md"), File.join(home, ".claude", "CLAUDE.md"))
+        File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "agents-config", "AGENTS.md"), File.join(home, ".claude", "CLAUDE.md"))
 
         out = StringIO.new
         v = UpdateHost::Verifier.new(io: out)
@@ -145,7 +145,7 @@ describe :update_host do
         UpdateHost.link_claude_md(home: home, repo_root: UpdateHost::REPO_ROOT)
 
         _(File.symlink?(claude_md)).must_equal true
-        _(File.readlink(claude_md)).must_equal File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md")
+        _(File.readlink(claude_md)).must_equal File.join(UpdateHost::REPO_ROOT, "share", "agents-config", "AGENTS.md")
       end
     end
 
@@ -166,7 +166,7 @@ describe :update_host do
       Dir.mktmpdir do |home|
         FileUtils.mkdir_p(File.join(home, ".claude"))
         agents_md = File.join(home, ".claude", "AGENTS.md")
-        File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "claude", "AGENTS.md"), agents_md)
+        File.symlink(File.join(UpdateHost::REPO_ROOT, "share", "agents-config", "AGENTS.md"), agents_md)
 
         UpdateHost.link_claude_md(home: home, repo_root: UpdateHost::REPO_ROOT)
         _(File.symlink?(agents_md)).must_equal false
@@ -317,10 +317,27 @@ describe :update_host do
     end
   end
 
+  describe "remote_link_script" do
+    it "creates links that resolve, including ones nested under ~/.claude and ~/.config" do
+      Dir.mktmpdir do |home|
+        UpdateHost::CONFIG_FILES.each do |rel|
+          FileUtils.mkdir_p(File.join(home, "Applications", "share", rel))
+        end
+
+        _(system({ "HOME" => home }, "sh", "-c", UpdateHost.remote_link_script, chdir: home)).must_equal true
+
+        UpdateHost::CONFIG_FILES.each do |rel|
+          dotfile = File.join(home, UpdateHost.dest_rel(rel))
+          _(File.exist?(dotfile)).must_equal true, "#{dotfile} -> #{File.readlink(dotfile)} is dangling"
+        end
+      end
+    end
+  end
+
   describe "verify_hook_executability" do
     it "reports ok for +x hooks and fail for non-executable ones" do
       Dir.mktmpdir do |repo_root|
-        hooks_dir = File.join(repo_root, "share", "claude", "hooks")
+        hooks_dir = File.join(repo_root, "share", "agents-config", "hooks")
         FileUtils.mkdir_p(hooks_dir)
         exe = File.join(hooks_dir, "good.sh")
         File.write(exe, "#!/usr/bin/env bash\n")

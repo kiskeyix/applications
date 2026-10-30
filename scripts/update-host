@@ -12,8 +12,9 @@
 #
 # ~/.claude/settings.json is never written by --local: Claude Code owns it at
 # runtime. --local/--verify only warn when it's missing keys from
-# share/claude/settings.json.example (see verify_claude_settings). Only the
-# explicit --merge-claude-settings adds them (existing values always win).
+# share/agents-config/settings.json.example (see verify_claude_settings).
+# Only the explicit --merge-claude-settings adds them (existing values always
+# win).
 #
 # Usage:
 #   update-host                 update all hosts listed in ~/.remote-hosts
@@ -53,16 +54,16 @@ module UpdateHost
     shell/iterm2_shell_integration.bash
     shell/ssh-agent-setup.bash
     shell/dir_colors
-    claude/hooks
-    claude/commands
+    agents-config/hooks
+    agents-config/commands
   ].freeze
 
   # source path (relative to share/) => dotfile it becomes under $HOME,
   # for entries that don't follow the default ".#{basename}" rule.
   DEST_OVERRIDES = {
     "vim" => File.join(".config", "vim"),
-    "claude/hooks" => File.join(".claude", "hooks"),
-    "claude/commands" => File.join(".claude", "commands")
+    "agents-config/hooks" => File.join(".claude", "hooks"),
+    "agents-config/commands" => File.join(".claude", "commands")
   }.freeze
 
   Options = Struct.new(
@@ -337,12 +338,12 @@ module UpdateHost
     puts "localhost: relinked #{CONFIG_FILES.size} configs"
   end
 
-  # share/claude/AGENTS.md is linked as ~/.claude/CLAUDE.md only: every Claude
-  # Code workflow loads that name, and the agents-md plugin would load a
+  # share/agents-config/AGENTS.md is linked as ~/.claude/CLAUDE.md only: every
+  # Claude Code workflow loads that name, and the agents-md plugin would load a
   # ~/.claude/AGENTS.md link too, i.e. the same instructions twice. Older
   # versions created that second link, so drop it if it's still ours.
   def link_claude_md(home: HOME, repo_root: REPO_ROOT)
-    source = File.join(repo_root, "share", "claude", "AGENTS.md")
+    source = File.join(repo_root, "share", "agents-config", "AGENTS.md")
     relink(File.join(home, ".claude", "CLAUDE.md"), source)
 
     agents_md = File.join(home, ".claude", "AGENTS.md")
@@ -422,7 +423,7 @@ module UpdateHost
     end
 
     claude_md = File.join(home, ".claude", "CLAUDE.md")
-    agents_target = File.join(repo_root, "share", "claude", "AGENTS.md")
+    agents_target = File.join(repo_root, "share", "agents-config", "AGENTS.md")
     label = "~/.claude/CLAUDE.md"
     if File.symlink?(claude_md)
       if File.readlink(claude_md) == agents_target
@@ -449,7 +450,7 @@ module UpdateHost
   def verify_claude_settings(v, home: HOME, repo_root: REPO_ROOT)
     v.section("Claude settings")
 
-    example = File.join(repo_root, "share", "claude", "settings.json.example")
+    example = File.join(repo_root, "share", "agents-config", "settings.json.example")
     unless File.readable?(example)
       v.fail_check("template missing: #{example}")
       return
@@ -487,7 +488,7 @@ module UpdateHost
   # authoritative rule), so it can't revert a setting; it also can't remove
   # one. The previous file is kept as settings.json.bak.
   def merge_claude_settings(home: HOME, repo_root: REPO_ROOT)
-    example = File.join(repo_root, "share", "claude", "settings.json.example")
+    example = File.join(repo_root, "share", "agents-config", "settings.json.example")
     target = File.join(claude_config_dir(home: home), "settings.json")
     abort "#{target} missing; start Claude Code once to create it" unless File.file?(target)
     abort "#{target} is a symlink; merge into the real file instead" if File.symlink?(target)
@@ -514,7 +515,7 @@ module UpdateHost
     v.section("Hook executability")
 
     patterns = [
-      File.join(repo_root, "share", "claude", "hooks", "*.sh"),
+      File.join(repo_root, "share", "agents-config", "hooks", "*.sh"),
       File.join(repo_root, "share", "git-templates", "hooks", "*")
     ]
     patterns.each do |pattern|
@@ -674,10 +675,12 @@ module UpdateHost
 
   # ----- remote update -----
 
+  # Link targets are absolute ($HOME expands on the remote): a relative one
+  # resolves from the link's own directory, which breaks e.g. ~/.claude/hooks.
   def remote_link_script
     CONFIG_FILES.map do |rel|
       dotfile = dest_rel(rel)
-      src = "Applications/share/#{rel}"
+      src = "$HOME/Applications/share/#{rel}"
       "mkdir -p $(dirname #{dotfile}) && rm -rf #{dotfile} && ln -sf #{src} #{dotfile}"
     end.join(" && ")
   end

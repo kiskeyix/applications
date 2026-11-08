@@ -1,5 +1,5 @@
-Audit our tracked Claude Code settings against the changelog after a version
-upgrade. Triggered manually, or automatically by
+Audit our tracked Claude Code settings against the changelog and a local
+binary diff after a version upgrade. Triggered manually, or automatically by
 `~/.claude/hooks/check-claude-version.sh`'s SessionStart nudge when the
 installed `claude --version` differs from the last-verified stamp.
 
@@ -37,6 +37,34 @@ If `$verified` is empty (never checked before), there's no lower bound — defau
 to the most recent ~15 entries and say so explicitly in the report (we're not
 diffing full history).
 
+## Step 2b: Diff the binaries
+
+The changelog can lag a release (2.1.319 reached the native installer before
+its changelog entry existed), so also diff the binaries locally. The native
+installer keeps recent versions in `~/.local/share/claude/versions/`:
+
+```bash
+versions="$HOME/.local/share/claude/versions"
+claude-binary-diff "$versions/$verified" "$versions/$installed" "$live" "$template"
+```
+
+`claude-binary-diff` lives in the Applications repo's `scripts/` (on `PATH`)
+and takes ~10s. It reports:
+- env vars (`CLAUDE_*`/`ANTHROPIC_*`) added or removed;
+- settings-schema keys added, removed, or re-described — best effort: it only
+  matches keys declared as `key:()=>…describe(…)` (about half the schema), so
+  a key absent from that list isn't proof of removal;
+- keys set in `$live`/`$template` that no longer appear anywhere in the new
+  binary — a strong sign of a removal or rename; confirm each in step 3.
+
+For each added env var or schema key, grep the settings reference downloaded
+in step 3 and note whether it's documented yet. That part is informational:
+report it, don't act on it unless it touches a key we set.
+
+If `$versions/$verified` is gone (the installer prunes old versions) or
+`$verified` is empty, diff from the oldest version still in `$versions` and
+say which. With no `$versions` dir (an npm install), skip this step and say so.
+
 ## Step 3: Check settings-reference for drift
 
 Download `https://code.claude.com/docs/en/settings-reference.md` with `curl`
@@ -60,18 +88,20 @@ If nothing was found, say so plainly — don't manufacture a finding.
 
 ## Step 5: Stamp the version
 
-Only if both fetches in steps 2–3 actually succeeded (regardless of
-whether they found anything to fix), record that this version was reviewed:
+Only if step 3's download succeeded and the changes up to `$installed` were
+actually reviewed — by a changelog entry for `$installed` (step 2) or by the
+binary diff (step 2b) — record that this version was reviewed, regardless of
+whether anything needed fixing:
 
 ```bash
 echo "$installed" > "$config_dir/.claude-code-verified-version"
 ```
 
-If a fetch failed, don't stamp — leave the SessionStart nudge active so the
-next session retries.
+Otherwise don't stamp — leave the SessionStart nudge active so the next
+session retries.
 
 ## Step 6: Report
 
-One concise summary: version jump reviewed, what (if anything) was found, what
-was fixed vs. what's waiting on confirmation, and whether the stamp was
-updated.
+One concise summary: version jump reviewed, binary-diff highlights, what (if
+anything) was found, what was fixed vs. what's waiting on confirmation, and
+whether the stamp was updated.

@@ -38,11 +38,13 @@ Standalone scripts:
 - `git*` — Git workflow helpers (gitamend, gitbranchdelete, gitbranchrename, gitcheckout, gitsync)
 - `update-host` — main deploy/sync utility
 - `claude-code-setup`, `signature`, `open-terminals`, `make-admin` (Darwin-only)
+- `claude-binary-diff` — diffs two Claude Code native binaries (env vars, settings-schema keys, our keys gone missing); used by `/claude-update-check`
 
 ### Tests (`test/`)
 - `test/scripts/skeleton_test.rb` — Vim skeleton module (skeleton file instantiation)
 - `test/scripts/update_host_test.rb` — `update-host`'s dotfile path mapping, foreign-symlink handling, Claude settings drift check, `--verify` checks, and the `~/.claude/CLAUDE.md` link
 - `test/scripts/claude_code_setup_test.rb` — `claude-code-setup`'s platform detection, package-manager command builders, and settings deep-merge
+- `test/scripts/claude_binary_diff_test.rb` — `claude-binary-diff`'s env-var, schema-key, and missing-key reporting
 
 ### Doc (`doc/`)
 Code examples and educational snippets organized by language (C, C++, Perl, Python, Java, PHP, shell). These are reference material, not deployed code.

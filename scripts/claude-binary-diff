@@ -1,0 +1,85 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# claude-binary-diff OLD_BINARY NEW_BINARY [SETTINGS_JSON...]
+#
+# Diffs two Claude Code native binaries (the installer keeps recent versions
+# in ~/.local/share/claude/versions/) for changes the changelog may not list
+# yet: env var names, settings-schema keys and their descriptions, and, given
+# settings files, which of our keys the new binary no longer contains at all.
+# Used by the /claude-update-check command.
+
+require "json"
+require "open3"
+
+ENV_VAR = /\b(?:CLAUDE|ANTHROPIC)_[A-Z0-9_]{3,}\b/
+# A settings-schema entry in the bundle looks like
+# `key:()=>O().optional().describe('…')`. Best effort: keys declared any other
+# way are missed, so a key absent from this list is not proof it was removed.
+SCHEMA_ENTRY = /([A-Za-z_]\w*):\(\)=>[^;{}]{0,300}?\.describe\((["'`])((?:\\.|(?!\2).){0,600})\2\)/
+# Maps keyed by plugin, model or hook-event names: check the key, skip its children.
+OPAQUE_MAPS = %w[enabledPlugins pluginConfigs modelSettings hooks].freeze
+
+def binary_strings(path)
+  out, status = Open3.capture2("strings", "-n", "6", path)
+  abort "claude-binary-diff: strings failed on #{path}" unless status.success?
+  out.force_encoding(Encoding::BINARY)
+end
+
+def env_vars(text) = text.scan(ENV_VAR).uniq.sort
+
+# key => sorted descriptions (a key can be described in more than one schema).
+# Scans only lines holding both markers: the regex over the whole ~75MB of
+# strings output takes ~25s, over the ~35 matching lines well under 1s.
+def schema_entries(text)
+  lines = text.each_line.select { |l| l.include?(":()=>") && l.include?(".describe(") }
+  lines.flat_map { |l| l.scan(SCHEMA_ENTRY) }.each_with_object(Hash.new { |h, k| h[k] = [] }) do |(key, _quote, desc), h|
+    h[key] |= [desc]
+  end.transform_values(&:sort)
+end
+
+def settings_keys(hash, out = [])
+  hash.each do |k, v|
+    next if k.start_with?("$")
+    out << k
+    settings_keys(v, out) if v.is_a?(Hash) && !OPAQUE_MAPS.include?(k)
+  end
+  out.uniq
+end
+
+def report(old_text, new_text, keys)
+  lines = []
+  old_env, new_env = env_vars(old_text), env_vars(new_text)
+  added, removed = new_env - old_env, old_env - new_env
+  lines << "== env vars (CLAUDE_*/ANTHROPIC_*): +#{added.size} -#{removed.size}"
+  added.each { |v| lines << "+ #{v}" }
+  removed.each { |v| lines << "- #{v}" }
+
+  old_s, new_s = schema_entries(old_text), schema_entries(new_text)
+  added = new_s.keys - old_s.keys
+  removed = old_s.keys - new_s.keys
+  changed = (old_s.keys & new_s.keys).select { |k| old_s[k] != new_s[k] }
+  lines << "== settings schema (best effort, #{new_s.size} keys matched): " \
+           "+#{added.size} -#{removed.size} ~#{changed.size}"
+  added.sort.each { |k| new_s[k].each { |d| lines << "+ #{k}: #{d}" } }
+  removed.sort.each { |k| lines << "- #{k}" }
+  changed.sort.each do |k|
+    (old_s[k] - new_s[k]).each { |d| lines << "~ #{k} (old): #{d}" }
+    (new_s[k] - old_s[k]).each { |d| lines << "~ #{k} (new): #{d}" }
+  end
+
+  missing = keys.reject { |k| new_text.include?(k.b) }
+  lines << "== our settings keys missing from new binary: #{missing.size} of #{keys.size}"
+  missing.each { |k| lines << "! #{k}" }
+  lines.join("\n")
+end
+
+return unless $PROGRAM_NAME == __FILE__
+
+if ARGV.size < 2
+  warn "usage: claude-binary-diff OLD_BINARY NEW_BINARY [SETTINGS_JSON...]"
+  exit 2
+end
+old_bin, new_bin, *settings = ARGV
+keys = settings.flat_map { |f| settings_keys(JSON.parse(File.read(f, encoding: "UTF-8"))) }.uniq
+puts report(binary_strings(old_bin), binary_strings(new_bin), keys)

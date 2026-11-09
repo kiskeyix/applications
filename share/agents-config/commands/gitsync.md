@@ -28,7 +28,14 @@ git rev-parse --is-inside-work-tree
 If this fails, tell the user there's no git repo in the current directory and
 stop — don't search elsewhere for one.
 
-## Step 2: Run it
+## Step 2: Review what it will push
+
+`gitsync` ends in `git push`, so AGENTS.md's pre-push review applies. If
+`git log @{upstream}..HEAD` lists commits, review them with the `review-pr`
+skill first, and stop on a _fix first_ verdict. With no upstream, gitsync's
+bare `git push` fails anyway; say so instead.
+
+## Step 3: Run it
 
 ```bash
 gitsync
@@ -37,7 +44,7 @@ gitsync
 Run from the current working directory. It operates on whatever repo that is,
 via `git remote`/`git branch` — there's nothing in it specific to this repo.
 
-## Step 3: Report
+## Step 4: Report
 
 Summarize what happened per remote: pulled clean / had conflicts / nothing to
 pull, tags fetched, and whether the final `push`/`push --tags` succeeded, and

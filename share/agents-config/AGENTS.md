@@ -80,15 +80,10 @@ ceremony below.
   already shared, without asking first.
 - Check `git status`/`git diff` before staging broadly (`git add -A` /
   `.`) — it's easy to sweep in a stray file that shouldn't be committed.
-- Before `git push`, review the outgoing diff (the target PR's diff 
-  if one exists, otherwise the commits not yet on the remote) with the
-  `review-pr` skill. It checks the diff against the ticket and runs 
-  `/code-review high` itself **when the diff contains executable code**;
-  in that case, run `pr-review-toolkit:silent-failure-hunter` in a 
-  background agent in parallel. For docs, prose, config, and 
-  slash-command/skill definitions, `review-pr` skips the adversarial 
-  passes and reads the diff; these have no ground truth to converge 
-  against, so adversarial review just iterates.
+- Before `git push`, review the outgoing commits with the `review-pr`
+  skill (not `pr-review-toolkit:review-pr`), once per push, in this
+  checkout. The skill decides which passes to run and what to re-run
+  after fixes.
 
 ## Docs
 

@@ -135,7 +135,7 @@ describe :update_host do
     end
   end
 
-describe "claude entry links" do
+  describe "claude entry links" do
     # A scratch repo with one hook, one command and one skill, plus a hidden
     # file that is none of them.
     def scratch_repo(dir)
@@ -216,7 +216,7 @@ describe "claude entry links" do
     end
   end
 
-describe "link_claude_md" do
+  describe "link_claude_md" do
     it "symlinks ~/.claude/CLAUDE.md to the AGENTS.md source file" do
       Dir.mktmpdir do |home|
         FileUtils.mkdir_p(File.join(home, ".claude"))
@@ -425,6 +425,26 @@ describe "link_claude_md" do
           _(File.symlink?(link)).must_equal true, "#{link} is not a link"
           _(File.exist?(link)).must_equal true, "#{link} -> #{File.readlink(link)} is dangling"
         end
+      end
+    end
+
+    it "quotes entry names, so a name with a space removes nothing else" do
+      Dir.mktmpdir do |home|
+        UpdateHost::CONFIG_FILES.each do |rel|
+          FileUtils.mkdir_p(File.join(home, "Applications", "share", rel))
+        end
+        # The unpacked repo on the remote is also the repo the names come from.
+        repo = File.join(home, "Applications")
+        commands = File.join(repo, "share", "agents-config", "commands")
+        FileUtils.mkdir_p(commands)
+        File.write(File.join(commands, "my notes.md"), "")
+        File.write(File.join(home, "notes.md"), "keep")
+
+        script = UpdateHost.remote_link_script(repo_root: repo)
+        _(system({ "HOME" => home }, "sh", "-c", script, chdir: home)).must_equal true
+
+        _(File.read(File.join(home, "notes.md"))).must_equal "keep"
+        _(File.readlink(File.join(home, ".claude", "commands", "my notes.md"))).must_equal File.join(commands, "my notes.md")
       end
     end
   end

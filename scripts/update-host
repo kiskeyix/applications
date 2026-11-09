@@ -32,6 +32,7 @@ require "socket"
 require "fileutils"
 require "open3"
 require "json"
+require "shellwords"
 
 module UpdateHost
   VERSION = "2.0.0"
@@ -731,7 +732,7 @@ module UpdateHost
 
   # Link targets are absolute ($HOME expands on the remote): a relative one
   # resolves from the link's own directory, which breaks e.g. ~/.claude/hooks.
-  def remote_link_script
+  def remote_link_script(repo_root: REPO_ROOT)
     dotfiles = CONFIG_FILES.map do |rel|
       dotfile = dest_rel(rel)
       src = "$HOME/Applications/share/#{rel}"
@@ -742,7 +743,8 @@ module UpdateHost
     entries = CLAUDE_ENTRY_DIRS.flat_map do |sub|
       dir = File.join(".claude", sub)
       ["{ [ ! -L #{dir} ] || rm #{dir}; } && mkdir -p #{dir}"] +
-        claude_entry_names(sub).map do |name|
+        claude_entry_names(sub, repo_root: repo_root).map do |name|
+          name = Shellwords.escape(name)
           "rm -rf #{dir}/#{name} && ln -s $HOME/Applications/share/agents-config/#{sub}/#{name} #{dir}/#{name}"
         end
     end

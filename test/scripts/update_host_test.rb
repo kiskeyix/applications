@@ -7,9 +7,8 @@ require "fileutils"
 load File.expand_path("../../scripts/update-host", __dir__)
 
 describe :update_host do
-  it "maps vim and agents-config/hooks to their overridden dotfile paths" do
+  it "maps vim to its overridden dotfile path" do
     _(UpdateHost.dest_rel("vim")).must_equal File.join(".config", "vim")
-    _(UpdateHost.dest_rel("agents-config/hooks")).must_equal File.join(".claude", "hooks")
   end
 
   it "falls back to a dotted basename for everything else" do
@@ -136,7 +135,88 @@ describe :update_host do
     end
   end
 
-  describe "link_claude_md" do
+describe "claude entry links" do
+    # A scratch repo with one hook, one command and one skill, plus a hidden
+    # file that is none of them.
+    def scratch_repo(dir)
+      base = File.join(dir, "share", "agents-config")
+      FileUtils.mkdir_p(File.join(base, "hooks"))
+      FileUtils.mkdir_p(File.join(base, "commands"))
+      FileUtils.mkdir_p(File.join(base, "skills", "review-pr"))
+      File.write(File.join(base, "hooks", "a.sh"), "#!/bin/sh\n")
+      File.write(File.join(base, "commands", "c.md"), "c\n")
+      File.write(File.join(base, "skills", "review-pr", "SKILL.md"), "---\nname: review-pr\n---\n")
+      File.write(File.join(base, "skills", ".placeholder"), "")
+      base
+    end
+
+    it "links each entry on its own and leaves Claude Code's own files alone" do
+      Dir.mktmpdir do |home|
+        Dir.mktmpdir do |repo|
+          base = scratch_repo(repo)
+          synced = File.join(home, ".claude", "skills", "synced")
+          FileUtils.mkdir_p(synced)
+
+          UpdateHost.link_claude_entries(home: home, repo_root: repo)
+
+          _(File.readlink(File.join(home, ".claude", "hooks", "a.sh"))).must_equal File.join(base, "hooks", "a.sh")
+          _(File.readlink(File.join(home, ".claude", "commands", "c.md"))).must_equal File.join(base, "commands", "c.md")
+          _(Dir.children(File.join(home, ".claude", "skills")).sort).must_equal %w[review-pr synced]
+          _(File.symlink?(File.join(home, ".claude", "hooks"))).must_equal false
+        end
+      end
+    end
+
+    it "turns our old whole-directory link into a directory of links, leaving the repo untouched" do
+      Dir.mktmpdir do |home|
+        Dir.mktmpdir do |repo|
+          base = scratch_repo(repo)
+          FileUtils.mkdir_p(File.join(home, ".claude"))
+          File.symlink(File.join(base, "hooks"), File.join(home, ".claude", "hooks"))
+
+          UpdateHost.link_claude_entries(home: home, repo_root: repo)
+
+          _(File.symlink?(File.join(home, ".claude", "hooks"))).must_equal false
+          _(File.readlink(File.join(home, ".claude", "hooks", "a.sh"))).must_equal File.join(base, "hooks", "a.sh")
+          _(File.symlink?(File.join(base, "hooks", "a.sh"))).must_equal false
+          _(File.read(File.join(base, "hooks", "a.sh"))).must_equal "#!/bin/sh\n"
+        end
+      end
+    end
+
+    it "leaves someone else's directory link alone" do
+      Dir.mktmpdir do |home|
+        Dir.mktmpdir do |repo|
+          scratch_repo(repo)
+          FileUtils.mkdir_p(File.join(home, ".claude"))
+          File.symlink("/somewhere/else", File.join(home, ".claude", "commands"))
+
+          _ { UpdateHost.link_claude_entries(home: home, repo_root: repo) }
+            .must_output "", /leaving .*commands -> \/somewhere\/else alone/
+          _(File.readlink(File.join(home, ".claude", "commands"))).must_equal "/somewhere/else"
+        end
+      end
+    end
+
+    it "verify names a missing entry link and an old whole-directory link" do
+      Dir.mktmpdir do |home|
+        Dir.mktmpdir do |repo|
+          base = scratch_repo(repo)
+          FileUtils.mkdir_p(File.join(home, ".claude"))
+          File.symlink(File.join(base, "hooks"), File.join(home, ".claude", "hooks"))
+          out = StringIO.new
+          v = UpdateHost::Verifier.new(io: out)
+          UpdateHost.verify_symlinks(v, home: home, repo_root: repo)
+
+          _(out.string).must_include "FAIL  ~/.claude/skills/review-pr missing"
+          _(out.string).must_include "~/.claude/hooks links the whole directory (older layout)"
+          _(out.string).wont_include "~/.claude/hooks/a.sh"
+        end
+      end
+    end
+  end
+
+describe "link_claude_md" do
     it "symlinks ~/.claude/CLAUDE.md to the AGENTS.md source file" do
       Dir.mktmpdir do |home|
         FileUtils.mkdir_p(File.join(home, ".claude"))
@@ -323,12 +403,27 @@ describe :update_host do
         UpdateHost::CONFIG_FILES.each do |rel|
           FileUtils.mkdir_p(File.join(home, "Applications", "share", rel))
         end
+        links = UpdateHost.claude_entry_links(home: home)
+        links.each do |_, source|
+          remote = File.join(home, "Applications", source.delete_prefix("#{UpdateHost::REPO_ROOT}/"))
+          FileUtils.mkdir_p(File.dirname(remote))
+          FileUtils.touch(remote)
+        end
+        # An older whole-directory link is replaced, not written through.
+        FileUtils.mkdir_p(File.join(home, ".claude"))
+        File.symlink(File.join(home, "Applications", "share", "agents-config", "hooks"), File.join(home, ".claude", "hooks"))
 
         _(system({ "HOME" => home }, "sh", "-c", UpdateHost.remote_link_script, chdir: home)).must_equal true
 
         UpdateHost::CONFIG_FILES.each do |rel|
           dotfile = File.join(home, UpdateHost.dest_rel(rel))
           _(File.exist?(dotfile)).must_equal true, "#{dotfile} -> #{File.readlink(dotfile)} is dangling"
+        end
+        _(links).wont_be_empty
+        _(File.symlink?(File.join(home, ".claude", "hooks"))).must_equal false
+        links.each do |link, _|
+          _(File.symlink?(link)).must_equal true, "#{link} is not a link"
+          _(File.exist?(link)).must_equal true, "#{link} -> #{File.readlink(link)} is dangling"
         end
       end
     end
@@ -522,6 +617,7 @@ describe :update_host do
       end
 
       UpdateHost.link_claude_md(home: home, repo_root: UpdateHost::REPO_ROOT)
+      UpdateHost.link_claude_entries(home: home, repo_root: UpdateHost::REPO_ROOT)
       FileUtils.cp(claude_template, File.join(config_dir, "settings.json"))
     end
 

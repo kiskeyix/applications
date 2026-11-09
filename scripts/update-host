@@ -54,17 +54,19 @@ module UpdateHost
     shell/iterm2_shell_integration.bash
     shell/ssh-agent-setup.bash
     shell/dir_colors
-    agents-config/hooks
-    agents-config/commands
   ].freeze
 
   # source path (relative to share/) => dotfile it becomes under $HOME,
   # for entries that don't follow the default ".#{basename}" rule.
   DEST_OVERRIDES = {
-    "vim" => File.join(".config", "vim"),
-    "agents-config/hooks" => File.join(".claude", "hooks"),
-    "agents-config/commands" => File.join(".claude", "commands")
+    "vim" => File.join(".config", "vim")
   }.freeze
+
+  # share/agents-config/<dir>/ whose entries are each linked into
+  # ~/.claude/<dir>/, never the directory itself: Claude Code keeps files of
+  # its own beside ours there (skills/synced/), and one link over the
+  # directory would replace them.
+  CLAUDE_ENTRY_DIRS = %w[hooks commands skills].freeze
 
   Options = Struct.new(
     :local, :verify, :merge_claude_settings, :tar_only, :send_key, :hosts_file, :local_path,
@@ -333,6 +335,7 @@ module UpdateHost
     end
 
     link_claude_md
+    link_claude_entries
     verify_claude_settings(Verifier.new)
 
     puts "localhost: relinked #{CONFIG_FILES.size} configs"
@@ -348,6 +351,40 @@ module UpdateHost
 
     agents_md = File.join(home, ".claude", "AGENTS.md")
     File.unlink(agents_md) if File.symlink?(agents_md) && File.readlink(agents_md) == source
+  end
+
+  # The entries of share/agents-config/<dir>/, hidden files (.placeholder)
+  # left out.
+  def claude_entry_names(sub, repo_root: REPO_ROOT)
+    dir = File.join(repo_root, "share", "agents-config", sub)
+    Dir.exist?(dir) ? Dir.children(dir).reject { |n| n.start_with?(".") }.sort : []
+  end
+
+  # [link, source] for every entry of every CLAUDE_ENTRY_DIRS directory.
+  def claude_entry_links(home: HOME, repo_root: REPO_ROOT)
+    CLAUDE_ENTRY_DIRS.flat_map do |sub|
+      claude_entry_names(sub, repo_root: repo_root).map do |name|
+        [File.join(home, ".claude", sub, name), File.join(repo_root, "share", "agents-config", sub, name)]
+      end
+    end
+  end
+
+  # Older versions linked ~/.claude/hooks and ~/.claude/commands as whole
+  # directories, and an entry linked through such a link would land in the
+  # repo itself. So our own directory link becomes a real directory first;
+  # anyone else's is left alone, entries and all.
+  def link_claude_entries(home: HOME, repo_root: REPO_ROOT)
+    claude_entry_links(home: home, repo_root: repo_root).group_by { |link, _| File.dirname(link) }.each do |dir, links|
+      if File.symlink?(dir)
+        own = File.dirname(links.first[1])
+        unless File.readlink(dir) == own
+          warn "update-host: leaving #{dir} -> #{File.readlink(dir)} alone (not a directory of links to #{own})"
+          next
+        end
+        File.unlink(dir)
+      end
+      links.each { |link, source| relink(link, source) }
+    end
   end
 
   def dest_rel(rel)
@@ -422,19 +459,36 @@ module UpdateHost
       end
     end
 
-    claude_md = File.join(home, ".claude", "CLAUDE.md")
-    agents_target = File.join(repo_root, "share", "agents-config", "AGENTS.md")
-    label = "~/.claude/CLAUDE.md"
-    if File.symlink?(claude_md)
-      if File.readlink(claude_md) == agents_target
-        v.ok("#{label} -> #{agents_target}")
+    claude_links = [[File.join(home, ".claude", "CLAUDE.md"), File.join(repo_root, "share", "agents-config", "AGENTS.md")]] +
+                   verify_claude_entry_dirs(v, home: home, repo_root: repo_root)
+    claude_links.each do |link, target|
+      label = "~/#{link.delete_prefix("#{home}/")}"
+      if File.symlink?(link)
+        if File.readlink(link) == target
+          v.ok("#{label} -> #{target}")
+        else
+          v.warn("#{label} points to #{File.readlink(link)} (expected #{target}; --local leaves it alone)")
+        end
+      elsif File.exist?(link)
+        v.warn("#{label} is a real file/dir, not our symlink (--local would move it to .bak)")
       else
-        v.warn("#{label} points to #{File.readlink(claude_md)} (expected #{agents_target}; --local leaves it alone)")
+        v.fail_check("#{label} missing — run: update-host --local")
       end
-    elsif File.exist?(claude_md)
-      v.warn("#{label} is a real file/dir, not our symlink (--local would move it to .bak)")
-    else
-      v.fail_check("#{label} missing — run: update-host --local")
+    end
+  end
+
+  # The entry links to check. A ~/.claude/<dir> that is itself a link is
+  # named instead, and its entries aren't checked through it.
+  def verify_claude_entry_dirs(v, home: HOME, repo_root: REPO_ROOT)
+    claude_entry_links(home: home, repo_root: repo_root).group_by { |link, _| File.dirname(link) }.flat_map do |dir, links|
+      next links unless File.symlink?(dir)
+      label = "~/#{dir.delete_prefix("#{home}/")}"
+      if File.readlink(dir) == File.dirname(links.first[1])
+        v.warn("#{label} links the whole directory (older layout) — run: update-host --local")
+      else
+        v.warn("#{label} points to #{File.readlink(dir)}, not a directory of links (--local leaves it alone)")
+      end
+      []
     end
   end
 
@@ -678,11 +732,21 @@ module UpdateHost
   # Link targets are absolute ($HOME expands on the remote): a relative one
   # resolves from the link's own directory, which breaks e.g. ~/.claude/hooks.
   def remote_link_script
-    CONFIG_FILES.map do |rel|
+    dotfiles = CONFIG_FILES.map do |rel|
       dotfile = dest_rel(rel)
       src = "$HOME/Applications/share/#{rel}"
       "mkdir -p $(dirname #{dotfile}) && rm -rf #{dotfile} && ln -sf #{src} #{dotfile}"
-    end.join(" && ")
+    end
+    # One link per entry, as link_claude_entries does locally; an older
+    # whole-directory link is removed first.
+    entries = CLAUDE_ENTRY_DIRS.flat_map do |sub|
+      dir = File.join(".claude", sub)
+      ["{ [ ! -L #{dir} ] || rm #{dir}; } && mkdir -p #{dir}"] +
+        claude_entry_names(sub).map do |name|
+          "rm -rf #{dir}/#{name} && ln -s $HOME/Applications/share/agents-config/#{sub}/#{name} #{dir}/#{name}"
+        end
+    end
+    (dotfiles + entries).join(" && ")
   end
 
   # The unpacked repo has no .git, so --local can't run there; load the script

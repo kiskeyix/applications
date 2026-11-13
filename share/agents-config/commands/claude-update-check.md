@@ -13,8 +13,9 @@ of drift against the docs, not from memory.
 ```bash
 config_dir="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
 live="$config_dir/settings.json"
-# ~/.claude/hooks is a symlink into the Applications repo's share/agents-config/hooks
-template="$(dirname "$(readlink -f "$config_dir/hooks")")/settings.json.example"
+# ~/.claude/hooks is a real directory (local entries live beside ours), so
+# resolve through this command's own link into share/agents-config/commands/
+template="$(dirname "$(dirname "$(readlink -f "$config_dir/commands/claude-update-check.md")")")/settings.json.example"
 installed=$(claude --version | awk '{print $1}')
 verified=$(cat "$config_dir/.claude-code-verified-version" 2>/dev/null || echo "")
 ```

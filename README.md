@@ -75,6 +75,9 @@ EOF
 ```
 
 These are sourced automatically by the corresponding main config file.
+Claude Code sessions also source `~/.path.setup` before each Bash command
+(via `share/agents-config/hooks/session-start.sh`), since their shell
+otherwise keeps only the `claude` process's PATH.
 
 ## Syncing to remote hosts
 

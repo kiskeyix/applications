@@ -53,7 +53,7 @@ touch ~/.profile-`hostname`
 touch ~/.alias.setup
 
 # a special .path.setup :
-cat > ~/.path.setup <<EOF
+cat > ~/.path.setup <<'EOF'
 # _path_add [-a] DIR — add DIR once, only if it exists. Default prepends; -a
 # appends so it can never shadow a system command.
 _path_add() {

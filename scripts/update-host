@@ -236,7 +236,8 @@ module UpdateHost
   def hosts_from_file(path)
     return [] unless File.readable?(path)
 
-    File.readlines(path).filter_map do |line|
+    # map + compact, not filter_map (Ruby 2.7+): macOS's /usr/bin/ruby is 2.6.
+    File.readlines(path).map do |line|
       line = line.strip
       next nil if line.empty? || line.start_with?("#")
 
@@ -245,7 +246,7 @@ module UpdateHost
       elsif line =~ /^(\S+)/
         Regexp.last_match(1)
       end
-    end.uniq
+    end.compact.uniq
   end
 
   def alive?(host, port, timeout = 3)

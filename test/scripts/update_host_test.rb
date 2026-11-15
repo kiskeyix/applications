@@ -16,6 +16,17 @@ describe :update_host do
     _(UpdateHost.dest_rel("git-templates")).must_equal ".git-templates"
   end
 
+  describe "hosts_from_file" do
+    it "takes the name after an IP, skips blanks and comments, and drops duplicates" do
+      Dir.mktmpdir do |dir|
+        path = File.join(dir, "remote-hosts")
+        File.write(path, "192.168.1.209 dark-bishop\n# comment\n\ncaissa\n10.0.0.5   dark-bishop extra\n")
+
+        _(UpdateHost.hosts_from_file(path)).must_equal %w[dark-bishop caissa]
+      end
+    end
+  end
+
   describe "deep_merge" do
     it "keeps live values and unions template array entries" do
       merged = UpdateHost.deep_merge(

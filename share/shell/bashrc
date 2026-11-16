@@ -712,6 +712,7 @@ fi
 ## EOF ##
 
 # mise — polyglot version manager (added by claude-code-setup)
+export MISE_ACTIVATE_AGGRESSIVE=1 # keep mise tool paths at the front of PATH; else they sink behind /bin after a cd
 [[ -x "$HOME/.local/bin/mise" ]] && eval "$($HOME/.local/bin/mise activate bash)"
 
 #--------------------------------------------------------------#
